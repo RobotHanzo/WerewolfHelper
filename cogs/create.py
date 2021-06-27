@@ -194,8 +194,8 @@ class Create(commands.Cog):
     @cog_ext.cog_slash(name='destroy', description='刪除暫時群伺服器')
     @commands.is_owner()
     async def destroy(self, ctx):
-        await ctx.guild.delete()
         self.logger.warning(f'{str(ctx.message.author.id)} 已刪除 {str(ctx.message.guild.id)}')
+        await ctx.guild.delete()
 
     @cog_ext.cog_slash(name='leave', description='自非主群離開', guild_ids=guilds)
     @commands.is_owner()
