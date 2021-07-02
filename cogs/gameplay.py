@@ -165,8 +165,9 @@ class Gameplay(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def dead(self, ctx, member: discord.Member):
         dead_role = discord.utils.get(ctx.guild.roles, name='旁觀者 / 死人')
-        for r in [i.name.startswith('玩家') for i in member.roles]:
-            await member.remove_roles(r)
+        for i in member.roles:
+            if i.name.startswith('玩家'):
+                await member.remove_roles(i)
         await member.add_roles(dead_role)
 
 
