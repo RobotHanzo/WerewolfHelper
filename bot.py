@@ -10,7 +10,7 @@ from utils.voting import Voting
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='w!', case_insensitive=False, intents=intents,
                    activity=discord.Game(name='Made by Hanzo'), status=discord.Status.online)
-bot.slash = SlashCommand(bot, sync_commands=True, sync_on_cog_reload=True)
+bot.slash = SlashCommand(bot, sync_commands=False)
 bot.voting = Voting(bot)
 logging.basicConfig(level=logging.INFO)
 with open('cred.json', 'r') as f:
