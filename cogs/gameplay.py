@@ -62,7 +62,7 @@ class Gameplay(commands.Cog):
                 return False
 
         async def callback(winner):
-            await ctx.send(f'投票結束，當選警長者：<@!{list(winner[0].keys())[0]}>')
+            await ctx.send(f'投票結束，被放逐者：<@!{list(winner[0].keys())[0]}>')
             return
             if len(winner) > 1:
                 await ctx.send('有平票！平票者將重新被票選！')
