@@ -160,7 +160,7 @@ class Gameplay(commands.Cog):
         await ctx.send(f'順序：{person.display_name} {order}')
 
     @cog_ext.cog_slash(name='dead', options=[
-        create_option(name='user', description='要使變成旁觀者/死人的人', option_type=6, required=True)
+        create_option(name='member', description='要使變成旁觀者/死人的人', option_type=6, required=True)
     ], description='讓人變成旁觀者或死人')
     @commands.has_permissions(administrator=True)
     async def dead(self, ctx, member: discord.Member):
