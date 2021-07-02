@@ -64,9 +64,10 @@ class Gameplay(commands.Cog):
         async def callback(winner):
             if len(winner) > 1:
                 await ctx.send('有平票！平票者將重新被票選！')
+                print(winner)
                 re_elected = []
                 for w in winner:
-                    w = ctx.guild.get_member(list(w.keys())[0])
+                    w = ctx.guild.get_member(int(list(w.keys())[0]))
                     re_elected.append((f'{member.display_name} ({str(member)})', str(member.id)))
                 await bot.voting.generate_new_poll(ctx, '放逐投票', re_elected, 1, 20, False, False, callback, voter_check)
             else:

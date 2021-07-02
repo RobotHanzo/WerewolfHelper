@@ -1,4 +1,3 @@
-import asyncio
 import random
 import time
 import typing
@@ -6,7 +5,7 @@ import typing
 import discord
 import discord_slash.model
 from discord.ext import commands, tasks
-from discord_slash import SlashContext, ButtonStyle, SlashCommand, ComponentContext
+from discord_slash import SlashContext, ButtonStyle, ComponentContext
 from discord_slash.utils import manage_components
 
 
@@ -58,7 +57,6 @@ class Voting:
         if remove_from_list:
             self.polls.pop(poll_id)
         if poll['callback']:
-            print(winner)
             await poll['callback'](winner)
         else:
             await msg.reply(f'投票結束！獲勝選項：{"、".join(parsed_winner)}')
