@@ -22,12 +22,10 @@ class Voting:
     @tasks.loop(seconds=1)
     async def routine_check(self):
         to_remove = []
-        for poll in self.polls:
+        for poll in self.polls.copy():
             if time.time() >= self.polls[poll]['expire']:
-                await self.end_poll(poll, False)
+                await self.end_poll(poll, True)
                 to_remove.append(poll)
-        for r in to_remove:
-            self.polls.pop(r)
 
     async def end_poll(self, poll_id: str, remove_from_list: bool):
         poll = self.polls[poll_id]
@@ -60,6 +58,7 @@ class Voting:
         if remove_from_list:
             self.polls.pop(poll_id)
         if poll['callback']:
+            print(winner)
             await poll['callback'](winner)
         else:
             await msg.reply(f'投票結束！獲勝選項：{"、".join(parsed_winner)}')
