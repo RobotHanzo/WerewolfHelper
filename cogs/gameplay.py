@@ -169,6 +169,7 @@ class Gameplay(commands.Cog):
             if i.name.startswith('玩家'):
                 await member.remove_roles(i)
         await member.add_roles(dead_role)
+        await ctx.send('完成')
 
 
 def setup(bot):
