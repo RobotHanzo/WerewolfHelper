@@ -17,6 +17,7 @@ class Ready(commands.Cog):
     async def role(self, ctx: SlashContext):
         await ctx.defer()
         judge_role = discord.utils.get(ctx.guild.roles, name='法官')
+        dead_role = discord.utils.get(ctx.guild.roles, name='旁觀者 / 死人')
         role_pool = []
         for role in ctx.guild.roles:
             if str(role).startswith('玩家 '):
@@ -25,7 +26,7 @@ class Ready(commands.Cog):
             member: discord.Member
             if member.bot:
                 continue
-            if judge_role.id in [i.id for i in member.roles]:
+            if judge_role.id in [i.id for i in member.roles] or dead_role.id in [i.id for i in member.roles]:
                 continue
             reward = random.choice(role_pool)
             role_pool.remove(reward)
