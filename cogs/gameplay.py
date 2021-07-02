@@ -155,6 +155,16 @@ class Gameplay(commands.Cog):
         order = random.choice(['上', '下'])
         await ctx.send(f'順序：{person.display_name} {order}')
 
+    @cog_ext.cog_slash(name='dead', options=[
+        create_option(name='user', description='要使變成旁觀者/死人的人', option_type=int, required=True)
+    ], description='讓人變成旁觀者或死人')
+    @commands.has_permissions(administrator=True)
+    async def dead(self, ctx, member: discord.Member):
+        dead_role = discord.utils.get(ctx.guild.roles, name='旁觀者 / 死人')
+        for r in [i.name.startswith('玩家') for i in member.roles]:
+            await member.remove_roles(r)
+        await member.add_roles(dead_role)
+
 
 def setup(bot):
     bot.add_cog(Gameplay(bot))

@@ -139,7 +139,7 @@ class Create(commands.Cog):
                                                       overwrites=dead_voice_overwrite)
         self.logger.info(f'已新增場外音頻')
         # 身分創頻
-        to_be_created_channels = ['狼人', '狼美人', '狼兄弟', '女巫', '預言家', '獵人', '騎士', '守衛', '黑市商人', '平民', '平民', '平民', '平民']
+        to_be_created_channels = ['狼人', '狼美人', '狼兄', '狼弟', '女巫', '預言家', '獵人', '騎士', '守衛', '黑市商人', '平民', '平民', '平民', '平民']
         # 先拒絕所有人讀取的權限，但接受旁觀
         text_deny_overwrite = {
             spectator: discord.PermissionOverwrite(
