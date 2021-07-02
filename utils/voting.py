@@ -83,7 +83,7 @@ class Voting:
         for button in buttons:
             if len(temp) == 5:
                 rows.append(manage_components.create_actionrow(*temp))
-                temp = []
+                temp = [temp]
             else:
                 temp.append(button)
         if len(temp) != 0:
