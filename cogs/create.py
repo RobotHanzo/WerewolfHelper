@@ -133,8 +133,6 @@ class Create(commands.Cog):
         }
         public_text = await guild.create_text_channel(name='場外', category=text_category, overwrites=dead_text_overwrite)
         self.logger.info(f'已新增場外文頻')
-        public_typing = await guild.create_text_channel(name='打字區', category=text_category, overwrites={
-            guild.default_role: discord.PermissionOverwrite(read_message_history=False)})
         dead_voice = await guild.create_voice_channel(name='場外', category=voice_category,
                                                       overwrites=dead_voice_overwrite)
         self.logger.info(f'已新增場外音頻')
