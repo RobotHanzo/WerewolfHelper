@@ -62,17 +62,11 @@ class Gameplay(commands.Cog):
                 return False
 
         async def callback(winner):
-            await ctx.send(f'投票結束，被放逐者：<@!{list(winner[0].keys())[0]}>')
+            parsed = []
+            for w in winner:
+                parsed.append(f'<@!{list(w.keys())[0]}>')
+            await ctx.send(f'投票結束，被放逐者：{"、".join(parsed)}')
             return
-            if len(winner) > 1:
-                await ctx.send('有平票！平票者將重新被票選！')
-                re_elected = []
-                for w in winner:
-                    w = ctx.guild.get_member(int(list(w.keys())[0]))
-                    re_elected.append((f'{w.display_name} ({str(w)})', str(w.id)))
-                await bot.voting.generate_new_poll(ctx, '放逐投票', re_elected, 1, 20, False, False, callback, voter_check)
-            else:
-                await ctx.send(f'投票結束，被放逐者：<@!{list(winner[0].keys())[0]}>')
 
         await self.bot.voting.generate_new_poll(ctx, '放逐投票', alive, 1, 20, False, False, callback, voter_check)
 
@@ -133,17 +127,11 @@ class Gameplay(commands.Cog):
                 return False
 
         async def callback(winner):
-            await ctx.send(f'投票結束，當選警長者：<@!{list(winner[0].keys())[0]}>')
+            parsed = []
+            for w in winner:
+                parsed.append(f'<@!{list(w.keys())[0]}>')
+            await ctx.send(f'投票結束，當選警長者：{"、".join(parsed)}')
             return
-            if len(winner) > 1:
-                await ctx.send('有平票！平票者將重新被票選！')
-                re_elected = []
-                for w in winner:
-                    w = ctx.guild.get_member(list(w.keys())[0])
-                    re_elected.append((f'{w.display_name} ({str(w)})', str(w.id)))
-                await bot.voting.generate_new_poll(ctx, '警長投票', re_elected, 1, 20, False, False, callback, voter_check)
-            else:
-                await ctx.send(f'投票結束，當選警長者：<@!{list(winner[0].keys())[0]}>')
 
         await self.bot.voting.generate_new_poll(ctx, '警長投票', candidates, 1, 20, False, False, callback, voter_check)
 
