@@ -159,6 +159,20 @@ class Gameplay(commands.Cog):
         await member.add_roles(dead_role)
         await ctx.send('完成')
 
+    @cog_ext.cog_slash(name='daytime', description='進入白天')
+    async def daytime(self, ctx):
+        await ctx.defer()
+        court = discord.utils.get(ctx.guild.stage_channels, name='法院')
+        for vc in ctx.guild.voice_channels:
+            vc: discord.VoiceChannel
+            if vc.name == '法院':
+                continue
+            else:
+                for m in vc.members:
+                    await m.move_to(court)
+        await ctx.channel.send('天亮了', tts=True)
+
+
 
 def setup(bot):
     bot.add_cog(Gameplay(bot))
