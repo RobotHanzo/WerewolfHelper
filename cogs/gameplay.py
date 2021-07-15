@@ -160,6 +160,7 @@ class Gameplay(commands.Cog):
         await ctx.send('完成')
 
     @cog_ext.cog_slash(name='daytime', description='進入白天')
+    @commands.has_permissions(administrator=True)
     async def daytime(self, ctx):
         await ctx.defer()
         court = discord.utils.get(ctx.guild.stage_channels, name='法院')
