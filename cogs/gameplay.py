@@ -29,7 +29,7 @@ class Gameplay(commands.Cog):
                                                                         custom_id=cid))])
         try:
             def check(comp_ctx: ComponentContext):
-                return ctx.author.id == comp_ctx.author.id & comp_ctx.custom_id == cid
+                return ctx.author.id == comp_ctx.author.id and comp_ctx.custom_id == cid
 
             await self.bot.wait_for('component', check=check, timeout=interval)
             await msg.reply('成功停止計時')
