@@ -30,6 +30,7 @@ class Gameplay(commands.Cog):
                 return ctx.author == comp_ctx.author & ctx.message.id == comp_ctx.message.id
 
             await self.bot.wait_for('component', check=check, timeout=interval)
+            await msg.reply('成功停止計時')
         except asyncio.TimeoutError:
             await msg.reply('時間到')
 
