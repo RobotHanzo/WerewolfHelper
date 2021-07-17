@@ -1,9 +1,10 @@
 import asyncio
 import random
+import time
 
 import discord
 from discord.ext import commands
-from discord_slash import cog_ext, ComponentContext
+from discord_slash import cog_ext, ComponentContext, SlashContext
 from discord_slash.utils.manage_commands import create_option
 from discord_slash.utils.manage_components import create_actionrow, create_button
 from discord_slash.model import ButtonStyle
@@ -13,35 +14,24 @@ class Gameplay(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.slash = bot.slash
-        self.timer_task = None
         self.allow_enroll = False
+        self.original_candidates = []
         self.candidates = []
-
-    async def timer(self, ctx, interval):
-        await ctx.send(f'開始計時 {interval}秒')
-        if interval >= 30:
-            await asyncio.sleep(interval - 30)
-            await ctx.send('剩下30秒')
-            await asyncio.sleep(30)
-            await ctx.send('計時器結束!')
-        else:
-            await asyncio.sleep(10)
-            await ctx.send('計時器結束!')
 
     @cog_ext.cog_slash(name='timer', options=[
         create_option(name='interval', description='秒數', option_type=int, required=True)
     ], description='計時器')
     @commands.has_permissions(administrator=True)
-    async def timer_cmd(self, ctx, interval: int):
-        task = asyncio.create_task(self.timer(ctx, interval))
-        self.timer_task = task
-        await task
+    async def timer_cmd(self, ctx: SlashContext, interval: int):
+        msg = await ctx.send(f'開始計時 {interval}秒\n結束時間：<t:{int(time.time() + interval)}:T>',
+                             components=[create_actionrow(create_button(ButtonStyle.red, label='結束計時'))])
+        try:
+            def check(comp_ctx: ComponentContext):
+                return ctx.author == comp_ctx.author & ctx.message.id == comp_ctx.message.id
 
-    @cog_ext.cog_slash(name='stop_timer', description='停止計時器')
-    @commands.has_permissions(administrator=True)
-    async def stop_timer(self, ctx):
-        self.timer_task.cancel()
-        await ctx.send('已停止')
+            await self.bot.wait_for('component', check=check, timeout=interval)
+        except asyncio.TimeoutError:
+            await msg.reply('時間到')
 
     @cog_ext.cog_slash(name='expel_poll', description='針對活著的玩家舉行放逐投票')
     @commands.has_permissions(administrator=True)
@@ -77,15 +67,19 @@ class Gameplay(commands.Cog):
         embed = discord.Embed(title='欲參選警長者請按下按鈕', description='時間只有15秒！請加快手速！')
         msg = await ctx.send(embed=embed, components=[
             create_actionrow(create_button(style=ButtonStyle.green, label='參選警長', custom_id='police_enroll'))])
+        self.original_candidates = []
+        self.candidates = []
 
         @self.slash.component_callback(use_callback_name=False, messages=msg)
         async def police_enroll(btn_ctx: ComponentContext):
             if self.allow_enroll:
                 if btn_ctx.author not in self.candidates:
+                    self.original_candidates.append(btn_ctx.author)
                     self.candidates.append(btn_ctx.author)
                     await btn_ctx.send('參選成功！', hidden=True)
                 else:
                     self.candidates.remove(btn_ctx.author)
+                    self.original_candidates.remove(btn_ctx.author)
                     await btn_ctx.send('退選成功！', hidden=True)
             else:
                 if btn_ctx.author in self.candidates:
@@ -120,10 +114,11 @@ class Gameplay(commands.Cog):
         bot = self.bot
 
         async def voter_check(int_ctx):
-            if any([i.name.startswith('玩家') for i in int_ctx.author.roles]) and int_ctx.author not in self.candidates:
+            if any([i.name.startswith('玩家') for i in
+                    int_ctx.author.roles]) and int_ctx.author not in self.original_candidates:
                 return True
             else:
-                await int_ctx.send('只有活人和非參選人才能投票！', hidden=True)
+                await int_ctx.send('只有活人和未曾參選者才能投票！', hidden=True)
                 return False
 
         async def callback(winner):
@@ -172,7 +167,6 @@ class Gameplay(commands.Cog):
                 for m in vc.members:
                     await m.move_to(court)
         await ctx.channel.send('天亮了', tts=True)
-
 
 
 def setup(bot):
