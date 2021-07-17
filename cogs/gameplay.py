@@ -31,8 +31,8 @@ class Gameplay(commands.Cog):
             def check(comp_ctx: ComponentContext):
                 return ctx.author.id == comp_ctx.author.id and comp_ctx.custom_id == cid
 
-            await self.bot.wait_for('component', check=check, timeout=interval)
-            await msg.reply('成功停止計時')
+            comp_ctx = await self.bot.wait_for('component', check=check, timeout=interval)
+            await comp_ctx.send('成功停止計時')
         except asyncio.TimeoutError:
             await msg.reply('時間到')
 
