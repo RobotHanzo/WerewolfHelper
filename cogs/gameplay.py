@@ -27,7 +27,7 @@ class Gameplay(commands.Cog):
                              components=[create_actionrow(create_button(ButtonStyle.red, label='結束計時'))])
         try:
             def check(comp_ctx: ComponentContext):
-                return ctx.author == comp_ctx.author & ctx.message.id == comp_ctx.message.id
+                return ctx.author.id == comp_ctx.author.id & ctx.message.id == comp_ctx.message.id
 
             await self.bot.wait_for('component', check=check, timeout=interval)
             await msg.reply('成功停止計時')
