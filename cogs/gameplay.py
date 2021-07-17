@@ -23,13 +23,13 @@ class Gameplay(commands.Cog):
     ], description='計時器')
     @commands.has_permissions(administrator=True)
     async def timer_cmd(self, ctx: SlashContext, interval: int):
+        cid = 'stop_timer_' + str(time.time())
         msg = await ctx.send(f'開始計時 {interval}秒\n結束時間：<t:{int(time.time() + interval)}:T>',
-                             components=[create_actionrow(create_button(ButtonStyle.red, label='結束計時'))])
+                             components=[create_actionrow(create_button(ButtonStyle.red, label='結束計時',
+                                                                        custom_id=cid))])
         try:
             def check(comp_ctx: ComponentContext):
-                print(ctx.author.id == comp_ctx.author.id)
-                print(ctx.message.id == comp_ctx.message.id)
-                return ctx.author.id == comp_ctx.author.id & ctx.message.id == comp_ctx.message.id
+                return ctx.author.id == comp_ctx.author.id & comp_ctx.custom_id == cid
 
             await self.bot.wait_for('component', check=check, timeout=interval)
             await msg.reply('成功停止計時')
