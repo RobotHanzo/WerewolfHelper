@@ -78,17 +78,7 @@ class Voting:
                 embed.add_field(name=label, value='\u200b')
         expire_after = poll['expire'] - int(time.time())
         embed.set_footer(text=f'{expire_after} 秒後計票')
-        rows = []
-        temp = []
-        for button in buttons:
-            if len(temp) == 5:
-                rows.append(manage_components.create_actionrow(*temp))
-                temp = [temp]
-            else:
-                temp.append(button)
-        if len(temp) != 0:
-            # put in the rest
-            rows.append(manage_components.create_actionrow(*temp))
+        rows = manage_components.spread_to_rows(*buttons)
         await msg.edit(embed=embed, components=rows)
 
     async def generate_new_poll(self, ctx: SlashContext, topic: str, options: typing.List[typing.Tuple[str, str]],
