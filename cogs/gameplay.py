@@ -175,8 +175,8 @@ class Gameplay(commands.Cog):
     @commands.Cog.listener()
     async def on_component(self, ctx: ComponentContext):
         if ctx.custom_id.startswith('timer_'):
+            await ctx.send('計時器啟動成功', hidden=True)
             await self.timer_cmd.invoke(ctx, interval=int(ctx.custom_id.replace('timer_', '')))
-            await ctx.send('計時器啟動成功')
 
     @cog_ext.cog_slash(name='menu', description='啟動輕鬆存取選單')
     @commands.has_permissions(administrator=True)
