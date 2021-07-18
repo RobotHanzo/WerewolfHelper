@@ -101,17 +101,7 @@ class Voting:
             else:
                 embed.add_field(name=label, value='\u200b')
         embed.set_footer(text=f'{expire_after} 秒後計票')
-        rows = []
-        temp = []
-        for button in buttons:
-            if len(temp) == 5:
-                rows.append(manage_components.create_actionrow(*temp))
-                temp = [button]
-            else:
-                temp.append(button)
-        if len(temp) != 0:
-            # put in the rest
-            rows.append(manage_components.create_actionrow(*temp))
+        rows = manage_components.spread_to_rows(*buttons)
         msg = await ctx.send(embed=embed, components=rows)
         self.polls[msg.id] = {'expire': int(time.time()) + expire_after,
                               'show_vote_count_before_ending': show_vote_count_before_ending,
