@@ -175,7 +175,8 @@ class Gameplay(commands.Cog):
     @commands.Cog.listener()
     async def on_component(self, ctx: ComponentContext):
         if ctx.custom_id.startswith('timer_'):
-            await self.timer_cmd.invoke(interval=int(ctx.custom_id.replace('timer_', '')))
+            await self.timer_cmd.invoke(ctx, interval=int(ctx.custom_id.replace('timer_', '')))
+            await ctx.send('計時器啟動成功')
 
     @cog_ext.cog_slash(name='menu', description='啟動輕鬆存取選單')
     @commands.has_permissions(administrator=True)
@@ -189,14 +190,6 @@ class Gameplay(commands.Cog):
                                                                         custom_id='timer_150'))
                                          ])
         await msg.pin()
-        try:
-            def check(comp_ctx: ComponentContext):
-                return ctx.author.id == comp_ctx.author.id and comp_ctx.custom_id.startswith('timer_')
-
-            comp_ctx = await self.bot.wait_for('component', check=check, timeout=6942069420)
-            await comp_ctx.send('成功停止計時')
-        except asyncio.TimeoutError:
-            return
 
 
 def setup(bot):
