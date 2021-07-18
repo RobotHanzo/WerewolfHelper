@@ -76,17 +76,17 @@ class Gameplay(commands.Cog):
         @self.slash.component_callback(use_callback_name=False, messages=msg)
         async def police_enroll(btn_ctx: ComponentContext):
             if self.allow_enroll:
-                if btn_ctx.author not in self.candidates:
-                    self.original_candidates.append(btn_ctx.author)
-                    self.candidates.append(btn_ctx.author)
+                if btn_ctx.author.id not in self.candidates:
+                    self.original_candidates.append(btn_ctx.author.id)
+                    self.candidates.append(btn_ctx.author.id)
                     await btn_ctx.send('參選成功！', hidden=True)
                 else:
-                    self.candidates.remove(btn_ctx.author)
-                    self.original_candidates.remove(btn_ctx.author)
+                    self.candidates.remove(btn_ctx.author.id)
+                    self.original_candidates.remove(btn_ctx.author.id)
                     await btn_ctx.send('退選成功！', hidden=True)
             else:
-                if btn_ctx.author in self.candidates:
-                    self.candidates.remove(btn_ctx.author)
+                if btn_ctx.author.id in self.candidates:
+                    self.candidates.remove(btn_ctx.author.id)
                     await btn_ctx.send('退選成功！', hidden=True)
                     await btn_ctx.send(btn_ctx.author.mention + '已退選！')
 
@@ -97,7 +97,7 @@ class Gameplay(commands.Cog):
         if len(self.candidates) == 0:
             await ctx.send('無人參選警長！')
         else:
-            res = sorted(x.display_name for x in self.candidates)
+            res = sorted(ctx.guild.get_member(x).display_name for x in self.candidates)
             await ctx.send(f'參選的有: {"，".join(res)}')
             order = random.choice(['上', '下'])
             speaker = random.choice(res)
@@ -110,7 +110,8 @@ class Gameplay(commands.Cog):
             await ctx.send('無人參選警長或尚未啟動參選警長選單！')
             return
         candidates = []
-        sorted_member = sorted(self.candidates, key=lambda x: x.display_name)
+        sorted_member = [ctx.guild.get_member(x) for x in self.candidates]
+        sorted_member = sorted(sorted_member, key=lambda x: x.display_name)
         for member in sorted_member:
             member: discord.Member
             candidates.append((f'{member.display_name} ({str(member)})', str(member.id)))
@@ -118,7 +119,7 @@ class Gameplay(commands.Cog):
 
         async def voter_check(int_ctx):
             if any([i.name.startswith('玩家') for i in
-                    int_ctx.author.roles]) and int_ctx.author not in self.original_candidates:
+                    int_ctx.author.roles]) and int_ctx.author.id not in self.original_candidates:
                 return True
             else:
                 await int_ctx.send('只有活人和未曾參選者才能投票！', hidden=True)
