@@ -172,6 +172,32 @@ class Gameplay(commands.Cog):
                     await m.move_to(court)
         await ctx.channel.send('天亮了', tts=True)
 
+    @commands.Cog.listener()
+    async def on_component(self, ctx: ComponentContext):
+        if ctx.custom_id.startswith('timer_'):
+            await self.timer_cmd.invoke(interval=int(ctx.custom_id.replace('timer_', '')))
+
+    @cog_ext.cog_slash(name='menu', description='啟動輕鬆存取選單')
+    @commands.has_permissions(administrator=True)
+    async def timer_cmd(self, ctx: SlashContext):
+        msg = await ctx.send(f'輕鬆存取選單',
+                             components=[create_actionrow(create_button(ButtonStyle.blurple, label='計時20秒',
+                                                                        custom_id='timer_20')),
+                                         create_actionrow(create_button(ButtonStyle.blurple, label='計時120秒',
+                                                                        custom_id='timer_120')),
+                                         create_actionrow(create_button(ButtonStyle.blurple, label='計時150秒',
+                                                                        custom_id='timer_150'))
+                                         ])
+        await msg.pin()
+        try:
+            def check(comp_ctx: ComponentContext):
+                return ctx.author.id == comp_ctx.author.id and comp_ctx.custom_id.startswith('timer_')
+
+            comp_ctx = await self.bot.wait_for('component', check=check, timeout=6942069420)
+            await comp_ctx.send('成功停止計時')
+        except asyncio.TimeoutError:
+            return
+
 
 def setup(bot):
     bot.add_cog(Gameplay(bot))
