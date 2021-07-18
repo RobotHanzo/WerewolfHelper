@@ -179,7 +179,7 @@ class Gameplay(commands.Cog):
 
     @cog_ext.cog_slash(name='menu', description='啟動輕鬆存取選單')
     @commands.has_permissions(administrator=True)
-    async def timer_cmd(self, ctx: SlashContext):
+    async def menu(self, ctx: SlashContext):
         msg = await ctx.send(f'輕鬆存取選單',
                              components=[create_actionrow(create_button(ButtonStyle.blurple, label='計時20秒',
                                                                         custom_id='timer_20')),
