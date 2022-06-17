@@ -408,7 +408,10 @@ public class Speech {
                 lastSpeaker = player.getUserId();
                 assert lastSpeaker != null;
                 int time = player.isPolice() ? 150 : 120;
-                Objects.requireNonNull(guild.getMemberById(lastSpeaker)).mute(false).queue();
+                try {
+                    Objects.requireNonNull(guild.getMemberById(lastSpeaker)).mute(false).queue();
+                } catch (IllegalStateException ignored) {
+                }
                 Message message = Objects.requireNonNull(guild.getTextChannelById(channelId))
                         .sendMessage("<@!" + player.getUserId() + "> 你有" + time + "秒可以發言\n")
                         .setActionRow(
