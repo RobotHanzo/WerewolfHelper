@@ -1,0 +1,41 @@
+plugins {
+    id 'java'
+    id "com.github.johnrengelman.shadow" version "7.1.2"
+}
+
+group 'dev.robothanzo.werewolf'
+version '1.0.0'
+compileJava.options.encoding = 'UTF-8'
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'https://jitpack.io'
+    }
+    maven {
+        url 'https://m2.dv8tion.net/releases'
+    }
+}
+
+dependencies {
+//    implementation('net.dv8tion:JDA:5.0.0-alpha.5')
+    implementation('net.dv8tion:JDA:5.0.0-alpha.12')
+    implementation('club.minnced:discord-webhooks:0.7.4')
+    implementation('org.mongodb:mongo-java-driver:3.12.10')
+    implementation('ch.qos.logback:logback-classic:1.2.10')
+    implementation('io.github.cdimascio:dotenv-java:2.2.3')
+    implementation('com.github.RobotHanzo:JDAInteractions:v0.0.10')
+    implementation 'com.sedmelluq:lavaplayer:1.3.77'
+    compileOnly 'org.projectlombok:lombok:1.18.22'
+    annotationProcessor 'org.projectlombok:lombok:1.18.22'
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'dev.robothanzo.werewolf.WerewolfHelper'
+        )
+    }
+}
+
+tasks.build.dependsOn('shadowJar')

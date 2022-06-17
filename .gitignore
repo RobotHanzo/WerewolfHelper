@@ -1,0 +1,4 @@
+/sounds/
+.gradle/
+build/
+/.env
