@@ -92,20 +92,18 @@ public class Player {
                     return true;
                 }
                 if (player.getValue().getRoles().size() == 1) {
-                    for (Role role : user.getRoles()) {
-                        guild.removeRoleFromMember(user, role).queue(v ->
-                                guild.addRoleToMember(user, spectatorRole).queue());
-                    }
+                    Runnable die = () -> transferPolice(session, guild, player.getValue(), () -> {
+                        for (Role role : user.getRoles()) {
+                            guild.removeRoleFromMember(user, role).queue(v ->
+                                    guild.addRoleToMember(user, spectatorRole).queue());
+                        }
+                        session.getPlayers().remove(player.getKey());
+                        Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
+                    });
                     if (lastWords) {
-                        Speech.lastWordsSpeech(guild, Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())), player.getValue(), () -> transferPolice(session, guild, player.getValue(), () -> {
-                            session.getPlayers().remove(player.getKey());
-                            Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
-                        }));
+                        Speech.lastWordsSpeech(guild, Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())), player.getValue(), die);
                     } else {
-                        transferPolice(session, guild, player.getValue(), () -> {
-                            session.getPlayers().remove(player.getKey());
-                            Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
-                        });
+                        die.run();
                     }
                 }
                 return true;
