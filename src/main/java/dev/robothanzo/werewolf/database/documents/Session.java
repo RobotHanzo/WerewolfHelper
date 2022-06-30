@@ -46,6 +46,8 @@ public class Session {
         @Builder.Default
         private boolean jinBaoBao = false;
         @Builder.Default
+        private boolean duplicated = false;
+        @Builder.Default
         private boolean police = false;
         @Builder.Default
         private boolean rolePositionLocked = false;

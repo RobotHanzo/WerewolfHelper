@@ -210,9 +210,11 @@ public class Speech {
                                 (gameSession.getPlayers().size() / 2 - session.getInterruptVotes().size()) + "票").queue();
                         session.getInterruptVotes().add(event.getUser().getIdLong());
                         if (session.getInterruptVotes().size() > (gameSession.getPlayers().size() / 2)) {
-                            event.getMessage().reply("人民的法槌已強制該玩家下台，有投票的有: " +
-                                    session.getInterruptVotes().stream().map(Object::toString)
-                                            .collect(Collectors.joining("、", "<@!", ">"))).queue();
+                            List<String> voterMentions = new LinkedList<>();
+                            for (long voter : session.getInterruptVotes()) {
+                                voterMentions.add("<@!" + voter + ">");
+                            }
+                            event.getMessage().reply("人民的法槌已強制該玩家下台，有投票的有: " + String.join("、", voterMentions)).queue();
                             session.next();
                         }
                     }

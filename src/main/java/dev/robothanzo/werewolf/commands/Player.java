@@ -255,8 +255,8 @@ public class Player {
             List<String> rs = new LinkedList<>();
             // at least one jin bao bao in a double identities game
             boolean isJinBaoBao = false;
-            rs.add(roles.get(0));
-            roles.remove(0);
+            boolean isDuplicated = false;
+            rs.add(roles.remove(0));
             if (rs.get(0).equals("平民") && !gaveJinBaoBao && session.isDoubleIdentities()) {
                 rs = List.of("平民", "平民");
                 roles.remove("平民");
@@ -264,6 +264,7 @@ public class Player {
                 isJinBaoBao = true;
             } else if (session.isDoubleIdentities()) {
                 if (roles.get(0).equals("複製人")) {
+                    isDuplicated = true;
                     roles.set(0, rs.get(0));
                 }
                 rs.add(roles.get(0));
@@ -275,11 +276,13 @@ public class Player {
                 }
                 roles.remove(0);
             }
+            player.setDuplicated(isDuplicated);
             player.setJinBaoBao(isJinBaoBao && session.isDoubleIdentities());
             player.setRoles(rs);
             MessageAction action = Objects.requireNonNull(event.getGuild().getTextChannelById(player.getChannelId())).sendMessageEmbeds(new EmbedBuilder()
                     .setTitle("你抽到的身分是 (若為狼人或金寶寶請使用自己的頻道來和隊友討論及確認身分)")
-                    .setDescription(String.join("、", rs) + (player.isJinBaoBao() ? " (金寶寶)" : ""))
+                    .setDescription(String.join("、", rs) + (player.isJinBaoBao() ? " (金寶寶)" : "") +
+                            (player.isDuplicated() ? " (複製人)" : ""))
                     .setColor(MsgUtils.getRandomColor()).build());
             if (session.isDoubleIdentities()) {
                 action.setActionRow(Button.primary("changeRoleOrder", "更換身分順序 (請在收到身分後兩分鐘內使用，逾時不候)"));
