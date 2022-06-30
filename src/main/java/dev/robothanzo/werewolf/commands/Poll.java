@@ -26,6 +26,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
@@ -34,7 +35,7 @@ import static com.mongodb.client.model.Updates.set;
 public class Poll {
     public static Map<Long, Map<Integer, Candidate>> expelCandidates = new HashMap<>(); // key is guild id // second key is candidate id
 
-    public static void handlePK(Session session, TextChannel channel, Message message, List<Candidate> winners) {
+    public static void handleExpelPK(Session session, TextChannel channel, Message message, List<Candidate> winners) {
         message.reply("平票，請PK").queue();
         Map<Integer, Candidate> newCandidates = new HashMap<>();
         for (Candidate winner : winners) {
@@ -82,7 +83,7 @@ public class Poll {
                     EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("驅逐投票").setColor(MsgUtils.getRandomColor())
                             .setDescription("發生平票");
                     sendVoteResult(session, channel, message, resultEmbed, expelCandidates);
-                    handlePK(session, channel, message, winners);
+                    handleExpelPK(session, channel, message, winners);
                 } else {
                     message.reply("平票第二次，不驅逐").queue();
                     expelCandidates.remove(channel.getGuild().getIdLong());
@@ -132,6 +133,19 @@ public class Poll {
     public static class Police {
         public static Map<Long, Boolean> allowEnroll = new HashMap<>(); // key is guild id
         public static Map<Long, Map<Integer, Candidate>> candidates = new HashMap<>(); // key is guild id // second key is candidate id
+        public static ReentrantReadWriteLock enrollLock = new ReentrantReadWriteLock();
+
+        public static void handlePolicePK(Session session, TextChannel channel, Message message, List<Candidate> winners) {
+            message.reply("平票，請PK").queue();
+            Map<Integer, Candidate> newCandidates = new HashMap<>();
+            for (Candidate winner : winners) {
+                winner.electors.clear();
+                newCandidates.put(winner.getPlayer().getId(), winner);
+            }
+            candidates.put(channel.getGuild().getIdLong(), newCandidates);
+            Speech.pollSpeech(channel.getGuild(), message, newCandidates.values().stream().map(Candidate::getPlayer).toList(),
+                    () -> startPolicePoll(session, channel, false));
+        }
 
         public static void startPolicePoll(Session session, TextChannel channel, boolean allowPK) {
             Audio.play(Audio.Resource.POLICE_POLL, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId()));
@@ -171,7 +185,7 @@ public class Poll {
                         EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("警長投票").setColor(MsgUtils.getRandomColor())
                                 .setDescription("發生平票");
                         sendVoteResult(session, channel, message, resultEmbed, candidates);
-                        handlePK(session, channel, message, winners);
+                        handlePolicePK(session, channel, message, winners);
                     } else {
                         message.reply("平票第二次，警徽撕毀").queue();
                         candidates.remove(channel.getGuild().getIdLong());
@@ -183,12 +197,21 @@ public class Poll {
         @dev.robothanzo.jda.interactions.annotations.Button()
         public void enrollPolice(ButtonInteractionEvent event) {
             event.deferReply(true).queue();
+            enrollLock.readLock().lock();
             Session session = CmdUtils.getSession(Objects.requireNonNull(event.getGuild()));
-            if (session == null) return;
+            if (session == null) {
+                enrollLock.readLock().unlock();
+                return;
+            };
             for (Map.Entry<Integer, Candidate> candidate : new LinkedList<>(candidates.get(event.getGuild().getIdLong()).entrySet())) {
                 if (Objects.equals(event.getUser().getIdLong(), candidate.getValue().getPlayer().getUserId())) {
-                    candidates.get(event.getGuild().getIdLong()).get(candidate.getKey()).setQuit(true);
+                    if (allowEnroll.get(event.getGuild().getIdLong())) { // The enrollment process hasn't ended yet, so we remove them completely
+                        candidates.get(event.getGuild().getIdLong()).remove(candidate.getKey());
+                    } else {
+                        candidates.get(event.getGuild().getIdLong()).get(candidate.getKey()).setQuit(true);
+                    }
                     event.getHook().editOriginal(":white_check_mark: 已取消參選").queue();
+                    enrollLock.readLock().unlock();
                     return;
                 }
             }
@@ -199,9 +222,11 @@ public class Poll {
                 if (Objects.equals(event.getUser().getIdLong(), player.getUserId())) {
                     candidates.get(event.getGuild().getIdLong()).put(player.getId(), Candidate.builder().player(player).build());
                     event.getHook().editOriginal(":white_check_mark: 已參選").queue();
+                    enrollLock.readLock().unlock();
                     return;
                 }
             }
+            enrollLock.readLock().unlock();
             event.getHook().editOriginal(":x: 你不是玩家").queue();
         }
 
@@ -222,9 +247,11 @@ public class Poll {
             CmdUtils.schedule(() -> Audio.play(Audio.Resource.ENROLL_10S_REMAINING, event.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId())), 20000);
             CmdUtils.schedule(() -> {
                 allowEnroll.put(event.getGuild().getIdLong(), false);
+                enrollLock.writeLock().lock();
                 if (candidates.get(event.getGuild().getIdLong()).size() == 0) {
                     candidates.remove(event.getGuild().getIdLong());
                     message.reply("無人參選，警徽撕毀").queue();
+                    enrollLock.writeLock().unlock();
                     return;
                 }
                 List<String> candidateMentions = new LinkedList<>();
@@ -236,8 +263,10 @@ public class Poll {
                     Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()),
                             set("players." + candidates.get(event.getGuild().getIdLong()).get(0).getPlayer().getId() + ".police", true));
                     candidates.remove(event.getGuild().getIdLong());
+                    enrollLock.writeLock().unlock();
                     return;
                 }
+                enrollLock.writeLock().unlock();
                 message.replyEmbeds(new EmbedBuilder().setTitle("參選警長結束")
                         .setDescription("參選的有: " + String.join("、", candidateMentions) + "\n備註:你可隨時再按一次按鈕以取消參選")
                         .setColor(MsgUtils.getRandomColor()).build()).complete();

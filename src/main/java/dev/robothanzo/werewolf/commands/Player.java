@@ -313,7 +313,7 @@ public class Player {
             assert player.getRoles() != null;
             embedBuilder.addField("玩家" + p,
                     String.join("、", player.getRoles()) + (player.isPolice() ? " (警長)" : "") +
-                            (player.isJinBaoBao() ? " (金寶寶)" : ""), true);
+                            (player.isJinBaoBao() ? " (金寶寶)" : "" + (player.isDuplicated() ? " (複製人)" : "")), true);
         }
         event.getHook().editOriginalEmbeds(embedBuilder.build()).queue();
     }
