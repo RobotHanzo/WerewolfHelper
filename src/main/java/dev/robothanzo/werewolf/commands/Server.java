@@ -256,6 +256,18 @@ public class Server {
             event.getHook().editOriginal(":white_check_mark:").queue();
         }
 
+        @Subcommand(description = "設定是否在發言後將玩家靜音")
+        public void mute_after_speech(SlashCommandInteractionEvent event, @Option(value = "value") Boolean value) {
+            event.deferReply().queue();
+            if (!CmdUtils.isAdmin(event)) return;
+            Session session = CmdUtils.getSession(event);
+            if (session == null) return;
+            Session.fetchCollection().updateOne(
+                    eq("guildId", Objects.requireNonNull(event.getGuild()).getIdLong()),
+                    set("muteAfterSpeech", value));
+            event.getHook().editOriginal(":white_check_mark:").queue();
+        }
+
         @Subcommand(description = "設定總玩家數量")
         public void players(SlashCommandInteractionEvent event, @Option(value = "value") Long value) {
             event.deferReply().queue();

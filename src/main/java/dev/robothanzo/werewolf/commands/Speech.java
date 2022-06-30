@@ -206,16 +206,21 @@ public class Speech {
                     if (event.getMember().getRoles().contains(event.getGuild().getRoleById(gameSession.getSpectatorRoleId()))) {
                         event.getHook().editOriginal(":x: 旁觀者不得投票").queue();
                     } else {
-                        event.getHook().editOriginal(":white_check_mark: 投票成功，距離該玩家下台還缺" +
-                                (gameSession.getPlayers().size() / 2 - session.getInterruptVotes().size()) + "票").queue();
-                        session.getInterruptVotes().add(event.getUser().getIdLong());
-                        if (session.getInterruptVotes().size() > (gameSession.getPlayers().size() / 2)) {
-                            List<String> voterMentions = new LinkedList<>();
-                            for (long voter : session.getInterruptVotes()) {
-                                voterMentions.add("<@!" + voter + ">");
+                        if (session.getInterruptVotes().contains(event.getUser().getIdLong())) {
+                            event.getHook().editOriginal(":white_check_mark: 成功取消下台投票，距離該玩家下台還缺" +
+                                    (gameSession.getPlayers().size() / 2 - session.getInterruptVotes().size()) + "票").queue();
+                        } else {
+                            event.getHook().editOriginal(":white_check_mark: 下台投票成功，距離該玩家下台還缺" +
+                                    (gameSession.getPlayers().size() / 2 - session.getInterruptVotes().size()) + "票").queue();
+                            session.getInterruptVotes().add(event.getUser().getIdLong());
+                            if (session.getInterruptVotes().size() > (gameSession.getPlayers().size() / 2)) {
+                                List<String> voterMentions = new LinkedList<>();
+                                for (long voter : session.getInterruptVotes()) {
+                                    voterMentions.add("<@!" + voter + ">");
+                                }
+                                event.getMessage().reply("人民的法槌已強制該玩家下台，有投票的有: " + String.join("、", voterMentions)).queue();
+                                session.next();
                             }
-                            event.getMessage().reply("人民的法槌已強制該玩家下台，有投票的有: " + String.join("、", voterMentions)).queue();
-                            session.next();
                         }
                     }
                 }

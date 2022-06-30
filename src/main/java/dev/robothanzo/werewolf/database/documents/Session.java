@@ -27,6 +27,8 @@ public class Session {
     private long spectatorRoleId;
     private boolean doubleIdentities;
     @Builder.Default
+    private boolean muteAfterSpeech = true;
+    @Builder.Default
     private List<String> roles = new LinkedList<>();
     @Builder.Default
     private Map<String, Player> players = new HashMap<>();
