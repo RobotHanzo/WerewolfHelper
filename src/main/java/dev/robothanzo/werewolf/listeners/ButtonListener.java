@@ -53,6 +53,11 @@ public class ButtonListener extends ListenerAdapter {
             }
             if (event.getButton().getId().startsWith("voteExpel")) {
                 if (Poll.expelCandidates.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
+                    Poll.Candidate votingCandidate = Poll.expelCandidates.get(Objects.requireNonNull(event.getGuild()).getIdLong()).get(player.getId());
+                    if (votingCandidate!=null&&votingCandidate.isExpelPK()) {
+                        event.getHook().editOriginal(":x: 你正在和別人進行放逐辯論，不得投票").queue();
+                        return;
+                    }
                     voteLock.lock();
                     Map<Integer, Poll.Candidate> candidates = Poll.expelCandidates.get(Objects.requireNonNull(event.getGuild()).getIdLong());
                     Poll.Candidate electedCandidate = candidates.get(Integer.parseInt(event.getButton().getId().replaceAll("voteExpel", "")));

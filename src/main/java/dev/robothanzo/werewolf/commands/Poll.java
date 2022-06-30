@@ -40,6 +40,7 @@ public class Poll {
         Map<Integer, Candidate> newCandidates = new HashMap<>();
         for (Candidate winner : winners) {
             winner.electors.clear();
+            winner.setExpelPK(true);
             newCandidates.put(winner.getPlayer().getId(), winner);
         }
         expelCandidates.put(channel.getGuild().getIdLong(), newCandidates);
@@ -289,6 +290,8 @@ public class Poll {
     @Builder
     public static class Candidate {
         private Session.Player player;
+        @Builder.Default
+        private boolean expelPK = false;
         @Builder.Default
         private List<Long> electors = new LinkedList<>();
         @Builder.Default
