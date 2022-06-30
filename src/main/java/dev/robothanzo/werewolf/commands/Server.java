@@ -195,11 +195,18 @@ public class Server {
             if (session == null) return;
             EmbedBuilder embedBuilder = new EmbedBuilder().setTitle("角色清單").setColor(MsgUtils.getRandomColor());
             Map<String, Integer> roles = new HashMap<>();
+            int rolesCount = 0;
             for (String role : session.getRoles()) {
                 roles.put(role, roles.containsKey(role) ? roles.get(role) + 1 : 1);
             }
             for (Map.Entry<String, Integer> entry : roles.entrySet()) {
                 embedBuilder.addField(entry.getKey(), "x" + entry.getValue(), true);
+                rolesCount += entry.getValue();
+            }
+            if (rolesCount == session.getPlayers().size() * (session.isDoubleIdentities() ? 2 : 1)) {
+                embedBuilder.setDescription(":white_check_mark: 角色數量正確");
+            } else {
+                embedBuilder.setDescription(":x: 角色數量錯誤，應有 *" + session.getPlayers().size() * (session.isDoubleIdentities() ? 2 : 1) + "* 個角色，現有 *" + rolesCount + "* 個");
             }
             event.getHook().editOriginalEmbeds(embedBuilder.build()).queue();
         }
