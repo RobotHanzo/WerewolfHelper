@@ -73,7 +73,7 @@ public class Poll {
 
                 EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("驅逐投票").setColor(MsgUtils.getRandomColor())
                         .setDescription("遭驅逐玩家: <@!" + winners.get(0).getPlayer().getUserId() + ">");
-                sendVoteResult(session, channel, message, resultEmbed);
+                sendVoteResult(session, channel, message, resultEmbed, expelCandidates);
                 expelCandidates.remove(channel.getGuild().getIdLong());
                 Player.playerDied(session, channel.getGuild().getMemberById(Objects.requireNonNull(winners.get(0).getPlayer().getUserId())), true);
             }
@@ -81,7 +81,7 @@ public class Poll {
                 if (allowPK) {
                     EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("驅逐投票").setColor(MsgUtils.getRandomColor())
                             .setDescription("發生平票");
-                    sendVoteResult(session, channel, message, resultEmbed);
+                    sendVoteResult(session, channel, message, resultEmbed, expelCandidates);
                     handlePK(session, channel, message, winners);
                 } else {
                     message.reply("平票第二次，不驅逐").queue();
@@ -91,9 +91,9 @@ public class Poll {
         }, 30000);
     }
 
-    public static void sendVoteResult(Session session, TextChannel channel, Message message, EmbedBuilder resultEmbed) {
+    public static void sendVoteResult(Session session, TextChannel channel, Message message, EmbedBuilder resultEmbed, Map<Long, Map<Integer, Candidate>> candidates) {
         List<Long> voted = new LinkedList<>();
-        for (Candidate candidate : expelCandidates.get(channel.getGuild().getIdLong()).values()) {
+        for (Candidate candidate : candidates.get(channel.getGuild().getIdLong()).values()) {
             if (candidate.isQuit()) continue;
             assert candidate.getPlayer().getUserId() != null;
             User user = WerewolfHelper.jda.getUserById(candidate.getPlayer().getUserId());
@@ -104,7 +104,7 @@ public class Poll {
         }
         List<String> discarded = new LinkedList<>();
         for (Session.Player player : session.getPlayers().values()) {
-            if (expelCandidates.get(channel.getGuild().getIdLong()).get(player.getId()) == null &&
+            if (candidates.get(channel.getGuild().getIdLong()).get(player.getId()) == null &&
                     !voted.contains(player.getUserId())) {
                 discarded.add("<@!" + player.getUserId() + ">");
             }
@@ -161,7 +161,7 @@ public class Poll {
 
                     EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("警長投票").setColor(MsgUtils.getRandomColor())
                             .setDescription("獲勝玩家: <@!" + winners.get(0).getPlayer().getUserId() + ">");
-                    sendVoteResult(session, channel, message, resultEmbed);
+                    sendVoteResult(session, channel, message, resultEmbed, candidates);
                     candidates.remove(channel.getGuild().getIdLong());
                     Session.fetchCollection().updateOne(eq("guildId", channel.getGuild().getIdLong()),
                             set("players." + winners.get(0).getPlayer().getId() + ".police", true));
@@ -170,7 +170,7 @@ public class Poll {
                     if (allowPK) {
                         EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("警長投票").setColor(MsgUtils.getRandomColor())
                                 .setDescription("發生平票");
-                        sendVoteResult(session, channel, message, resultEmbed);
+                        sendVoteResult(session, channel, message, resultEmbed, candidates);
                         handlePK(session, channel, message, winners);
                     } else {
                         message.reply("平票第二次，警徽撕毀").queue();
