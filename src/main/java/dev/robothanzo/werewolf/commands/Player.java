@@ -89,6 +89,7 @@ public class Player {
                     if (lastWords) {
                         Speech.lastWordsSpeech(guild, Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())), player.getValue(), null);
                     }
+                    return true;
                 }
                 if (player.getValue().getRoles().size() == 1) {
                     for (Role role : user.getRoles()) {
