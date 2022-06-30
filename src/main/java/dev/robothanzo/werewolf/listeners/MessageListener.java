@@ -47,7 +47,8 @@ public class MessageListener extends ListenerAdapter {
                         || event.getChannel().getIdLong() == session.getJudgeTextChannelId()) {
                     WebhookMessage message = new WebhookMessageBuilder()
                             .setContent(event.getMessage().getContentRaw())
-                            .setUsername("玩家" + player.getId() + " (" + event.getAuthor().getName() + "#" + event.getAuthor().getDiscriminator() + ")")
+                            .setUsername((((event.getChannel().getIdLong() == session.getJudgeTextChannelId()) ? "法官頻道" : "玩家" + player.getId())) +
+                                    " (" + event.getAuthor().getName() + "#" + event.getAuthor().getDiscriminator() + ")")
                             .setAvatarUrl(event.getAuthor().getAvatarUrl())
                             .build();
                     for (Session.Player p : session.getPlayers().values()) {
