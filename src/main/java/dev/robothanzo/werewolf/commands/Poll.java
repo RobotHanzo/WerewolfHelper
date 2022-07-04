@@ -65,7 +65,7 @@ public class Poll {
                 .setActionRows(MsgUtils.spreadButtonsAcrossActionRows(buttons)).complete();
         CmdUtils.schedule(() -> Audio.play(Audio.Resource.POLL_10S_REMAINING, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId())), 20000);
         CmdUtils.schedule(() -> {
-            List<Candidate> winners = Candidate.getWinner(expelCandidates.get(channel.getGuild().getIdLong()).values(), null);
+            List<Candidate> winners = Candidate.getWinner(expelCandidates.get(channel.getGuild().getIdLong()).values(), session.getPolice());
             if (winners.size() == 0) {
                 message.reply("沒有人投票，不驅逐").queue();
                 expelCandidates.remove(channel.getGuild().getIdLong());
@@ -203,7 +203,7 @@ public class Poll {
             if (session == null) {
                 enrollLock.readLock().unlock();
                 return;
-            };
+            }
             for (Map.Entry<Integer, Candidate> candidate : new LinkedList<>(candidates.get(event.getGuild().getIdLong()).entrySet())) {
                 if (Objects.equals(event.getUser().getIdLong(), candidate.getValue().getPlayer().getUserId())) {
                     if (allowEnroll.get(event.getGuild().getIdLong())) { // The enrollment process hasn't ended yet, so we remove them completely
@@ -301,11 +301,11 @@ public class Poll {
             return Comparator.comparingInt(o -> o.getPlayer().getId());
         }
 
-        public static List<Candidate> getWinner(Collection<Candidate> candidates, @Nullable Long police) {
+        public static List<Candidate> getWinner(Collection<Candidate> candidates, @Nullable Session.Player police) {
             List<Candidate> winners = new LinkedList<>();
-            int winningVotes = 0;
+            float winningVotes = 0;
             for (Candidate candidate : candidates) {
-                int votes = candidate.getVotes(police);
+                float votes = candidate.getVotes(police);
                 if (votes <= 0) continue;
                 if (votes > winningVotes) {
                     winningVotes = votes;
@@ -326,8 +326,10 @@ public class Poll {
             return result;
         }
 
-        public int getVotes(@Nullable Long police) {
-            return (electors.size() + (electors.contains(police) ? 1 : 0)) * (quit ? 0 : 1);
+        public float getVotes(@Nullable Session.Player police) {
+            boolean hasPolice = police != null;
+            if (hasPolice) hasPolice = electors.contains(police.getUserId());
+            return (float) ((electors.size() + (hasPolice ? 0.5 : 0)) * (quit ? 0 : 1));
         }
     }
 }

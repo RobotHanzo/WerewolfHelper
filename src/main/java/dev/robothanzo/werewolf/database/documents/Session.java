@@ -37,6 +37,15 @@ public class Session {
         return Database.database.getCollection("sessions", Session.class);
     }
 
+    @Nullable
+    public Player getPolice() {
+        for (var player : players.values()) {
+            if (player.isPolice())
+                return player;
+        }
+        return null;
+    }
+
     @Data
     @Builder
     @NoArgsConstructor

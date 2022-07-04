@@ -183,13 +183,13 @@ public class Speech {
         if (event.getGuild() != null && speechSessions.containsKey(event.getGuild().getIdLong())) {
             SpeechSession session = speechSessions.get(event.getGuild().getIdLong());
             if (session.getLastSpeaker() != null && event.getUser().getIdLong() != session.getLastSpeaker()) {
-                event.getHook().editOriginal(":x: 你不是發言者").queue();
+                event.getHook().setEphemeral(true).editOriginal(":x: 你不是發言者").queue();
             } else {
                 event.getHook().editOriginal(":white_check_mark: 發言已跳過").queue();
                 session.next();
             }
         } else {
-            event.getHook().editOriginal(":x: 法官尚未開始發言流程").queue();
+            event.getHook().setEphemeral(true).editOriginal(":x: 法官尚未開始發言流程").queue();
         }
     }
 
@@ -270,7 +270,7 @@ public class Speech {
 
     @Subcommand(description = "開始自動發言流程")
     public void auto(SlashCommandInteractionEvent event) {
-        event.deferReply().queue();
+        event.deferReply(false).queue();
         if (!CmdUtils.isAdmin(event)) return;
         Session session = CmdUtils.getSession(event);
         if (session == null) return;
