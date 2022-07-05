@@ -35,6 +35,15 @@ public class MessageListener extends ListenerAdapter {
         return webhookCache.get(channel.getIdLong());
     }
 
+    private boolean isCharacterAlive(Session session, String character) {
+        for (Session.Player player : session.getPlayers().values()) {
+            if (player.getRoles() != null && player.getRoles().contains(character)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
         if (event.getAuthor().isBot()) return;
@@ -42,8 +51,12 @@ public class MessageListener extends ListenerAdapter {
         if (session == null) return;
         for (Session.Player player : session.getPlayers().values()) {
             if (player.getRoles() != null && player.getRoles().size() > 0) {
-                if ((player.getRoles().get(0).contains("狼") || player.getRoles().contains("狼兄"))
-                        && player.getChannelId() == event.getChannel().getIdLong()
+                boolean shouldSend =
+                        player.getRoles().get(0).contains("狼人") ||
+                                player.getRoles().contains("狼兄") ||
+                                player.getRoles().get(0).contains("狼王") ||
+                                (player.getRoles().contains("狼弟") && !isCharacterAlive(session, "狼兄"));
+                if (shouldSend && player.getChannelId() == event.getChannel().getIdLong()
                         || event.getChannel().getIdLong() == session.getJudgeTextChannelId()) {
                     WebhookMessage message = new WebhookMessageBuilder()
                             .setContent(event.getMessage().getContentRaw())
@@ -53,7 +66,7 @@ public class MessageListener extends ListenerAdapter {
                             .build();
                     for (Session.Player p : session.getPlayers().values()) {
                         assert p.getRoles() != null;
-                        if ((p.getRoles().get(0).contains("狼") || p.getRoles().contains("狼兄")) && event.getChannel().getIdLong() != p.getChannelId()) {
+                        if (shouldSend && event.getChannel().getIdLong() != p.getChannelId()) {
                             getWebhookClientOrCreate(Objects.requireNonNull(event.getGuild().getTextChannelById(p.getChannelId()))).send(message);
                         }
                     }
