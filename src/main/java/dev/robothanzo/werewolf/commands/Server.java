@@ -15,6 +15,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.ChannelType;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Icon;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
@@ -45,6 +46,7 @@ public class Server {
     public static InteractionHook newServerHook;
 
     @Subcommand(description = "建立一個新的狼人殺伺服器")
+    @SneakyThrows
     public void create(SlashCommandInteractionEvent event,
                        @Option(value = "players", description = "玩家數量") Long players,
                        @Option(value = "double_identity", description = "是否為雙身分模式，預設否", optional = true) Boolean doubleIdentity) {
@@ -57,7 +59,7 @@ public class Server {
         newServerDoubleIdentities = doubleIdentity != null && doubleIdentity;
 
         GuildAction guildAction = WerewolfHelper.jda.createGuild("狼人殺伺服器")
-                .setNotificationLevel(Guild.NotificationLevel.MENTIONS_ONLY);
+                .setNotificationLevel(Guild.NotificationLevel.MENTIONS_ONLY).setIcon(Icon.from(Objects.requireNonNull(WerewolfHelper.class.getClassLoader().getResourceAsStream("wolf.png"))));
         // spectator role
         GuildAction.RoleData deadRole = guildAction.newRole().setColor(new Color(0x654321)).setName("旁觀者/死人")
                 .setHoisted(false).setPosition(0).addPermissions(Permission.VIEW_CHANNEL);

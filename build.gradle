@@ -18,7 +18,7 @@ repositories {
 }
 
 dependencies {
-    implementation('net.dv8tion:JDA:5.0.0-alpha.12')
+    implementation('net.dv8tion:JDA:5.0.0-alpha.13')
     implementation('club.minnced:discord-webhooks:0.8.0')
     implementation('org.mongodb:mongo-java-driver:3.12.11')
     implementation('ch.qos.logback:logback-classic:1.2.11')
