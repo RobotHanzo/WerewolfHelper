@@ -133,6 +133,7 @@ public class Player {
             if (session.getSenderId() == event.getUser().getIdLong()) {
                 if (session.getRecipientId() != null) {
                     Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()), set("players." + session.getRecipientId() + ".police", true));
+                    transferPoliceSessions.remove(event.getGuild().getIdLong());
                     event.reply(":white_check_mark: 警徽已移交給 <@!" +
                             Objects.requireNonNull(CmdUtils.getSession(event)).getPlayers().get(session.getRecipientId().toString()).getUserId() + ">").queue();
                 } else {
@@ -149,8 +150,8 @@ public class Player {
         if (transferPoliceSessions.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
             TransferPoliceSession session = transferPoliceSessions.get(Objects.requireNonNull(event.getGuild()).getIdLong());
             if (session.getSenderId() == event.getUser().getIdLong()) {
-                event.reply(":white_check_mark: 警徽已撕毀").setEphemeral(false).queue();
                 transferPoliceSessions.remove(event.getGuild().getIdLong());
+                event.reply(":white_check_mark: 警徽已撕毀").setEphemeral(false).queue();
             } else {
                 event.reply(":x: 你不是原本的警長").setEphemeral(true).queue();
             }
