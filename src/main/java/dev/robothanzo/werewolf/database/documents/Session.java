@@ -5,6 +5,7 @@ import dev.robothanzo.werewolf.database.Database;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,6 +13,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Data
 @Builder
@@ -46,6 +48,45 @@ public class Session {
         return null;
     }
 
+    public Result hasEnded(String simulateRoleRemoval) {
+        int wolves = 0;
+        int gods = 0;
+        int villagers = 0;
+        for (var player : players.values()) {
+            for (var role : Objects.requireNonNull(player.getRoles())) {
+                if (role.equals(simulateRoleRemoval))
+                    continue;
+                if(Player.isWolf(role))
+                    wolves++;
+                else if(Player.isGod(role))
+                    gods++;
+                else if (Player.isVillager(role))
+                    villagers++;
+            }
+        }
+        if (wolves >= gods + villagers)
+            return Result.EQUAL_PLAYERS;
+        if (gods == 0)
+            return Result.GODS_DIED;
+        if (wolves == 0)
+            return Result.WOLVES_DIED;
+        if (villagers == 0)
+            return Result.VILLAGERS_DIED;
+        return Result.NOT_ENDED;
+    }
+
+    @AllArgsConstructor
+    @Getter
+    public enum Result {
+        NOT_ENDED("未結束"),
+        VILLAGERS_DIED("全部村民死亡"),
+        GODS_DIED("全部神死亡"),
+        WOLVES_DIED("全部狼死亡"),
+        EQUAL_PLAYERS("狼人陣營人數=好人陣營人數");
+
+        private final String reason;
+    }
+
     @Data
     @Builder
     @NoArgsConstructor
@@ -59,6 +100,8 @@ public class Session {
         @Builder.Default
         private boolean duplicated = false;
         @Builder.Default
+        private boolean idiot = false;
+        @Builder.Default
         private boolean police = false;
         @Builder.Default
         private boolean rolePositionLocked = false;
@@ -67,5 +110,17 @@ public class Session {
         @Nullable
         @Builder.Default
         private List<String> roles = new LinkedList<>(); // stuff like wolf, villager...etc
+
+        private static boolean isGod(String role) {
+            return (!isWolf(role))&&(!isVillager(role));
+        }
+
+        private static boolean isWolf(String role) {
+            return role.contains("狼") || role.equals("石像鬼") || role.equals("血月使者");
+        }
+
+        private static boolean isVillager(String role) {
+            return role.equals("平民");
+        }
     }
 }

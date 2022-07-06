@@ -81,6 +81,15 @@ public class Player {
                 if (player.getValue().getRoles().size() == 0) {
                     return false;
                 }
+                Session.Result result = session.hasEnded(player.getValue().getRoles().remove(0));
+                if (result != Session.Result.NOT_ENDED) {
+                    if (result == Session.Result.WOLVES_DIED) {
+                        Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())).sendMessage("遊戲結束，**好**人獲勝，原因：" + result.getReason()).queue();
+                    } else {
+                        Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())).sendMessage("遊戲結束，**狼**人獲勝，原因：" + result.getReason()).queue();
+                    }
+                    return true;
+                }
                 if (player.getValue().getRoles().size() == 2) {
                     player.getValue().getRoles().remove(0);
                     Objects.requireNonNull(guild.getTextChannelById(player.getValue().getChannelId()))
@@ -93,12 +102,19 @@ public class Player {
                 }
                 if (player.getValue().getRoles().size() == 1) {
                     Runnable die = () -> transferPolice(session, guild, player.getValue(), () -> {
-                        for (Role role : user.getRoles()) {
-                            guild.removeRoleFromMember(user, role).queue(v ->
-                                    guild.addRoleToMember(user, spectatorRole).queue());
+                        if (player.getValue().isIdiot()) {
+                            player.getValue().getRoles().remove(0);
+                            session.getPlayers().put(player.getKey(), player.getValue());
+                            Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
+                            Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())).sendMessage(user.getAsMention() + " 是白癡，所以他會待在場上並繼續發言").queue();
+                        } else {
+                            for (Role role : user.getRoles()) {
+                                guild.removeRoleFromMember(user, role).queue(v ->
+                                        guild.addRoleToMember(user, spectatorRole).queue());
+                            }
+                            session.getPlayers().remove(player.getKey());
+                            Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
                         }
-                        session.getPlayers().remove(player.getKey());
-                        Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
                     });
                     if (lastWords) {
                         Speech.lastWordsSpeech(guild, Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())), player.getValue(), die);
@@ -254,8 +270,10 @@ public class Player {
             List<String> rs = new LinkedList<>();
             // at least one jin bao bao in a double identities game
             boolean isJinBaoBao = false;
-            boolean isDuplicated = false;
             rs.add(roles.remove(0));
+            if (rs.get(0).equals("白癡")) {
+                player.setIdiot(true);
+            }
             if (rs.get(0).equals("平民") && !gaveJinBaoBao && session.isDoubleIdentities()) {
                 rs = List.of("平民", "平民");
                 roles.remove("平民");
@@ -263,7 +281,7 @@ public class Player {
                 isJinBaoBao = true;
             } else if (session.isDoubleIdentities()) {
                 if (roles.get(0).equals("複製人")) {
-                    isDuplicated = true;
+                    player.setDuplicated(true);
                     roles.set(0, rs.get(0));
                 }
                 rs.add(roles.get(0));
@@ -275,7 +293,6 @@ public class Player {
                 }
                 roles.remove(0);
             }
-            player.setDuplicated(isDuplicated);
             player.setJinBaoBao(isJinBaoBao && session.isDoubleIdentities());
             player.setRoles(rs);
             MessageAction action = Objects.requireNonNull(event.getGuild().getTextChannelById(player.getChannelId())).sendMessageEmbeds(new EmbedBuilder()
