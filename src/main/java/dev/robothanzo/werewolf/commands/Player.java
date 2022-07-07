@@ -81,14 +81,14 @@ public class Player {
                 if (player.getValue().getRoles().size() == 0) {
                     return false;
                 }
-                Session.Result result = session.hasEnded(player.getValue().getRoles().remove(0));
+                Session.Result result = session.hasEnded(player.getValue().getRoles().get(0));
                 if (result != Session.Result.NOT_ENDED) {
                     if (result == Session.Result.WOLVES_DIED) {
                         Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())).sendMessage("遊戲結束，**好**人獲勝，原因：" + result.getReason()).queue();
                     } else {
                         Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())).sendMessage("遊戲結束，**狼**人獲勝，原因：" + result.getReason()).queue();
                     }
-                    return true;
+                    lastWords = false;
                 }
                 if (player.getValue().getRoles().size() == 2) {
                     player.getValue().getRoles().remove(0);

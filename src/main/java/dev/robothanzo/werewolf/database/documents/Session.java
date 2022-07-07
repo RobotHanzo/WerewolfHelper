@@ -52,26 +52,34 @@ public class Session {
         int wolves = 0;
         int gods = 0;
         int villagers = 0;
+        int jinBaoBao = 0;
         for (var player : players.values()) {
+            if(player.isJinBaoBao())
+                jinBaoBao++;
             for (var role : Objects.requireNonNull(player.getRoles())) {
                 if (role.equals(simulateRoleRemoval))
                     continue;
                 if(Player.isWolf(role))
                     wolves++;
-                else if(Player.isGod(role))
+                else if(Player.isGod(role)||(player.isDuplicated()&&player.getRoles().size()>1))
                     gods++;
                 else if (Player.isVillager(role))
                     villagers++;
             }
         }
-        if (wolves >= gods + villagers)
+        if (wolves >= gods + villagers&&!doubleIdentities) // we don't do equal players ending in double identities, too annoying
             return Result.EQUAL_PLAYERS;
         if (gods == 0)
             return Result.GODS_DIED;
         if (wolves == 0)
             return Result.WOLVES_DIED;
-        if (villagers == 0)
-            return Result.VILLAGERS_DIED;
+        if (doubleIdentities) {
+            if (jinBaoBao == 0)
+                return Result.JIN_BAO_BAO_DIED;
+        } else {
+            if (villagers == 0&&roles.contains("平民")) //support for an all gods game
+                return Result.VILLAGERS_DIED;
+        }
         return Result.NOT_ENDED;
     }
 
@@ -82,6 +90,7 @@ public class Session {
         VILLAGERS_DIED("全部村民死亡"),
         GODS_DIED("全部神死亡"),
         WOLVES_DIED("全部狼死亡"),
+        JIN_BAO_BAO_DIED("全部金寶寶死亡"),
         EQUAL_PLAYERS("狼人陣營人數=好人陣營人數");
 
         private final String reason;
