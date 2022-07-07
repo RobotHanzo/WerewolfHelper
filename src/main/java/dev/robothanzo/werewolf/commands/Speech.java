@@ -340,6 +340,19 @@ public class Speech {
         event.reply(":white_check_mark:").queue();
     }
 
+    @Subcommand(description = "靜音所有人")
+    public void mute_all(SlashCommandInteractionEvent event) {
+        if (!CmdUtils.isAdmin(event)) return;
+        for (Member member : Objects.requireNonNull(event.getGuild()).getMembers()) {
+            try {
+                if (member.getPermissions().contains(Permission.ADMINISTRATOR)) continue;
+                member.mute(true).queue();
+            } catch (IllegalStateException ignored) {
+            }
+        }
+        event.reply(":white_check_mark:").queue();
+    }
+
     public enum Order {
         UP, DOWN;
 

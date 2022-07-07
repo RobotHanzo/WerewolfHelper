@@ -44,6 +44,14 @@ public class MessageListener extends ListenerAdapter {
         return false;
     }
 
+    private boolean shouldSend(Session.Player player, Session session) {
+        assert player.getRoles() != null;
+        return player.getRoles().get(0).contains("狼人") ||
+                player.getRoles().contains("狼兄") ||
+                player.getRoles().get(0).contains("狼王") ||
+                (player.getRoles().contains("狼弟") && !isCharacterAlive(session, "狼兄"));
+    }
+
     @Override
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
         if (event.getAuthor().isBot()) return;
@@ -51,12 +59,7 @@ public class MessageListener extends ListenerAdapter {
         if (session == null) return;
         for (Session.Player player : session.getPlayers().values()) {
             if (player.getRoles() != null && player.getRoles().size() > 0) {
-                boolean shouldSend =
-                        player.getRoles().get(0).contains("狼人") ||
-                                player.getRoles().contains("狼兄") ||
-                                player.getRoles().get(0).contains("狼王") ||
-                                (player.getRoles().contains("狼弟") && !isCharacterAlive(session, "狼兄"));
-                if (shouldSend && player.getChannelId() == event.getChannel().getIdLong()
+                if (shouldSend(player, session) && player.getChannelId() == event.getChannel().getIdLong()
                         || event.getChannel().getIdLong() == session.getJudgeTextChannelId()) {
                     WebhookMessage message = new WebhookMessageBuilder()
                             .setContent(event.getMessage().getContentRaw())
@@ -65,12 +68,12 @@ public class MessageListener extends ListenerAdapter {
                             .setAvatarUrl(event.getAuthor().getAvatarUrl())
                             .build();
                     for (Session.Player p : session.getPlayers().values()) {
-                        assert p.getRoles() != null;
-                        if (shouldSend && event.getChannel().getIdLong() != p.getChannelId()) {
+                        if (shouldSend(p, session) && event.getChannel().getIdLong() != p.getChannelId()) {
                             getWebhookClientOrCreate(Objects.requireNonNull(event.getGuild().getTextChannelById(p.getChannelId()))).send(message);
                         }
                     }
-                    getWebhookClientOrCreate(Objects.requireNonNull(event.getGuild().getTextChannelById(session.getJudgeTextChannelId()))).send(message);
+                    if (event.getChannel().getIdLong() != session.getJudgeTextChannelId())
+                        getWebhookClientOrCreate(Objects.requireNonNull(event.getGuild().getTextChannelById(session.getJudgeTextChannelId()))).send(message);
                     break;
                 }
                 if ((player.isJinBaoBao()
