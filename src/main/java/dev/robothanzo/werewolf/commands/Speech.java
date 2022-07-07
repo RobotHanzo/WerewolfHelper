@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.commands;
 
+import com.mongodb.client.model.Filters;
 import dev.robothanzo.jda.interactions.annotations.Button;
 import dev.robothanzo.jda.interactions.annotations.slash.Command;
 import dev.robothanzo.jda.interactions.annotations.slash.Subcommand;
@@ -48,6 +49,7 @@ public class Speech {
         speechSessions.put(guild.getIdLong(), SpeechSession.builder()
                 .guildId(guild.getIdLong())
                 .channelId(enrollMessage.getChannel().getIdLong())
+                .session(Session.fetchCollection().find(Filters.eq("guildId", guild.getIdLong())).first())
                 .finishedCallback(callback)
                 .build());
         Order order = Order.getRandomOrder();
@@ -67,6 +69,7 @@ public class Speech {
         speechSessions.put(guild.getIdLong(), SpeechSession.builder()
                 .guildId(guild.getIdLong())
                 .channelId(channel.getIdLong())
+                .session(Session.fetchCollection().find(Filters.eq("guildId", guild.getIdLong())).first())
                 .order(order)
                 .finishedCallback(callback)
                 .build());
@@ -280,12 +283,14 @@ public class Speech {
         speechSessions.put(event.getGuild().getIdLong(), SpeechSession.builder()
                 .guildId(event.getGuild().getIdLong())
                 .channelId(event.getChannel().getIdLong())
+                .session(session)
                 .build());
 
         for (Session.Player player : session.getPlayers().values()) {
             assert player.getUserId() != null;
             try {
-                Objects.requireNonNull(Objects.requireNonNull(event.getGuild()).getMemberById(player.getUserId())).mute(true).queue();
+                if (session.isMuteAfterSpeech())
+                    Objects.requireNonNull(Objects.requireNonNull(event.getGuild()).getMemberById(player.getUserId())).mute(true).queue();
             } catch (IllegalStateException ignored) {
             }
             if (player.isPolice()) {
@@ -376,6 +381,7 @@ public class Speech {
     public static class SpeechSession {
         private long guildId;
         private long channelId;
+        private Session session;
         @Builder.Default
         private List<Long> interruptVotes = new LinkedList<>();
         @Builder.Default
@@ -405,13 +411,15 @@ public class Speech {
                 if (member == null) {
                     guild.retrieveMemberById(lastSpeaker).queue(m -> {
                         try {
-                            m.mute(true).queue();
+                            if (session.isMuteAfterSpeech())
+                                m.mute(true).queue();
                         } catch (IllegalStateException ignored) {
                         }
                     });
                 } else {
                     try {
-                        member.mute(true).queue();
+                        if (session.isMuteAfterSpeech())
+                            member.mute(true).queue();
                     } catch (IllegalStateException ignored) {
                     }
                 }
