@@ -67,7 +67,7 @@ public class Session {
                     villagers++;
             }
         }
-        if (wolves >= gods + villagers&&!doubleIdentities) // we don't do equal players ending in double identities, too annoying
+        if ((wolves >= gods + villagers)&&!doubleIdentities) // we don't do equal players ending in double identities, too annoying
             return Result.EQUAL_PLAYERS;
         if (gods == 0)
             return Result.GODS_DIED;
@@ -125,7 +125,7 @@ public class Session {
         }
 
         private static boolean isWolf(String role) {
-            return role.contains("狼") || role.equals("石像鬼") || role.equals("血月使者");
+            return role.contains("狼") || role.equals("石像鬼") || role.equals("血月使者") || role.equals("惡靈騎士");
         }
 
         private static boolean isVillager(String role) {
