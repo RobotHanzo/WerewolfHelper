@@ -30,6 +30,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Random;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
@@ -248,7 +249,7 @@ public class Player {
                 pending.add(member);
             }
         }
-        Collections.shuffle(pending);
+        Collections.shuffle(pending, new Random());
         if (pending.size() != session.getPlayers().size()) {
             event.getHook().editOriginal(
                     ":x: 玩家數量不符合設定之，請確認是否已給予旁觀者應有之身分(使用`/player died`)，是則請使用`/server set players`來更改總玩家人數").queue();
