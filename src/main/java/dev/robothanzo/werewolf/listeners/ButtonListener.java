@@ -21,6 +21,9 @@ public class ButtonListener extends ListenerAdapter {
         if (!Objects.requireNonNull(event.getButton().getId()).startsWith("vote")) return;
         event.deferReply(true).queue();
         if (event.getButton().getId() == null) return;
+
+        if (!event.getButton().getId().startsWith("vote"))
+            return;
         Session session = CmdUtils.getSession(event);
         if (session == null) return;
         Session.Player player = null;
@@ -32,41 +35,42 @@ public class ButtonListener extends ListenerAdapter {
                 break;
             }
         }
-        if (event.getButton().getId().startsWith("vote")) {
-            if (!check) {
-                event.getHook().editOriginal(":x: 只有玩家能投票").queue();
-                return;
-            }
-            if (event.getButton().getId().startsWith("votePolice")) {
-                if (Poll.Police.candidates.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
-                    voteLock.lock();
-                    Map<Integer, Poll.Candidate> candidates = Poll.Police.candidates.get(Objects.requireNonNull(event.getGuild()).getIdLong());
-                    if (candidates.containsKey(player.getId())) {
-                        event.getHook().editOriginal(":x: 你曾經參選過或正在參選，不得投票").queue();
-                        return;
-                    }
-                    Poll.Candidate electedCandidate = candidates.get(Integer.parseInt(event.getButton().getId().replaceAll("votePolice", "")));
-                    handleVote(event, candidates, electedCandidate);
-                } else {
-                    event.getHook().editOriginal(":x: 投票已過期").queue();
+        if (!check) {
+            event.getHook().editOriginal(":x: 只有玩家能投票").queue();
+            return;
+        }
+        if (player.isIdiot() && player.getRoles().isEmpty()) {
+            event.getHook().editOriginal(":x: 死掉的白癡不得投票").queue();
+            return;
+        }
+        if (event.getButton().getId().startsWith("votePolice")) {
+            if (Poll.Police.candidates.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
+                voteLock.lock();
+                Map<Integer, Poll.Candidate> candidates = Poll.Police.candidates.get(Objects.requireNonNull(event.getGuild()).getIdLong());
+                if (candidates.containsKey(player.getId())) {
+                    event.getHook().editOriginal(":x: 你曾經參選過或正在參選，不得投票").queue();
+                    return;
                 }
+                Poll.Candidate electedCandidate = candidates.get(Integer.parseInt(event.getButton().getId().replaceAll("votePolice", "")));
+                handleVote(event, candidates, electedCandidate);
+            } else {
+                event.getHook().editOriginal(":x: 投票已過期").queue();
             }
-            if (event.getButton().getId().startsWith("voteExpel")) {
-                if (Poll.expelCandidates.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
-                    Poll.Candidate votingCandidate = Poll.expelCandidates.get(Objects.requireNonNull(event.getGuild()).getIdLong()).get(player.getId());
-                    if (votingCandidate!=null&&votingCandidate.isExpelPK()) {
-                        event.getHook().editOriginal(":x: 你正在和別人進行放逐辯論，不得投票").queue();
-                        return;
-                    }
-                    voteLock.lock();
-                    Map<Integer, Poll.Candidate> candidates = Poll.expelCandidates.get(Objects.requireNonNull(event.getGuild()).getIdLong());
-                    Poll.Candidate electedCandidate = candidates.get(Integer.parseInt(event.getButton().getId().replaceAll("voteExpel", "")));
-                    handleVote(event, candidates, electedCandidate);
-                } else {
-                    event.getHook().editOriginal(":x: 投票已過期").queue();
+        }
+        if (event.getButton().getId().startsWith("voteExpel")) {
+            if (Poll.expelCandidates.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
+                Poll.Candidate votingCandidate = Poll.expelCandidates.get(Objects.requireNonNull(event.getGuild()).getIdLong()).get(player.getId());
+                if (votingCandidate != null && votingCandidate.isExpelPK()) {
+                    event.getHook().editOriginal(":x: 你正在和別人進行放逐辯論，不得投票").queue();
+                    return;
                 }
+                voteLock.lock();
+                Map<Integer, Poll.Candidate> candidates = Poll.expelCandidates.get(Objects.requireNonNull(event.getGuild()).getIdLong());
+                Poll.Candidate electedCandidate = candidates.get(Integer.parseInt(event.getButton().getId().replaceAll("voteExpel", "")));
+                handleVote(event, candidates, electedCandidate);
+            } else {
+                event.getHook().editOriginal(":x: 投票已過期").queue();
             }
-
         }
     }
 

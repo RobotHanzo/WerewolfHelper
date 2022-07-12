@@ -54,6 +54,8 @@ public class Poll {
         List<Button> buttons = new LinkedList<>();
         for (Candidate player : expelCandidates.get(channel.getGuild().getIdLong()).values()
                 .stream().sorted(Candidate.getComparator()).toList()) {
+            assert player.getPlayer().getRoles() != null;
+            if(player.getPlayer().getRoles().isEmpty()) continue;
             if (player.isQuit()) continue;
             assert player.getPlayer().getUserId() != null;
             Member user = channel.getGuild().getMemberById(player.getPlayer().getUserId());
@@ -77,7 +79,7 @@ public class Poll {
                         .setDescription("遭驅逐玩家: <@!" + winners.get(0).getPlayer().getUserId() + ">");
                 sendVoteResult(session, channel, message, resultEmbed, expelCandidates);
                 expelCandidates.remove(channel.getGuild().getIdLong());
-                Player.playerDied(session, channel.getGuild().getMemberById(Objects.requireNonNull(winners.get(0).getPlayer().getUserId())), true);
+                Player.playerDied(session, channel.getGuild().getMemberById(Objects.requireNonNull(winners.get(0).getPlayer().getUserId())), true, true);
             }
             if (winners.size() > 1) {
                 if (allowPK) {
@@ -155,6 +157,8 @@ public class Poll {
             List<Button> buttons = new LinkedList<>();
             for (Candidate player : candidates.get(channel.getGuild().getIdLong()).values()
                     .stream().sorted(Candidate.getComparator()).toList()) {
+                assert player.getPlayer().getRoles() != null;
+                if(player.getPlayer().getRoles().isEmpty()) continue;
                 if (player.isQuit()) continue;
                 assert player.getPlayer().getUserId() != null;
                 Member user = channel.getGuild().getMemberById(player.getPlayer().getUserId());

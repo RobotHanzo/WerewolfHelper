@@ -73,7 +73,7 @@ public class Player {
         if (callback != null) callback.run();
     }
 
-    public static boolean playerDied(Session session, Member user, boolean lastWords) { // returns whether the action succeeded
+    public static boolean playerDied(Session session, Member user, boolean lastWords, boolean isExpelled) { // returns whether the action succeeded
         Guild guild = Objects.requireNonNull(WerewolfHelper.jda.getGuildById(session.getGuildId()));
         Role spectatorRole = Objects.requireNonNull(guild.getRoleById(session.getSpectatorRoleId()));
         for (Map.Entry<String, Session.Player> player : new LinkedList<>(session.getPlayers().entrySet())) {
@@ -103,7 +103,7 @@ public class Player {
                 }
                 if (player.getValue().getRoles().size() == 1) {
                     Runnable die = () -> transferPolice(session, guild, player.getValue(), () -> {
-                        if (player.getValue().isIdiot()) {
+                        if (player.getValue().isIdiot()&&isExpelled) {
                             player.getValue().getRoles().remove(0);
                             session.getPlayers().put(player.getKey(), player.getValue());
                             Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
@@ -228,7 +228,7 @@ public class Player {
         if (lastWords == null) lastWords = false;
         Member member = Objects.requireNonNull(Objects.requireNonNull(event.getGuild()).getMemberById(user.getId()));
 
-        if (playerDied(session, member, lastWords)) {
+        if (playerDied(session, member, lastWords, false)) {
             event.getHook().editOriginal(":white_check_mark:").queue();
         } else {
             event.getHook().editOriginal(":x: 使用者已經死了").queue();

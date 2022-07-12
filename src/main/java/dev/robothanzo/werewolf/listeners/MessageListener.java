@@ -50,6 +50,7 @@ public class MessageListener extends ListenerAdapter {
                 player.getRoles().contains("狼兄") ||
                 player.getRoles().get(0).contains("狼王") ||
                 player.getRoles().get(0).contains("狼美人") ||
+                player.getRoles().get(0).contains("血月使者") ||
                 player.getRoles().get(0).contains("惡靈騎士") ||
                 (player.getRoles().contains("狼弟") && !isCharacterAlive(session, "狼兄"));
     }
