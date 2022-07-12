@@ -49,26 +49,28 @@ public class Session {
         return null;
     }
 
-    public Result hasEnded(String simulateRoleRemoval) {
+    public Result hasEnded(@Nullable String simulateRoleRemoval) {
         int wolves = 0;
         int gods = 0;
         int villagers = 0;
         int jinBaoBao = 0;
         for (var player : players.values()) {
-            if(player.isJinBaoBao())
+            if (player.isJinBaoBao())
                 jinBaoBao++;
             for (var role : Objects.requireNonNull(player.getRoles())) {
-                if (role.equals(simulateRoleRemoval))
+                if (role.equals(simulateRoleRemoval)) {
+                    simulateRoleRemoval = null;
                     continue;
-                if(Player.isWolf(role))
+                }
+                if (Player.isWolf(role))
                     wolves++;
-                else if(Player.isGod(role)||(player.isDuplicated()&&player.getRoles().size()>1))
+                else if (Player.isGod(role) || (player.isDuplicated() && player.getRoles().size() > 1))
                     gods++;
                 else if (Player.isVillager(role))
                     villagers++;
             }
         }
-        if ((wolves >= gods + villagers)&&!doubleIdentities) // we don't do equal players ending in double identities, too annoying
+        if ((wolves >= gods + villagers) && !doubleIdentities) // we don't do equal players ending in double identities, too annoying
             return Result.EQUAL_PLAYERS;
         if (gods == 0)
             return Result.GODS_DIED;
@@ -78,7 +80,7 @@ public class Session {
             if (jinBaoBao == 0)
                 return Result.JIN_BAO_BAO_DIED;
         } else {
-            if (villagers == 0&&roles.contains("平民")) //support for an all gods game
+            if (villagers == 0 && roles.contains("平民")) //support for an all gods game
                 return Result.VILLAGERS_DIED;
         }
         return Result.NOT_ENDED;
@@ -122,7 +124,7 @@ public class Session {
         private List<String> roles = new LinkedList<>(); // stuff like wolf, villager...etc
 
         private static boolean isGod(String role) {
-            return (!isWolf(role))&&(!isVillager(role));
+            return (!isWolf(role)) && (!isVillager(role));
         }
 
         private static boolean isWolf(String role) {
