@@ -128,6 +128,7 @@ public class Poll {
         }
         expelCandidates.put(event.getGuild().getIdLong(), candidates);
         startExpelPoll(session, event.getTextChannel(), true);
+        event.getHook().editOriginal(":white_check_mark:").queue();
     }
 
     @Subcommand
@@ -274,6 +275,7 @@ public class Poll {
                 Speech.pollSpeech(event.getGuild(), message, candidates.get(event.getGuild().getIdLong()).values().stream().map(Candidate::getPlayer).toList(),
                         () -> startPolicePoll(session, event.getTextChannel(), true));
             }, 30000);
+            event.getHook().editOriginal(":white_check_mark:").queue();
         }
 
         @Subcommand(description = "啟動警長投票 (會自動開始，請只在出問題時使用)")
