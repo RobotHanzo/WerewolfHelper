@@ -76,7 +76,9 @@ public class Speech {
         speechSessions.get(guild.getIdLong()).next();
     }
 
-    public static void changeOrder(Guild guild, Order order, Collection<Session.Player> players, Session.Player target) {
+    public static void changeOrder(Guild guild, Order order, Collection<Session.Player> playersRaw, Session.Player target) {
+        var players = new LinkedList<>(playersRaw);
+        Collections.sort(players);
         List<Session.Player> prePolice = new LinkedList<>(); // 1 2 3
         Session.Player police = null; // 4
         List<Session.Player> postPolice = new LinkedList<>(); // 5 6 7

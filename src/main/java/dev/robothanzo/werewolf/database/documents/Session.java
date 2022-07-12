@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -100,7 +101,7 @@ public class Session {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class Player {
+    public static class Player implements Comparable<Player> {
         private int id;
         private long roleId;
         private long channelId;
@@ -130,6 +131,11 @@ public class Session {
 
         private static boolean isVillager(String role) {
             return role.equals("平民");
+        }
+
+        @Override
+        public int compareTo(@NotNull Session.Player o) {
+            return Integer.compare(id, o.id);
         }
     }
 }
