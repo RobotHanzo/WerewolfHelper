@@ -41,6 +41,14 @@ public class CmdUtils {
         return true;
     }
 
+    public static boolean isServerCreator(SlashCommandInteractionEvent event) {
+        if (!WerewolfHelper.SERVER_CREATORS.contains(event.getUser().getIdLong())) {
+            event.getHook().editOriginal(":x:").queue();
+            return false;
+        }
+        return true;
+    }
+
     @Nullable
     public static Session getSession(@Nullable Guild guild) {
         if (guild == null) return null;

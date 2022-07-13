@@ -43,6 +43,7 @@ public class Server {
     public static Lock serverCreationLock = new ReentrantLock();
     public static int newServerPlayerCount = 0;
     public static boolean newServerDoubleIdentities = false;
+    public static long newServerOwner = 0;
     public static InteractionHook newServerHook;
 
     @Subcommand(description = "建立一個新的狼人殺伺服器")
@@ -50,13 +51,14 @@ public class Server {
     public void create(SlashCommandInteractionEvent event,
                        @Option(value = "players", description = "玩家數量") Long players,
                        @Option(value = "double_identity", description = "是否為雙身分模式，預設否", optional = true) Boolean doubleIdentity) {
-        if (!CmdUtils.isAuthor(event)) return;
+        if (!CmdUtils.isServerCreator(event)) return;
         event.deferReply().queue();
         log.info("Queued an server creation attempt of {} players", players);
         serverCreationLock.lock();
         log.info("Server creation lock acquired");
         newServerPlayerCount = Math.toIntExact(players);
         newServerDoubleIdentities = doubleIdentity != null && doubleIdentity;
+        newServerOwner = event.getUser().getIdLong();
 
         GuildAction guildAction = WerewolfHelper.jda.createGuild("狼人殺伺服器")
                 .setNotificationLevel(Guild.NotificationLevel.MENTIONS_ONLY).setIcon(Icon.from(Objects.requireNonNull(WerewolfHelper.class.getClassLoader().getResourceAsStream("wolf.png"))));
@@ -102,7 +104,7 @@ public class Server {
     @Subcommand(description = "刪除所在之伺服器(僅可在狼人殺伺服器內使用)")
     public void delete(SlashCommandInteractionEvent event, @Option(value = "guild_id", optional = true) String guildId) {
         try {
-            if (!CmdUtils.isAuthor(event)) return;
+            if (!CmdUtils.isServerCreator(event)) return;
             if (guildId == null) {
                 Objects.requireNonNull(event.getGuild()).delete().queue();
                 Session.fetchCollection().deleteOne(eq("guildId", event.getGuild().getIdLong()));

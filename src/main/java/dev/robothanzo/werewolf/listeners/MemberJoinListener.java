@@ -15,9 +15,9 @@ import static com.mongodb.client.model.Filters.eq;
 public class MemberJoinListener extends ListenerAdapter {
     @Override
     public void onGuildMemberJoin(@NotNull GuildMemberJoinEvent event) {
-        if (event.getMember().getIdLong() == WerewolfHelper.AUTHOR) {
+        if (WerewolfHelper.SERVER_CREATORS.contains(event.getMember().getIdLong())) {
             Session session = Session.fetchCollection().find(eq("guildId", event.getGuild().getIdLong())).first();
-            if (session != null) {
+            if (session != null && session.getOwner() == event.getUser().getIdLong()) {
                 event.getGuild().addRoleToMember(event.getMember(),
                         Objects.requireNonNull(event.getGuild().getRoleById(session.getJudgeRoleId()))).queue();
             }

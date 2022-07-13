@@ -23,7 +23,8 @@ public class GuildJoinListener extends ListenerAdapter {
         if (event.getGuild().getName().equals("狼人殺伺服器")) {
             Session.SessionBuilder sessionBuilder = Session.builder()
                     .guildId(event.getGuild().getIdLong())
-                    .doubleIdentities(Server.newServerDoubleIdentities);
+                    .doubleIdentities(Server.newServerDoubleIdentities)
+                    .owner(Server.newServerOwner);
             if (Server.newServerDoubleIdentities) {
                 sessionBuilder.roles(List.of(
                         "狼人", "狼人", "狼兄",

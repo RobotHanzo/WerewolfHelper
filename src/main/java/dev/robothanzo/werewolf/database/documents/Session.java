@@ -28,6 +28,7 @@ public class Session {
     private long judgeTextChannelId;
     private long judgeRoleId;
     private long spectatorRoleId;
+    private long owner;
     private boolean doubleIdentities;
     @Builder.Default
     private boolean muteAfterSpeech = true;
