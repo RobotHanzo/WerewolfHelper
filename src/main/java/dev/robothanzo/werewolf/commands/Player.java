@@ -15,6 +15,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -84,12 +85,16 @@ public class Player {
                 }
                 Session.Result result = session.hasEnded(player.getValue().getRoles().get(0));
                 if (result != Session.Result.NOT_ENDED) {
-                    if (result == Session.Result.WOLVES_DIED) {
-                        Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())).sendMessage("遊戲結束，**好**人獲勝，原因：" + result.getReason()).queue();
-                    } else {
-                        Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())).sendMessage("遊戲結束，**狼**人獲勝，原因：" + result.getReason()).queue();
+                    TextChannel channel = guild.getTextChannelById(session.getSpectatorTextChannelId());
+                    String judgePing = "<@" + session.getJudgeRoleId() + "> ";
+                    if (channel!=null) {
+                        if (result == Session.Result.WOLVES_DIED) {
+                            channel.sendMessage(judgePing + "遊戲結束，**好**人獲勝，原因：" + result.getReason()).queue();
+                        } else {
+                            channel.sendMessage(judgePing + "遊戲結束，**狼**人獲勝，原因：" + result.getReason()).queue();
+                        }
+                        lastWords = false;
                     }
-                    lastWords = false;
                 }
                 if (player.getValue().getRoles().size() == 2) {
                     player.getValue().getRoles().remove(0);

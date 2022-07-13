@@ -51,10 +51,12 @@ public class Session {
     }
 
     public Result hasEnded(@Nullable String simulateRoleRemoval) {
-        int wolves = 0;
-        int gods = 0;
-        int villagers = 0;
-        int jinBaoBao = 0;
+        float wolves = 0;
+        float gods = 0;
+        float villagers = 0;
+        float jinBaoBao = 0;
+        boolean policeOnWolf = false;
+        boolean policeOnGood = false;
         for (var player : players.values()) {
             if (player.isJinBaoBao())
                 jinBaoBao++;
@@ -63,16 +65,21 @@ public class Session {
                     simulateRoleRemoval = null;
                     continue;
                 }
-                if (Player.isWolf(role))
+                if (Player.isWolf(role)) {
                     wolves++;
-                else if (Player.isGod(role) || (player.isDuplicated() && player.getRoles().size() > 1))
+                    if (player.isPolice())
+                        policeOnWolf = true;
+                } else if (Player.isGod(role) || (player.isDuplicated() && player.getRoles().size() > 1)) {
                     gods++;
-                else if (Player.isVillager(role))
+                    if (player.isPolice())
+                        policeOnGood = true;
+                } else if (Player.isVillager(role)) {
                     villagers++;
+                    if (player.isPolice())
+                        policeOnGood = true;
+                }
             }
         }
-        if ((wolves >= gods + villagers) && !doubleIdentities) // we don't do equal players ending in double identities, too annoying
-            return Result.EQUAL_PLAYERS;
         if (gods == 0)
             return Result.GODS_DIED;
         if (wolves == 0)
@@ -84,6 +91,12 @@ public class Session {
             if (villagers == 0 && roles.contains("平民")) //support for an all gods game
                 return Result.VILLAGERS_DIED;
         }
+        if (policeOnGood)
+            villagers += 0.5;
+        if (policeOnWolf)
+            wolves += 0.5;
+        if ((wolves >= gods + villagers) && !doubleIdentities) // we don't do equal players ending in double identities, too annoying
+            return Result.EQUAL_PLAYERS;
         return Result.NOT_ENDED;
     }
 
