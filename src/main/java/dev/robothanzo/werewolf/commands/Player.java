@@ -86,7 +86,7 @@ public class Player {
                 Session.Result result = session.hasEnded(player.getValue().getRoles().get(0));
                 if (result != Session.Result.NOT_ENDED) {
                     TextChannel channel = guild.getTextChannelById(session.getSpectatorTextChannelId());
-                    String judgePing = "<@" + session.getJudgeRoleId() + "> ";
+                    String judgePing = "<@&" + session.getJudgeRoleId() + "> ";
                     if (channel!=null) {
                         if (result == Session.Result.WOLVES_DIED) {
                             channel.sendMessage(judgePing + "遊戲結束，**好**人獲勝，原因：" + result.getReason()).queue();
@@ -286,11 +286,15 @@ public class Player {
                 gaveJinBaoBao = true;
                 isJinBaoBao = true;
             } else if (session.isDoubleIdentities()) {
-                if (roles.get(0).equals("複製人")) {
-                    player.setDuplicated(true);
-                    roles.set(0, rs.get(0));
-                }
                 rs.add(roles.get(0));
+                if (rs.contains("複製人")) {
+                    player.setDuplicated(true);
+                    if (rs.get(0).equals("複製人")) {
+                        rs.set(0, rs.get(1));
+                    } else {
+                        rs.set(1, rs.get(0));
+                    }
+                }
                 if (rs.get(0).equals("平民") && rs.get(1).equals("平民")) {
                     isJinBaoBao = true;
                 }
