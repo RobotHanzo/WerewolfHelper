@@ -10,9 +10,9 @@ import dev.robothanzo.werewolf.utils.MsgUtils;
 import lombok.Builder;
 import lombok.Data;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.GuildMessageChannel;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -35,7 +35,7 @@ import static com.mongodb.client.model.Updates.set;
 public class Poll {
     public static Map<Long, Map<Integer, Candidate>> expelCandidates = new HashMap<>(); // key is guild id // second key is candidate id
 
-    public static void handleExpelPK(Session session, TextChannel channel, Message message, List<Candidate> winners) {
+    public static void handleExpelPK(Session session, GuildMessageChannel channel, Message message, List<Candidate> winners) {
         message.reply("平票，請PK").queue();
         Map<Integer, Candidate> newCandidates = new HashMap<>();
         for (Candidate winner : winners) {
@@ -48,14 +48,14 @@ public class Poll {
                 () -> startExpelPoll(session, channel, false));
     }
 
-    public static void startExpelPoll(Session session, TextChannel channel, boolean allowPK) {
+    public static void startExpelPoll(Session session, GuildMessageChannel channel, boolean allowPK) {
         Audio.play(Audio.Resource.EXPEL_POLL, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId()));
         EmbedBuilder embedBuilder = new EmbedBuilder().setTitle("驅逐投票").setDescription("30秒後立刻計票，請加快手速!\n若要改票可直接按下要改成的對象\n若要改為棄票需按下原本投給的使用者").setColor(MsgUtils.getRandomColor());
         List<Button> buttons = new LinkedList<>();
         for (Candidate player : expelCandidates.get(channel.getGuild().getIdLong()).values()
                 .stream().sorted(Candidate.getComparator()).toList()) {
             assert player.getPlayer().getRoles() != null;
-            if(player.getPlayer().getRoles().isEmpty()) continue;
+            if (player.getPlayer().getRoles().isEmpty()) continue;
             if (player.isQuit()) continue;
             assert player.getPlayer().getUserId() != null;
             Member user = channel.getGuild().getMemberById(player.getPlayer().getUserId());
@@ -95,7 +95,7 @@ public class Poll {
         }, 30000);
     }
 
-    public static void sendVoteResult(Session session, TextChannel channel, Message message, EmbedBuilder resultEmbed, Map<Long, Map<Integer, Candidate>> candidates) {
+    public static void sendVoteResult(Session session, GuildMessageChannel channel, Message message, EmbedBuilder resultEmbed, Map<Long, Map<Integer, Candidate>> candidates) {
         List<Long> voted = new LinkedList<>();
         for (Candidate candidate : candidates.get(channel.getGuild().getIdLong()).values()) {
             if (candidate.isQuit()) continue;
@@ -129,7 +129,7 @@ public class Poll {
             candidates.put(player.getId(), Candidate.builder().player(player).build());
         }
         expelCandidates.put(event.getGuild().getIdLong(), candidates);
-        startExpelPoll(session, event.getTextChannel(), true);
+        startExpelPoll(session, event.getGuildChannel(), true);
         event.getHook().editOriginal(":white_check_mark:").queue();
     }
 
@@ -139,7 +139,7 @@ public class Poll {
         public static Map<Long, Map<Integer, Candidate>> candidates = new HashMap<>(); // key is guild id // second key is candidate id
         public static ReentrantReadWriteLock enrollLock = new ReentrantReadWriteLock();
 
-        public static void handlePolicePK(Session session, TextChannel channel, Message message, List<Candidate> winners) {
+        public static void handlePolicePK(Session session, GuildMessageChannel channel, Message message, List<Candidate> winners) {
             message.reply("平票，請PK").queue();
             Map<Integer, Candidate> newCandidates = new HashMap<>();
             for (Candidate winner : winners) {
@@ -151,14 +151,14 @@ public class Poll {
                     () -> startPolicePoll(session, channel, false));
         }
 
-        public static void startPolicePoll(Session session, TextChannel channel, boolean allowPK) {
+        public static void startPolicePoll(Session session, GuildMessageChannel channel, boolean allowPK) {
             Audio.play(Audio.Resource.POLICE_POLL, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId()));
             EmbedBuilder embedBuilder = new EmbedBuilder().setTitle("警長投票").setDescription("30秒後立刻計票，請加快手速!\n若要改票可直接按下要改成的對象\n若要改為棄票需按下原本投給的使用者").setColor(MsgUtils.getRandomColor());
             List<Button> buttons = new LinkedList<>();
             for (Candidate player : candidates.get(channel.getGuild().getIdLong()).values()
                     .stream().sorted(Candidate.getComparator()).toList()) {
                 assert player.getPlayer().getRoles() != null;
-                if(player.getPlayer().getRoles().isEmpty()) continue;
+                if (player.getPlayer().getRoles().isEmpty()) continue;
                 if (player.isQuit()) continue;
                 assert player.getPlayer().getUserId() != null;
                 Member user = channel.getGuild().getMemberById(player.getPlayer().getUserId());
@@ -277,7 +277,7 @@ public class Poll {
                         .setDescription("參選的有: " + String.join("、", candidateMentions) + "\n備註:你可隨時再按一次按鈕以取消參選")
                         .setColor(MsgUtils.getRandomColor()).build()).complete();
                 Speech.pollSpeech(event.getGuild(), message, candidates.get(event.getGuild().getIdLong()).values().stream().map(Candidate::getPlayer).toList(),
-                        () -> startPolicePoll(session, event.getTextChannel(), true));
+                        () -> startPolicePoll(session, event.getGuildChannel(), true));
             }, 30000);
             event.getHook().editOriginal(":white_check_mark:").queue();
         }
@@ -288,7 +288,7 @@ public class Poll {
             if (!CmdUtils.isAdmin(event)) return;
             Session session = CmdUtils.getSession(Objects.requireNonNull(event.getGuild()));
             if (session == null) return;
-            startPolicePoll(session, event.getTextChannel(), true);
+            startPolicePoll(session, event.getGuildChannel(), true);
         }
     }
 
