@@ -217,6 +217,8 @@ public class Poll {
                         candidates.get(event.getGuild().getIdLong()).get(candidate.getKey()).setQuit(true);
                     }
                     event.getHook().editOriginal(":white_check_mark: 已取消參選").queue();
+                    Objects.requireNonNull(event.getGuild().getTextChannelById(session.getCourtTextChannelId()))
+                            .sendMessage(event.getUser().getAsMention() + " 已取消參選").queue();
                     enrollLock.readLock().unlock();
                     return;
                 }
