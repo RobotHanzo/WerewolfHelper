@@ -291,6 +291,8 @@ public class Server {
                 for (long i = players.size() + 1; i <= value; i++) {
                     Role role = event.getGuild().createRole().setColor(MsgUtils.getRandomColor()).setHoisted(true).setName("玩家" + i).complete();
                     TextChannel channel = event.getGuild().createTextChannel("玩家" + i)
+                            .addPermissionOverride(Objects.requireNonNull(event.getGuild().getRoleById(session.getSpectatorRoleId())),
+                                    Permission.VIEW_CHANNEL.getRawValue(), Permission.MESSAGE_SEND.getRawValue())
                             .addPermissionOverride(role, List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND), List.of())
                             .addPermissionOverride(event.getGuild().getPublicRole(), List.of(), List.of(Permission.VIEW_CHANNEL,
                                     Permission.MESSAGE_SEND, Permission.USE_APPLICATION_COMMANDS)).complete();
