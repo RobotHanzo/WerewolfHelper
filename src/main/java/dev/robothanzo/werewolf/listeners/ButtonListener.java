@@ -10,12 +10,8 @@ import org.jetbrains.annotations.NotNull;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class ButtonListener extends ListenerAdapter {
-    public static Lock voteLock = new ReentrantLock();
-
     @Override
     public void onButtonInteraction(@NotNull ButtonInteractionEvent event) {
         if (!Objects.requireNonNull(event.getButton().getId()).startsWith("vote")) return;
@@ -45,7 +41,6 @@ public class ButtonListener extends ListenerAdapter {
         }
         if (event.getButton().getId().startsWith("votePolice")) {
             if (Poll.Police.candidates.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
-                voteLock.lock();
                 Map<Integer, Poll.Candidate> candidates = Poll.Police.candidates.get(Objects.requireNonNull(event.getGuild()).getIdLong());
                 if (candidates.containsKey(player.getId())) {
                     event.getHook().editOriginal(":x: 你曾經參選過或正在參選，不得投票").queue();
@@ -64,7 +59,6 @@ public class ButtonListener extends ListenerAdapter {
                     event.getHook().editOriginal(":x: 你正在和別人進行放逐辯論，不得投票").queue();
                     return;
                 }
-                voteLock.lock();
                 Map<Integer, Poll.Candidate> candidates = Poll.expelCandidates.get(Objects.requireNonNull(event.getGuild()).getIdLong());
                 Poll.Candidate electedCandidate = candidates.get(Integer.parseInt(event.getButton().getId().replaceAll("voteExpel", "")));
                 handleVote(event, candidates, electedCandidate);
@@ -95,6 +89,5 @@ public class ButtonListener extends ListenerAdapter {
             electedCandidate.getElectors().add(event.getUser().getIdLong());
             event.getHook().editOriginal(":white_check_mark: 已投給玩家" + electedCandidate.getPlayer().getId()).queue();
         }
-        voteLock.unlock();
     }
 }

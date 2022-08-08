@@ -87,7 +87,7 @@ public class Player {
                 if (result != Session.Result.NOT_ENDED) {
                     TextChannel channel = guild.getTextChannelById(session.getSpectatorTextChannelId());
                     String judgePing = "<@&" + session.getJudgeRoleId() + "> ";
-                    if (channel!=null) {
+                    if (channel != null) {
                         if (result == Session.Result.WOLVES_DIED) {
                             channel.sendMessage(judgePing + "遊戲結束，**好**人獲勝，原因：" + result.getReason()).queue();
                         } else {
@@ -108,7 +108,7 @@ public class Player {
                 }
                 if (player.getValue().getRoles().size() == 1) {
                     Runnable die = () -> transferPolice(session, guild, player.getValue(), () -> {
-                        if (player.getValue().isIdiot()&&isExpelled) {
+                        if (player.getValue().isIdiot() && isExpelled) {
                             player.getValue().getRoles().remove(0);
                             session.getPlayers().put(player.getKey(), player.getValue());
                             Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
