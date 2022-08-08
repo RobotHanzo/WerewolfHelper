@@ -14,8 +14,8 @@ repositories {
 
 dependencies {
     implementation("net.dv8tion:JDA:5.0.0-alpha.16")
-    implementation("club.minnced:discord-webhooks:0.8.0")
-    implementation("org.mongodb:mongo-java-driver:3.12.11")
+    implementation("club.minnced:discord-webhooks:0.8.2")
+    implementation("org.mongodb:mongodb-driver-sync:4.7.1")
     implementation("ch.qos.logback:logback-classic:1.2.11")
     implementation("io.github.cdimascio:dotenv-java:2.2.4")
     implementation("com.github.RobotHanzo:JDAInteractions:v0.0.10")
