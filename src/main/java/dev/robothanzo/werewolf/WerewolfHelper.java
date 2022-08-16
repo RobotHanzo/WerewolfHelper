@@ -35,7 +35,7 @@ public class WerewolfHelper {
     public static final List<Long> SERVER_CREATORS = List.of(466769036122783744L, 616590798989033502L, 451672040227864587L);
     public static final List<String> ROLES = List.of(
             "狼人", "女巫", "獵人", "預言家", "平民", "狼王", "狼美人", "白狼王", "夢魘", "混血兒", "守衛", "騎士", "白癡",
-            "守墓人", "魔術師", "黑市商人", "邱比特", "盜賊", "石像鬼", "狼兄", "複製人", "血月使者", "惡靈騎士", "通靈師", "機械狼"
+            "守墓人", "魔術師", "黑市商人", "邱比特", "盜賊", "石像鬼", "狼兄", "複製人", "血月使者", "惡靈騎士", "通靈師", "機械狼", "獵魔人"
     );
     public static JDA jda;
     public static Dotenv dotenv = Dotenv.load();
