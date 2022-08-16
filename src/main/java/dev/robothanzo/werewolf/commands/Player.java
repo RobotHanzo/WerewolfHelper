@@ -25,6 +25,7 @@ import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -267,7 +268,7 @@ public class Player {
         }
         List<String> roles = session.getRoles();
         Collections.shuffle(roles);
-        boolean gaveJinBaoBao = false;
+        int gaveJinBaoBao = 0;
         for (Session.Player player : session.getPlayers().values()) {
             event.getGuild().addRoleToMember(pending.get(player.getId() - 1),
                     Objects.requireNonNull(event.getGuild().getRoleById(player.getRoleId()))).queue();
@@ -280,12 +281,13 @@ public class Player {
             if (rs.get(0).equals("白癡")) {
                 player.setIdiot(true);
             }
-            if (rs.get(0).equals("平民") && !gaveJinBaoBao && session.isDoubleIdentities()) {
+            if (rs.get(0).equals("平民") && gaveJinBaoBao == 0 && session.isDoubleIdentities()) {
                 rs = List.of("平民", "平民");
                 roles.remove("平民");
-                gaveJinBaoBao = true;
+                gaveJinBaoBao++;
                 isJinBaoBao = true;
             } else if (session.isDoubleIdentities()) {
+                boolean shouldRemove = true;
                 rs.add(roles.get(0));
                 if (rs.contains("複製人")) {
                     player.setDuplicated(true);
@@ -296,12 +298,26 @@ public class Player {
                     }
                 }
                 if (rs.get(0).equals("平民") && rs.get(1).equals("平民")) {
-                    isJinBaoBao = true;
+                    if (gaveJinBaoBao >= 2) {
+                        for (var r : new ArrayList<>(roles)) {
+                            if (!r.equals("平民")) {
+                                rs.set(1, r);
+                                roles.remove(r);
+                                shouldRemove = false;
+                                break;
+                            }
+                        }
+                    }
+                    if (rs.get(0).equals("平民") && rs.get(1).equals("平民")) { // just in case they still got a jin bao bao
+                        isJinBaoBao = true;
+                        gaveJinBaoBao++;
+                    }
                 }
                 if (rs.get(0).contains("狼")) {
                     Collections.reverse(rs);
                 }
-                roles.remove(0);
+                if (shouldRemove)
+                    roles.remove(0);
             }
             player.setJinBaoBao(isJinBaoBao && session.isDoubleIdentities());
             player.setRoles(rs);
