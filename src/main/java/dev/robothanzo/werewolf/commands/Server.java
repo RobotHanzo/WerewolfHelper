@@ -170,13 +170,11 @@ public class Server {
 
         @AutoCompleter
         public void role(CommandAutoCompleteInteractionEvent event) {
-            List<net.dv8tion.jda.api.interactions.commands.Command.Choice> choices = new LinkedList<>();
-            for (String role : WerewolfHelper.ROLES) {
-                if (role.startsWith(event.getFocusedOption().getValue())) {
-                    choices.add(new Choice(role, role));
-                }
-            }
-            event.replyChoices(choices).queue();
+            event.replyChoices(WerewolfHelper.ROLES.stream()
+                    .filter(s -> s.startsWith(event.getFocusedOption().getValue()))
+                    .limit(25)
+                    .map(s -> new Choice(s, s))
+                    .toList()).queue();
         }
 
         @AutoCompleter
