@@ -10,10 +10,10 @@ import dev.robothanzo.werewolf.utils.MsgUtils;
 import lombok.Builder;
 import lombok.Data;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.GuildMessageChannel;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
@@ -63,7 +63,7 @@ public class Poll {
                     "玩家" + player.getPlayer().getId() + " (" + user.getUser().getName() + "#" + user.getUser().getDiscriminator() + ")"));
         }
         Message message = channel.sendMessageEmbeds(embedBuilder.build())
-                .setActionRows(MsgUtils.spreadButtonsAcrossActionRows(buttons)).complete();
+                .setComponents(MsgUtils.spreadButtonsAcrossActionRows(buttons)).complete();
         CmdUtils.schedule(() -> Audio.play(Audio.Resource.POLL_10S_REMAINING, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId())), 20000);
         CmdUtils.schedule(() -> {
             List<Candidate> winners = Candidate.getWinner(expelCandidates.get(channel.getGuild().getIdLong()).values(), session.getPolice());
@@ -166,7 +166,7 @@ public class Poll {
                         "玩家" + player.getPlayer().getId() + " (" + user.getUser().getName() + "#" + user.getUser().getDiscriminator() + ")"));
             }
             Message message = channel.sendMessageEmbeds(embedBuilder.build())
-                    .setActionRows(MsgUtils.spreadButtonsAcrossActionRows(buttons)).complete();
+                    .setComponents(MsgUtils.spreadButtonsAcrossActionRows(buttons)).complete();
             CmdUtils.schedule(() -> Audio.play(Audio.Resource.POLL_10S_REMAINING, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId())), 20000);
             CmdUtils.schedule(() -> {
                 List<Candidate> winners = Candidate.getWinner(candidates.get(channel.getGuild().getIdLong()).values(), null);

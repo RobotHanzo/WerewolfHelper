@@ -6,8 +6,8 @@ import club.minnced.discord.webhook.send.WebhookMessageBuilder;
 import dev.robothanzo.werewolf.database.documents.Session;
 import dev.robothanzo.werewolf.utils.CmdUtils;
 import lombok.extern.slf4j.Slf4j;
-import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.Webhook;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.jetbrains.annotations.NotNull;
@@ -28,7 +28,7 @@ public class MessageListener extends ListenerAdapter {
                 webhook = w;
             }
             if (webhook == null) {
-                webhook = Objects.requireNonNull(channel.createWebhook("Discord Werewolf Impersonator").complete());
+                webhook = Objects.requireNonNull(channel.createWebhook("Werewolf Impersonator").complete());
             }
             webhookCache.put(channel.getIdLong(), WebhookClient.withUrl(webhook.getUrl()));
         }

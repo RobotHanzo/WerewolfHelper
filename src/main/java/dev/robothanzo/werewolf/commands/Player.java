@@ -15,14 +15,14 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.Role;
-import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.events.interaction.component.SelectMenuInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import net.dv8tion.jda.api.requests.restaction.MessageAction;
+import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -49,19 +49,20 @@ public class Player {
                     .senderId(player.getUserId())
                     .callback(callback)
                     .build());
-            net.dv8tion.jda.api.interactions.components.selections.SelectMenu.Builder selectMenu = net.dv8tion.jda.api.interactions.components.selections.SelectMenu.create("selectNewPolice");
+            StringSelectMenu.Builder selectMenu = StringSelectMenu.create("selectNewPolice");
             for (Session.Player p : session.getPlayers().values()) {
                 assert p.getUserId() != null;
                 if (Objects.equals(p.getUserId(), player.getUserId())) continue;
                 User user = WerewolfHelper.jda.getUserById(p.getUserId());
                 assert user != null;
+                //TODO utilize EntitySelectMenu
                 selectMenu.addOption("玩家" + p.getId() + " (" + user.getName() + "#" + user.getDiscriminator() + ")", String.valueOf(p.getId()));
             }
             Message message = Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())).sendMessageEmbeds(
                             new EmbedBuilder()
                                     .setTitle("移交警徽").setColor(MsgUtils.getRandomColor())
                                     .setDescription("請選擇要移交警徽的對象，若要撕掉警徽，請按下撕毀按鈕\n請在30秒內做出選擇，否則警徽將被自動撕毀").build())
-                    .setActionRows(ActionRow.of(selectMenu.build()), ActionRow.of(
+                    .setComponents(ActionRow.of(selectMenu.build()), ActionRow.of(
                             Button.success("confirmNewPolice", "移交"),
                             Button.danger("destroyPolice", "撕毀")
                     ))
@@ -137,7 +138,8 @@ public class Player {
     }
 
     @SelectMenu
-    public void selectNewPolice(SelectMenuInteractionEvent event) {
+    //TODO utilize EntitySelectMenu
+    public void selectNewPolice(StringSelectInteractionEvent event) {
         if (transferPoliceSessions.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
             TransferPoliceSession session = transferPoliceSessions.get(Objects.requireNonNull(event.getGuild()).getIdLong());
             if (session.getSenderId() == event.getUser().getIdLong()) {
@@ -321,7 +323,7 @@ public class Player {
             }
             player.setJinBaoBao(isJinBaoBao && session.isDoubleIdentities());
             player.setRoles(rs);
-            MessageAction action = Objects.requireNonNull(event.getGuild().getTextChannelById(player.getChannelId())).sendMessageEmbeds(new EmbedBuilder()
+            var action = Objects.requireNonNull(event.getGuild().getTextChannelById(player.getChannelId())).sendMessageEmbeds(new EmbedBuilder()
                     .setTitle("你抽到的身分是 (若為狼人或金寶寶請使用自己的頻道來和隊友討論及確認身分)")
                     .setDescription(String.join("、", rs) + (player.isJinBaoBao() ? " (金寶寶)" : "") +
                             (player.isDuplicated() ? " (複製人)" : ""))

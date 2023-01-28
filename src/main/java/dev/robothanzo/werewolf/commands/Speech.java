@@ -14,18 +14,18 @@ import lombok.Builder;
 import lombok.Data;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.AudioChannel;
-import net.dv8tion.jda.api.entities.Channel;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.entities.channel.Channel;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.events.interaction.component.SelectMenuInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
-import net.dv8tion.jda.api.interactions.components.selections.SelectMenu;
+import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.utils.TimeFormat;
 import org.jetbrains.annotations.Nullable;
 
@@ -120,7 +120,7 @@ public class Speech {
     }
 
     @dev.robothanzo.jda.interactions.annotations.SelectMenu
-    public void selectOrder(SelectMenuInteractionEvent event) {
+    public void selectOrder(StringSelectInteractionEvent event) {
         event.deferReply(true).queue();
         Session session = CmdUtils.getSession(Objects.requireNonNull(event.getGuild()));
         Order order = Order.valueOf(event.getSelectedOptions().get(0).getValue().toUpperCase(Locale.ROOT));
@@ -299,7 +299,7 @@ public class Speech {
                 event.getHook().editOriginalEmbeds(new EmbedBuilder().setTitle("警長請選擇發言順序")
                                 .setDescription("警長尚未選擇順序")
                                 .setColor(MsgUtils.getRandomColor()).build())
-                        .setActionRows(ActionRow.of(SelectMenu.create("selectOrder")
+                        .setComponents(ActionRow.of(StringSelectMenu.create("selectOrder")
                                 .addOption(Order.UP.toString(), "up", Order.UP.toEmoji())
                                 .addOption(Order.DOWN.toString(), "down", Order.DOWN.toEmoji())
                                 .setPlaceholder("請警長按此選擇發言順序").build()
