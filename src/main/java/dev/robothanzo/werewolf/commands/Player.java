@@ -56,7 +56,7 @@ public class Player {
                 User user = WerewolfHelper.jda.getUserById(p.getUserId());
                 assert user != null;
                 //TODO utilize EntitySelectMenu
-                selectMenu.addOption("玩家" + p.getId() + " (" + user.getName() + "#" + user.getDiscriminator() + ")", String.valueOf(p.getId()));
+                selectMenu.addOption("玩家" + p.getId() + " (" + user.getName() + ")", String.valueOf(p.getId()));
             }
             Message message = Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())).sendMessageEmbeds(
                             new EmbedBuilder()

@@ -67,7 +67,7 @@ public class MessageListener extends ListenerAdapter {
                     WebhookMessage message = new WebhookMessageBuilder()
                             .setContent(event.getMessage().getContentRaw())
                             .setUsername((((event.getChannel().getIdLong() == session.getJudgeTextChannelId()) ? "法官頻道" : "玩家" + player.getId())) +
-                                    " (" + event.getAuthor().getName() + "#" + event.getAuthor().getDiscriminator() + ")")
+                                    " (" + event.getAuthor().getName() + ")")
                             .setAvatarUrl(event.getAuthor().getAvatarUrl())
                             .build();
                     for (Session.Player p : session.getPlayers().values()) {
@@ -83,7 +83,7 @@ public class MessageListener extends ListenerAdapter {
                         && player.getChannelId() == event.getChannel().getIdLong())) {
                     WebhookMessage message = new WebhookMessageBuilder()
                             .setContent(event.getMessage().getContentRaw())
-                            .setUsername("玩家" + player.getId() + " (" + event.getAuthor().getName() + "#" + event.getAuthor().getDiscriminator() + ")")
+                            .setUsername("玩家" + player.getId() + " (" + event.getAuthor().getName() + ")")
                             .setAvatarUrl(event.getAuthor().getAvatarUrl())
                             .build();
                     for (Session.Player p : session.getPlayers().values()) {

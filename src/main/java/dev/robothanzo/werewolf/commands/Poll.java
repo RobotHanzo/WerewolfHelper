@@ -60,7 +60,7 @@ public class Poll {
             Member user = channel.getGuild().getMemberById(player.getPlayer().getUserId());
             assert user != null;
             buttons.add(Button.primary("voteExpel" + player.getPlayer().getId(),
-                    "玩家" + player.getPlayer().getId() + " (" + user.getUser().getName() + "#" + user.getUser().getDiscriminator() + ")"));
+                    "玩家" + player.getPlayer().getId() + " (" + user.getUser().getName() + ")"));
         }
         Message message = channel.sendMessageEmbeds(embedBuilder.build())
                 .setComponents(MsgUtils.spreadButtonsAcrossActionRows(buttons)).complete();
@@ -88,6 +88,9 @@ public class Poll {
                     handleExpelPK(session, channel, message, winners);
                 } else {
                     message.reply("平票第二次，不驅逐").queue();
+                    EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("驅逐投票").setColor(MsgUtils.getRandomColor())
+                            .setDescription("平票第二次，不驅逐");
+                    sendVoteResult(session, channel, message, resultEmbed, expelCandidates, false);
                     expelCandidates.remove(channel.getGuild().getIdLong());
                 }
             }
@@ -103,7 +106,7 @@ public class Poll {
             User user = WerewolfHelper.jda.getUserById(candidate.getPlayer().getUserId());
             assert user != null;
             voted.addAll(candidate.getElectors());
-            resultEmbed.addField("玩家" + candidate.getPlayer().getId() + " (" + user.getName() + "#" + user.getDiscriminator() + ")",
+            resultEmbed.addField("玩家" + candidate.getPlayer().getId() + " (" + user.getName() + ")",
                     String.join("、", candidate.getElectorsAsMention()), false);
         }
         List<String> discarded = new LinkedList<>();
@@ -163,7 +166,7 @@ public class Poll {
                 Member user = channel.getGuild().getMemberById(player.getPlayer().getUserId());
                 assert user != null;
                 buttons.add(Button.primary("votePolice" + player.getPlayer().getId(),
-                        "玩家" + player.getPlayer().getId() + " (" + user.getUser().getName() + "#" + user.getUser().getDiscriminator() + ")"));
+                        "玩家" + player.getPlayer().getId() + " (" + user.getUser().getName() + ")"));
             }
             Message message = channel.sendMessageEmbeds(embedBuilder.build())
                     .setComponents(MsgUtils.spreadButtonsAcrossActionRows(buttons)).complete();
@@ -192,7 +195,10 @@ public class Poll {
                         sendVoteResult(session, channel, message, resultEmbed, candidates, true);
                         handlePolicePK(session, channel, message, winners);
                     } else {
+                        EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("警長投票").setColor(MsgUtils.getRandomColor())
+                                .setDescription("平票第二次，警徽撕毀");
                         message.reply("平票第二次，警徽撕毀").queue();
+                        sendVoteResult(session, channel, message, resultEmbed, candidates, true);
                         candidates.remove(channel.getGuild().getIdLong());
                     }
                 }

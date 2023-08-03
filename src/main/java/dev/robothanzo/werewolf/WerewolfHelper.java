@@ -47,10 +47,11 @@ public class WerewolfHelper {
         Database.initDatabase();
         AudioSourceManagers.registerLocalSource(playerManager);
         jda = JDABuilder.createDefault(System.getenv("TOKEN"))
-                .enableIntents(EnumSet.allOf(GatewayIntent.class))
+                .enableIntents(GatewayIntent.GUILD_MEMBERS, GatewayIntent.MESSAGE_CONTENT)
                 .setChunkingFilter(ChunkingFilter.ALL)
                 .setMemberCachePolicy(MemberCachePolicy.ALL)
                 .enableCache(EnumSet.allOf(CacheFlag.class))
+                .disableCache(CacheFlag.ACTIVITY, CacheFlag.CLIENT_STATUS, CacheFlag.ONLINE_STATUS)
                 .addEventListeners(new GuildJoinListener(), new MemberJoinListener(), new MessageListener(), new ButtonListener())
                 .build();
         new JDAInteractions("dev.robothanzo.werewolf.commands").registerInteractions(jda).queue();

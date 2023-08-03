@@ -70,6 +70,7 @@ public class Server {
                 .addPermissionOverride(guildAction.getPublicRole(), List.of(), List.of(Permission.USE_APPLICATION_COMMANDS))
                 .addPermissionOverride(deadRole, Permission.VIEW_CHANNEL.getRawValue(), Permission.MESSAGE_SEND.getRawValue());
         guildAction.newChannel(ChannelType.VOICE, "法院")
+                .addPermissionOverride(guildAction.getPublicRole(), List.of(Permission.VOICE_SPEAK), List.of(Permission.VOICE_START_ACTIVITIES))
                 .addPermissionOverride(deadRole, Permission.VIEW_CHANNEL.getRawValue(), Permission.VOICE_SPEAK.getRawValue());
         guildAction.newChannel(ChannelType.TEXT, "場外")
                 .addPermissionOverride(deadRole, List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND), List.of())
