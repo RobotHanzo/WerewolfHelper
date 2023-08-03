@@ -19,12 +19,7 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.mongodb.client.model.Filters.eq;
@@ -185,6 +180,9 @@ public class Poll {
                             .setDescription("獲勝玩家: <@!" + winners.get(0).getPlayer().getUserId() + ">");
                     sendVoteResult(session, channel, message, resultEmbed, candidates, true);
                     candidates.remove(channel.getGuild().getIdLong());
+                    Member member = channel.getGuild().getMemberById(Objects.requireNonNull(winners.get(0).getPlayer().getUserId()));
+                    if (member != null)
+                        member.modifyNickname("[警長] " + member.getNickname()).queue();
                     Session.fetchCollection().updateOne(eq("guildId", channel.getGuild().getIdLong()),
                             set("players." + winners.get(0).getPlayer().getId() + ".police", true));
                 }
@@ -268,6 +266,9 @@ public class Poll {
                 }
                 if (candidates.get(event.getGuild().getIdLong()).size() == 1) {
                     message.reply("只有" + candidateMentions.get(0) + "參選，直接當選").queue();
+                    Member member = event.getGuild().getMemberById(Objects.requireNonNull(candidates.get(event.getGuild().getIdLong()).get(0).getPlayer().getUserId()));
+                    if (member != null)
+                        member.modifyNickname("[警長] " + member.getNickname()).queue();
                     Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()),
                             set("players." + candidates.get(event.getGuild().getIdLong()).get(0).getPlayer().getId() + ".police", true));
                     candidates.remove(event.getGuild().getIdLong());

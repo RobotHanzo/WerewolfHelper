@@ -3,7 +3,7 @@ package dev.robothanzo.werewolf.utils;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 
-import java.awt.Color;
+import java.awt.*;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;

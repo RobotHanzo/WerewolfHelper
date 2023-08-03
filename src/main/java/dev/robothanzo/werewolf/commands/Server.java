@@ -24,12 +24,9 @@ import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.Command.Choice;
 import net.dv8tion.jda.api.requests.restaction.GuildAction;
 
-import java.awt.Color;
-import java.util.HashMap;
-import java.util.LinkedList;
+import java.awt.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 

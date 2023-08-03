@@ -2,19 +2,11 @@ package dev.robothanzo.werewolf.database.documents;
 
 import com.mongodb.client.MongoCollection;
 import dev.robothanzo.werewolf.database.Database;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @Data
 @Builder

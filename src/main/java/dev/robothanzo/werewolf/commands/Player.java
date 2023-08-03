@@ -10,11 +10,7 @@ import dev.robothanzo.werewolf.utils.MsgUtils;
 import lombok.Builder;
 import lombok.Data;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.Role;
-import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -25,14 +21,7 @@ import net.dv8tion.jda.api.interactions.components.selections.EntitySelectMenu;
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
@@ -110,6 +99,7 @@ public class Player {
                 }
                 if (player.getValue().getRoles().size() == 1) {
                     Runnable die = () -> transferPolice(session, guild, player.getValue(), () -> {
+                        user.modifyNickname("[死人] " + user.getNickname()).queue();
                         if (player.getValue().isIdiot() && isExpelled) {
                             player.getValue().getRoles().remove(0);
                             session.getPlayers().put(player.getKey(), player.getValue());
@@ -134,6 +124,7 @@ public class Player {
             }
         }
         guild.addRoleToMember(user, spectatorRole).queue(); // if they aren't found, they will become spectators
+        user.modifyNickname("[旁觀] " + user.getNickname()).queue();
         return true;
     }
 
@@ -158,8 +149,15 @@ public class Player {
                 if (session.getRecipientId() != null) {
                     Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()), set("players." + session.getRecipientId() + ".police", true));
                     transferPoliceSessions.remove(event.getGuild().getIdLong());
-                    event.reply(":white_check_mark: 警徽已移交給 <@!" +
-                            Objects.requireNonNull(CmdUtils.getSession(event)).getPlayers().get(session.getRecipientId().toString()).getUserId() + ">").queue();
+                    Long recipientDiscordId = Objects.requireNonNull(CmdUtils.getSession(event)).getPlayers().get(session.getRecipientId().toString()).getUserId();
+                    if (recipientDiscordId != null) {
+                        Member recipient = event.getGuild().getMemberById(recipientDiscordId);
+                        if (recipient != null) {
+                            recipient.modifyNickname("[警長] " + recipient.getNickname()).queue();
+                        }
+                        event.reply(":white_check_mark: 警徽已移交給 <@!" +
+                                Objects.requireNonNull(CmdUtils.getSession(event)).getPlayers().get(session.getRecipientId().toString()).getUserId() + ">").queue();
+                    }
                 } else {
                     event.reply(":x: 請先選擇要移交警徽的對象").setEphemeral(true).queue();
                 }
