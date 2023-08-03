@@ -20,7 +20,7 @@ public class Database {
 
     public static void initDatabase(@Nullable CodecRegistry... codecRegistry) {
         ConnectionString connString = new ConnectionString(
-                WerewolfHelper.dotenv.get("DATABASE", "mongodb://localhost:27017")
+                System.getenv().getOrDefault("DATABASE", "mongodb://localhost:27017")
         );
         CodecRegistry pojoCodecRegistry = fromRegistries(MongoClientSettings.getDefaultCodecRegistry(),
                 fromProviders(PojoCodecProvider.builder().automatic(true).build()));

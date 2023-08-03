@@ -9,7 +9,6 @@ import dev.robothanzo.werewolf.listeners.ButtonListener;
 import dev.robothanzo.werewolf.listeners.GuildJoinListener;
 import dev.robothanzo.werewolf.listeners.MemberJoinListener;
 import dev.robothanzo.werewolf.listeners.MessageListener;
-import io.github.cdimascio.dotenv.Dotenv;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
@@ -40,7 +39,6 @@ public class WerewolfHelper {
             "守墓人", "魔術師", "黑市商人", "邱比特", "盜賊", "石像鬼", "狼兄", "複製人", "血月使者", "惡靈騎士", "通靈師", "機械狼", "獵魔人"
     );
     public static JDA jda;
-    public static Dotenv dotenv = Dotenv.load();
     public static AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
 
     @SneakyThrows
@@ -48,7 +46,7 @@ public class WerewolfHelper {
         extractSoundFiles();
         Database.initDatabase();
         AudioSourceManagers.registerLocalSource(playerManager);
-        jda = JDABuilder.createDefault(dotenv.get("TOKEN"))
+        jda = JDABuilder.createDefault(System.getenv("TOKEN"))
                 .enableIntents(EnumSet.allOf(GatewayIntent.class))
                 .setChunkingFilter(ChunkingFilter.ALL)
                 .setMemberCachePolicy(MemberCachePolicy.ALL)
