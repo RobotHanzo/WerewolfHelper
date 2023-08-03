@@ -131,6 +131,17 @@ public class Server {
         event.reply(sb.toString()).queue();
     }
 
+    @Subcommand(description = "列出所在之伺服器")
+    public void lists(SlashCommandInteractionEvent event) {
+        if (!CmdUtils.isAuthor(event)) return;
+        StringBuilder sb = new StringBuilder();
+        for (Guild guild : WerewolfHelper.jda.getGuilds()) {
+            sb.append(guild.getName())
+                    .append(" (").append(guild.getId()).append(")\n");
+        }
+        event.reply(sb.toString()).queue();
+    }
+
     @SneakyThrows
     @Subcommand
     public void session(SlashCommandInteractionEvent event, @Option(value = "guild_id", optional = true) String guildId) {

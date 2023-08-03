@@ -1,6 +1,5 @@
 package dev.robothanzo.werewolf.commands;
 
-import dev.robothanzo.jda.interactions.annotations.SelectMenu;
 import dev.robothanzo.jda.interactions.annotations.slash.Command;
 import dev.robothanzo.jda.interactions.annotations.slash.Subcommand;
 import dev.robothanzo.jda.interactions.annotations.slash.options.Option;
@@ -19,9 +18,10 @@ import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.interactions.components.selections.EntitySelectMenu;
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import org.jetbrains.annotations.Nullable;
 
@@ -137,13 +137,12 @@ public class Player {
         return true;
     }
 
-    @SelectMenu
-    //TODO utilize EntitySelectMenu
-    public void selectNewPolice(StringSelectInteractionEvent event) {
+    @dev.robothanzo.jda.interactions.annotations.select.EntitySelectMenu(targets = EntitySelectMenu.SelectTarget.USER)
+    public void selectNewPolice(EntitySelectInteractionEvent event) {
         if (transferPoliceSessions.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
             TransferPoliceSession session = transferPoliceSessions.get(Objects.requireNonNull(event.getGuild()).getIdLong());
             if (session.getSenderId() == event.getUser().getIdLong()) {
-                session.setRecipientId(Integer.parseInt(event.getSelectedOptions().get(0).getValue()));
+                session.setRecipientId(Integer.parseInt(event.getInteraction().getMentions().getMembers().get(0).getId()));
                 event.reply(":white_check_mark: 請按下移交來完成移交動作").setEphemeral(true).queue();
             } else {
                 event.reply(":x: 你不是原本的警長").setEphemeral(true).queue();

@@ -1,12 +1,12 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="EntryPointsManager">
-    <list size="5">
+    <list size="6">
       <item index="0" class="java.lang.String" itemvalue="dev.robothanzo.jda.interactions.annotations.Button" />
       <item index="1" class="java.lang.String" itemvalue="dev.robothanzo.jda.interactions.annotations.SelectMenu" />
-      <item index="2" class="java.lang.String" itemvalue="dev.robothanzo.jda.interactions.annotations.slash.Subcommand" />
-      <item index="3" class="java.lang.String" itemvalue="dev.robothanzo.jda.interactions.annotations.slash.options.AutoCompleter" />
-      <item index="4" class="java.lang.String" itemvalue="dev.robothanzo.jda.interactions.annotations.slash.options.Mapper" />
+      <item index="2" class="java.lang.String" itemvalue="dev.robothanzo.jda.interactions.annotations.select.EntitySelectMenu" />
+      <item index="3" class="java.lang.String" itemvalue="dev.robothanzo.jda.interactions.annotations.slash.Subcommand" />
+      <item index="4" class="java.lang.String" itemvalue="dev.robothanzo.jda.interactions.annotations.slash.options.AutoCompleter" />
+      <item index="5" class="java.lang.String" itemvalue="dev.robothanzo.jda.interactions.annotations.slash.options.Mapper" />
     </list>
   </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />
@@ -17,7 +17,7 @@
     <option name="enabled" value="true" />
     <option name="wasEnabledAtLeastOnce" value="true" />
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_17" default="true" project-jdk-name="openjdk-17" project-jdk-type="JavaSDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_17" default="true" project-jdk-name="17" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
   <component name="ProjectType">

@@ -11,6 +11,7 @@ import dev.robothanzo.werewolf.listeners.MemberJoinListener;
 import dev.robothanzo.werewolf.listeners.MessageListener;
 import io.github.cdimascio.dotenv.Dotenv;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
@@ -30,6 +31,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 
+@Slf4j
 public class WerewolfHelper {
     public static final long AUTHOR = 466769036122783744L;
     public static final List<Long> SERVER_CREATORS = List.of(466769036122783744L, 616590798989033502L, 451672040227864587L);

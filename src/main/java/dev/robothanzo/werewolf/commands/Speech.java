@@ -119,7 +119,7 @@ public class Speech {
         }
     }
 
-    @dev.robothanzo.jda.interactions.annotations.SelectMenu
+    @dev.robothanzo.jda.interactions.annotations.select.StringSelectMenu
     public void selectOrder(StringSelectInteractionEvent event) {
         event.deferReply(true).queue();
         Session session = CmdUtils.getSession(Objects.requireNonNull(event.getGuild()));
