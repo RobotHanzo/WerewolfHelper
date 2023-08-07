@@ -9,6 +9,7 @@ import dev.robothanzo.werewolf.utils.CmdUtils;
 import dev.robothanzo.werewolf.utils.MsgUtils;
 import lombok.Builder;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -18,7 +19,6 @@ import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionE
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.interactions.components.selections.EntitySelectMenu;
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -27,6 +27,7 @@ import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
 
 @Command
+@Slf4j
 public class Player {
     public static Map<Long, TransferPoliceSession> transferPoliceSessions = new HashMap<>(); // key is guild ID
 
@@ -38,14 +39,15 @@ public class Player {
                     .senderId(player.getUserId())
                     .callback(callback)
                     .build());
-            StringSelectMenu.Builder selectMenu = StringSelectMenu.create("selectNewPolice");
+            EntitySelectMenu.Builder selectMenu = EntitySelectMenu.create("selectNewPolice", EntitySelectMenu.SelectTarget.USER)
+                    .setMinValues(1)
+                    .setMaxValues(1);
             for (Session.Player p : session.getPlayers().values()) {
                 assert p.getUserId() != null;
                 if (Objects.equals(p.getUserId(), player.getUserId())) continue;
                 User user = WerewolfHelper.jda.getUserById(p.getUserId());
                 assert user != null;
-                //TODO utilize EntitySelectMenu
-                selectMenu.addOption("玩家" + p.getId() + " (" + user.getName() + ")", String.valueOf(p.getId()));
+                transferPoliceSessions.get(guild.getIdLong()).getPossibleRecipientIds().add(p.getUserId());
             }
             Message message = Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())).sendMessageEmbeds(
                             new EmbedBuilder()
@@ -73,7 +75,7 @@ public class Player {
         for (Map.Entry<String, Session.Player> player : new LinkedList<>(session.getPlayers().entrySet())) {
             if (Objects.equals(user.getIdLong(), player.getValue().getUserId())) {
                 assert player.getValue().getRoles() != null;
-                if (player.getValue().getRoles().size() == 0) {
+                if (player.getValue().getRoles().isEmpty()) {
                     return false;
                 }
                 Session.Result result = session.hasEnded(player.getValue().getRoles().get(0));
@@ -101,16 +103,18 @@ public class Player {
                 }
                 if (player.getValue().getRoles().size() == 1) {
                     Runnable die = () -> transferPolice(session, guild, player.getValue(), () -> {
+                        var newSession = CmdUtils.getSession(guild); // We need to update the session as it may have been tampered with by transferPolice
+                        if (newSession == null) return;
                         user.modifyNickname("[死人] " + user.getEffectiveName()).queue();
                         if (player.getValue().isIdiot() && isExpelled) {
                             player.getValue().getRoles().remove(0);
-                            session.getPlayers().put(player.getKey(), player.getValue());
-                            Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
-                            Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())).sendMessage(user.getAsMention() + " 是白癡，所以他會待在場上並繼續發言").queue();
+                            newSession.getPlayers().put(player.getKey(), player.getValue());
+                            Session.fetchCollection().updateOne(eq("guildId", newSession.getGuildId()), set("players", newSession.getPlayers()));
+                            Objects.requireNonNull(guild.getTextChannelById(newSession.getCourtTextChannelId())).sendMessage(user.getAsMention() + " 是白癡，所以他會待在場上並繼續發言").queue();
                         } else {
                             guild.modifyMemberRoles(user, spectatorRole).queue();
-                            session.getPlayers().remove(player.getKey());
-                            Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
+                            newSession.getPlayers().remove(player.getKey());
+                            Session.fetchCollection().updateOne(eq("guildId", newSession.getGuildId()), set("players", newSession.getPlayers()));
                         }
                     });
                     if (lastWords) {
@@ -130,12 +134,24 @@ public class Player {
     @dev.robothanzo.jda.interactions.annotations.select.EntitySelectMenu(targets = EntitySelectMenu.SelectTarget.USER)
     public void selectNewPolice(EntitySelectInteractionEvent event) {
         if (transferPoliceSessions.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
+            Member target = event.getMentions().getMembers().get(0);
             TransferPoliceSession session = transferPoliceSessions.get(Objects.requireNonNull(event.getGuild()).getIdLong());
-            if (session.getSenderId() == event.getUser().getIdLong()) {
-                session.setRecipientId(Integer.parseInt(event.getInteraction().getMentions().getMembers().get(0).getId()));
-                event.reply(":white_check_mark: 請按下移交來完成移交動作").setEphemeral(true).queue();
+            if (!session.getPossibleRecipientIds().contains(target.getIdLong())) {
+                event.reply(":x: 你不能移交警徽給這個人").setEphemeral(true).queue();
             } else {
-                event.reply(":x: 你不是原本的警長").setEphemeral(true).queue();
+                if (session.getSenderId() == event.getUser().getIdLong()) {
+                    Session guildSession = Session.fetchCollection().find(eq("guildId", event.getGuild().getIdLong())).first();
+                    if (guildSession == null) return;
+                    for (var player : guildSession.getPlayers().values()) {
+                        if (Objects.requireNonNull(player.getUserId()) == target.getIdLong()) {
+                            session.setRecipientId(player.getId());
+                            event.reply(":white_check_mark: 請按下移交來完成移交動作").setEphemeral(true).queue();
+                            break;
+                        }
+                    }
+                } else {
+                    event.reply(":x: 你不是原本的警長").setEphemeral(true).queue();
+                }
             }
         }
     }
@@ -147,15 +163,15 @@ public class Player {
             if (session.getSenderId() == event.getUser().getIdLong()) {
                 if (session.getRecipientId() != null) {
                     Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()), set("players." + session.getRecipientId() + ".police", true));
+                    log.info("Transferred police to " + session.getRecipientId() + " in guild " + event.getGuild().getIdLong());
                     transferPoliceSessions.remove(event.getGuild().getIdLong());
                     Long recipientDiscordId = Objects.requireNonNull(CmdUtils.getSession(event)).getPlayers().get(session.getRecipientId().toString()).getUserId();
                     if (recipientDiscordId != null) {
                         Member recipient = event.getGuild().getMemberById(recipientDiscordId);
                         if (recipient != null) {
                             recipient.modifyNickname(recipient.getEffectiveName() + " [警長]").queue();
+                            event.reply(":white_check_mark: 警徽已移交給 " + recipient.getAsMention()).queue();
                         }
-                        event.reply(":white_check_mark: 警徽已移交給 <@!" +
-                                Objects.requireNonNull(CmdUtils.getSession(event)).getPlayers().get(session.getRecipientId().toString()).getUserId() + ">").queue();
                     }
                     Member sender = event.getGuild().getMemberById(session.getSenderId());
                     if (sender != null) {
@@ -361,7 +377,7 @@ public class Player {
             assert player.getRoles() != null;
             embedBuilder.addField("玩家" + p,
                     String.join("、", player.getRoles()) + (player.isPolice() ? " (警長)" : "") +
-                            (player.isJinBaoBao() ? " (金寶寶)" : "" + (player.isDuplicated() ? " (複製人)" : "")), true);
+                            (player.isJinBaoBao() ? " (金寶寶)" : player.isDuplicated() ? " (複製人)" : ""), true);
         }
         event.getHook().editOriginalEmbeds(embedBuilder.build()).queue();
     }
@@ -400,6 +416,8 @@ public class Player {
     public static class TransferPoliceSession {
         private long guildId;
         private long senderId;
+        @Builder.Default
+        private List<Long> possibleRecipientIds = new ArrayList<>();
         @Nullable
         private Integer recipientId; // 1 / 2 / 3..etc
         @Nullable
