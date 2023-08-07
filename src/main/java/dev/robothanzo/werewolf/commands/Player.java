@@ -59,10 +59,12 @@ public class Player {
             CmdUtils.schedule(() -> {
                 if (transferPoliceSessions.remove(guild.getIdLong()) != null) {
                     message.reply("警徽已自動撕毀").queue();
+                    if (callback != null) callback.run();
                 }
             }, 30000);
+        } else {
+            if (callback != null) callback.run();
         }
-        if (callback != null) callback.run();
     }
 
     public static boolean playerDied(Session session, Member user, boolean lastWords, boolean isExpelled) { // returns whether the action succeeded
@@ -159,6 +161,7 @@ public class Player {
                     if (sender != null) {
                         sender.modifyNickname(sender.getEffectiveName().replace("[警長] ", "")).queue();
                     }
+                    if (session.getCallback() != null) session.getCallback().run();
                 } else {
                     event.reply(":x: 請先選擇要移交警徽的對象").setEphemeral(true).queue();
                 }
@@ -175,6 +178,7 @@ public class Player {
             if (session.getSenderId() == event.getUser().getIdLong()) {
                 transferPoliceSessions.remove(event.getGuild().getIdLong());
                 event.reply(":white_check_mark: 警徽已撕毀").setEphemeral(false).queue();
+                if (session.getCallback() != null) session.getCallback().run();
             } else {
                 event.reply(":x: 你不是原本的警長").setEphemeral(true).queue();
             }
