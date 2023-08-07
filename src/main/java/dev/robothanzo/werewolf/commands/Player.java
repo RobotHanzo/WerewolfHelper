@@ -337,8 +337,10 @@ public class Player {
             action.queue();
             Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()),
                     set("players", session.getPlayers()));
-            event.getHook().editOriginal(":white_check_mark:").queue();
         }
+        Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()),
+                set("hasAssignedRoles", true));
+        event.getHook().editOriginal(":white_check_mark:").queue();
     }
 
     @Subcommand(description = "列出每個玩家的身分資訊")

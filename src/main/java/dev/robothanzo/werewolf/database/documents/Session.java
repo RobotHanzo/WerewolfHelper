@@ -23,6 +23,8 @@ public class Session {
     private long owner;
     private boolean doubleIdentities;
     @Builder.Default
+    private boolean hasAssignedRoles = false;
+    @Builder.Default
     private boolean muteAfterSpeech = true;
     @Builder.Default
     private List<String> roles = new LinkedList<>();
