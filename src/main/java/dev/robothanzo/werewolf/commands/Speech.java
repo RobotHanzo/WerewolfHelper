@@ -440,7 +440,7 @@ public class Speech {
                                 net.dv8tion.jda.api.interactions.components.buttons.Button.danger("skipSpeech", "跳過 (發言者按)").withEmoji(Emoji.fromUnicode("U+23ed")),
                                 net.dv8tion.jda.api.interactions.components.buttons.Button.danger("interruptSpeech", "下台 (玩家或法官按)").withEmoji(Emoji.fromUnicode("U+1f5d1"))
                         ).complete();
-                AudioChannel channel = Objects.requireNonNull(Objects.requireNonNull(guild.getMemberById(lastSpeaker)).getVoiceState()).getChannel();
+                AudioChannel channel = guild.getVoiceChannelById(session.getCourtVoiceChannelId());
                 try {
                     Thread.sleep((time - 30) * 1000);
                     Audio.play(Audio.Resource.TIMER_30S_REMAINING, channel);
