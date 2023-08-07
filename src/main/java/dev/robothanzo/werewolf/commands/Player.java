@@ -61,12 +61,10 @@ public class Player {
             CmdUtils.schedule(() -> {
                 if (transferPoliceSessions.remove(guild.getIdLong()) != null) {
                     message.reply("警徽已自動撕毀").queue();
-                    if (callback != null) callback.run();
                 }
             }, 30000);
-        } else {
-            if (callback != null) callback.run();
         }
+        if (callback != null) callback.run();
     }
 
     public static boolean playerDied(Session session, Member user, boolean lastWords, boolean isExpelled) { // returns whether the action succeeded
