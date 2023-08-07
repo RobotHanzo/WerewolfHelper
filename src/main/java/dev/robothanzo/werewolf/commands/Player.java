@@ -152,14 +152,14 @@ public class Player {
                     if (recipientDiscordId != null) {
                         Member recipient = event.getGuild().getMemberById(recipientDiscordId);
                         if (recipient != null) {
-                            recipient.modifyNickname("[警長] " + recipient.getEffectiveName()).queue();
+                            recipient.modifyNickname(recipient.getEffectiveName() + " [警長]").queue();
                         }
                         event.reply(":white_check_mark: 警徽已移交給 <@!" +
                                 Objects.requireNonNull(CmdUtils.getSession(event)).getPlayers().get(session.getRecipientId().toString()).getUserId() + ">").queue();
                     }
                     Member sender = event.getGuild().getMemberById(session.getSenderId());
                     if (sender != null) {
-                        sender.modifyNickname(sender.getEffectiveName().replace("[警長] ", "")).queue();
+                        sender.modifyNickname(sender.getEffectiveName().replace(" [警長]", "")).queue();
                     }
                     if (session.getCallback() != null) session.getCallback().run();
                 } else {
@@ -380,7 +380,7 @@ public class Player {
                 Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
                 Member member = event.getGuild().getMemberById(Objects.requireNonNull(player.getUserId()));
                 if (member != null) {
-                    member.modifyNickname(member.getEffectiveName().replace("[警長] ", "")).queue();
+                    member.modifyNickname(member.getEffectiveName().replace(" [警長]", "")).queue();
                 }
             }
             if (Objects.equals(player.getUserId(), user.getIdLong())) {
@@ -388,7 +388,7 @@ public class Player {
                 Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
                 Member member = event.getGuild().getMemberById(Objects.requireNonNull(player.getUserId()));
                 if (member != null) {
-                    member.modifyNickname("[警長] " + member.getEffectiveName()).queue();
+                    member.modifyNickname(member.getEffectiveName() + " [警長]").queue();
                 }
             }
         }
