@@ -278,7 +278,10 @@ public class Poll {
                         .setDescription("參選的有: " + String.join("、", candidateMentions) + "\n備註:你可隨時再按一次按鈕以取消參選")
                         .setColor(MsgUtils.getRandomColor()).build()).complete();
                 Speech.pollSpeech(event.getGuild(), message, candidates.get(event.getGuild().getIdLong()).values().stream().map(Candidate::getPlayer).toList(),
-                        () -> startPolicePoll(session, event.getGuildChannel(), true));
+                        () -> {
+                            message.getChannel().sendMessage("政見發表結束，參選人有15秒進行退選，15秒後將自動開始投票").queue();
+                            CmdUtils.schedule(() -> startPolicePoll(session, event.getGuildChannel(), true), 15000);
+                        });
             }, 30000);
             event.getHook().editOriginal(":white_check_mark:").queue();
         }
