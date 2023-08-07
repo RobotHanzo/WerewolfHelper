@@ -99,17 +99,14 @@ public class Player {
                 }
                 if (player.getValue().getRoles().size() == 1) {
                     Runnable die = () -> transferPolice(session, guild, player.getValue(), () -> {
-                        user.modifyNickname("[死人] " + user.getNickname()).queue();
+                        user.modifyNickname("[死人] " + user.getEffectiveName()).queue();
                         if (player.getValue().isIdiot() && isExpelled) {
                             player.getValue().getRoles().remove(0);
                             session.getPlayers().put(player.getKey(), player.getValue());
                             Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
                             Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())).sendMessage(user.getAsMention() + " 是白癡，所以他會待在場上並繼續發言").queue();
                         } else {
-                            for (Role role : user.getRoles()) {
-                                guild.removeRoleFromMember(user, role).queue(v ->
-                                        guild.addRoleToMember(user, spectatorRole).queue());
-                            }
+                            guild.modifyMemberRoles(user, spectatorRole).queue();
                             session.getPlayers().remove(player.getKey());
                             Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
                         }
@@ -124,7 +121,7 @@ public class Player {
             }
         }
         guild.addRoleToMember(user, spectatorRole).queue(); // if they aren't found, they will become spectators
-        user.modifyNickname("[旁觀] " + user.getNickname()).queue();
+        user.modifyNickname("[旁觀] " + user.getEffectiveName()).queue();
         return true;
     }
 
@@ -153,10 +150,14 @@ public class Player {
                     if (recipientDiscordId != null) {
                         Member recipient = event.getGuild().getMemberById(recipientDiscordId);
                         if (recipient != null) {
-                            recipient.modifyNickname("[警長] " + recipient.getNickname()).queue();
+                            recipient.modifyNickname("[警長] " + recipient.getEffectiveName()).queue();
                         }
                         event.reply(":white_check_mark: 警徽已移交給 <@!" +
                                 Objects.requireNonNull(CmdUtils.getSession(event)).getPlayers().get(session.getRecipientId().toString()).getUserId() + ">").queue();
+                    }
+                    Member sender = event.getGuild().getMemberById(session.getSenderId());
+                    if (sender != null) {
+                        sender.modifyNickname(sender.getEffectiveName().replace("[警長] ", "")).queue();
                     }
                 } else {
                     event.reply(":x: 請先選擇要移交警徽的對象").setEphemeral(true).queue();
@@ -364,16 +365,25 @@ public class Player {
                                      event, @Option(value = "user", description = "要強制成為警長的玩家") User user) {
         event.deferReply().queue();
         if (!CmdUtils.isAdmin(event)) return;
+        if (event.getGuild() == null) return;
         Session session = CmdUtils.getSession(event);
         if (session == null) return;
         for (Session.Player player : session.getPlayers().values()) {
             if (player.isPolice() && !Objects.equals(player.getUserId(), user.getIdLong())) {
                 player.setPolice(false);
                 Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
+                Member member = event.getGuild().getMemberById(Objects.requireNonNull(player.getUserId()));
+                if (member != null) {
+                    member.modifyNickname(member.getEffectiveName().replace("[警長] ", "")).queue();
+                }
             }
             if (Objects.equals(player.getUserId(), user.getIdLong())) {
                 player.setPolice(true);
                 Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
+                Member member = event.getGuild().getMemberById(Objects.requireNonNull(player.getUserId()));
+                if (member != null) {
+                    member.modifyNickname("[警長] " + member.getEffectiveName()).queue();
+                }
             }
         }
         event.getHook().editOriginal(":white_check_mark:").queue();
