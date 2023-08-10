@@ -20,7 +20,7 @@ dependencies {
     slim("net.dv8tion:JDA:5.0.0-beta.12")
     slim("club.minnced:discord-webhooks:0.8.3")
     slim("org.mongodb:mongodb-driver-sync:4.10.2")
-    slim("ch.qos.logback:logback-classic:1.4.8")
+    slim("ch.qos.logback:logback-classic:1.4.11")
     slim("com.github.RobotHanzo:JDAInteractions:0.1.2")
     implementation("io.github.slimjar:slimjar:1.2.6")
     slim("com.sedmelluq:lavaplayer:1.3.78")
