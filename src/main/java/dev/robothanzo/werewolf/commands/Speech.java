@@ -429,7 +429,7 @@ public class Speech {
             speakingThread = new Thread(() -> {
                 lastSpeaker = player.getUserId();
                 assert lastSpeaker != null;
-                int time = player.isPolice() ? 150 : 120;
+                int time = player.isPolice() ? 210 : 180;
                 try {
                     Objects.requireNonNull(guild.getMemberById(lastSpeaker)).mute(false).queue();
                 } catch (IllegalStateException ignored) {
