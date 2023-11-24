@@ -150,6 +150,7 @@ public class Poll {
 
         public static void startPolicePoll(Session session, GuildMessageChannel channel, boolean allowPK) {
             Audio.play(Audio.Resource.POLICE_POLL, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId()));
+            allowEnroll.put(channel.getGuild().getIdLong(), true);
             EmbedBuilder embedBuilder = new EmbedBuilder().setTitle("警長投票").setDescription("30秒後立刻計票，請加快手速!\n若要改票可直接按下要改成的對象\n若要改為棄票需按下原本投給的使用者").setColor(MsgUtils.getRandomColor());
             List<Button> buttons = new LinkedList<>();
             for (Candidate player : candidates.get(channel.getGuild().getIdLong()).values()
