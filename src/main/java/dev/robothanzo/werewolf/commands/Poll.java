@@ -279,8 +279,8 @@ public class Poll {
                         .setColor(MsgUtils.getRandomColor()).build()).complete();
                 Speech.pollSpeech(event.getGuild(), message, candidates.get(event.getGuild().getIdLong()).values().stream().map(Candidate::getPlayer).toList(),
                         () -> {
-                            message.getChannel().sendMessage("政見發表結束，參選人有15秒進行退選，15秒後將自動開始投票").queue();
-                            CmdUtils.schedule(() -> startPolicePoll(session, event.getGuildChannel(), true), 15000);
+                            message.getChannel().sendMessage("政見發表結束，參選人有15秒進行退選，20秒後將自動開始投票").queue();
+                            CmdUtils.schedule(() -> startPolicePoll(session, event.getGuildChannel(), true), 20000);
                         });
             }, 30000);
             event.getHook().editOriginal(":white_check_mark:").queue();
