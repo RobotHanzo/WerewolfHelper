@@ -13,16 +13,15 @@ repositories {
     mavenCentral()
     maven("https://jitpack.io")
     maven("https://m2.dv8tion.net/releases")
-    maven("https://repo.gkpixel.com/mirror/")
 }
 
 dependencies {
-    slim("net.dv8tion:JDA:5.0.0-beta.22")
+    slim("net.dv8tion:JDA:5.0.0-beta.23")
     slim("club.minnced:discord-webhooks:0.8.4")
     slim("org.mongodb:mongodb-driver-sync:5.0.1")
     slim("ch.qos.logback:logback-classic:1.5.6")
     slim("com.github.RobotHanzo:JDAInteractions:0.1.2")
-    implementation("io.github.slimjar:slimjar:1.2.6")
+    implementation("com.github.RobotHanzo:slimjar:master-SNAPSHOT")
     slim("com.sedmelluq:lavaplayer:1.3.78")
     compileOnly("org.projectlombok:lombok:1.18.32")
     annotationProcessor("org.projectlombok:lombok:1.18.32")
