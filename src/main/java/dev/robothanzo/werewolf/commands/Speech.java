@@ -48,9 +48,9 @@ public class Speech {
         Order order = Order.getRandomOrder();
         List<Session.Player> shuffledPlayers = new LinkedList<>(players);
         Collections.shuffle(shuffledPlayers);
-        Session.Player target = shuffledPlayers.get(0);
+        Session.Player target = shuffledPlayers.getFirst();
         enrollMessage.replyEmbeds(new EmbedBuilder().setTitle("隨機抽取投票辯論順序")
-                .setDescription("抽到的順序: 玩家" + shuffledPlayers.get(0).getId() + order.toString())
+                .setDescription("抽到的順序: 玩家" + shuffledPlayers.getFirst().getId() + order.toString())
                 .setColor(MsgUtils.getRandomColor()).build()).queue();
         changeOrder(guild, order, players, target);
         speechSessions.get(guild.getIdLong()).next();
@@ -116,7 +116,7 @@ public class Speech {
     public void selectOrder(StringSelectInteractionEvent event) {
         event.deferReply(true).queue();
         Session session = CmdUtils.getSession(Objects.requireNonNull(event.getGuild()));
-        Order order = Order.valueOf(event.getSelectedOptions().get(0).getValue().toUpperCase(Locale.ROOT));
+        Order order = Order.valueOf(event.getSelectedOptions().getFirst().getValue().toUpperCase(Locale.ROOT));
         if (session == null) return;
         if (!speechSessions.containsKey(event.getGuild().getIdLong())) {
             event.getHook().editOriginal("法官尚未開始發言流程").queue();
@@ -135,7 +135,7 @@ public class Speech {
         }
         changeOrder(event.getGuild(), order, session.getPlayers().values(), target);
         event.getHook().editOriginal(":white_check_mark: 請按下確認以開始發言流程").queue();
-        event.getMessage().editMessageEmbeds(new EmbedBuilder(event.getInteraction().getMessage().getEmbeds().get(0))
+        event.getMessage().editMessageEmbeds(new EmbedBuilder(event.getInteraction().getMessage().getEmbeds().getFirst())
                 .setDescription("警長已選擇 " + order.toEmoji().getName() + " " + order + "\n請按下確認").build()).queue();
     }
 
@@ -165,7 +165,7 @@ public class Speech {
         if (!check) {
             event.getHook().editOriginal(":x: 你不是警長").queue();
         } else {
-            if (speechSession.getOrder().size() == 0) {
+            if (speechSession.getOrder().isEmpty()) {
                 event.getHook().editOriginal(":x: 請先選取往上或往下").queue();
             } else {
                 speechSession.next();
@@ -304,9 +304,9 @@ public class Speech {
         List<Session.Player> shuffledPlayers = new LinkedList<>(session.getPlayers().values());
         Collections.shuffle(shuffledPlayers);
         Order order = Order.getRandomOrder();
-        changeOrder(event.getGuild(), order, session.getPlayers().values(), shuffledPlayers.get(0));
+        changeOrder(event.getGuild(), order, session.getPlayers().values(), shuffledPlayers.getFirst());
         event.getHook().editOriginalEmbeds(new EmbedBuilder().setTitle("找不到警長，自動抽籤發言順序")
-                .setDescription("抽到的順序: 玩家" + shuffledPlayers.get(0).getId() + order.toString())
+                .setDescription("抽到的順序: 玩家" + shuffledPlayers.getFirst().getId() + order.toString())
                 .setColor(MsgUtils.getRandomColor()).build()).queue();
         speechSessions.get(event.getGuild().getIdLong()).next();
 
@@ -419,13 +419,13 @@ public class Speech {
                     }
                 }
             }
-            if (order.size() == 0) {
+            if (order.isEmpty()) {
                 Objects.requireNonNull(guild.getTextChannelById(channelId)).sendMessage("發言流程結束").queue();
                 interrupt();
                 if (finishedCallback != null) finishedCallback.run();
                 return;
             }
-            final Session.Player player = order.get(0);
+            final Session.Player player = order.getFirst();
             speakingThread = new Thread(() -> {
                 lastSpeaker = player.getUserId();
                 assert lastSpeaker != null;
@@ -446,19 +446,19 @@ public class Speech {
                     Audio.play(Audio.Resource.TIMER_30S_REMAINING, channel);
                     Thread.sleep(35000); // 5 extra seconds to allocate space for latency and notification sounds
                     Audio.play(Audio.Resource.TIMER_ENDED, channel);
-                    message.reply("計時結束" + (order.size() == 0 ? "，下面一位" : "")).queue();
+                    message.reply("計時結束" + (order.isEmpty() ? "，下面一位" : "")).queue();
                     next();
                 } catch (InterruptedException ignored) {
                     Audio.play(Audio.Resource.TIMER_ENDED, channel);
 //                    message.reply("計時被終止" + (order.size() == 0 ? "，下面一位" : "")).queue();
                 } catch (NullPointerException ignored) {
                     Audio.play(Audio.Resource.TIMER_ENDED, channel);
-                    message.reply("發言者已離開語音或機器人出錯" + (order.size() == 0 ? "，下面一位" : "")).queue();
+                    message.reply("發言者已離開語音或機器人出錯" + (order.isEmpty() ? "，下面一位" : "")).queue();
                     next();
                 }
             });
             speakingThread.start();
-            order.remove(0);
+            order.removeFirst();
         }
     }
 }

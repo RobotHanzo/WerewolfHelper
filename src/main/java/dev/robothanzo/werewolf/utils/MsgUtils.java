@@ -30,7 +30,7 @@ public class MsgUtils {
     }
 
     public static List<ActionRow> spreadButtonsAcrossActionRows(List<net.dv8tion.jda.api.interactions.components.buttons.Button> buttons) {
-        List<ActionRow> rows = new LinkedList<>(List.of(ActionRow.of(buttons.remove(0))));
+        List<ActionRow> rows = new LinkedList<>(List.of(ActionRow.of(buttons.removeFirst())));
         for (Button button : buttons) {
             if (rows.get(rows.size() - 1).getComponents().size() >= 5) {
                 rows.add(ActionRow.of(button));

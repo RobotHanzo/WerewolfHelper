@@ -76,7 +76,7 @@ public class Player {
                 if (player.getValue().getRoles().isEmpty()) {
                     return false;
                 }
-                Session.Result result = session.hasEnded(player.getValue().getRoles().get(0));
+                Session.Result result = session.hasEnded(player.getValue().getRoles().getFirst());
                 if (result != Session.Result.NOT_ENDED) {
                     TextChannel channel = guild.getTextChannelById(session.getSpectatorTextChannelId());
                     String judgePing = "<@&" + session.getJudgeRoleId() + "> ";
@@ -90,9 +90,9 @@ public class Player {
                     }
                 }
                 if (player.getValue().getRoles().size() == 2) {
-                    player.getValue().getRoles().remove(0);
+                    player.getValue().getRoles().removeFirst();
                     Objects.requireNonNull(guild.getTextChannelById(player.getValue().getChannelId()))
-                            .sendMessage("因為你死了，所以你的角色變成了 " + player.getValue().getRoles().get(0)).queue();
+                            .sendMessage("因為你死了，所以你的角色變成了 " + player.getValue().getRoles().getFirst()).queue();
                     Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
                     if (lastWords) {
                         Speech.lastWordsSpeech(guild, Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())), player.getValue(), null);
@@ -105,7 +105,7 @@ public class Player {
                         if (newSession == null) return;
                         user.modifyNickname("[死人] " + user.getEffectiveName()).queue();
                         if (player.getValue().isIdiot() && isExpelled) {
-                            player.getValue().getRoles().remove(0);
+                            player.getValue().getRoles().removeFirst();
                             newSession.getPlayers().put(player.getKey(), player.getValue());
                             Session.fetchCollection().updateOne(eq("guildId", newSession.getGuildId()), set("players", newSession.getPlayers()));
                             Objects.requireNonNull(guild.getTextChannelById(newSession.getCourtTextChannelId())).sendMessage(user.getAsMention() + " 是白癡，所以他會待在場上並繼續發言").queue();
@@ -132,7 +132,7 @@ public class Player {
     @dev.robothanzo.jda.interactions.annotations.select.EntitySelectMenu(targets = EntitySelectMenu.SelectTarget.USER)
     public void selectNewPolice(EntitySelectInteractionEvent event) {
         if (transferPoliceSessions.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
-            Member target = event.getMentions().getMembers().get(0);
+            Member target = event.getMentions().getMembers().getFirst();
             TransferPoliceSession session = transferPoliceSessions.get(Objects.requireNonNull(event.getGuild()).getIdLong());
             if (!session.getPossibleRecipientIds().contains(target.getIdLong())) {
                 event.reply(":x: 你不能移交警徽給這個人").setEphemeral(true).queue();
@@ -295,27 +295,27 @@ public class Player {
             List<String> rs = new LinkedList<>();
             // at least one jin bao bao in a double identities game
             boolean isJinBaoBao = false;
-            rs.add(roles.remove(0));
-            if (rs.get(0).equals("白癡")) {
+            rs.add(roles.removeFirst());
+            if (rs.getFirst().equals("白癡")) {
                 player.setIdiot(true);
             }
-            if (rs.get(0).equals("平民") && gaveJinBaoBao == 0 && session.isDoubleIdentities()) {
+            if (rs.getFirst().equals("平民") && gaveJinBaoBao == 0 && session.isDoubleIdentities()) {
                 rs = List.of("平民", "平民");
                 roles.remove("平民");
                 gaveJinBaoBao++;
                 isJinBaoBao = true;
             } else if (session.isDoubleIdentities()) {
                 boolean shouldRemove = true;
-                rs.add(roles.get(0));
+                rs.add(roles.getFirst());
                 if (rs.contains("複製人")) {
                     player.setDuplicated(true);
-                    if (rs.get(0).equals("複製人")) {
+                    if (rs.getFirst().equals("複製人")) {
                         rs.set(0, rs.get(1));
                     } else {
-                        rs.set(1, rs.get(0));
+                        rs.set(1, rs.getFirst());
                     }
                 }
-                if (rs.get(0).equals("平民") && rs.get(1).equals("平民")) {
+                if (rs.getFirst().equals("平民") && rs.get(1).equals("平民")) {
                     if (gaveJinBaoBao >= 2) {
                         for (var r : new ArrayList<>(roles)) {
                             if (!r.equals("平民")) {
@@ -326,16 +326,16 @@ public class Player {
                             }
                         }
                     }
-                    if (rs.get(0).equals("平民") && rs.get(1).equals("平民")) { // just in case they still got a jin bao bao
+                    if (rs.getFirst().equals("平民") && rs.get(1).equals("平民")) { // just in case they still got a jin bao bao
                         isJinBaoBao = true;
                         gaveJinBaoBao++;
                     }
                 }
-                if (rs.get(0).contains("狼")) {
+                if (rs.getFirst().contains("狼")) {
                     Collections.reverse(rs);
                 }
                 if (shouldRemove)
-                    roles.remove(0);
+                    roles.removeFirst();
             }
             player.setJinBaoBao(isJinBaoBao && session.isDoubleIdentities());
             player.setRoles(rs);

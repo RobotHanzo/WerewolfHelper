@@ -46,13 +46,13 @@ public class MessageListener extends ListenerAdapter {
 
     private boolean shouldSend(Session.Player player, Session session) {
         assert player.getRoles() != null;
-        return player.getRoles().get(0).contains("狼人") ||
+        return player.getRoles().getFirst().contains("狼人") ||
                 player.getRoles().contains("狼兄") ||
-                player.getRoles().get(0).contains("狼王") ||
-                player.getRoles().get(0).contains("狼美人") ||
-                player.getRoles().get(0).contains("血月使者") ||
-                player.getRoles().get(0).contains("惡靈騎士") ||
-                player.getRoles().get(0).contains("夢魘") ||
+                player.getRoles().getFirst().contains("狼王") ||
+                player.getRoles().getFirst().contains("狼美人") ||
+                player.getRoles().getFirst().contains("血月使者") ||
+                player.getRoles().getFirst().contains("惡靈騎士") ||
+                player.getRoles().getFirst().contains("夢魘") ||
                 (player.getRoles().contains("狼弟") && !isCharacterAlive(session, "狼兄"));
     }
 
@@ -62,7 +62,7 @@ public class MessageListener extends ListenerAdapter {
         Session session = CmdUtils.getSession(event.getGuild());
         if (session == null) return;
         for (Session.Player player : session.getPlayers().values()) {
-            if (player.getRoles() != null && player.getRoles().size() > 0) {
+            if (player.getRoles() != null && !player.getRoles().isEmpty()) {
                 if (shouldSend(player, session) && player.getChannelId() == event.getChannel().getIdLong()
                         || event.getChannel().getIdLong() == session.getJudgeTextChannelId()) {
                     WebhookMessage message = new WebhookMessageBuilder()

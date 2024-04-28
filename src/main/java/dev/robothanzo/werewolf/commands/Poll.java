@@ -62,18 +62,18 @@ public class Poll {
         CmdUtils.schedule(() -> Audio.play(Audio.Resource.POLL_10S_REMAINING, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId())), 20000);
         CmdUtils.schedule(() -> {
             List<Candidate> winners = Candidate.getWinner(expelCandidates.get(channel.getGuild().getIdLong()).values(), session.getPolice());
-            if (winners.size() == 0) {
+            if (winners.isEmpty()) {
                 message.reply("沒有人投票，不驅逐").queue();
                 expelCandidates.remove(channel.getGuild().getIdLong());
             }
             if (winners.size() == 1) {
-                message.reply("投票已結束，<@!" + winners.get(0).getPlayer().getUserId() + "> 遭到驅逐").queue();
+                message.reply("投票已結束，<@!" + winners.getFirst().getPlayer().getUserId() + "> 遭到驅逐").queue();
 
                 EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("驅逐投票").setColor(MsgUtils.getRandomColor())
-                        .setDescription("遭驅逐玩家: <@!" + winners.get(0).getPlayer().getUserId() + ">");
+                        .setDescription("遭驅逐玩家: <@!" + winners.getFirst().getPlayer().getUserId() + ">");
                 sendVoteResult(session, channel, message, resultEmbed, expelCandidates, false);
                 expelCandidates.remove(channel.getGuild().getIdLong());
-                Player.playerDied(session, channel.getGuild().getMemberById(Objects.requireNonNull(winners.get(0).getPlayer().getUserId())), true, true);
+                Player.playerDied(session, channel.getGuild().getMemberById(Objects.requireNonNull(winners.getFirst().getPlayer().getUserId())), true, true);
             }
             if (winners.size() > 1) {
                 if (allowPK) {
@@ -134,6 +134,7 @@ public class Poll {
     @Subcommand
     public static class Police {
         public static Map<Long, Boolean> allowEnroll = new ConcurrentHashMap<>(); // key is guild id
+        public static Map<Long, Boolean> allowUnEnroll = new ConcurrentHashMap<>(); // key is guild id
         public static Map<Long, Map<Integer, Candidate>> candidates = new ConcurrentHashMap<>(); // key is guild id // second key is candidate id
 
         public static void handlePolicePK(Session session, GuildMessageChannel channel, Message message, List<Candidate> winners) {
@@ -149,6 +150,7 @@ public class Poll {
         }
 
         public static void startPolicePoll(Session session, GuildMessageChannel channel, boolean allowPK) {
+            allowUnEnroll.put(channel.getGuild().getIdLong(), false);
             Audio.play(Audio.Resource.POLICE_POLL, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId()));
             allowEnroll.put(channel.getGuild().getIdLong(), true);
             EmbedBuilder embedBuilder = new EmbedBuilder().setTitle("警長投票").setDescription("30秒後立刻計票，請加快手速!\n若要改票可直接按下要改成的對象\n若要改為棄票需按下原本投給的使用者").setColor(MsgUtils.getRandomColor());
@@ -169,23 +171,23 @@ public class Poll {
             CmdUtils.schedule(() -> Audio.play(Audio.Resource.POLL_10S_REMAINING, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId())), 20000);
             CmdUtils.schedule(() -> {
                 List<Candidate> winners = Candidate.getWinner(candidates.get(channel.getGuild().getIdLong()).values(), null);
-                if (winners.size() == 0) {
+                if (winners.isEmpty()) {
                     message.reply("沒有人投票，警徽撕毀").queue();
                     candidates.remove(channel.getGuild().getIdLong());
                     return;
                 }
                 if (winners.size() == 1) {
-                    message.reply("投票已結束，<@!" + winners.get(0).getPlayer().getUserId() + "> 獲勝").queue();
+                    message.reply("投票已結束，<@!" + winners.getFirst().getPlayer().getUserId() + "> 獲勝").queue();
 
                     EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("警長投票").setColor(MsgUtils.getRandomColor())
-                            .setDescription("獲勝玩家: <@!" + winners.get(0).getPlayer().getUserId() + ">");
+                            .setDescription("獲勝玩家: <@!" + winners.getFirst().getPlayer().getUserId() + ">");
                     sendVoteResult(session, channel, message, resultEmbed, candidates, true);
                     candidates.remove(channel.getGuild().getIdLong());
-                    Member member = channel.getGuild().getMemberById(Objects.requireNonNull(winners.get(0).getPlayer().getUserId()));
+                    Member member = channel.getGuild().getMemberById(Objects.requireNonNull(winners.getFirst().getPlayer().getUserId()));
                     if (member != null)
                         member.modifyNickname(member.getEffectiveName() + " [警長]").queue();
                     Session.fetchCollection().updateOne(eq("guildId", channel.getGuild().getIdLong()),
-                            set("players." + winners.get(0).getPlayer().getId() + ".police", true));
+                            set("players." + winners.getFirst().getPlayer().getId() + ".police", true));
                 }
                 if (winners.size() > 1) {
                     if (allowPK) {
@@ -213,15 +215,16 @@ public class Poll {
             }
             for (Map.Entry<Integer, Candidate> candidate : new LinkedList<>(candidates.get(event.getGuild().getIdLong()).entrySet())) {
                 if (Objects.equals(event.getUser().getIdLong(), candidate.getValue().getPlayer().getUserId())) {
-                    if (allowEnroll.get(event.getGuild().getIdLong())) { // The enrollment process hasn't ended yet, so we remove them completely
+                    if (allowEnroll.get(event.getGuild().getIdLong()) && allowUnEnroll.get(event.getGuild().getIdLong())) { // The enrollment process hasn't ended yet, so we remove them completely
                         candidates.get(event.getGuild().getIdLong()).remove(candidate.getKey());
-                    } else {
+                        event.getHook().editOriginal(":white_check_mark: 已取消參選").queue();
+                    } else if (allowUnEnroll.get(event.getGuild().getIdLong())) {
                         candidates.get(event.getGuild().getIdLong()).get(candidate.getKey()).setQuit(true);
-                    }
-                    event.getHook().editOriginal(":white_check_mark: 已取消參選").queue();
-                    if (!allowEnroll.get(event.getGuild().getIdLong())) {
+                        event.getHook().editOriginal(":white_check_mark: 已取消參選").queue();
                         Objects.requireNonNull(event.getGuild().getTextChannelById(session.getCourtTextChannelId()))
                                 .sendMessage(event.getUser().getAsMention() + " 已取消參選").queue();
+                    } else {
+                        event.getHook().editOriginal(":x: 無法取消參選，投票已開始").queue();
                     }
                     return;
                 }
@@ -247,6 +250,7 @@ public class Poll {
             if (session == null) return;
             candidates.put(event.getGuild().getIdLong(), new ConcurrentHashMap<>());
             allowEnroll.put(event.getGuild().getIdLong(), true);
+            allowUnEnroll.put(event.getGuild().getIdLong(), true);
             Audio.play(Audio.Resource.POLICE_ENROLL, event.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId()));
             EmbedBuilder embed = new EmbedBuilder()
                     .setTitle("參選警長").setDescription("30秒後立刻進入辯論，請加快手速!").setColor(MsgUtils.getRandomColor());
@@ -256,7 +260,7 @@ public class Poll {
             CmdUtils.schedule(() -> Audio.play(Audio.Resource.ENROLL_10S_REMAINING, event.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId())), 20000);
             CmdUtils.schedule(() -> {
                 allowEnroll.put(event.getGuild().getIdLong(), false);
-                if (candidates.get(event.getGuild().getIdLong()).size() == 0) {
+                if (candidates.get(event.getGuild().getIdLong()).isEmpty()) {
                     candidates.remove(event.getGuild().getIdLong());
                     message.reply("無人參選，警徽撕毀").queue();
                     return;
@@ -266,7 +270,7 @@ public class Poll {
                     candidateMentions.add("<@!" + candidate.getPlayer().getUserId() + ">");
                 }
                 if (candidates.get(event.getGuild().getIdLong()).size() == 1) {
-                    message.reply("只有" + candidateMentions.get(0) + "參選，直接當選").queue();
+                    message.reply("只有" + candidateMentions.getFirst() + "參選，直接當選").queue();
                     Member member = event.getGuild().getMemberById(Objects.requireNonNull(candidates.get(event.getGuild().getIdLong()).get(0).getPlayer().getUserId()));
                     if (member != null)
                         member.modifyNickname(member.getEffectiveName() + " [警長]").queue();
