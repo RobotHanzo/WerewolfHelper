@@ -23,8 +23,8 @@ dependencies {
     slim("com.github.RobotHanzo:JDAInteractions:0.1.2")
     implementation("com.github.RobotHanzo:slimjar:master-SNAPSHOT")
     slim("com.sedmelluq:lavaplayer:1.3.78")
-    compileOnly("org.projectlombok:lombok:1.18.32")
-    annotationProcessor("org.projectlombok:lombok:1.18.32")
+    compileOnly("org.projectlombok:lombok:1.18.34")
+    annotationProcessor("org.projectlombok:lombok:1.18.34")
 }
 
 tasks {
