@@ -1,9 +1,11 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import io.github.slimjar.task.SlimJar
 
 plugins {
     java
+//    id("com.gradleup.shadow") version "8.3.0" // not yet supported by slimjar
     id("com.github.johnrengelman.shadow") version "8.1.1"
-    id("io.github.slimjar").version("1.3.0")
+    id("dev.racci.slimjar").version("1.6.1")
 }
 
 group = "dev.robothanzo.werewolf"
@@ -16,15 +18,15 @@ repositories {
 }
 
 dependencies {
-    slim("net.dv8tion:JDA:5.0.0-beta.23")
+    slim("net.dv8tion:JDA:5.1.0")
     slim("club.minnced:discord-webhooks:0.8.4")
-    slim("org.mongodb:mongodb-driver-sync:5.0.1")
-    slim("ch.qos.logback:logback-classic:1.5.6")
+    slim("org.mongodb:mongodb-driver-sync:5.1.3")
+    slim("ch.qos.logback:logback-classic:1.5.7")
     slim("com.github.RobotHanzo:JDAInteractions:0.1.2")
     implementation("com.github.RobotHanzo:slimjar:master-SNAPSHOT")
-    slim("com.sedmelluq:lavaplayer:1.3.78")
-    compileOnly("org.projectlombok:lombok:1.18.32")
-    annotationProcessor("org.projectlombok:lombok:1.18.32")
+    slim("dev.arbjerg:lavaplayer:2.2.1")
+    compileOnly("org.projectlombok:lombok:1.18.34")
+    annotationProcessor("org.projectlombok:lombok:1.18.34")
 }
 
 tasks {
@@ -41,6 +43,10 @@ tasks {
 
     named<ShadowJar>("shadowJar") {
         archiveClassifier.set("")
+    }
+
+    named<SlimJar>("slimJar") {
+        dependsOn(shadowJar)
     }
 
     build {
