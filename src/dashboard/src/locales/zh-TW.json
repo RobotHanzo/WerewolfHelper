@@ -1,0 +1,101 @@
+{
+    "app": {
+        "title": "狼人殺助手",
+        "subtitle": "管理員儀表板與遊戲管理器"
+    },
+    "login": {
+        "title": "狼人殺助手",
+        "subtitle": "管理員儀表板與遊戲管理器",
+        "loginButton": "使用 Discord 登入",
+        "restriction": "僅限狼人伺服器管理員"
+    },
+    "sidebar": {
+        "dashboard": "儀表板",
+        "gameSettings": "遊戲設定",
+        "integrationGuide": "整合指南",
+        "botConnected": "機器人已連接",
+        "signOut": "登出"
+    },
+    "gameHeader": {
+        "currentPhase": "當前階段",
+        "timer": "計時器",
+        "startGame": "開始遊戲",
+        "nextPhase": "下一階段"
+    },
+    "phases": {
+        "LOBBY": "大廳",
+        "NIGHT": "夜晚",
+        "DAY": "白天",
+        "VOTING": "投票",
+        "GAME_OVER": "遊戲結束"
+    },
+    "players": {
+        "title": "玩家",
+        "alive": "存活",
+        "dead": "死亡",
+        "kill": "殺死",
+        "revive": "復活",
+        "edit": "編輯"
+    },
+    "roles": {
+        "WEREWOLF": "狼人",
+        "VILLAGER": "村民",
+        "SEER": "預言家",
+        "WITCH": "女巫",
+        "HUNTER": "獵人",
+        "GUARD": "守衛"
+    },
+    "status": {
+        "sheriff": "警長",
+        "jinBaoBao": "金寶寶",
+        "protected": "已保護",
+        "poisoned": "已中毒",
+        "silenced": "已禁言"
+    },
+    "gameLog": {
+        "title": "遊戲日誌",
+        "clear": "清除",
+        "placeholder": "輸入手動命令...",
+        "systemInit": "系統已初始化。等待連接中...",
+        "adminLogin": "管理員透過 Discord OAuth 模擬登入。",
+        "gameStarted": "遊戲已開始！",
+        "gamePaused": "遊戲計時器已被管理員暫停。",
+        "gameReset": "遊戲已重置。",
+        "broadcastRoles": "正在透過私訊向所有玩家廣播角色...",
+        "randomizeRoles": "正在隨機分配角色...",
+        "adminCommand": "管理員執行命令：/{action} 對 {player}",
+        "adminGlobalCommand": "管理員執行全域命令：/{action}",
+        "manualCommand": "手動命令：{cmd}"
+    },
+    "globalCommands": {
+        "title": "全域管理員命令",
+        "broadcastRole": "廣播角色（私訊）",
+        "randomAssign": "隨機分配角色",
+        "forceReset": "強制重置"
+    },
+    "integrationGuide": {
+        "title": "整合指南",
+        "close": "關閉",
+        "overview": "概述",
+        "overviewText": "此儀表板透過 HTTP REST API 與您的 Java Discord 機器人通訊。以下是如何整合此前端與您的後端的逐步指南。",
+        "step1": "步驟 1：設定 CORS",
+        "step1Text": "確保您的 Java 伺服器允許來自此儀表板來源的請求。",
+        "step2": "步驟 2：實作 API 端點",
+        "step2Text": "建立 REST 控制器來處理遊戲狀態更新。",
+        "step3": "步驟 3：WebSocket（可選）",
+        "step3Text": "對於即時更新，使用 WebSocket 將遊戲事件推送到儀表板。",
+        "step4": "步驟 4：Discord OAuth",
+        "step4Text": "使用 Discord OAuth2 進行身份驗證，以限制管理員存取。",
+        "apiReference": "API 參考",
+        "getGameState": "取得遊戲狀態",
+        "updatePlayer": "更新玩家",
+        "globalAction": "全域動作",
+        "notes": "注意事項",
+        "notesText": "將 {baseUrl} 替換為您的 Java 伺服器 URL（例如 http://localhost:8080），並確保在正式環境中使用 HTTPS。"
+    },
+    "theme": {
+        "toggle": "切換主題",
+        "light": "淺色模式",
+        "dark": "深色模式"
+    }
+}
