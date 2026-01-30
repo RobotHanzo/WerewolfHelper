@@ -1,7 +1,7 @@
 package dev.robothanzo.werewolf.utils;
 
-import net.dv8tion.jda.api.interactions.components.ActionRow;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
 
 import java.awt.*;
 import java.util.Comparator;
@@ -29,13 +29,13 @@ public class MsgUtils {
         return Comparator.comparingInt(MsgUtils::getSortOrder);
     }
 
-    public static List<ActionRow> spreadButtonsAcrossActionRows(List<net.dv8tion.jda.api.interactions.components.buttons.Button> buttons) {
+    public static List<ActionRow> spreadButtonsAcrossActionRows(List<Button> buttons) {
         List<ActionRow> rows = new LinkedList<>(List.of(ActionRow.of(buttons.removeFirst())));
         for (Button button : buttons) {
-            if (rows.get(rows.size() - 1).getComponents().size() >= 5) {
+            if (rows.getLast().getComponents().size() >= 5) {
                 rows.add(ActionRow.of(button));
             } else {
-                List<Button> newButtons = new LinkedList<>(rows.get(rows.size() - 1).getButtons());
+                List<Button> newButtons = new LinkedList<>(rows.getLast().getButtons());
                 newButtons.add(button);
                 rows.set(rows.size() - 1, ActionRow.of(newButtons));
             }

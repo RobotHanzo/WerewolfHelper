@@ -16,9 +16,9 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent;
-import net.dv8tion.jda.api.interactions.components.ActionRow;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import net.dv8tion.jda.api.interactions.components.selections.EntitySelectMenu;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.components.selections.EntitySelectMenu;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -53,10 +53,7 @@ public class Player {
                             new EmbedBuilder()
                                     .setTitle("移交警徽").setColor(MsgUtils.getRandomColor())
                                     .setDescription("請選擇要移交警徽的對象，若要撕掉警徽，請按下撕毀按鈕\n請在30秒內做出選擇，否則警徽將被自動撕毀").build())
-                    .setComponents(ActionRow.of(selectMenu.build()), ActionRow.of(
-                            Button.success("confirmNewPolice", "移交"),
-                            Button.danger("destroyPolice", "撕毀")
-                    ))
+                    .setComponents(ActionRow.of(selectMenu.build()), ActionRow.of(Button.success("confirmNewPolice", "移交"), Button.danger("destroyPolice", "撕毀")))
                     .complete();
             CmdUtils.schedule(() -> {
                 if (transferPoliceSessions.remove(guild.getIdLong()) != null) {
@@ -129,8 +126,7 @@ public class Player {
         return true;
     }
 
-    @dev.robothanzo.jda.interactions.annotations.select.EntitySelectMenu(targets = EntitySelectMenu.SelectTarget.USER)
-    public void selectNewPolice(EntitySelectInteractionEvent event) {
+    public static void selectNewPolice(EntitySelectInteractionEvent event) {
         if (transferPoliceSessions.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
             Member target = event.getMentions().getMembers().getFirst();
             TransferPoliceSession session = transferPoliceSessions.get(Objects.requireNonNull(event.getGuild()).getIdLong());
@@ -155,7 +151,7 @@ public class Player {
     }
 
     @dev.robothanzo.jda.interactions.annotations.Button
-    public void confirmNewPolice(ButtonInteractionEvent event) {
+    public static void confirmNewPolice(ButtonInteractionEvent event) {
         if (transferPoliceSessions.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
             TransferPoliceSession session = transferPoliceSessions.get(Objects.requireNonNull(event.getGuild()).getIdLong());
             if (session.getSenderId() == event.getUser().getIdLong()) {
@@ -186,7 +182,7 @@ public class Player {
     }
 
     @dev.robothanzo.jda.interactions.annotations.Button
-    public void destroyPolice(ButtonInteractionEvent event) {
+    public static void destroyPolice(ButtonInteractionEvent event) {
         if (transferPoliceSessions.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
             TransferPoliceSession session = transferPoliceSessions.get(Objects.requireNonNull(event.getGuild()).getIdLong());
             if (session.getSenderId() == event.getUser().getIdLong()) {
@@ -345,7 +341,7 @@ public class Player {
                             (player.isDuplicated() ? " (複製人)" : ""))
                     .setColor(MsgUtils.getRandomColor()).build());
             if (session.isDoubleIdentities()) {
-                action.setActionRow(Button.primary("changeRoleOrder", "更換身分順序 (請在收到身分後兩分鐘內使用，逾時不候)"));
+                action.setComponents(ActionRow.of(Button.primary("changeRoleOrder", "更換身分順序 (請在收到身分後全分聽完再使用，逾時不候)")));
                 CmdUtils.schedule(() -> {
                     Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()),
                             set("players." + player.getId() + ".rolePositionLocked", true));

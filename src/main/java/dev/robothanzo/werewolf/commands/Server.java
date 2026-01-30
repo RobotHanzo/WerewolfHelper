@@ -14,21 +14,15 @@ import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Icon;
 import net.dv8tion.jda.api.entities.Role;
-import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.Command.Choice;
-import net.dv8tion.jda.api.requests.restaction.GuildAction;
 
 import java.awt.*;
-import java.util.List;
 import java.util.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.List;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.pushEach;
@@ -37,11 +31,7 @@ import static com.mongodb.client.model.Updates.set;
 @Slf4j
 @Command
 public class Server {
-    public static Lock serverCreationLock = new ReentrantLock();
-    public static int newServerPlayerCount = 0;
-    public static boolean newServerDoubleIdentities = false;
-    public static long newServerOwner = 0;
-    public static InteractionHook newServerHook;
+    public static Map<Long, PendingSetup> pendingSetups = new HashMap<>();
 
     @Subcommand(description = "建立一個新的狼人殺伺服器")
     @SneakyThrows
@@ -49,54 +39,25 @@ public class Server {
                        @Option(value = "players", description = "玩家數量") Long players,
                        @Option(value = "double_identity", description = "是否為雙身分模式，預設否", optional = true) Boolean doubleIdentity) {
         if (!CmdUtils.isServerCreator(event)) return;
-        event.deferReply().queue();
-        log.info("Queued an server creation attempt of {} players", players);
-        serverCreationLock.lock();
-        log.info("Server creation lock acquired");
-        newServerPlayerCount = Math.toIntExact(players);
-        newServerDoubleIdentities = doubleIdentity != null && doubleIdentity;
-        newServerOwner = event.getUser().getIdLong();
 
-        GuildAction guildAction = WerewolfHelper.jda.createGuild("狼人殺伺服器")
-                .setNotificationLevel(Guild.NotificationLevel.MENTIONS_ONLY).setIcon(Icon.from(Objects.requireNonNull(WerewolfHelper.class.getClassLoader().getResourceAsStream("wolf.png"))));
-        // spectator role
-        GuildAction.RoleData deadRole = guildAction.newRole().setColor(new Color(0x654321)).setName("旁觀者/死人")
-                .setHoisted(false).setPosition(0).addPermissions(Permission.VIEW_CHANNEL);
-        // court text, voice, spectator channels, judge channel
-        guildAction.newChannel(ChannelType.TEXT, "法院")
-                .addPermissionOverride(guildAction.getPublicRole(), List.of(), List.of(Permission.USE_APPLICATION_COMMANDS))
-                .addPermissionOverride(deadRole, List.of(Permission.VIEW_CHANNEL), List.of(Permission.MESSAGE_SEND, Permission.MESSAGE_ADD_REACTION));
-        guildAction.newChannel(ChannelType.VOICE, "法院")
-                .addPermissionOverride(guildAction.getPublicRole(), List.of(Permission.VOICE_SPEAK), List.of(Permission.USE_EMBEDDED_ACTIVITIES))
-                .addPermissionOverride(deadRole, Permission.VIEW_CHANNEL.getRawValue(), Permission.VOICE_SPEAK.getRawValue());
-        guildAction.newChannel(ChannelType.TEXT, "場外")
-                .addPermissionOverride(deadRole, List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND), List.of())
-                .addPermissionOverride(guildAction.getPublicRole(), List.of(), List.of(Permission.VIEW_CHANNEL, Permission.USE_APPLICATION_COMMANDS));
-        guildAction.newChannel(ChannelType.VOICE, "場外")
-                .addPermissionOverride(deadRole, List.of(Permission.VIEW_CHANNEL, Permission.VOICE_SPEAK), List.of())
-                .addPermissionOverride(guildAction.getPublicRole(), List.of(), List.of(Permission.VIEW_CHANNEL));
-        guildAction.newChannel(ChannelType.TEXT, "法官")
-                .addPermissionOverride(deadRole, Permission.VIEW_CHANNEL.getRawValue(), Permission.MESSAGE_SEND.getRawValue())
-                .addPermissionOverride(guildAction.getPublicRole(), List.of(), List.of(Permission.VIEW_CHANNEL, Permission.USE_APPLICATION_COMMANDS));
-        // player roles & channels
-        Map<Long, GuildAction.RoleData> playerRoles = new HashMap<>();
-        for (long i = players; i != 0; i--) { // doing roles in reverse allows us to make roles in order
-            GuildAction.RoleData playerRole = guildAction.newRole().setColor(MsgUtils.getRandomColor())
-                    .setHoisted(true).setPosition(-1).setName("玩家" + i);
-            playerRoles.put(i, playerRole);
-        }
-        //judge role
-        guildAction.newRole().setColor(Color.YELLOW).setName("法官").setHoisted(true).addPermissions(Permission.ADMINISTRATOR);
-        for (long i = 1; i != (players + 1); i++) {
-            guildAction.newChannel(ChannelType.TEXT, "玩家" + i)
-                    .addPermissionOverride(deadRole, Permission.VIEW_CHANNEL.getRawValue(), Permission.MESSAGE_SEND.getRawValue())
-                    .addPermissionOverride(playerRoles.get(i), List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND), List.of())
-                    .addPermissionOverride(guildAction.getPublicRole(), List.of(), List.of(Permission.VIEW_CHANNEL,
-                            Permission.MESSAGE_SEND, Permission.USE_APPLICATION_COMMANDS));
-        }
-        newServerHook = event.getHook();
-        guildAction.complete();
-        log.info("Server creation complete");
+        long userId = event.getUser().getIdLong();
+        boolean doubleId = doubleIdentity != null && doubleIdentity;
+        // store the channel where user invoked the command so we can send the invite back there later
+        long originChannelId = event.getChannel().getIdLong();
+        pendingSetups.put(userId, new PendingSetup(Math.toIntExact(players), doubleId, originChannelId));
+
+        String inviteUrl = WerewolfHelper.jda.getInviteUrl(Permission.ADMINISTRATOR).replaceAll("scope=bot", "scope=bot%20applications.commands");
+
+        EmbedBuilder eb = new EmbedBuilder()
+                .setTitle("狼人殺伺服器建立指南")
+                .setDescription("由於 Discord 政策變更，機器人無法再自動建立伺服器。請依照以下步驟完成設定：")
+                .addField("1. 建立伺服器", "請手動建立一個新的 Discord 伺服器，名稱建議為「狼人殺伺服器」。", false)
+                .addField("2. 邀請機器人", "請點擊下方連結將機器人邀請至新伺服器 (需授予管理員權限)：\n" + inviteUrl, false)
+                .addField("3. 自動設定", "機器人加入後將會自動偵測並開始設定頻道與身分組。", false)
+                .setColor(Color.GREEN);
+
+        event.replyEmbeds(eb.build()).setEphemeral(true).queue();
+        log.info("Queued a server setup for user {} with {} players", userId, players);
     }
 
     @Subcommand(description = "刪除所在之伺服器(僅可在狼人殺伺服器內使用)")
@@ -104,11 +65,11 @@ public class Server {
         try {
             if (!CmdUtils.isServerCreator(event)) return;
             if (guildId == null) {
-                Objects.requireNonNull(event.getGuild()).delete().queue();
+                Objects.requireNonNull(event.getGuild()).leave().queue();
                 Session.fetchCollection().deleteOne(eq("guildId", event.getGuild().getIdLong()));
                 Speech.speechSessions.remove(event.getGuild().getIdLong());
             } else {
-                Objects.requireNonNull(WerewolfHelper.jda.getGuildById(guildId)).delete().queue();
+                Objects.requireNonNull(WerewolfHelper.jda.getGuildById(guildId)).leave().queue();
                 Session.fetchCollection().deleteOne(eq("guildId", guildId));
                 Speech.speechSessions.remove(Objects.requireNonNull(WerewolfHelper.jda.getGuildById(guildId)).getIdLong());
             }
@@ -165,6 +126,9 @@ public class Server {
                     .setDescription("```json\n" + new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(session) + "\n```");
             event.getHook().editOriginalEmbeds(eb.build()).queue();
         }
+    }
+
+    public record PendingSetup(int players, boolean doubleIdentity, long originChannelId) {
     }
 
     @Subcommand

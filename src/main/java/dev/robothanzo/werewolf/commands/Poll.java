@@ -16,7 +16,8 @@ import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -58,7 +59,7 @@ public class Poll {
                     "玩家" + player.getPlayer().getId() + " (" + user.getUser().getName() + ")"));
         }
         Message message = channel.sendMessageEmbeds(embedBuilder.build())
-                .setComponents(MsgUtils.spreadButtonsAcrossActionRows(buttons)).complete();
+                .setComponents(MsgUtils.spreadButtonsAcrossActionRows(buttons).toArray(new ActionRow[0])).complete();
         CmdUtils.schedule(() -> Audio.play(Audio.Resource.POLL_10S_REMAINING, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId())), 20000);
         CmdUtils.schedule(() -> {
             List<Candidate> winners = Candidate.getWinner(expelCandidates.get(channel.getGuild().getIdLong()).values(), session.getPolice());
@@ -167,7 +168,7 @@ public class Poll {
                         "玩家" + player.getPlayer().getId() + " (" + user.getUser().getName() + ")"));
             }
             Message message = channel.sendMessageEmbeds(embedBuilder.build())
-                    .setComponents(MsgUtils.spreadButtonsAcrossActionRows(buttons)).complete();
+                    .setComponents(MsgUtils.spreadButtonsAcrossActionRows(buttons).toArray(new ActionRow[0])).complete();
             CmdUtils.schedule(() -> Audio.play(Audio.Resource.POLL_10S_REMAINING, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId())), 20000);
             CmdUtils.schedule(() -> {
                 List<Candidate> winners = Candidate.getWinner(candidates.get(channel.getGuild().getIdLong()).values(), null);
@@ -255,7 +256,7 @@ public class Poll {
             EmbedBuilder embed = new EmbedBuilder()
                     .setTitle("參選警長").setDescription("30秒後立刻進入辯論，請加快手速!").setColor(MsgUtils.getRandomColor());
             Message message = event.getHook().editOriginalEmbeds(embed.build())
-                    .setActionRow(Button.success("enrollPolice", "參選警長"))
+                    .setComponents(ActionRow.of(Button.success("enrollPolice", "參選警長")))
                     .complete();
             CmdUtils.schedule(() -> Audio.play(Audio.Resource.ENROLL_10S_REMAINING, event.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId())), 20000);
             CmdUtils.schedule(() -> {
@@ -346,5 +347,16 @@ public class Poll {
             if (hasPolice) hasPolice = electors.contains(police.getUserId());
             return (float) ((electors.size() + (hasPolice ? 0.5 : 0)) * (quit ? 0 : 1));
         }
+    }
+
+    public static void sendRolesList(ButtonInteractionEvent event) {
+        Session session = CmdUtils.getSession(event);
+        if (session == null) return;
+        List<String> roles = session.getRoles();
+        event.replyEmbeds(new EmbedBuilder()
+                .setTitle("剩餘身分")
+                .setDescription(roles.isEmpty() ? "無" : String.join("\n", roles))
+                .setColor(MsgUtils.getRandomColor())
+                .build()).setEphemeral(true).queue();
     }
 }

@@ -1,7 +1,6 @@
 package dev.robothanzo.werewolf.commands;
 
 import com.mongodb.client.model.Filters;
-import dev.robothanzo.jda.interactions.annotations.Button;
 import dev.robothanzo.jda.interactions.annotations.slash.Command;
 import dev.robothanzo.jda.interactions.annotations.slash.Subcommand;
 import dev.robothanzo.jda.interactions.annotations.slash.options.Option;
@@ -24,8 +23,9 @@ import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
-import net.dv8tion.jda.api.interactions.components.ActionRow;
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.utils.TimeFormat;
 import org.jetbrains.annotations.Nullable;
 
@@ -101,8 +101,7 @@ public class Speech {
         speechSessions.get(guild.getIdLong()).setOrder(orderList);
     }
 
-    @Button
-    public void terminateTimer(ButtonInteractionEvent event) {
+    public static void terminateTimer(ButtonInteractionEvent event) {
         event.deferReply(true).queue();
         if (timers.containsKey(event.getChannel().getIdLong()) && CmdUtils.isAdmin(event)) {
             timers.get(event.getChannel().getIdLong()).interrupt();
@@ -139,7 +138,7 @@ public class Speech {
                 .setDescription("警長已選擇 " + order.toEmoji().getName() + " " + order + "\n請按下確認").build()).queue();
     }
 
-    @Button
+    @dev.robothanzo.jda.interactions.annotations.Button
     public void confirmOrder(ButtonInteractionEvent event) {
         event.deferReply(true).queue();
         Session session = CmdUtils.getSession(Objects.requireNonNull(event.getGuild()));
@@ -174,7 +173,7 @@ public class Speech {
         }
     }
 
-    @Button
+    @dev.robothanzo.jda.interactions.annotations.Button
     public void skipSpeech(ButtonInteractionEvent event) {
         event.deferReply().queue();
         if (event.getGuild() != null && speechSessions.containsKey(event.getGuild().getIdLong())) {
@@ -190,7 +189,7 @@ public class Speech {
         }
     }
 
-    @Button
+    @dev.robothanzo.jda.interactions.annotations.Button
     public void interruptSpeech(ButtonInteractionEvent event) {
         event.deferReply(true).queue();
         if (event.getGuild() != null && speechSessions.containsKey(event.getGuild().getIdLong())) {
@@ -237,7 +236,7 @@ public class Speech {
         event.reply(":white_check_mark:").setEphemeral(true).queue();
         Thread thread = new Thread(() -> {
             Message message = event.getChannel().sendMessage(time.getSeconds() + "秒的計時開始，" + TimeFormat.TIME_LONG.after(time) + "後結束")
-                    .setActionRow(net.dv8tion.jda.api.interactions.components.buttons.Button.danger("terminateTimer", "強制結束計時")).complete();
+                    .setComponents(ActionRow.of(Button.danger("terminateTimer", "強制結束計時"))).complete();
             try {
                 if (time.getSeconds() > 30) {
                     Thread.sleep(time.toMillis() - 30000);
@@ -296,7 +295,7 @@ public class Speech {
                                 .addOption(Order.UP.toString(), "up", Order.UP.toEmoji())
                                 .addOption(Order.DOWN.toString(), "down", Order.DOWN.toEmoji())
                                 .setPlaceholder("請警長按此選擇發言順序").build()
-                        ), ActionRow.of(net.dv8tion.jda.api.interactions.components.buttons.Button.success("confirmOrder", "確認選取"))).queue();
+                        ), ActionRow.of(Button.success("confirmOrder", "確認選取"))).queue();
                 return;
             }
         }
@@ -436,10 +435,10 @@ public class Speech {
                 }
                 Message message = Objects.requireNonNull(guild.getTextChannelById(channelId))
                         .sendMessage("<@!" + player.getUserId() + "> 你有" + time + "秒可以發言\n")
-                        .setActionRow(
-                                net.dv8tion.jda.api.interactions.components.buttons.Button.danger("skipSpeech", "跳過 (發言者按)").withEmoji(Emoji.fromUnicode("U+23ed")),
-                                net.dv8tion.jda.api.interactions.components.buttons.Button.danger("interruptSpeech", "下台 (玩家或法官按)").withEmoji(Emoji.fromUnicode("U+1f5d1"))
-                        ).complete();
+                        .setComponents(ActionRow.of(
+                                Button.danger("skipSpeech", "跳過 (發言者按)").withEmoji(Emoji.fromUnicode("U+23ed")),
+                                Button.danger("interruptSpeech", "下台 (玩家或法官按)").withEmoji(Emoji.fromUnicode("U+1f5d1"))
+                        )).complete();
                 AudioChannel channel = guild.getVoiceChannelById(session.getCourtVoiceChannelId());
                 try {
                     Thread.sleep((time - 30) * 1000);
