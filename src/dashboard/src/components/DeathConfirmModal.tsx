@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { useTranslation } from '../lib/i18n';
-import { Player } from '../types';
-import { Skull, X, AlertTriangle } from 'lucide-react';
-import { api } from '../lib/api';
+import React, {useState} from 'react';
+import {useTranslation} from '../lib/i18n';
+import {Player} from '../types';
+import {Skull, X} from 'lucide-react';
+import {api} from '../lib/api';
 
 interface DeathConfirmModalProps {
     player: Player;
@@ -10,8 +10,8 @@ interface DeathConfirmModalProps {
     onClose: () => void;
 }
 
-export const DeathConfirmModal: React.FC<DeathConfirmModalProps> = ({ player, guildId, onClose }) => {
-    const { t } = useTranslation();
+export const DeathConfirmModal: React.FC<DeathConfirmModalProps> = ({player, guildId, onClose}) => {
+    const {t} = useTranslation();
     const [lastWords, setLastWords] = useState(false);
     const [loading, setLoading] = useState(false);
 
@@ -30,22 +30,25 @@ export const DeathConfirmModal: React.FC<DeathConfirmModalProps> = ({ player, gu
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-scale-up border border-slate-200 dark:border-slate-800">
-                <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-red-50 dark:bg-red-900/20">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+            <div
+                className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-scale-up border border-slate-200 dark:border-slate-800">
+                <div
+                    className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-red-50 dark:bg-red-900/20">
                     <h2 className="text-lg font-bold text-red-700 dark:text-red-400 flex items-center gap-2">
-                        <Skull className="w-5 h-5" />
+                        <Skull className="w-5 h-5"/>
                         {t('actions.kill')}
                     </h2>
                     <button onClick={onClose} className="p-1 rounded-full hover:bg-black/5 transition-colors">
-                        <X className="w-5 h-5 text-slate-500" />
+                        <X className="w-5 h-5 text-slate-500"/>
                     </button>
                 </div>
 
                 <div className="p-6 space-y-4">
                     <div className="flex items-center gap-3">
                         <div className="text-4xl">
-                            {player.avatar ? <img src={player.avatar} className="w-12 h-12 rounded-full" /> : '👤'}
+                            {player.avatar ? <img src={player.avatar} className="w-12 h-12 rounded-full"/> : '👤'}
                         </div>
                         <div>
                             <p className="font-bold text-lg dark:text-slate-200">{player.name}</p>
@@ -55,7 +58,8 @@ export const DeathConfirmModal: React.FC<DeathConfirmModalProps> = ({ player, gu
                         </div>
                     </div>
 
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg text-sm text-slate-600 dark:text-slate-300">
+                    <div
+                        className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg text-sm text-slate-600 dark:text-slate-300">
                         <p>{t('players.killConfirmation', 'Are you sure you want to kill this player?')}</p>
                     </div>
 
@@ -67,7 +71,8 @@ export const DeathConfirmModal: React.FC<DeathConfirmModalProps> = ({ player, gu
                             onChange={(e) => setLastWords(e.target.checked)}
                             className="w-4 h-4 text-red-600 rounded border-slate-300 focus:ring-red-500"
                         />
-                        <label htmlFor="lastWords" className="text-sm font-medium text-slate-700 dark:text-slate-300 select-none cursor-pointer">
+                        <label htmlFor="lastWords"
+                               className="text-sm font-medium text-slate-700 dark:text-slate-300 select-none cursor-pointer">
                             {t('game.lastWords', 'Allow Last Words')}
                         </label>
                     </div>
@@ -86,7 +91,7 @@ export const DeathConfirmModal: React.FC<DeathConfirmModalProps> = ({ player, gu
                         >
                             {loading ? '...' : (
                                 <>
-                                    <Skull className="w-4 h-4" />
+                                    <Skull className="w-4 h-4"/>
                                     {t('actions.kill')}
                                 </>
                             )}

@@ -1,314 +1,329 @@
 {
-    "app": {
-        "title": "狼人殺助手",
-        "subtitle": "管理員儀表板與遊戲管理器"
-    },
-    "login": {
-        "title": "狼人殺助手",
-        "subtitle": "管理員儀表板與遊戲管理器",
-        "loginButton": "使用 Discord 登入",
-        "restriction": "僅限狼人伺服器管理員"
-    },
-    "auth": {
-        "loggingIn": "登入中..."
-    },
-    "sidebar": {
-        "dashboard": "儀表板",
-        "switchServer": "切換伺服器",
-        "gameSettings": "遊戲設定",
-        "integrationGuide": "整合指南",
-        "botConnected": "機器人已連接",
-        "botDisconnected": "機器人未連接",
-        "spectator": "上帝視角",
-        "spectatorView": "上帝視角 / 亡者國度",
-        "speechManager": "發言管理系統",
-        "signOut": "登出",
-        "viewAsSpectator": "以觀眾身分檢視 (預覽)",
-        "backToJudge": "返回法官模式"
-    },
-    "actions": {
-        "kill": "殺死"
-    },
-    "accessDenied": {
-        "title": "存取限制",
-        "message": "身為遊戲中的活躍玩家，為了確保遊戲公平性，您目前無法進入管理儀表板。",
-        "suggestion": "如果您是法官或上帝，請確保您的 Discord 帳號已擁有正確的身分組。",
-        "back": "返回伺服器列表"
-    },
-    "common": {
-        "cancel": "取消",
-        "confirm": "確認",
-        "none": "無",
-        "save": "儲存"
-    },
-    "game": {
-        "lastWords": "遺言"
-    },
-    "gameHeader": {
-        "currentPhase": "當前階段",
-        "timer": "計時器",
-        "startGame": "開始遊戲",
-        "nextPhase": "下一階段",
-        "lastWords": "遺言"
-    },
-    "phases": {
-        "LOBBY": "大廳",
-        "NIGHT": "夜晚",
-        "DAY": "白天",
-        "VOTING": "投票",
-        "GAME_OVER": "遊戲結束"
-    },
-    "players": {
-        "title": "玩家",
-        "alive": "存活",
-        "dead": "死亡",
-        "kill": "殺死",
-        "confirmKill": "確認殺死?",
-        "revive": "復活",
-        "edit": "編輯",
-        "transferPoliceDescription": "將警徽移交給另一位存活玩家。",
-        "selectTarget": "選擇對象...",
-        "noActionsAvailable": "此玩家目前沒有可用的特定操作。",
-        "killConfirmation": "確認處決",
-        "reviveRole": "復活身分: {role}",
-        "switchOrder": "切換身分順序"
-    },
-    "spectator": {
-        "title": "上帝視角 / 亡者國度",
-        "subtitle": "在此查看遊戲進度及各陣營勝利條件",
-        "wolfGoal": "狼人目標：屠戮神職",
-        "wolfGoalDesc": "殺死所有神職人員",
-        "godsLeft": "神職陣營狀況",
-        "godsLeftDesc": "剩餘存活神職",
-        "wolvesLeft": "狼人陣營狀況",
-        "wolvesLeftDesc": "剩餘存活狼人",
-        "villagersLeft": "平民陣營狀況",
-        "villagersLeftDesc": "剩餘存活平民",
-        "jbbLeft": "金寶寶陣營狀況",
-        "jbbLeftDesc": "剩餘存活金寶寶",
-        "godGoal": "好人目標：驅逐狼人",
-        "godGoalDesc": "放逐或殺死所有狼人",
-        "villagerGoal": "狼人目標：屠戮平民",
-        "villagerGoalDesc": "殺死所有平民",
-        "jbbGoal": "狼人目標：尋找金寶寶",
-        "jbbGoalDesc": "殺死所有金寶寶",
-        "winConditions": "詳細勝利條件",
-        "goodWinCondition": "好人陣營：所有狼人死亡",
-        "wolfWinConditionNormal": "狼人陣營：所有神職死亡 或 所有平民死亡",
-        "wolfWinConditionDouble": "狼人陣營：所有神職死亡 或 所有金寶寶死亡"
-    },
-    "roles": {
-        "title": "角色編輯",
-        "role": "角色",
-        "WEREWOLF": "狼人",
-        "VILLAGER": "村民",
-        "SEER": "預言家",
-        "WITCH": "女巫",
-        "HUNTER": "獵人",
-        "GUARD": "守衛",
-        "unknown": "未知身分"
-    },
-    "status": {
-        "sheriff": "警長",
-        "jinBaoBao": "金寶寶",
-        "protected": "已保護",
-        "poisoned": "已中毒",
-        "silenced": "已禁言"
-    },
-    "gameLog": {
-        "title": "遊戲日誌",
-        "placeholder": "輸入手動命令...",
-        "gameStarted": "遊戲已開始！",
-        "gamePaused": "遊戲計時器已被管理員暫停。",
-        "randomizeRoles": "正在隨機分配角色...",
-        "adminCommand": "管理員執行命令：/{action} 對 {player}",
-        "adminGlobalCommand": "管理員執行全域命令：/{action}",
-        "manualCommand": "手動命令：{cmd}"
-    },
-    "globalCommands": {
-        "title": "全域管理員命令",
-        "randomAssign": "隨機分配角色",
-        "startGame": "正式開始遊戲",
-        "forceReset": "強制重置",
-        "confirmReset": "確認重置?",
-        "gameFlow": "遊戲流程",
-        "voiceTimer": "語音與計時",
-        "adminRoles": "管理員身分"
-    },
-    "timer": {
-        "title": "手動計時器",
-        "start": "開始計時",
-        "minutes": "分",
-        "seconds": "秒"
-    },
-    "voice": {
-        "muteAll": "全體靜音",
-        "unmuteAll": "全體解除靜音"
-    },
-    "admin": {
-        "assignJudge": "指派法官",
-        "demoteJudge": "解除法官",
-        "forcePolice": "強制警長"
-    },
-    "serverSelector": {
-        "title": "選擇伺服器",
-        "subtitle": "選擇要管理的狼人殺遊戲伺服器",
-        "loading": "載入伺服器列表...",
-        "loadError": "無法載入伺服器列表",
-        "retry": "重試",
-        "noSessions": "目前沒有進行中的遊戲",
-        "noSessionsHint": "在 Discord 中使用指令建立遊戲後再回來",
-        "players": "位玩家",
-        "backToLogin": "返回登入"
-    },
-    "settings": {
-        "general": "一般設定",
-        "muteAfterSpeech": "發言後靜音",
-        "muteAfterSpeechDesc": "玩家發言結束後自動將其靜音",
-        "doubleIdentities": "雙重身分",
-        "doubleIdentitiesDesc": "每位玩家獲得兩個角色",
-        "playerCount": "玩家人數設定",
-        "totalPlayers": "總玩家數",
-        "playerCountDesc": "調整此數值將會自動建立或刪除遊戲頻道。"
-    },
-    "buttons": {
-        "update": "更新"
-    },
-    "speechManager": {
-        "startAuto": "開始自動發言",
-        "startPoliceEnroll": "啟動警長參選",
-        "skip": "強制換人",
-        "interrupt": "終止流程",
-        "noActiveSpeech": "目前沒有正在進行的自動發言流程。",
-        "noActiveSpeechJudge": "目前沒有正在進行的自動發言流程。身為法官，您可以隨時開始新的流程。",
-        "activeSpeech": "發言進行中",
-        "autoProcess": "自動流程",
-        "speaking": "正在發言",
-        "waiting": "等待發言",
-        "noMoreSpeakers": "沒有更多發言者",
-        "interruptVote": "下台投票",
-        "preparing": "準備中...",
-        "policeEnrollment": "警長參選",
-        "allowEnroll": "允許參選",
-        "allowUnEnroll": "允許退選",
-        "candidates": "參選名單",
-        "noCandidates": "目前無參選者...",
-        "waitingForPolice": "等待警長選擇發言順序...",
-        "waitingForPoliceSub": "警長正在選擇發言順序 (上警/下警)",
-        "forceUp": "強制往上 (死者/小號)",
-        "forceDown": "強制往下 (死者/小號)",
-        "judgeOverride": "法官強制操作"
-    },
-    "progressOverlay": {
-        "operationFailed": "操作失敗",
-        "processing": "正在處理請求...",
-        "complete": "完成！",
-        "unknownError": "發生未知錯誤",
-        "close": "關閉",
-        "ok": "確定",
-        "resetTitle": "重置遊戲"
-    },
-    "playerEdit": {
-        "title": "編輯玩家",
-        "subtitle": "修改 {player} 的角色與狀態",
-        "currentRoles": "目前角色",
-        "noRoles": "尚未分配角色",
-        "addRole": "新增角色",
-        "selectRole": "選擇角色...",
-        "add": "新增",
-        "removeRole": "移除角色",
-        "switchOrder": "交換順序",
-        "lockPosition": "鎖定位置",
-        "unlockPosition": "解鎖位置",
-        "positionLocked": "位置已鎖定",
-        "positionUnlocked": "位置未鎖定",
-        "close": "關閉"
-    },
-    "deathConfirm": {
-        "title": "確認處決",
-        "message": "確定要處決 {player} 嗎？",
-        "lastWordsOption": "允許遺言",
-        "cancel": "取消",
-        "confirm": "確認處決"
-    },
-    "gameSettings": {
-        "title": "遊戲設定",
-        "subtitle": "管理遊戲規則與行為",
-        "generalSettings": "一般設定",
-        "doubleIdentities": "雙重身分",
-        "doubleIdentitiesDesc": "每位玩家獲得兩個角色",
-        "muteAfterSpeech": "發言後靜音",
-        "muteAfterSpeechDesc": "玩家發言結束後自動靜音",
-        "roleManagement": "角色管理",
-        "roleManagementDesc": "新增或移除遊戲中的角色",
-        "currentRoles": "目前角色",
-        "noRoles": "尚未設定角色",
-        "addRole": "新增角色",
-        "selectRole": "選擇角色...",
-        "amount": "數量",
-        "add": "新增",
-        "remove": "移除",
-        "backToDashboard": "返回儀表板"
-    },
-    "settingsModal": {
-        "backendUrl": "後端伺服器網址",
-        "urlPlaceholder": "（保持空白以使用目前網域）",
-        "urlHint": "保持空白則自動使用目前來源。如果您在開發環境（如可以使用 127.0.0.1:8080），也可以手動輸入網址。",
-        "testConnection": "測試連接",
-        "testing": "測試中...",
-        "connectionSuccess": "連接成功",
-        "connectionFailed": "連接失敗"
-    },
-    "search": {
-        "placeholder": "搜尋玩家...",
-        "noResults": "找不到玩家"
-    },
-    "modal": {
-        "assignJudge": "指派法官",
-        "demoteJudge": "解除法官",
-        "forcePolice": "強制警長"
-    },
-    "tooltips": {
-        "skipSpeaker": "跳過當前發言者，換下一位",
-        "interruptSpeech": "終止整個發言流程",
-        "switchToLight": "切換到淺色模式",
-        "switchToDark": "切換到深色模式"
-    },
-    "messages": {
-        "unassigned": "未指派",
-        "player": "玩家",
-        "speaking": "發言中",
-        "progress": "進度",
-        "totalCount": "總數",
-        "noRolesConfigured": "尚無角色配置",
-        "selectOrEnterRole": "選擇或輸入角色名稱...",
-        "add": "新增",
-        "lockRoleOrder": "鎖定角色順序",
-        "autoMuteAfterSpeech": "發言後自動閉麥",
-        "autoMuteDesc": "玩家發言結束後自動將其靜音",
-        "roleSettings": "設定",
-        "randomAssignRoles": "隨機分配角色"
-    },
-    "errors": {
-        "actionFailed": "{action} 失敗",
-        "unknownError": "未知錯誤",
-        "error": "錯誤",
-        "resetFailed": "重置失敗",
-        "assignFailed": "分配失敗"
-    },
-    "overlayMessages": {
-        "resetting": "正在重置遊戲...",
-        "resetSuccess": "重置成功！遊戲已恢復到初始狀態。",
-        "requestingAssign": "正在向伺服器請求分配...",
-        "assignSuccess": "分配成功！所有玩家已收到身分通知。",
-        "updatingPlayerCount": "正在更新玩家人數並調整遊戲配置...",
-        "playerCountUpdateSuccess": "玩家人數更新成功。",
-        "processing": "處理中..."
-    },
-    "userRoles": {
-        "JUDGE": "法官",
-        "SPECTATOR": "上帝模式",
-        "PENDING": "等待中",
-        "BLOCKED": "玩家 (受限)"
-    }
+  "app": {
+    "title": "狼人殺助手",
+    "subtitle": "管理員儀表板與遊戲管理器"
+  },
+  "login": {
+    "title": "狼人殺助手",
+    "subtitle": "管理員儀表板與遊戲管理器",
+    "loginButton": "使用 Discord 登入",
+    "restriction": "僅限狼人伺服器管理員"
+  },
+  "auth": {
+    "loggingIn": "登入中...",
+    "sessionExpiredTitle": "登入已過期",
+    "sessionExpiredMessage": "您的登入工作階段已過期，請重新登入。",
+    "loginAgain": "重新登入"
+  },
+  "sidebar": {
+    "dashboard": "儀表板",
+    "switchServer": "切換伺服器",
+    "gameSettings": "遊戲設定",
+    "integrationGuide": "整合指南",
+    "botConnected": "機器人已連接",
+    "botDisconnected": "機器人未連接",
+    "spectator": "上帝視角",
+    "spectatorView": "上帝視角 / 亡者國度",
+    "speechManager": "發言管理系統",
+    "signOut": "登出",
+    "viewAsSpectator": "以觀眾身分檢視 (預覽)",
+    "backToJudge": "返回法官模式"
+  },
+  "actions": {
+    "kill": "殺死"
+  },
+  "accessDenied": {
+    "title": "存取限制",
+    "message": "身為遊戲中的活躍玩家，為了確保遊戲公平性，您目前無法進入管理儀表板。",
+    "suggestion": "如果您是法官或上帝，請確保您的 Discord 帳號已擁有正確的身分組。",
+    "back": "返回伺服器列表"
+  },
+  "common": {
+    "cancel": "取消",
+    "confirm": "確認",
+    "none": "無",
+    "save": "儲存"
+  },
+  "game": {
+    "lastWords": "遺言"
+  },
+  "gameHeader": {
+    "currentPhase": "當前階段",
+    "timer": "計時器",
+    "startGame": "開始遊戲",
+    "nextPhase": "下一階段",
+    "lastWords": "遺言"
+  },
+  "phases": {
+    "LOBBY": "大廳",
+    "NIGHT": "夜晚",
+    "DAY": "白天",
+    "VOTING": "投票",
+    "GAME_OVER": "遊戲結束"
+  },
+  "players": {
+    "title": "玩家",
+    "alive": "存活",
+    "dead": "死亡",
+    "kill": "殺死",
+    "confirmKill": "確認殺死?",
+    "revive": "復活",
+    "edit": "編輯",
+    "transferPoliceDescription": "將警徽移交給另一位存活玩家。",
+    "selectTarget": "選擇對象...",
+    "noActionsAvailable": "此玩家目前沒有可用的特定操作。",
+    "killConfirmation": "確認處決",
+    "reviveRole": "復活身分: {role}",
+    "switchOrder": "切換身分順序"
+  },
+  "spectator": {
+    "title": "上帝視角 / 亡者國度",
+    "subtitle": "在此查看遊戲進度及各陣營勝利條件",
+    "wolfGoal": "狼人目標：屠戮神職",
+    "wolfGoalDesc": "殺死所有神職人員",
+    "godsLeft": "神職陣營狀況",
+    "godsLeftDesc": "剩餘存活神職",
+    "wolvesLeft": "狼人陣營狀況",
+    "wolvesLeftDesc": "剩餘存活狼人",
+    "villagersLeft": "平民陣營狀況",
+    "villagersLeftDesc": "剩餘存活平民",
+    "jbbLeft": "金寶寶陣營狀況",
+    "jbbLeftDesc": "剩餘存活金寶寶",
+    "godGoal": "好人目標：驅逐狼人",
+    "godGoalDesc": "放逐或殺死所有狼人",
+    "villagerGoal": "狼人目標：屠戮平民",
+    "villagerGoalDesc": "殺死所有平民",
+    "jbbGoal": "狼人目標：尋找金寶寶",
+    "jbbGoalDesc": "殺死所有金寶寶",
+    "winConditions": "詳細勝利條件",
+    "goodWinCondition": "好人陣營：所有狼人死亡",
+    "wolfWinConditionNormal": "狼人陣營：所有神職死亡 或 所有平民死亡",
+    "wolfWinConditionDouble": "狼人陣營：所有神職死亡 或 所有金寶寶死亡"
+  },
+  "roles": {
+    "title": "角色編輯",
+    "role": "角色",
+    "WEREWOLF": "狼人",
+    "VILLAGER": "村民",
+    "SEER": "預言家",
+    "WITCH": "女巫",
+    "HUNTER": "獵人",
+    "GUARD": "守衛",
+    "unknown": "未知身分"
+  },
+  "status": {
+    "sheriff": "警長",
+    "jinBaoBao": "金寶寶",
+    "protected": "已保護",
+    "poisoned": "已中毒",
+    "silenced": "已禁言"
+  },
+  "gameLog": {
+    "title": "遊戲日誌",
+    "placeholder": "輸入手動命令...",
+    "gameStarted": "遊戲已開始！",
+    "gamePaused": "遊戲計時器已被管理員暫停。",
+    "randomizeRoles": "正在隨機分配角色...",
+    "adminCommand": "管理員執行命令：/{action} 對 {player}",
+    "adminGlobalCommand": "管理員執行全域命令：/{action}",
+    "manualCommand": "手動命令：{cmd}"
+  },
+  "globalCommands": {
+    "title": "全域管理員命令",
+    "randomAssign": "隨機分配角色",
+    "startGame": "正式開始遊戲",
+    "forceReset": "強制重置",
+    "confirmReset": "確認重置?",
+    "gameFlow": "遊戲流程",
+    "voiceTimer": "語音與計時",
+    "adminRoles": "管理員身分"
+  },
+  "timer": {
+    "title": "手動計時器",
+    "start": "開始計時",
+    "minutes": "分",
+    "seconds": "秒"
+  },
+  "voice": {
+    "muteAll": "全體靜音",
+    "unmuteAll": "全體解除靜音"
+  },
+  "admin": {
+    "assignJudge": "指派法官",
+    "demoteJudge": "解除法官",
+    "forcePolice": "強制警長"
+  },
+  "serverSelector": {
+    "title": "選擇伺服器",
+    "subtitle": "選擇要管理的狼人殺遊戲伺服器",
+    "loading": "載入伺服器列表...",
+    "loadError": "無法載入伺服器列表",
+    "retry": "重試",
+    "noSessions": "目前沒有進行中的遊戲",
+    "noSessionsHint": "在 Discord 中使用指令建立遊戲後再回來",
+    "players": "位玩家",
+    "backToLogin": "返回登入",
+    "switching": "切換伺服器中..."
+  },
+  "settings": {
+    "general": "一般設定",
+    "muteAfterSpeech": "發言後靜音",
+    "muteAfterSpeechDesc": "玩家發言結束後自動將其靜音",
+    "doubleIdentities": "雙重身分",
+    "doubleIdentitiesDesc": "每位玩家獲得兩個角色",
+    "playerCount": "玩家人數設定",
+    "totalPlayers": "總玩家數",
+    "playerCountDesc": "調整此數值將會自動建立或刪除遊戲頻道。"
+  },
+  "buttons": {
+    "update": "更新"
+  },
+  "speechManager": {
+    "startAuto": "開始自動發言",
+    "startPoliceEnroll": "啟動警長參選",
+    "skip": "強制換人",
+    "interrupt": "終止流程",
+    "noActiveSpeech": "目前沒有正在進行的自動發言流程。",
+    "noActiveSpeechJudge": "目前沒有正在進行的自動發言流程。身為法官，您可以隨時開始新的流程。",
+    "activeSpeech": "發言進行中",
+    "autoProcess": "自動流程",
+    "speaking": "正在發言",
+    "waiting": "等待發言",
+    "noMoreSpeakers": "沒有更多發言者",
+    "interruptVote": "下台投票",
+    "preparing": "準備中...",
+    "policeUnenrollment": "警長退選",
+    "policeEnrollment": "警長參選",
+    "allowEnroll": "允許參選",
+    "allowUnEnroll": "允許退選",
+    "candidates": "參選名單",
+    "noCandidates": "目前無參選者...",
+    "waitingForPolice": "等待警長選擇發言順序...",
+    "waitingForPoliceSub": "警長正在選擇發言順序 (警上/警下)",
+    "forceUp": "強制往上",
+    "forceDown": "強制往下",
+    "judgeOverride": "法官強制操作"
+  },
+  "progressOverlay": {
+    "operationFailed": "操作失敗",
+    "processing": "正在處理請求...",
+    "complete": "完成！",
+    "unknownError": "發生未知錯誤",
+    "close": "關閉",
+    "ok": "確定",
+    "resetTitle": "重置遊戲"
+  },
+  "vote": {
+    "policeElection": "警長選舉",
+    "expelVote": "放逐投票",
+    "progress": "投票進行中",
+    "total": "總票數",
+    "count": "票",
+    "noVotes": "尚未有人投票",
+    "waiting": "等待 {count} 位玩家..."
+  },
+  "playerEdit": {
+    "title": "編輯玩家",
+    "subtitle": "修改 {player} 的角色與狀態",
+    "currentRoles": "目前角色",
+    "noRoles": "尚未分配角色",
+    "addRole": "新增角色",
+    "selectRole": "選擇角色...",
+    "add": "新增",
+    "removeRole": "移除角色",
+    "switchOrder": "交換順序",
+    "lockPosition": "鎖定位置",
+    "unlockPosition": "解鎖位置",
+    "positionLocked": "位置已鎖定",
+    "positionUnlocked": "位置未鎖定",
+    "close": "關閉"
+  },
+  "deathConfirm": {
+    "title": "確認處決",
+    "message": "確定要處決 {player} 嗎？",
+    "lastWordsOption": "允許遺言",
+    "cancel": "取消",
+    "confirm": "確認處決"
+  },
+  "gameSettings": {
+    "title": "遊戲設定",
+    "subtitle": "管理遊戲規則與行為",
+    "generalSettings": "一般設定",
+    "doubleIdentities": "雙重身分",
+    "doubleIdentitiesDesc": "每位玩家獲得兩個角色",
+    "muteAfterSpeech": "發言後靜音",
+    "muteAfterSpeechDesc": "玩家發言結束後自動靜音",
+    "roleManagement": "角色管理",
+    "roleManagementDesc": "新增或移除遊戲中的角色",
+    "currentRoles": "目前角色",
+    "noRoles": "尚未設定角色",
+    "addRole": "新增角色",
+    "selectRole": "選擇角色...",
+    "amount": "數量",
+    "add": "新增",
+    "remove": "移除",
+    "backToDashboard": "返回儀表板"
+  },
+  "settingsModal": {
+    "backendUrl": "後端伺服器網址",
+    "urlPlaceholder": "（保持空白以使用目前網域）",
+    "urlHint": "保持空白則自動使用目前來源。如果您在開發環境（如可以使用 127.0.0.1:8080），也可以手動輸入網址。",
+    "testConnection": "測試連接",
+    "testing": "測試中...",
+    "connectionSuccess": "連接成功",
+    "connectionFailed": "連接失敗"
+  },
+  "search": {
+    "placeholder": "搜尋玩家...",
+    "noResults": "找不到玩家"
+  },
+  "modal": {
+    "assignJudge": "指派法官",
+    "demoteJudge": "解除法官",
+    "forcePolice": "強制警長"
+  },
+  "tooltips": {
+    "skipSpeaker": "跳過當前發言者，換下一位",
+    "interruptSpeech": "終止整個發言流程",
+    "switchToLight": "切換到淺色模式",
+    "switchToDark": "切換到深色模式"
+  },
+  "messages": {
+    "unassigned": "未指派",
+    "player": "玩家",
+    "speaking": "發言中",
+    "progress": "進度",
+    "totalCount": "總數",
+    "noRolesConfigured": "尚無角色配置",
+    "selectOrEnterRole": "選擇或輸入角色名稱...",
+    "add": "新增",
+    "lockRoleOrder": "鎖定角色順序",
+    "autoMuteAfterSpeech": "發言後自動閉麥",
+    "autoMuteDesc": "玩家發言結束後自動將其靜音",
+    "roleSettings": "設定",
+    "randomAssignRoles": "隨機分配角色"
+  },
+  "errors": {
+    "actionFailed": "{action} 失敗",
+    "unknownError": "未知錯誤",
+    "error": "錯誤",
+    "resetFailed": "重置失敗",
+    "assignFailed": "分配失敗"
+  },
+  "overlayMessages": {
+    "resetting": "正在重置遊戲...",
+    "resetSuccess": "重置成功！遊戲已恢復到初始狀態。",
+    "requestingAssign": "正在向伺服器請求分配...",
+    "assignSuccess": "分配成功！所有玩家已收到身分通知。",
+    "updatingPlayerCount": "正在更新玩家人數並調整遊戲配置...",
+    "playerCountUpdateSuccess": "玩家人數更新成功。",
+    "processing": "處理中..."
+  },
+  "userRoles": {
+    "JUDGE": "法官",
+    "SPECTATOR": "上帝模式",
+    "PENDING": "等待中",
+    "BLOCKED": "玩家 (受限)",
+    "null": "未知"
+  }
 }

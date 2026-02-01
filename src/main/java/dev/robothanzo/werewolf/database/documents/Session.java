@@ -3,8 +3,14 @@ package dev.robothanzo.werewolf.database.documents;
 import com.mongodb.client.MongoCollection;
 import dev.robothanzo.werewolf.database.Database;
 import lombok.*;
+import org.bson.BsonType;
+import org.bson.codecs.pojo.annotations.BsonId;
+import org.bson.codecs.pojo.annotations.BsonRepresentation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -16,7 +22,14 @@ import static com.mongodb.client.model.Filters.eq;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Document(collection = "sessions")
 public class Session {
+    @Id
+    @BsonId
+    @BsonRepresentation(BsonType.OBJECT_ID)
+    private String id;
+
+    @Indexed(unique = true)
     private long guildId;
     private long courtTextChannelId;
     private long courtVoiceChannelId;
@@ -103,14 +116,15 @@ public class Session {
             if (jinBaoBao == 0)
                 return Result.JIN_BAO_BAO_DIED;
         } else {
-            if (villagers == 0 && roles.contains("平民")) //support for an all gods game
+            if (villagers == 0 && roles.contains("平民")) // support for an all gods game
                 return Result.VILLAGERS_DIED;
         }
         if (policeOnGood)
             villagers += 0.5f;
         if (policeOnWolf)
             wolves += 0.5f;
-        if ((wolves >= gods + villagers) && !doubleIdentities) // we don't do equal players ending in double identities, too annoying
+        if ((wolves >= gods + villagers) && !doubleIdentities) // we don't do equal players ending in double identities,
+            // too annoying
             return Result.EQUAL_PLAYERS;
         return Result.NOT_ENDED;
     }
@@ -157,8 +171,10 @@ public class Session {
         private List<String> deadRoles = new LinkedList<>();
 
         public boolean isAlive() {
-            if (roles == null || roles.isEmpty()) return false;
-            if (deadRoles == null) return true;
+            if (roles == null || roles.isEmpty())
+                return false;
+            if (deadRoles == null)
+                return true;
             return deadRoles.size() < roles.size();
         }
 
@@ -195,7 +211,8 @@ public class Session {
         }
 
         public void updateNickname(net.dv8tion.jda.api.entities.Member member) {
-            if (member == null) return;
+            if (member == null)
+                return;
 
             String newName = getNickname();
             if (!member.getEffectiveName().equals(newName)) {
@@ -238,11 +255,10 @@ public class Session {
                 .metadata(metadata)
                 .build();
         logs.add(entry);
-        
+
         // Persist to database
         fetchCollection().updateOne(
-            eq("guildId", guildId),
-            com.mongodb.client.model.Updates.push("logs", entry)
-        );
+                eq("guildId", guildId),
+                com.mongodb.client.model.Updates.push("logs", entry));
     }
 }

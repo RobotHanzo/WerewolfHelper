@@ -1,6 +1,6 @@
 package dev.robothanzo.werewolf.utils;
 
-import dev.robothanzo.werewolf.WerewolfHelper;
+import dev.robothanzo.werewolf.WerewolfApplication;
 import dev.robothanzo.werewolf.database.documents.Session;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
@@ -34,7 +34,7 @@ public class CmdUtils {
     }
 
     public static boolean isAuthor(SlashCommandInteractionEvent event) {
-        if (event.getUser().getIdLong() != WerewolfHelper.AUTHOR) {
+        if (event.getUser().getIdLong() != WerewolfApplication.AUTHOR) {
             event.getHook().editOriginal(":x:").queue();
             return false;
         }
@@ -42,7 +42,7 @@ public class CmdUtils {
     }
 
     public static boolean isServerCreator(SlashCommandInteractionEvent event) {
-        if (!WerewolfHelper.SERVER_CREATORS.contains(event.getUser().getIdLong())) {
+        if (!WerewolfApplication.SERVER_CREATORS.contains(event.getUser().getIdLong())) {
             event.getHook().editOriginal(":x:").queue();
             return false;
         }

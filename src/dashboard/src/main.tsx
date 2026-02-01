@@ -1,7 +1,7 @@
-import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import { ThemeProvider } from './lib/ThemeProvider';
-import { AuthProvider } from './contexts/AuthContext';
+import {createRoot} from 'react-dom/client';
+import {BrowserRouter} from 'react-router-dom';
+import {ThemeProvider} from './lib/ThemeProvider';
+import {AuthProvider} from './contexts/AuthContext';
 import App from './App';
 import './index.css';
 
@@ -10,7 +10,7 @@ root.render(
     <ThemeProvider>
         <BrowserRouter>
             <AuthProvider>
-                <App />
+                <App/>
             </AuthProvider>
         </BrowserRouter>
     </ThemeProvider>

@@ -5,7 +5,7 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
-import dev.robothanzo.werewolf.WerewolfHelper;
+import dev.robothanzo.werewolf.WerewolfApplication;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.managers.AudioManager;
@@ -18,9 +18,9 @@ public class Audio {
         try {
             AudioManager audioManager = channel.getGuild().getAudioManager();
             audioManager.openAudioConnection(channel);
-            AudioPlayer player = WerewolfHelper.playerManager.createPlayer();
+            AudioPlayer player = WerewolfApplication.playerManager.createPlayer();
             audioManager.setSendingHandler(new AudioPlayerSendHandler(player));
-            WerewolfHelper.playerManager.loadItem("sounds/" + resource + ".mp3", new AudioLoadResultHandler() {
+            WerewolfApplication.playerManager.loadItem("sounds/" + resource + ".mp3", new AudioLoadResultHandler() {
                 @Override
                 public void trackLoaded(AudioTrack track) {
                     player.startTrack(track, false);
@@ -45,7 +45,8 @@ public class Audio {
     }
 
     public enum Resource {
-        EXPEL_POLL, POLICE_ENROLL, POLICE_POLL, TIMER_ENDED, ENROLL_10S_REMAINING, POLL_10S_REMAINING, TIMER_30S_REMAINING;
+        EXPEL_POLL, POLICE_ENROLL, POLICE_POLL, TIMER_ENDED, ENROLL_10S_REMAINING, POLL_10S_REMAINING,
+        TIMER_30S_REMAINING;
 
         @Override
         public String toString() {

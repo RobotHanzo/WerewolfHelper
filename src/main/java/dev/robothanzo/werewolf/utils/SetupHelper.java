@@ -1,6 +1,6 @@
 package dev.robothanzo.werewolf.utils;
 
-import dev.robothanzo.werewolf.WerewolfHelper;
+import dev.robothanzo.werewolf.WerewolfApplication;
 import dev.robothanzo.werewolf.commands.Server;
 import dev.robothanzo.werewolf.database.documents.Session;
 import lombok.SneakyThrows;
@@ -27,7 +27,7 @@ public class SetupHelper {
         guild.getManager()
                 .setDefaultNotificationLevel(Guild.NotificationLevel.MENTIONS_ONLY)
                 .setName("狼人殺伺服器")
-                .setIcon(Icon.from(Objects.requireNonNull(WerewolfHelper.class.getClassLoader().getResourceAsStream("wolf.png")))).queue();
+                .setIcon(Icon.from(Objects.requireNonNull(WerewolfApplication.class.getClassLoader().getResourceAsStream("wolf.png")))).queue();
 
         // Delete all existing channels before creating new ones
         try {
@@ -115,7 +115,7 @@ public class SetupHelper {
                                                 try {
                                                     courtChannel.createInvite().setMaxUses(0).setMaxAge(0).queue(invite -> {
                                                         long originChannelId = config.originChannelId();
-                                                        TextChannel origin = WerewolfHelper.jda.getTextChannelById(originChannelId);
+                                                        TextChannel origin = WerewolfApplication.jda.getTextChannelById(originChannelId);
                                                         if (origin != null) {
                                                             origin.sendMessage("伺服器已設定完成，點此連結前往伺服器： " + invite.getUrl()).queue();
                                                         }

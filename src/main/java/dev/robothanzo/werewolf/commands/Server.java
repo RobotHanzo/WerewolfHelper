@@ -5,7 +5,7 @@ import dev.robothanzo.jda.interactions.annotations.slash.Command;
 import dev.robothanzo.jda.interactions.annotations.slash.Subcommand;
 import dev.robothanzo.jda.interactions.annotations.slash.options.AutoCompleter;
 import dev.robothanzo.jda.interactions.annotations.slash.options.Option;
-import dev.robothanzo.werewolf.WerewolfHelper;
+import dev.robothanzo.werewolf.WerewolfApplication;
 import dev.robothanzo.werewolf.database.documents.Session;
 import dev.robothanzo.werewolf.utils.CmdUtils;
 import dev.robothanzo.werewolf.utils.MsgUtils;
@@ -38,15 +38,18 @@ public class Server {
     public void create(SlashCommandInteractionEvent event,
                        @Option(value = "players", description = "玩家數量") Long players,
                        @Option(value = "double_identity", description = "是否為雙身分模式，預設否", optional = true) Boolean doubleIdentity) {
-        if (!CmdUtils.isServerCreator(event)) return;
+        if (!CmdUtils.isServerCreator(event))
+            return;
 
         long userId = event.getUser().getIdLong();
         boolean doubleId = doubleIdentity != null && doubleIdentity;
-        // store the channel where user invoked the command so we can send the invite back there later
+        // store the channel where user invoked the command so we can send the invite
+        // back there later
         long originChannelId = event.getChannel().getIdLong();
         pendingSetups.put(userId, new PendingSetup(Math.toIntExact(players), doubleId, originChannelId));
 
-        String inviteUrl = WerewolfHelper.jda.getInviteUrl(Permission.ADMINISTRATOR).replaceAll("scope=bot", "scope=bot%20applications.commands");
+        String inviteUrl = WerewolfApplication.jda.getInviteUrl(Permission.ADMINISTRATOR).replaceAll("scope=bot",
+                "scope=bot%20applications.commands");
 
         EmbedBuilder eb = new EmbedBuilder()
                 .setTitle("狼人殺伺服器建立指南")
@@ -61,17 +64,20 @@ public class Server {
     }
 
     @Subcommand(description = "刪除所在之伺服器(僅可在狼人殺伺服器內使用)")
-    public void delete(SlashCommandInteractionEvent event, @Option(value = "guild_id", optional = true) String guildId) {
+    public void delete(SlashCommandInteractionEvent event,
+                       @Option(value = "guild_id", optional = true) String guildId) {
         try {
-            if (!CmdUtils.isServerCreator(event)) return;
+            if (!CmdUtils.isServerCreator(event))
+                return;
             if (guildId == null) {
                 Objects.requireNonNull(event.getGuild()).leave().queue();
                 Session.fetchCollection().deleteOne(eq("guildId", event.getGuild().getIdLong()));
-                Speech.speechSessions.remove(event.getGuild().getIdLong());
+                WerewolfApplication.speechService.interruptSession(event.getGuild().getIdLong());
             } else {
-                Objects.requireNonNull(WerewolfHelper.jda.getGuildById(guildId)).leave().queue();
+                Objects.requireNonNull(WerewolfApplication.jda.getGuildById(guildId)).leave().queue();
                 Session.fetchCollection().deleteOne(eq("guildId", guildId));
-                Speech.speechSessions.remove(Objects.requireNonNull(WerewolfHelper.jda.getGuildById(guildId)).getIdLong());
+                WerewolfApplication.speechService.interruptSession(
+                        Objects.requireNonNull(WerewolfApplication.jda.getGuildById(guildId)).getIdLong());
             }
             event.reply(":white_check_mark:").queue();
         } catch (Exception e) {
@@ -81,9 +87,10 @@ public class Server {
 
     @Subcommand(description = "列出所在之伺服器")
     public void list(SlashCommandInteractionEvent event) {
-        if (!CmdUtils.isAuthor(event)) return;
+        if (!CmdUtils.isAuthor(event))
+            return;
         StringBuilder sb = new StringBuilder();
-        for (Guild guild : WerewolfHelper.jda.getGuilds()) {
+        for (Guild guild : WerewolfApplication.jda.getGuilds()) {
             sb.append(guild.getName())
                     .append(" (").append(guild.getId()).append(")\n");
         }
@@ -92,9 +99,10 @@ public class Server {
 
     @Subcommand(description = "列出所在之伺服器")
     public void lists(SlashCommandInteractionEvent event) {
-        if (!CmdUtils.isAuthor(event)) return;
+        if (!CmdUtils.isAuthor(event))
+            return;
         StringBuilder sb = new StringBuilder();
-        for (Guild guild : WerewolfHelper.jda.getGuilds()) {
+        for (Guild guild : WerewolfApplication.jda.getGuilds()) {
             sb.append(guild.getName())
                     .append(" (").append(guild.getId()).append(")\n");
         }
@@ -103,9 +111,11 @@ public class Server {
 
     @SneakyThrows
     @Subcommand
-    public void session(SlashCommandInteractionEvent event, @Option(value = "guild_id", optional = true) String guildId) {
+    public void session(SlashCommandInteractionEvent event,
+                        @Option(value = "guild_id", optional = true) String guildId) {
         event.deferReply().queue();
-        if (!CmdUtils.isAuthor(event)) return;
+        if (!CmdUtils.isAuthor(event))
+            return;
         long gid;
         if (guildId == null) {
             if (event.getGuild() == null) {
@@ -123,24 +133,27 @@ public class Server {
         } else {
             EmbedBuilder eb = new EmbedBuilder()
                     .setTitle("戰局資訊")
-                    .setDescription("```json\n" + new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(session) + "\n```");
+                    .setDescription("```json\n"
+                            + new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(session)
+                            + "\n```");
             event.getHook().editOriginalEmbeds(eb.build()).queue();
         }
     }
 
     @Subcommand(description = "取得管理面板連結")
     public void dashboard(SlashCommandInteractionEvent event) {
-        if (!CmdUtils.isAdmin(event)) return;
+        if (!CmdUtils.isAdmin(event))
+            return;
 
         Guild guild = event.getGuild();
         if (guild == null) {
             event.reply(":x: 此指令僅能在伺服器中使用").setEphemeral(true).queue();
             return;
         }
-        
+
         String dashboardUrl = System.getenv().getOrDefault("DASHBOARD_URL", "http://localhost:5173");
         String fullUrl = dashboardUrl + "/server/" + guild.getId();
-        
+
         event.reply("管理面板連結：" + fullUrl).setEphemeral(false).queue();
     }
 
@@ -159,7 +172,7 @@ public class Server {
 
         @AutoCompleter
         public void role(CommandAutoCompleteInteractionEvent event) {
-            event.replyChoices(WerewolfHelper.ROLES.stream()
+            event.replyChoices(WerewolfApplication.ROLES.stream()
                     .filter(s -> s.startsWith(event.getFocusedOption().getValue()))
                     .limit(25)
                     .map(s -> new Choice(s, s))
@@ -170,7 +183,8 @@ public class Server {
         public void existingRole(CommandAutoCompleteInteractionEvent event) {
             List<net.dv8tion.jda.api.interactions.commands.Command.Choice> choices = new LinkedList<>();
             Session session = CmdUtils.getSession(event.getGuild());
-            if (session == null) return;
+            if (session == null)
+                return;
             for (String role : session.getRoles()) {
                 if (role.startsWith(event.getFocusedOption().getValue())) {
                     choices.add(new Choice(role, role));
@@ -183,7 +197,8 @@ public class Server {
         public void list(SlashCommandInteractionEvent event) {
             event.deferReply().queue();
             Session session = CmdUtils.getSession(event);
-            if (session == null) return;
+            if (session == null)
+                return;
             EmbedBuilder embedBuilder = new EmbedBuilder().setTitle("角色清單").setColor(MsgUtils.getRandomColor());
             Map<String, Integer> roles = new HashMap<>();
             int rolesCount = 0;
@@ -197,7 +212,9 @@ public class Server {
             if (rolesCount == session.getPlayers().size() * (session.isDoubleIdentities() ? 2 : 1)) {
                 embedBuilder.setDescription(":white_check_mark: 角色數量正確");
             } else {
-                embedBuilder.setDescription(":x: 角色數量錯誤，應有 *" + session.getPlayers().size() * (session.isDoubleIdentities() ? 2 : 1) + "* 個角色，現有 *" + rolesCount + "* 個");
+                embedBuilder.setDescription(
+                        ":x: 角色數量錯誤，應有 *" + session.getPlayers().size() * (session.isDoubleIdentities() ? 2 : 1)
+                                + "* 個角色，現有 *" + rolesCount + "* 個");
             }
             event.getHook().editOriginalEmbeds(embedBuilder.build()).queue();
         }
@@ -206,23 +223,30 @@ public class Server {
         public void add(SlashCommandInteractionEvent event, @Option(value = "role", autoComplete = true) String role,
                         @Option(value = "amount", optional = true) Long amount) {
             event.deferReply().queue();
-            if (!CmdUtils.isAdmin(event)) return;
-            if (amount == null) amount = 1L;
+            if (!CmdUtils.isAdmin(event))
+                return;
+            if (amount == null)
+                amount = 1L;
             Session session = CmdUtils.getSession(event);
-            if (session == null) return;
+            if (session == null)
+                return;
             Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()),
                     pushEach("roles", expandStringToList(role, amount.intValue())));
             event.getHook().editOriginal(":white_check_mark:").queue();
         }
 
         @Subcommand(description = "刪除角色")
-        public void delete(SlashCommandInteractionEvent event, @Option(value = "role", autoComplete = true, autoCompleter = "existingRole") String role,
+        public void delete(SlashCommandInteractionEvent event,
+                           @Option(value = "role", autoComplete = true, autoCompleter = "existingRole") String role,
                            @Option(value = "amount", optional = true) Long amount) {
             event.deferReply().queue();
-            if (!CmdUtils.isAdmin(event)) return;
-            if (amount == null) amount = 1L;
+            if (!CmdUtils.isAdmin(event))
+                return;
+            if (amount == null)
+                amount = 1L;
             Session session = CmdUtils.getSession(event);
-            if (session == null) return;
+            if (session == null)
+                return;
             List<String> roles = session.getRoles();
             for (int i = 0; i < amount; i++) {
                 roles.remove(role);
@@ -238,9 +262,11 @@ public class Server {
         @Subcommand(description = "設定是否為雙身分局")
         public void double_identities(SlashCommandInteractionEvent event, @Option(value = "value") Boolean value) {
             event.deferReply().queue();
-            if (!CmdUtils.isAdmin(event)) return;
+            if (!CmdUtils.isAdmin(event))
+                return;
             Session session = CmdUtils.getSession(event);
-            if (session == null) return;
+            if (session == null)
+                return;
             Session.fetchCollection().updateOne(
                     eq("guildId", Objects.requireNonNull(event.getGuild()).getIdLong()),
                     set("doubleIdentities", value));
@@ -250,9 +276,11 @@ public class Server {
         @Subcommand(description = "設定是否在發言後將玩家靜音")
         public void mute_after_speech(SlashCommandInteractionEvent event, @Option(value = "value") Boolean value) {
             event.deferReply().queue();
-            if (!CmdUtils.isAdmin(event)) return;
+            if (!CmdUtils.isAdmin(event))
+                return;
             Session session = CmdUtils.getSession(event);
-            if (session == null) return;
+            if (session == null)
+                return;
             Session.fetchCollection().updateOne(
                     eq("guildId", Objects.requireNonNull(event.getGuild()).getIdLong()),
                     set("muteAfterSpeech", value));
@@ -262,9 +290,11 @@ public class Server {
         @Subcommand(description = "設定總玩家數量")
         public void players(SlashCommandInteractionEvent event, @Option(value = "value") Long value) {
             event.deferReply().queue();
-            if (!CmdUtils.isAdmin(event)) return;
+            if (!CmdUtils.isAdmin(event))
+                return;
             Session session = CmdUtils.getSession(event);
-            if (session == null) return;
+            if (session == null)
+                return;
             assert event.getGuild() != null;
             Map<String, Session.Player> players = session.getPlayers();
             try {
@@ -272,25 +302,31 @@ public class Server {
                     if (player.getId() > value) {
                         players.remove(String.valueOf(player.getId()));
                         Objects.requireNonNull(event.getGuild().getRoleById(player.getRoleId())).delete().queue();
-                        Objects.requireNonNull(event.getGuild().getTextChannelById(player.getChannelId())).delete().queue();
+                        Objects.requireNonNull(event.getGuild().getTextChannelById(player.getChannelId())).delete()
+                                .queue();
                     }
                 }
                 for (long i = players.size() + 1; i <= value; i++) {
                     Role role = event.getGuild().createRole().setColor(MsgUtils.getRandomColor()).setHoisted(true)
                             .setName("玩家" + Session.Player.ID_FORMAT.format(i)).complete();
                     TextChannel channel = event.getGuild().createTextChannel("玩家" + Session.Player.ID_FORMAT.format(i))
-                            .addPermissionOverride(Objects.requireNonNull(event.getGuild().getRoleById(session.getSpectatorRoleId())),
+                            .addPermissionOverride(
+                                    Objects.requireNonNull(event.getGuild().getRoleById(session.getSpectatorRoleId())),
                                     Permission.VIEW_CHANNEL.getRawValue(), Permission.MESSAGE_SEND.getRawValue())
-                            .addPermissionOverride(role, List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND), List.of())
-                            .addPermissionOverride(event.getGuild().getPublicRole(), List.of(), List.of(Permission.VIEW_CHANNEL,
-                                    Permission.MESSAGE_SEND, Permission.USE_APPLICATION_COMMANDS)).complete();
+                            .addPermissionOverride(role, List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND),
+                                    List.of())
+                            .addPermissionOverride(event.getGuild().getPublicRole(), List.of(),
+                                    List.of(Permission.VIEW_CHANNEL,
+                                            Permission.MESSAGE_SEND, Permission.USE_APPLICATION_COMMANDS))
+                            .complete();
                     players.put(String.valueOf(i), Session.Player.builder()
                             .id((int) i)
                             .roleId(role.getIdLong())
                             .channelId(channel.getIdLong())
                             .build());
                 }
-                Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()), set("players", players));
+                Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()),
+                        set("players", players));
             } catch (Exception e) {
                 log.error("Failed to update player amount", e);
                 event.getHook().editOriginal(":x: 因為未知原因而無法更新玩家人數").queue();

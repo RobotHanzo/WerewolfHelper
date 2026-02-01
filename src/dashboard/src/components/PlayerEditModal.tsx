@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { useTranslation } from '../lib/i18n';
-import { Player } from '../types';
-import { Shield, X, ChevronRight, Users } from 'lucide-react';
-import { api } from '../lib/api';
+import React, {useState} from 'react';
+import {useTranslation} from '../lib/i18n';
+import {Player} from '../types';
+import {ChevronRight, Shield, Users, X} from 'lucide-react';
+import {api} from '../lib/api';
 
 interface PlayerEditModalProps {
     player: Player;
@@ -13,8 +13,15 @@ interface PlayerEditModalProps {
     availableRoles: string[];
 }
 
-export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({ player, allPlayers, guildId, onClose, doubleIdentities, availableRoles }) => {
-    const { t } = useTranslation();
+export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
+                                                                    player,
+                                                                    allPlayers,
+                                                                    guildId,
+                                                                    onClose,
+                                                                    doubleIdentities,
+                                                                    availableRoles
+                                                                }) => {
+    const {t} = useTranslation();
     const [selectedRole1, setSelectedRole1] = useState<string>(player.roles[0] || '');
     const [selectedRole2, setSelectedRole2] = useState<string>(player.roles[1] || 'None');
     const [rolePositionLocked, setRolePositionLocked] = useState<boolean>(player.rolePositionLocked || false);
@@ -83,15 +90,20 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({ player, allPla
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-scale-up border border-slate-200 dark:border-slate-800">
-                <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+            <div
+                className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-scale-up border border-slate-200 dark:border-slate-800">
+                <div
+                    className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
                     <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        <span className="text-xl">{player.avatar ? <img src={player.avatar} className="w-6 h-6 rounded-full inline-block" /> : '👤'}</span>
+                        <span className="text-xl">{player.avatar ?
+                            <img src={player.avatar} className="w-6 h-6 rounded-full inline-block"/> : '👤'}</span>
                         {t('players.edit')} - {player.name}
                     </h2>
-                    <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-                        <X className="w-5 h-5 text-slate-500" />
+                    <button onClick={onClose}
+                            className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        <X className="w-5 h-5 text-slate-500"/>
                     </button>
                 </div>
 
@@ -99,15 +111,18 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({ player, allPla
                     {/* Role Editing Section */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-sm uppercase tracking-wider">
-                                <Users className="w-4 h-4" />
+                            <div
+                                className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-sm uppercase tracking-wider">
+                                <Users className="w-4 h-4"/>
                                 {t('roles.title' as any)}
                             </div>
                         </div>
 
-                        <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4 space-y-3">
+                        <div
+                            className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4 space-y-3">
                             <div>
-                                <label className="block text-xs font-semibold text-slate-500 mb-1">{t('roles.role' as any)} 1</label>
+                                <label
+                                    className="block text-xs font-semibold text-slate-500 mb-1">{t('roles.role' as any)} 1</label>
                                 <select
                                     className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     value={selectedRole1}
@@ -122,7 +137,8 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({ player, allPla
 
                             {isDoubleIdentity && (
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-500 mb-1">{t('roles.role' as any)} 2</label>
+                                    <label
+                                        className="block text-xs font-semibold text-slate-500 mb-1">{t('roles.role' as any)} 2</label>
                                     <select
                                         className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                         value={selectedRole2}
@@ -139,7 +155,8 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({ player, allPla
                             {isDoubleIdentity && (
                                 <div className="pt-2 border-t border-slate-200 dark:border-slate-700 mt-2">
                                     <div className="flex items-center justify-between">
-                                        <label className="text-xs font-semibold text-slate-500">{t('messages.lockRoleOrder')}</label>
+                                        <label
+                                            className="text-xs font-semibold text-slate-500">{t('messages.lockRoleOrder')}</label>
                                         <label className="relative inline-flex items-center cursor-pointer">
                                             <input
                                                 type="checkbox"
@@ -147,7 +164,8 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({ player, allPla
                                                 onChange={(e) => setRolePositionLocked(e.target.checked)}
                                                 className="sr-only peer"
                                             />
-                                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                                            <div
+                                                className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
                                         </label>
                                     </div>
                                 </div>
@@ -166,11 +184,13 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({ player, allPla
                     {/* Police Badge Transfer Section */}
                     {player.isSheriff ? (
                         <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
-                            <div className="flex items-center gap-2 text-green-600 dark:text-green-500 font-bold text-sm uppercase tracking-wider">
-                                <Shield className="w-4 h-4" />
+                            <div
+                                className="flex items-center gap-2 text-green-600 dark:text-green-500 font-bold text-sm uppercase tracking-wider">
+                                <Shield className="w-4 h-4"/>
                                 {t('status.sheriff')}
                             </div>
-                            <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/30 rounded-lg p-4">
+                            <div
+                                className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/30 rounded-lg p-4">
                                 <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
                                     {t('players.transferPoliceDescription', 'Transfer the police badge to another alive player.')}
                                 </p>
@@ -193,7 +213,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({ player, allPla
                                         onClick={handleTransferPolice}
                                         className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                     >
-                                        {loading ? '...' : <ChevronRight className="w-4 h-4" />}
+                                        {loading ? '...' : <ChevronRight className="w-4 h-4"/>}
                                     </button>
                                 </div>
                             </div>
