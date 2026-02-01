@@ -1,0 +1,39 @@
+Initialized native services in: C:\Users\Nathan Lee\.gradle\native
+Initialized jansi services in: C:\Users\Nathan Lee\.gradle\native
+The client will now receive all logging from the daemon (pid: 45728). The daemon log file: C:\Users\Nathan Lee\.gradle\daemon\9.3.1\daemon-45728.out.log
+Starting 46th build in daemon [uptime: 5 hrs 12 mins 20.154 secs, performance: 99%, GC rate: 0.00/s, heap usage: 0% of 512 MiB, non-heap usage: 44% of 384 MiB]
+Using 20 worker leases.
+Operational build model parameters: {requiresToolingModels=false, parallelProjectExecution=false, configureOnDemand=false, configurationCache=false, configurationCacheParallelStore=false, configurationCacheParallelLoad=true, isolatedProjects=false, parallelProjectConfiguration=false, intermediateModelCache=false, parallelToolingApiActions=false, invalidateCoupledProjects=false, modelAsProjectDependency=false, resilientModelBuilding=false}
+Now considering [C:\Users\Nathan Lee\Coding Projects\Java Projects\WerewolfHelper] as hierarchies to watch
+Watching the file system is configured to be enabled if available
+File system watching is active
+Starting Build
+Settings evaluated using settings file 'C:\Users\Nathan Lee\Coding Projects\Java Projects\WerewolfHelper\settings.gradle.kts'.
+Projects loaded. Root project using build file 'C:\Users\Nathan Lee\Coding Projects\Java Projects\WerewolfHelper\build.gradle.kts'.
+Included projects: [root project 'WerewolfHelper']
+
+> Configure project :
+Evaluating root project 'WerewolfHelper' using build file 'C:\Users\Nathan Lee\Coding Projects\Java Projects\WerewolfHelper\build.gradle.kts'.
+Resolved plugin [id: 'org.gradle.java']
+Resolved plugin [id: 'com.gradleup.shadow', version: '9.3.1']
+Skipping Develocity integration for Shadow plugin.
+Setting org.gradle.jvm.version attribute for shadowRuntimeElements configuration.
+Setting target JVM version to 21 for shadowRuntimeElements configuration.
+Adding shadowRuntimeElements variant to Java component.
+All projects evaluated.
+Task name matched 'compileJava'
+Selected primary task 'compileJava' from project :
+Tasks to be executed: [task ':compileJava']
+Tasks that were excluded: []
+Resolve mutations for :compileJava (Thread[#7164,Execution worker,5,main]) started.
+:compileJava (Thread[#7178,Execution worker Thread 15,5,main]) started.
+
+> Task :compileJava UP-TO-DATE
+Caching disabled for task ':compileJava' because:
+  Build cache is disabled
+Skipping task ':compileJava' as it is up-to-date.
+
+BUILD SUCCESSFUL in 1s
+1 actionable task: 1 up-to-date
+Watched directory hierarchies: [C:\Users\Nathan Lee\Coding Projects\Java Projects\WerewolfHelper]
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.3.1/userguide/configuration_cache_enabling.html

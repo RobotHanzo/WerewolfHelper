@@ -128,6 +128,22 @@ public class Server {
         }
     }
 
+    @Subcommand(description = "取得管理面板連結")
+    public void dashboard(SlashCommandInteractionEvent event) {
+        if (!CmdUtils.isAdmin(event)) return;
+
+        Guild guild = event.getGuild();
+        if (guild == null) {
+            event.reply(":x: 此指令僅能在伺服器中使用").setEphemeral(true).queue();
+            return;
+        }
+        
+        String dashboardUrl = System.getenv().getOrDefault("DASHBOARD_URL", "http://localhost:5173");
+        String fullUrl = dashboardUrl + "/server/" + guild.getId();
+        
+        event.reply("管理面板連結：" + fullUrl).setEphemeral(false).queue();
+    }
+
     public record PendingSetup(int players, boolean doubleIdentity, long originChannelId) {
     }
 
@@ -260,8 +276,9 @@ public class Server {
                     }
                 }
                 for (long i = players.size() + 1; i <= value; i++) {
-                    Role role = event.getGuild().createRole().setColor(MsgUtils.getRandomColor()).setHoisted(true).setName("玩家" + i).complete();
-                    TextChannel channel = event.getGuild().createTextChannel("玩家" + i)
+                    Role role = event.getGuild().createRole().setColor(MsgUtils.getRandomColor()).setHoisted(true)
+                            .setName("玩家" + Session.Player.ID_FORMAT.format(i)).complete();
+                    TextChannel channel = event.getGuild().createTextChannel("玩家" + Session.Player.ID_FORMAT.format(i))
                             .addPermissionOverride(Objects.requireNonNull(event.getGuild().getRoleById(session.getSpectatorRoleId())),
                                     Permission.VIEW_CHANNEL.getRawValue(), Permission.MESSAGE_SEND.getRawValue())
                             .addPermissionOverride(role, List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND), List.of())

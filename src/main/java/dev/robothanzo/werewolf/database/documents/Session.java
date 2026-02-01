@@ -6,7 +6,11 @@ import lombok.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.*;
+
+import static com.mongodb.client.model.Filters.eq;
 
 @Data
 @Builder
@@ -30,6 +34,18 @@ public class Session {
     private List<String> roles = new LinkedList<>();
     @Builder.Default
     private Map<String, Player> players = new HashMap<>();
+    @Builder.Default
+    private List<LogEntry> logs = new ArrayList<>();
+
+    public Map<String, Player> fetchAlivePlayers() {
+        Map<String, Player> alivePlayers = new HashMap<>();
+        for (Map.Entry<String, Player> entry : players.entrySet()) {
+            if (entry.getValue().isAlive()) {
+                alivePlayers.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return alivePlayers;
+    }
 
     public static MongoCollection<Session> fetchCollection() {
         return Database.database.getCollection("sessions", Session.class);
@@ -59,6 +75,11 @@ public class Session {
                     simulateRoleRemoval = null;
                     continue;
                 }
+                // Skip dead roles
+                if (player.getDeadRoles() != null && player.getDeadRoles().contains(role)) {
+                    continue;
+                }
+
                 if (Player.isWolf(role)) {
                     wolves++;
                     if (player.isPolice())
@@ -86,9 +107,9 @@ public class Session {
                 return Result.VILLAGERS_DIED;
         }
         if (policeOnGood)
-            villagers += 0.5;
+            villagers += 0.5f;
         if (policeOnWolf)
-            wolves += 0.5;
+            wolves += 0.5f;
         if ((wolves >= gods + villagers) && !doubleIdentities) // we don't do equal players ending in double identities, too annoying
             return Result.EQUAL_PLAYERS;
         return Result.NOT_ENDED;
@@ -112,6 +133,7 @@ public class Session {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Player implements Comparable<Player> {
+        public static final NumberFormat ID_FORMAT = new DecimalFormat("00");
         private int id;
         private long roleId;
         private long channelId;
@@ -130,6 +152,15 @@ public class Session {
         @Nullable
         @Builder.Default
         private List<String> roles = new LinkedList<>(); // stuff like wolf, villager...etc
+        @Nullable
+        @Builder.Default
+        private List<String> deadRoles = new LinkedList<>();
+
+        public boolean isAlive() {
+            if (roles == null || roles.isEmpty()) return false;
+            if (deadRoles == null) return true;
+            return deadRoles.size() < roles.size();
+        }
 
         private static boolean isGod(String role) {
             return (!isWolf(role)) && (!isVillager(role));
@@ -143,9 +174,75 @@ public class Session {
             return role.equals("平民");
         }
 
-        @Override
         public int compareTo(@NotNull Session.Player o) {
             return Integer.compare(id, o.id);
         }
+
+        public String getNickname() {
+            StringBuilder sb = new StringBuilder();
+
+            if (!isAlive()) {
+                sb.append("[死人] ");
+            }
+
+            sb.append("玩家").append(ID_FORMAT.format(id));
+
+            if (isPolice()) {
+                sb.append(" [警長]");
+            }
+
+            return sb.toString();
+        }
+
+        public void updateNickname(net.dv8tion.jda.api.entities.Member member) {
+            if (member == null) return;
+
+            String newName = getNickname();
+            if (!member.getEffectiveName().equals(newName)) {
+                member.modifyNickname(newName).queue();
+            }
+        }
+    }
+
+    /**
+     * Audit log entry for tracking game events
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LogEntry {
+        private String id;
+        private long timestamp;
+        private LogType type;
+        private String message;
+        private Map<String, Object> metadata;
+    }
+
+    /**
+     * Add a log entry to the session
+     */
+    public void addLog(LogType type, String message) {
+        addLog(type, message, null);
+    }
+
+    /**
+     * Add a log entry with metadata to the session
+     */
+    public void addLog(LogType type, String message, Map<String, Object> metadata) {
+        LogEntry entry = LogEntry.builder()
+                .id(UUID.randomUUID().toString())
+                .timestamp(System.currentTimeMillis())
+                .type(type)
+                .message(message)
+                .metadata(metadata)
+                .build();
+        logs.add(entry);
+        
+        // Persist to database
+        fetchCollection().updateOne(
+            eq("guildId", guildId),
+            com.mongodb.client.model.Updates.push("logs", entry)
+        );
     }
 }

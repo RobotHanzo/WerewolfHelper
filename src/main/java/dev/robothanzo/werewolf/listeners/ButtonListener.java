@@ -49,7 +49,7 @@ public class ButtonListener extends ListenerAdapter {
         if (session == null) return;
         Session.Player player = null;
         boolean check = false;
-        for (Session.Player p : session.getPlayers().values()) {
+        for (Session.Player p : session.fetchAlivePlayers().values()) {
             if (p.getUserId() != null && p.getUserId() == event.getUser().getIdLong()) {
                 check = true;
                 player = p;

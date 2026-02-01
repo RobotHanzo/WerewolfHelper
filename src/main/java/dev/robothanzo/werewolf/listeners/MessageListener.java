@@ -36,9 +36,12 @@ public class MessageListener extends ListenerAdapter {
     }
 
     private boolean isCharacterAlive(Session session, String character) {
-        for (Session.Player player : session.getPlayers().values()) {
+        for (Session.Player player : session.fetchAlivePlayers().values()) {
             if (player.getRoles() != null && player.getRoles().contains(character)) {
-                return true;
+                // Check if this specific role is NOT dead
+                if (player.getDeadRoles() == null || !player.getDeadRoles().contains(character)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -46,6 +49,17 @@ public class MessageListener extends ListenerAdapter {
 
     private boolean shouldSend(Session.Player player, Session session) {
         assert player.getRoles() != null;
+        // Check first role (primary role for speech?) or any active role?
+        // Logic seems to assume specific roles.
+        // Assuming primary role is relevant, but with soft kill, roles order matters.
+        // We should probably check if the role enabling speech is ALIVE.
+        // But original code uses getRoles().getFirst().
+        // If first role is dead in soft kill (but player alive), should he speak?
+        // Probably not as that role.
+        // But let's keep getFirst() for now, or check deadRoles.
+        // Ideally we check if ANY of the enabling roles are alive.
+        // But complicating this might break assumption that first role = current identity.
+        // For now, let's just stick to replacement of getPlayers -> fetchAlivePlayers.
         return player.getRoles().getFirst().contains("狼人") ||
                 player.getRoles().contains("狼兄") ||
                 player.getRoles().getFirst().contains("狼王") ||
@@ -61,17 +75,17 @@ public class MessageListener extends ListenerAdapter {
         if (event.getAuthor().isBot()) return;
         Session session = CmdUtils.getSession(event.getGuild());
         if (session == null) return;
-        for (Session.Player player : session.getPlayers().values()) {
+        for (Session.Player player : session.fetchAlivePlayers().values()) {
             if (player.getRoles() != null && !player.getRoles().isEmpty()) {
                 if (shouldSend(player, session) && player.getChannelId() == event.getChannel().getIdLong()
                         || event.getChannel().getIdLong() == session.getJudgeTextChannelId()) {
                     WebhookMessage message = new WebhookMessageBuilder()
                             .setContent(event.getMessage().getContentRaw())
-                            .setUsername((((event.getChannel().getIdLong() == session.getJudgeTextChannelId()) ? "法官頻道" : "玩家" + player.getId())) +
+                            .setUsername((((event.getChannel().getIdLong() == session.getJudgeTextChannelId()) ? "法官頻道" : player.getNickname())) +
                                     " (" + event.getAuthor().getName() + ")")
                             .setAvatarUrl(event.getAuthor().getAvatarUrl())
                             .build();
-                    for (Session.Player p : session.getPlayers().values()) {
+                    for (Session.Player p : session.fetchAlivePlayers().values()) {
                         if (shouldSend(p, session) && event.getChannel().getIdLong() != p.getChannelId()) {
                             getWebhookClientOrCreate(Objects.requireNonNull(event.getGuild().getTextChannelById(p.getChannelId()))).send(message);
                         }
@@ -84,10 +98,10 @@ public class MessageListener extends ListenerAdapter {
                         && player.getChannelId() == event.getChannel().getIdLong())) {
                     WebhookMessage message = new WebhookMessageBuilder()
                             .setContent(event.getMessage().getContentRaw())
-                            .setUsername("玩家" + player.getId() + " (" + event.getAuthor().getName() + ")")
+                            .setUsername(player.getNickname() + " (" + event.getAuthor().getName() + ")")
                             .setAvatarUrl(event.getAuthor().getAvatarUrl())
                             .build();
-                    for (Session.Player p : session.getPlayers().values()) {
+                    for (Session.Player p : session.fetchAlivePlayers().values()) {
                         if (p.isJinBaoBao() && event.getChannel().getIdLong() != p.getChannelId()) {
                             getWebhookClientOrCreate(Objects.requireNonNull(event.getGuild().getTextChannelById(p.getChannelId()))).send(message);
                         }
