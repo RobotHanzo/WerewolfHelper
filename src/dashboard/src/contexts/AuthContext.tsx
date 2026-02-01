@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {createContext, ReactNode, useContext, useEffect, useState} from 'react';
 
 interface User {
     userId: string;
     username: string;
     avatar: string;
-    guildId: number;
+    guildId: string; // Changed from number to string
     role: 'JUDGE' | 'SPECTATOR' | 'BLOCKED' | 'PENDING';
 }
 
@@ -30,7 +30,7 @@ interface AuthProviderProps {
     children: ReactNode;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -88,7 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }, []);
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout, checkAuth }}>
+        <AuthContext.Provider value={{user, loading, login, logout, checkAuth}}>
             {children}
         </AuthContext.Provider>
     );

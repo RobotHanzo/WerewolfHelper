@@ -1,14 +1,18 @@
-const DEFAULT_BACKEND_URL = ''; // Empty string means use current origin (relative URLs)
-
 export class ApiClient {
     private baseUrl: string;
 
     constructor() {
         this.baseUrl = this.getBackendUrl();
+        console.log('ApiClient initialized with baseUrl:', this.baseUrl);
+        if (this.baseUrl !== '') {
+            console.warn('Backend URL is not empty! Forcing reset.');
+            this.baseUrl = '';
+        }
     }
 
     private getBackendUrl(): string {
-        return localStorage.getItem('backendUrl') || DEFAULT_BACKEND_URL;
+        // return localStorage.getItem('backendUrl') || DEFAULT_BACKEND_URL;
+        return ''; // Force local proxy
     }
 
     public setBackendUrl(url: string) {
@@ -25,6 +29,7 @@ export class ApiClient {
 
         try {
             const response = await fetch(url, {
+                credentials: 'include', // Ensure cookies are sent
                 ...options,
                 headers: {
                     'Content-Type': 'application/json',
@@ -72,15 +77,15 @@ export class ApiClient {
     }
 
     async assignRoles(guildId: string) {
-        return this.request(`/api/sessions/${guildId}/players/assign`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/players/assign`, {method: 'POST'});
     }
 
     async markPlayerDead(guildId: string, userId: string, lastWords: boolean = false) {
-        return this.request(`/api/sessions/${guildId}/players/${userId}/died?lastWords=${lastWords}`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/players/${userId}/died?lastWords=${lastWords}`, {method: 'POST'});
     }
 
     async setPolice(guildId: string, userId: string) {
-        return this.request(`/api/sessions/${guildId}/players/${userId}/police`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/players/${userId}/police`, {method: 'POST'});
     }
 
     async updatePlayerRoles(guildId: string, userId: string, roles: string[]) {
@@ -91,11 +96,11 @@ export class ApiClient {
     }
 
     async reviveRole(guildId: string, userId: string, role: string) {
-        return this.request(`/api/sessions/${guildId}/players/${userId}/revive-role?role=${encodeURIComponent(role)}`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/players/${userId}/revive-role?role=${encodeURIComponent(role)}`, {method: 'POST'});
     }
 
     async revivePlayer(guildId: string, userId: string) {
-        return this.request(`/api/sessions/${guildId}/players/${userId}/revive`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/players/${userId}/revive`, {method: 'POST'});
     }
 
     // Role management
@@ -104,11 +109,11 @@ export class ApiClient {
     }
 
     async addRole(guildId: string, role: string, amount: number = 1) {
-        return this.request(`/api/sessions/${guildId}/roles/add?role=${encodeURIComponent(role)}&amount=${amount}`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/roles/add?role=${encodeURIComponent(role)}&amount=${amount}`, {method: 'POST'});
     }
 
     async removeRole(guildId: string, role: string, amount: number = 1) {
-        return this.request(`/api/sessions/${guildId}/roles/${encodeURIComponent(role)}?amount=${amount}`, { method: 'DELETE' });
+        return this.request(`/api/sessions/${guildId}/roles/${encodeURIComponent(role)}?amount=${amount}`, {method: 'DELETE'});
     }
 
     // Role Order
@@ -136,67 +141,67 @@ export class ApiClient {
     async setPlayerCount(guildId: string, count: number) {
         return this.request(`/api/sessions/${guildId}/player-count`, {
             method: 'POST',
-            body: JSON.stringify({ count })
+            body: JSON.stringify({count})
         });
     }
 
     // Speech endpoints
     async startSpeech(guildId: string) {
-        return this.request(`/api/sessions/${guildId}/speech/auto`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/speech/auto`, {method: 'POST'});
     }
 
     async skipSpeech(guildId: string) {
-        return this.request(`/api/sessions/${guildId}/speech/skip`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/speech/skip`, {method: 'POST'});
     }
 
     async interruptSpeech(guildId: string) {
-        return this.request(`/api/sessions/${guildId}/speech/interrupt`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/speech/interrupt`, {method: 'POST'});
     }
 
     async startPoliceEnroll(guildId: string) {
-        return this.request(`/api/sessions/${guildId}/speech/police-enroll`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/speech/police-enroll`, {method: 'POST'});
     }
 
     async setSpeechOrder(guildId: string, direction: 'UP' | 'DOWN') {
         return this.request(`/api/sessions/${guildId}/speech/order`, {
             method: 'POST',
-            body: JSON.stringify({ direction })
+            body: JSON.stringify({direction})
         });
     }
 
     async confirmSpeech(guildId: string) {
-        return this.request(`/api/sessions/${guildId}/speech/confirm`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/speech/confirm`, {method: 'POST'});
     }
 
     // Start and Reset session
     async startGame(guildId: string) {
-        return this.request(`/api/sessions/${guildId}/start`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/start`, {method: 'POST'});
     }
 
     async resetSession(guildId: string) {
-        return this.request(`/api/sessions/${guildId}/reset`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/reset`, {method: 'POST'});
     }
 
     // New Commands (Timer, Voice, Roles)
     async manualStartTimer(guildId: string, duration: number) {
         return this.request(`/api/sessions/${guildId}/speech/manual-start`, {
             method: 'POST',
-            body: JSON.stringify({ duration })
+            body: JSON.stringify({duration})
         });
     }
 
     async muteAll(guildId: string) {
-        return this.request(`/api/sessions/${guildId}/speech/mute-all`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/speech/mute-all`, {method: 'POST'});
     }
 
     async unmuteAll(guildId: string) {
-        return this.request(`/api/sessions/${guildId}/speech/unmute-all`, { method: 'POST' });
+        return this.request(`/api/sessions/${guildId}/speech/unmute-all`, {method: 'POST'});
     }
 
     async updateUserRole(guildId: string, userId: string, role: string) {
         return this.request(`/api/sessions/${guildId}/players/${userId}/role`, {
             method: 'POST',
-            body: JSON.stringify({ role })
+            body: JSON.stringify({role})
         });
     }
 

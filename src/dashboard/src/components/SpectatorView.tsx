@@ -1,16 +1,16 @@
-import React, { useMemo } from 'react';
-import { useTranslation } from '../lib/i18n';
-import { Player } from '../types';
-import { Skull, Shield, Zap, HeartPulse, Users } from 'lucide-react';
-import { PlayerCard } from './PlayerCard';
+import React, {useMemo} from 'react';
+import {useTranslation} from '../lib/i18n';
+import {Player} from '../types';
+import {HeartPulse, Shield, Skull, Users, Zap} from 'lucide-react';
+import {PlayerCard} from './PlayerCard';
 
 interface SpectatorViewProps {
     players: Player[];
     doubleIdentities: boolean;
 }
 
-export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIdentities }) => {
-    const { t } = useTranslation();
+export const SpectatorView: React.FC<SpectatorViewProps> = ({players, doubleIdentities}) => {
+    const {t} = useTranslation();
 
     const stats = useMemo(() => {
         let wolves = 0;
@@ -86,7 +86,7 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIde
                 {/* Wolves Status */}
                 <FactionCard
                     title={t('spectator.wolvesLeft')}
-                    icon={<Skull className="w-6 h-6 text-red-500" />}
+                    icon={<Skull className="w-6 h-6 text-red-500"/>}
                     color="red"
                     current={stats.wolves - stats.deadWolves}
                     total={stats.wolves}
@@ -98,7 +98,7 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIde
                     <>
                         <FactionCard
                             title={t('spectator.godsLeft')}
-                            icon={<Zap className="w-6 h-6 text-yellow-500" />}
+                            icon={<Zap className="w-6 h-6 text-yellow-500"/>}
                             color="yellow"
                             current={stats.gods - stats.deadGods}
                             total={stats.gods}
@@ -106,7 +106,7 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIde
                         />
                         <FactionCard
                             title={t('spectator.jbbLeft')}
-                            icon={<HeartPulse className="w-6 h-6 text-pink-500" />}
+                            icon={<HeartPulse className="w-6 h-6 text-pink-500"/>}
                             color="pink"
                             current={stats.jinBaoBaos - stats.deadJinBaoBaos}
                             total={stats.jinBaoBaos}
@@ -117,7 +117,7 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIde
                     <>
                         <FactionCard
                             title={t('spectator.godsLeft')}
-                            icon={<Zap className="w-6 h-6 text-yellow-500" />}
+                            icon={<Zap className="w-6 h-6 text-yellow-500"/>}
                             color="yellow"
                             current={stats.gods - stats.deadGods}
                             total={stats.gods}
@@ -125,7 +125,7 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIde
                         />
                         <FactionCard
                             title={t('spectator.villagersLeft')}
-                            icon={<Shield className="w-6 h-6 text-emerald-500" />}
+                            icon={<Shield className="w-6 h-6 text-emerald-500"/>}
                             color="emerald"
                             current={stats.villagers - stats.deadVillagers}
                             total={stats.villagers}
@@ -135,7 +135,8 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIde
                 )}
             </div>
 
-            <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg text-sm text-slate-600 dark:text-slate-400">
+            <div
+                className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg text-sm text-slate-600 dark:text-slate-400">
                 <h3 className="font-bold mb-2">{t('spectator.winConditions')}</h3>
                 <ul className="list-disc list-inside space-y-1">
                     <li>{t('spectator.goodWinCondition')}</li>
@@ -146,15 +147,17 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIde
             {/* Read-only Player Grid */}
             <div className="space-y-4">
                 <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <Users className="w-5 h-5 text-slate-500 dark:text-slate-400" />
-                    {t('players.title')} <span className="text-slate-500 dark:text-slate-500 text-sm font-normal">({players.filter(p => p.isAlive).length} {t('players.alive')})</span>
+                    <Users className="w-5 h-5 text-slate-500 dark:text-slate-400"/>
+                    {t('players.title')} <span
+                    className="text-slate-500 dark:text-slate-500 text-sm font-normal">({players.filter(p => p.isAlive).length} {t('players.alive')})</span>
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {players.map(player => (
                         <PlayerCard
                             key={player.id}
                             player={player}
-                            onAction={() => { }}
+                            onAction={() => {
+                            }}
                             readonly={true}
                         />
                     ))}
@@ -175,19 +178,20 @@ interface FactionCardProps {
     description: string;
 }
 
-const FactionCard: React.FC<FactionCardProps> = ({ title, icon, color, current, total, description }) => {
-    const { t } = useTranslation();
+const FactionCard: React.FC<FactionCardProps> = ({title, icon, color, current, total, description}) => {
+    const {t} = useTranslation();
     const percentage = total > 0 ? ((total - current) / total) * 100 : 0;
 
     const colorClasses = {
-        red: { bg: 'bg-red-500', bar: 'bg-red-500', text: 'text-red-600 dark:text-red-400' },
-        yellow: { bg: 'bg-yellow-500', bar: 'bg-yellow-500', text: 'text-yellow-600 dark:text-yellow-400' },
-        emerald: { bg: 'bg-emerald-500', bar: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
-        pink: { bg: 'bg-pink-500', bar: 'bg-pink-500', text: 'text-pink-600 dark:text-pink-400' },
+        red: {bg: 'bg-red-500', bar: 'bg-red-500', text: 'text-red-600 dark:text-red-400'},
+        yellow: {bg: 'bg-yellow-500', bar: 'bg-yellow-500', text: 'text-yellow-600 dark:text-yellow-400'},
+        emerald: {bg: 'bg-emerald-500', bar: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400'},
+        pink: {bg: 'bg-pink-500', bar: 'bg-pink-500', text: 'text-pink-600 dark:text-pink-400'},
     };
 
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+        <div
+            className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-lg bg-slate-100 dark:bg-slate-800`}>
@@ -211,7 +215,7 @@ const FactionCard: React.FC<FactionCardProps> = ({ title, icon, color, current, 
                 <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div
                         className={`h-full rounded-full transition-all duration-500 ${colorClasses[color].bar}`}
-                        style={{ width: `${percentage}%` }}
+                        style={{width: `${percentage}%`}}
                     />
                 </div>
             </div>

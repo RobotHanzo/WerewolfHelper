@@ -2,91 +2,102 @@ package dev.robothanzo.werewolf.commands;
 
 import dev.robothanzo.jda.interactions.annotations.slash.Command;
 import dev.robothanzo.jda.interactions.annotations.slash.Subcommand;
-import dev.robothanzo.werewolf.WerewolfHelper;
+import dev.robothanzo.werewolf.WerewolfApplication;
 import dev.robothanzo.werewolf.audio.Audio;
 import dev.robothanzo.werewolf.database.documents.Session;
-import dev.robothanzo.werewolf.server.WebServer;
+import dev.robothanzo.werewolf.model.Candidate;
 import dev.robothanzo.werewolf.utils.CmdUtils;
 import dev.robothanzo.werewolf.utils.MsgUtils;
-import lombok.Builder;
-import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.components.actionrow.ActionRow;
-import net.dv8tion.jda.api.components.buttons.Button;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.mongodb.client.model.Filters.eq;
-import static com.mongodb.client.model.Updates.set;
-
 @Command
+@Slf4j
 public class Poll {
-    public static Map<Long, Map<Integer, Candidate>> expelCandidates = new ConcurrentHashMap<>(); // key is guild id // second key is candidate id
+    public static Map<Long, Map<Integer, Candidate>> expelCandidates = new ConcurrentHashMap<>(); // key is guild id //
+    // second key is
+    // candidate id
 
-    public static void handleExpelPK(Session session, GuildMessageChannel channel, Message message, List<Candidate> winners) {
-        message.reply("平票，請PK").queue();
+    public static void handleExpelPK(Session session, GuildMessageChannel channel, Message message,
+                                     List<Candidate> winners) {
+        if (message != null)
+            message.reply("平票，請PK").queue();
         Map<Integer, Candidate> newCandidates = new ConcurrentHashMap<>();
         for (Candidate winner : winners) {
-            winner.electors.clear();
+            winner.getElectors().clear();
             winner.setExpelPK(true);
             newCandidates.put(winner.getPlayer().getId(), winner);
         }
         expelCandidates.put(channel.getGuild().getIdLong(), newCandidates);
-        Speech.pollSpeech(channel.getGuild(), message, newCandidates.values().stream().map(Candidate::getPlayer).toList(),
+        WerewolfApplication.speechService.startSpeechPoll(channel.getGuild(), message,
+                newCandidates.values().stream().map(Candidate::getPlayer).toList(),
                 () -> startExpelPoll(session, channel, false));
     }
 
     public static void startExpelPoll(Session session, GuildMessageChannel channel, boolean allowPK) {
         Audio.play(Audio.Resource.EXPEL_POLL, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId()));
-        EmbedBuilder embedBuilder = new EmbedBuilder().setTitle("驅逐投票").setDescription("30秒後立刻計票，請加快手速!\n若要改票可直接按下要改成的對象\n若要改為棄票需按下原本投給的使用者").setColor(MsgUtils.getRandomColor());
+        EmbedBuilder embedBuilder = new EmbedBuilder().setTitle("驅逐投票")
+                .setDescription("30秒後立刻計票，請加快手速!\n若要改票可直接按下要改成的對象\n若要改為棄票需按下原本投給的使用者")
+                .setColor(MsgUtils.getRandomColor());
         List<Button> buttons = new LinkedList<>();
         for (Candidate player : expelCandidates.get(channel.getGuild().getIdLong()).values()
                 .stream().sorted(Candidate.getComparator()).toList()) {
-            assert player.getPlayer().getRoles() != null;
-            if (player.getPlayer().getRoles().isEmpty()) continue;
-            if (player.isQuit()) continue;
-            assert player.getPlayer().getUserId() != null;
             Member user = channel.getGuild().getMemberById(player.getPlayer().getUserId());
-            assert user != null;
-            buttons.add(Button.primary("voteExpel" + player.getPlayer().getId(),
-                    player.getPlayer().getNickname() + " (" + user.getUser().getName() + ")"));
+            if (user != null) {
+                buttons.add(Button.danger("voteExpel" + player.getPlayer().getId(),
+                        player.getPlayer().getNickname() + " (" + user.getUser().getName() + ")"));
+            }
         }
         Message message = channel.sendMessageEmbeds(embedBuilder.build())
                 .setComponents(MsgUtils.spreadButtonsAcrossActionRows(buttons).toArray(new ActionRow[0])).complete();
-        CmdUtils.schedule(() -> Audio.play(Audio.Resource.POLL_10S_REMAINING, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId())), 20000);
+        CmdUtils.schedule(() -> Audio.play(Audio.Resource.POLL_10S_REMAINING,
+                channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId())), 20000);
         CmdUtils.schedule(() -> {
-            List<Candidate> winners = Candidate.getWinner(expelCandidates.get(channel.getGuild().getIdLong()).values(), session.getPolice());
+            List<Candidate> winners = Candidate.getWinner(expelCandidates.get(channel.getGuild().getIdLong()).values(),
+                    null);
             if (winners.isEmpty()) {
-                message.reply("沒有人投票，不驅逐").queue();
+                if (message != null)
+                    message.reply("沒有人投票，本次驅逐無人出局").queue();
                 expelCandidates.remove(channel.getGuild().getIdLong());
+                return;
             }
+
             if (winners.size() == 1) {
-                message.reply("投票已結束，<@!" + winners.getFirst().getPlayer().getUserId() + "> 遭到驅逐").queue();
+                Candidate winner = winners.getFirst();
+                if (message != null)
+                    message.reply("投票已結束，正在放逐玩家 <@!" + winner.getPlayer().getUserId() + ">").queue();
 
                 EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("驅逐投票").setColor(MsgUtils.getRandomColor())
-                        .setDescription("遭驅逐玩家: <@!" + winners.getFirst().getPlayer().getUserId() + ">");
+                        .setDescription("放逐玩家: <@!" + winner.getPlayer().getUserId() + ">");
                 sendVoteResult(session, channel, message, resultEmbed, expelCandidates, false);
+
                 expelCandidates.remove(channel.getGuild().getIdLong());
-                Player.playerDied(session, channel.getGuild().getMemberById(Objects.requireNonNull(winners.getFirst().getPlayer().getUserId())), true, true);
-            }
-            if (winners.size() > 1) {
+            } else {
                 if (allowPK) {
                     EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("驅逐投票").setColor(MsgUtils.getRandomColor())
                             .setDescription("發生平票");
                     sendVoteResult(session, channel, message, resultEmbed, expelCandidates, false);
+
                     handleExpelPK(session, channel, message, winners);
                 } else {
-                    message.reply("平票第二次，不驅逐").queue();
                     EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("驅逐投票").setColor(MsgUtils.getRandomColor())
-                            .setDescription("平票第二次，不驅逐");
+                            .setDescription("再次發生平票，本次驅逐無人出局");
+                    if (message != null)
+                        message.reply("再次平票，無人出局").queue();
                     sendVoteResult(session, channel, message, resultEmbed, expelCandidates, false);
                     expelCandidates.remove(channel.getGuild().getIdLong());
                 }
@@ -94,343 +105,83 @@ public class Poll {
         }, 30000);
     }
 
-    public static void sendVoteResult(Session session, GuildMessageChannel channel, Message message, EmbedBuilder resultEmbed,
+    public static void sendVoteResult(Session session, GuildMessageChannel channel, Message message,
+                                      EmbedBuilder resultEmbed,
                                       Map<Long, Map<Integer, Candidate>> candidates, boolean police) {
         List<Long> voted = new LinkedList<>();
         for (Candidate candidate : candidates.get(channel.getGuild().getIdLong()).values()) {
-            if (candidate.isQuit()) continue;
-            assert candidate.getPlayer().getUserId() != null;
-            User user = WerewolfHelper.jda.getUserById(candidate.getPlayer().getUserId());
+            User user = WerewolfApplication.jda.getUserById(candidate.getPlayer().getUserId());
             assert user != null;
             voted.addAll(candidate.getElectors());
-            resultEmbed.addField(candidate.player.getNickname() + " (" + user.getName() + ")",
+            resultEmbed.addField(candidate.getPlayer().getNickname() + " (" + user.getName() + ")",
                     String.join("、", candidate.getElectorsAsMention()), false);
         }
         List<String> discarded = new LinkedList<>();
         for (Session.Player player : session.fetchAlivePlayers().values()) {
-            if ((candidates.get(channel.getGuild().getIdLong()).get(player.getId()) == null || !police) &&
-                    !voted.contains(player.getUserId())) {
+            if (!voted.contains(player.getUserId())) {
                 discarded.add("<@!" + player.getUserId() + ">");
             }
         }
-        resultEmbed.addField("棄票玩家", String.join("、", discarded), false);
-        message.editMessageEmbeds(resultEmbed.build()).queue();
+        resultEmbed.addField("棄票", discarded.isEmpty() ? "無" : String.join("、", discarded), false);
+        if (message != null)
+            message.getChannel().sendMessageEmbeds(resultEmbed.build()).queue();
+        else
+            channel.sendMessageEmbeds(resultEmbed.build()).queue();
     }
 
-    @Subcommand(description = "啟動放逐投票")
+    @Subcommand(description = "啟動驅逐投票")
     public void expel(SlashCommandInteractionEvent event) {
         event.deferReply().queue();
-        if (!CmdUtils.isAdmin(event)) return;
+        if (!CmdUtils.isAdmin(event))
+            return;
         Session session = CmdUtils.getSession(Objects.requireNonNull(event.getGuild()));
-        if (session == null) return;
+        if (session == null)
+            return;
 
         Map<Integer, Candidate> candidates = new ConcurrentHashMap<>();
-        for (Session.Player player : session.fetchAlivePlayers().values()) {
-            candidates.put(player.getId(), Candidate.builder().player(player).build());
+        for (Session.Player p : session.getPlayers().values()) {
+            if (p.isAlive()) {
+                candidates.put(p.getId(), Candidate.builder().player(p).expelPK(true).build());
+            }
         }
         expelCandidates.put(event.getGuild().getIdLong(), candidates);
-        startExpelPoll(session, event.getGuildChannel(), true);
+        startExpelPoll(session, (GuildMessageChannel) event.getChannel(), true);
         event.getHook().editOriginal(":white_check_mark:").queue();
     }
 
     @Subcommand
     public static class Police {
-        public static Map<Long, Boolean> allowEnroll = new ConcurrentHashMap<>(); // key is guild id
-        public static Map<Long, Boolean> allowUnEnroll = new ConcurrentHashMap<>(); // key is guild id
-        public static Map<Long, Map<Integer, Candidate>> candidates = new ConcurrentHashMap<>(); // key is guild id // second key is candidate id
-
-        public static void handlePolicePK(Session session, GuildMessageChannel channel, Message message, List<Candidate> winners) {
-            message.reply("平票，請PK").queue();
-            Map<Integer, Candidate> newCandidates = new ConcurrentHashMap<>();
-            for (Candidate winner : winners) {
-                winner.electors.clear();
-                newCandidates.put(winner.getPlayer().getId(), winner);
-            }
-            candidates.put(channel.getGuild().getIdLong(), newCandidates);
-            Speech.pollSpeech(channel.getGuild(), message, newCandidates.values().stream().map(Candidate::getPlayer).toList(),
-                    () -> startPolicePoll(session, channel, false));
-        }
-
-        public static void startPolicePoll(Session session, GuildMessageChannel channel, boolean allowPK) {
-            allowUnEnroll.put(channel.getGuild().getIdLong(), false);
-            Audio.play(Audio.Resource.POLICE_POLL, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId()));
-            allowEnroll.put(channel.getGuild().getIdLong(), true);
-            EmbedBuilder embedBuilder = new EmbedBuilder().setTitle("警長投票").setDescription("30秒後立刻計票，請加快手速!\n若要改票可直接按下要改成的對象\n若要改為棄票需按下原本投給的使用者").setColor(MsgUtils.getRandomColor());
-            List<Button> buttons = new LinkedList<>();
-            for (Candidate player : candidates.get(channel.getGuild().getIdLong()).values()
-                    .stream().sorted(Candidate.getComparator()).toList()) {
-                assert player.getPlayer().getRoles() != null;
-                if (player.getPlayer().getRoles().isEmpty()) continue;
-                if (player.isQuit()) continue;
-                assert player.getPlayer().getUserId() != null;
-                Member user = channel.getGuild().getMemberById(player.getPlayer().getUserId());
-                assert user != null;
-                buttons.add(Button.primary("votePolice" + player.getPlayer().getId(),
-                        player.getPlayer().getNickname() + " (" + user.getUser().getName() + ")"));
-            }
-            Message message = channel.sendMessageEmbeds(embedBuilder.build())
-                    .setComponents(MsgUtils.spreadButtonsAcrossActionRows(buttons).toArray(new ActionRow[0])).complete();
-            CmdUtils.schedule(() -> Audio.play(Audio.Resource.POLL_10S_REMAINING, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId())), 20000);
-            CmdUtils.schedule(() -> {
-                List<Candidate> winners = Candidate.getWinner(candidates.get(channel.getGuild().getIdLong()).values(), null);
-                if (winners.isEmpty()) {
-                    message.reply("沒有人投票，警徽撕毀").queue();
-                    candidates.remove(channel.getGuild().getIdLong());
-                    allowEnroll.remove(channel.getGuild().getIdLong());
-                    allowUnEnroll.remove(channel.getGuild().getIdLong());
-                    WerewolfHelper.webServer.broadcastSessionUpdate(session);
-                    return;
-                }
-                if (winners.size() == 1) {
-                    message.reply("投票已結束，<@!" + winners.getFirst().getPlayer().getUserId() + "> 獲勝").queue();
-
-                    EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("警長投票").setColor(MsgUtils.getRandomColor())
-                            .setDescription("獲勝玩家: <@!" + winners.getFirst().getPlayer().getUserId() + ">");
-                    sendVoteResult(session, channel, message, resultEmbed, candidates, true);
-                    candidates.remove(channel.getGuild().getIdLong());
-                    allowEnroll.remove(channel.getGuild().getIdLong());
-                    allowUnEnroll.remove(channel.getGuild().getIdLong());
-                    Member member = channel.getGuild().getMemberById(Objects.requireNonNull(winners.getFirst().getPlayer().getUserId()));
-                    if (member != null)
-                        member.modifyNickname(member.getEffectiveName() + " [警長]").queue();
-                    Session.fetchCollection().updateOne(eq("guildId", channel.getGuild().getIdLong()),
-                            set("players." + winners.getFirst().getPlayer().getId() + ".police", true));
-                    
-                    // Log police election
-                    Map<String, Object> metadata = new HashMap<>();
-                    metadata.put("playerId", winners.getFirst().getPlayer().getId());
-                    metadata.put("playerName", winners.getFirst().getPlayer().getNickname());
-                    session.addLog(dev.robothanzo.werewolf.database.documents.LogType.POLICE_ELECTED, 
-                        winners.getFirst().getPlayer().getNickname() + " 當選警長", metadata);
-                    
-                    WerewolfHelper.webServer.broadcastSessionUpdate(session);
-                }
-                if (winners.size() > 1) {
-                    if (allowPK) {
-                        EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("警長投票").setColor(MsgUtils.getRandomColor())
-                                .setDescription("發生平票");
-                        sendVoteResult(session, channel, message, resultEmbed, candidates, true);
-                        handlePolicePK(session, channel, message, winners);
-                    } else {
-                        EmbedBuilder resultEmbed = new EmbedBuilder().setTitle("警長投票").setColor(MsgUtils.getRandomColor())
-                                .setDescription("平票第二次，警徽撕毀");
-                        message.reply("平票第二次，警徽撕毀").queue();
-                        sendVoteResult(session, channel, message, resultEmbed, candidates, true);
-                        candidates.remove(channel.getGuild().getIdLong());
-                        allowEnroll.remove(channel.getGuild().getIdLong());
-                        allowUnEnroll.remove(channel.getGuild().getIdLong());
-                        WerewolfHelper.webServer.broadcastSessionUpdate(session);
-                    }
-                }
-            }, 30000);
-        }
-
-        @dev.robothanzo.jda.interactions.annotations.Button()
-        public void enrollPolice(ButtonInteractionEvent event) {
-            event.deferReply(true).queue();
-            Session session = CmdUtils.getSession(Objects.requireNonNull(event.getGuild()));
-            if (session == null) {
-                return;
-            }
-            for (Map.Entry<Integer, Candidate> candidate : new LinkedList<>(candidates.get(event.getGuild().getIdLong()).entrySet())) {
-                if (Objects.equals(event.getUser().getIdLong(), candidate.getValue().getPlayer().getUserId())) {
-                    if (allowEnroll.get(event.getGuild().getIdLong()) && allowUnEnroll.get(event.getGuild().getIdLong())) { // The enrollment process hasn't ended yet, so we remove them completely
-                        candidates.get(event.getGuild().getIdLong()).remove(candidate.getKey());
-                        event.getHook().editOriginal(":white_check_mark: 已取消參選").queue();
-                        
-                        // Log unenrollment
-                        Map<String, Object> metadata = new HashMap<>();
-                        metadata.put("playerId", candidate.getValue().getPlayer().getId());
-                        metadata.put("playerName", candidate.getValue().getPlayer().getNickname());
-                        session.addLog(dev.robothanzo.werewolf.database.documents.LogType.POLICE_UNENROLLED, 
-                            candidate.getValue().getPlayer().getNickname() + " 已取消參選警長", metadata);
-                        
-                        WerewolfHelper.webServer.broadcastSessionUpdate(session);
-                    } else if (allowUnEnroll.get(event.getGuild().getIdLong())) {
-                        candidates.get(event.getGuild().getIdLong()).get(candidate.getKey()).setQuit(true);
-                        event.getHook().editOriginal(":white_check_mark: 已取消參選").queue();
-                        Objects.requireNonNull(event.getGuild().getTextChannelById(session.getCourtTextChannelId()))
-                                .sendMessage(event.getUser().getAsMention() + " 已取消參選").queue();
-                        
-                        // Log unenrollment
-                        Map<String, Object> metadata = new HashMap<>();
-                        metadata.put("playerId", candidate.getValue().getPlayer().getId());
-                        metadata.put("playerName", candidate.getValue().getPlayer().getNickname());
-                        session.addLog(dev.robothanzo.werewolf.database.documents.LogType.POLICE_UNENROLLED, 
-                            candidate.getValue().getPlayer().getNickname() + " 已取消參選警長", metadata);
-                        
-                        WerewolfHelper.webServer.broadcastSessionUpdate(session);
-                    } else {
-                        event.getHook().editOriginal(":x: 無法取消參選，投票已開始").queue();
-                    }
-                    return;
-                }
-            }
-            if ((!allowEnroll.containsKey(event.getGuild().getIdLong())) || !allowEnroll.get(event.getGuild().getIdLong())) {
-                event.getHook().editOriginal(":x: 無法參選，時間已到").queue();
-            }
-            for (Session.Player player : session.fetchAlivePlayers().values()) {
-                if (Objects.equals(event.getUser().getIdLong(), player.getUserId())) {
-                    candidates.get(event.getGuild().getIdLong()).put(player.getId(), Candidate.builder().player(player).build());
-                    event.getHook().editOriginal(":white_check_mark: 已參選").queue();
-                    
-                    // Log enrollment
-                    java.util.Map<String, Object> metadata = new java.util.HashMap<>();
-                    metadata.put("playerId", player.getId());
-                    metadata.put("playerName", player.getNickname());
-                    session.addLog(dev.robothanzo.werewolf.database.documents.LogType.POLICE_ENROLLED, 
-                        player.getNickname() + " 已參選警長", metadata);
-                    
-                    WerewolfHelper.webServer.broadcastSessionUpdate(session);
-                    return;
-                }
-            }
-            event.getHook().editOriginal(":x: 你不是玩家").queue();
-        }
-
-        public static void startEnrollment(Session session, GuildMessageChannel channel, @Nullable SlashCommandInteractionEvent event) {
-            candidates.put(channel.getGuild().getIdLong(), new ConcurrentHashMap<>());
-            allowEnroll.put(channel.getGuild().getIdLong(), true);
-            allowUnEnroll.put(channel.getGuild().getIdLong(), true);
-            
-            // Log enrollment start
-            session.addLog(dev.robothanzo.werewolf.database.documents.LogType.POLICE_ENROLLMENT_STARTED, 
-                "警長參選已開始", null);
-            
-            WerewolfHelper.webServer.broadcastSessionUpdate(session);
-            Audio.play(Audio.Resource.POLICE_ENROLL, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId()));
-            EmbedBuilder embed = new EmbedBuilder()
-                    .setTitle("參選警長").setDescription("30秒後立刻進入辯論，請加快手速!").setColor(MsgUtils.getRandomColor());
-            
-            Message message;
-            if (event != null) {
-                message = event.getHook().editOriginalEmbeds(embed.build())
-                        .setComponents(ActionRow.of(Button.success("enrollPolice", "參選警長")))
-                        .complete();
-            } else {
-                message = channel.sendMessageEmbeds(embed.build())
-                        .setComponents(ActionRow.of(Button.success("enrollPolice", "參選警長")))
-                        .complete();
-            }
-
-            CmdUtils.schedule(() -> Audio.play(Audio.Resource.ENROLL_10S_REMAINING, channel.getGuild().getVoiceChannelById(session.getCourtVoiceChannelId())), 20000);
-            CmdUtils.schedule(() -> {
-                allowEnroll.put(channel.getGuild().getIdLong(), false);
-                WerewolfHelper.webServer.broadcastSessionUpdate(session);
-                if (candidates.get(channel.getGuild().getIdLong()).isEmpty()) {
-                    candidates.remove(channel.getGuild().getIdLong());
-                    allowEnroll.remove(channel.getGuild().getIdLong());
-                    allowUnEnroll.remove(channel.getGuild().getIdLong());
-                    message.reply("無人參選，警徽撕毀").queue();
-                    WerewolfHelper.webServer.broadcastSessionUpdate(session);
-                    return;
-                }
-                List<String> candidateMentions = new LinkedList<>();
-                for (Candidate candidate : candidates.get(channel.getGuild().getIdLong()).values().stream().sorted(Candidate.getComparator()).toList()) {
-                    candidateMentions.add("<@!" + candidate.getPlayer().getUserId() + ">");
-                }
-                if (candidates.get(channel.getGuild().getIdLong()).size() == 1) {
-                    message.reply("只有" + candidateMentions.getFirst() + "參選，直接當選").queue();
-                    Member member = channel.getGuild().getMemberById(Objects.requireNonNull(candidates.get(channel.getGuild().getIdLong()).get(0).getPlayer().getUserId()));
-                    if (member != null)
-                        member.modifyNickname(member.getEffectiveName() + " [警長]").queue();
-                    Session.fetchCollection().updateOne(eq("guildId", channel.getGuild().getIdLong()),
-                            set("players." + candidates.get(channel.getGuild().getIdLong()).get(0).getPlayer().getId() + ".police", true));
-                    candidates.remove(channel.getGuild().getIdLong());
-                    allowEnroll.remove(channel.getGuild().getIdLong());
-                    allowUnEnroll.remove(channel.getGuild().getIdLong());
-                    WerewolfHelper.webServer.broadcastSessionUpdate(session);
-                    return;
-                }
-                message.replyEmbeds(new EmbedBuilder().setTitle("參選警長結束")
-                        .setDescription("參選的有: " + String.join("、", candidateMentions) + "\n備註:你可隨時再按一次按鈕以取消參選")
-                        .setColor(MsgUtils.getRandomColor()).build()).complete();
-                Speech.pollSpeech(channel.getGuild(), message, candidates.get(channel.getGuild().getIdLong()).values().stream().map(Candidate::getPlayer).toList(),
-                        () -> {
-                            message.getChannel().sendMessage("政見發表結束，參選人有20秒進行退選，20秒後將自動開始投票").queue();
-                            CmdUtils.schedule(() -> startPolicePoll(session, channel, true), 20000);
-                        });
-            }, 30000);
-            
-            if (event != null) {
-                event.getHook().editOriginal(":white_check_mark:").queue();
-            }
-        }
-
         @Subcommand(description = "啟動警長參選投票")
         public void enroll(SlashCommandInteractionEvent event) {
             event.deferReply().queue();
-            if (!CmdUtils.isAdmin(event)) return;
+            if (!CmdUtils.isAdmin(event))
+                return;
             Session session = CmdUtils.getSession(Objects.requireNonNull(event.getGuild()));
-            if (session == null) return;
-            startEnrollment(session, event.getGuildChannel(), event);
+            if (session == null)
+                return;
+
+            if (WerewolfApplication.policeService.getSessions().containsKey(event.getGuild().getIdLong())) {
+                event.getHook().editOriginal(":x: 警長選舉已在進行中").queue();
+                return;
+            }
+
+            WerewolfApplication.policeService.startEnrollment(session, (GuildMessageChannel) event.getChannel(), null);
+            event.getHook().editOriginal(":white_check_mark:").queue();
         }
 
         @Subcommand(description = "啟動警長投票 (會自動開始，請只在出問題時使用)")
         public void start(SlashCommandInteractionEvent event) {
             event.deferReply().queue();
-            if (!CmdUtils.isAdmin(event)) return;
-            Session session = CmdUtils.getSession(Objects.requireNonNull(event.getGuild()));
-            if (session == null) return;
-            startPolicePoll(session, event.getGuildChannel(), true);
-        }
-    }
+            if (!CmdUtils.isAdmin(event))
+                return;
 
-    @Data
-    @Builder
-    public static class Candidate {
-        private Session.Player player;
-        @Builder.Default
-        private boolean expelPK = false;
-        @Builder.Default
-        private List<Long> electors = new LinkedList<>();
-        @Builder.Default
-        private boolean quit = false;
-
-        public static Comparator<Candidate> getComparator() {
-            return Comparator.comparingInt(o -> o.getPlayer().getId());
+            WerewolfApplication.policeService.forceStartVoting(event.getGuild().getIdLong());
+            event.getHook().editOriginal(":white_check_mark:").queue();
         }
 
-        public static List<Candidate> getWinner(Collection<Candidate> candidates, @Nullable Session.Player police) {
-            List<Candidate> winners = new LinkedList<>();
-            float winningVotes = 0;
-            for (Candidate candidate : candidates) {
-                float votes = candidate.getVotes(police);
-                if (votes <= 0) continue;
-                if (votes > winningVotes) {
-                    winningVotes = votes;
-                    winners.clear();
-                    winners.add(candidate);
-                } else if (votes == winningVotes) {
-                    winners.add(candidate);
-                }
-            }
-            return winners;
+        @dev.robothanzo.jda.interactions.annotations.Button()
+        public void enrollPolice(ButtonInteractionEvent event) {
+            WerewolfApplication.policeService.enrollPolice(event);
         }
-
-        public List<String> getElectorsAsMention() {
-            List<String> result = new LinkedList<>();
-            for (Long elector : electors) {
-                result.add("<@!" + elector + ">");
-            }
-            return result;
-        }
-
-        public float getVotes(@Nullable Session.Player police) {
-            boolean hasPolice = police != null;
-            if (hasPolice) hasPolice = electors.contains(police.getUserId());
-            return (float) ((electors.size() + (hasPolice ? 0.5 : 0)) * (quit ? 0 : 1));
-        }
-    }
-
-    public static void sendRolesList(ButtonInteractionEvent event) {
-        Session session = CmdUtils.getSession(event);
-        if (session == null) return;
-        List<String> roles = session.getRoles();
-        event.replyEmbeds(new EmbedBuilder()
-                .setTitle("剩餘身分")
-                .setDescription(roles.isEmpty() ? "無" : String.join("\n", roles))
-                .setColor(MsgUtils.getRandomColor())
-                .build()).setEphemeral(true).queue();
     }
 }

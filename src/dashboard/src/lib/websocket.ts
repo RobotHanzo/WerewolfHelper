@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { api } from './api';
+import {useEffect, useRef, useState} from 'react';
+import {api} from './api';
 
 type MessageHandler = (data: any) => void;
 
@@ -9,9 +9,10 @@ export class WebSocketClient {
     private messageHandlers: Set<MessageHandler> = new Set();
     private url: string;
     private reconnectAttempts = 0;
+    private guildId: string | null = null;
 
     private onConnectHandlers: Set<() => void> = new Set();
-    private onDisconnectHandlers: Set<() => void> = new Set();
+    private onDisconnectHandlers: Set<(event: CloseEvent) => void> = new Set();
 
     constructor() {
         this.url = this.getWebSocketUrl();
@@ -19,20 +20,29 @@ export class WebSocketClient {
 
     private getWebSocketUrl(): string {
         const backendUrl = api.getConfiguredUrl();
+        const query = this.guildId ? `?guildId=${this.guildId}` : '';
         if (!backendUrl) {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            // In development, handle Vite's proxy or different ports if needed
             const host = window.location.host;
-            return `${protocol}//${host}/ws`;
+            return `${protocol}//${host}/ws${query}`;
         }
-        return backendUrl.replace(/^http/, 'ws') + '/ws';
+        return (backendUrl.replace(/^http/, 'ws') + '/ws').replace(/\/+$/, '') + query;
     }
 
     public get isConnected(): boolean {
         return this.ws?.readyState === WebSocket.OPEN;
     }
 
-    connect() {
+    connect(guildId?: string) {
+        if (guildId !== undefined) {
+            if (this.guildId !== guildId) {
+                this.guildId = guildId;
+                if (this.ws) {
+                    this.disconnect();
+                }
+            }
+        }
+
         if (this.ws?.readyState === WebSocket.OPEN || this.ws?.readyState === WebSocket.CONNECTING) {
             return;
         }
@@ -69,9 +79,9 @@ export class WebSocketClient {
             };
 
             this.ws.onclose = (event) => {
-                console.log(`WebSocket closed (code: ${event.code}), reconnecting...`);
+                console.log(`WebSocket closed (code: ${event.code}, reason: ${event.reason}), reconnecting...`);
                 this.ws = null;
-                this.onDisconnectHandlers.forEach(h => h());
+                this.onDisconnectHandlers.forEach(h => h(event));
                 this.reconnect();
             };
         } catch (error) {
@@ -102,13 +112,14 @@ export class WebSocketClient {
 
         if (this.ws) {
             this.ws.onclose = null; // Prevent auto-reconnect on manual disconnect
+            const closeEvent = new CloseEvent('close', {code: 1000, reason: 'Manual disconnect'});
             this.ws.close();
             this.ws = null;
-            this.onDisconnectHandlers.forEach(h => h());
+            this.onDisconnectHandlers.forEach(h => h(closeEvent));
         }
     }
 
-    addConnectionHandlers(onConnect: () => void, onDisconnect: () => void) {
+    addConnectionHandlers(onConnect: () => void, onDisconnect: (event: CloseEvent) => void) {
         this.onConnectHandlers.add(onConnect);
         this.onDisconnectHandlers.add(onDisconnect);
 
@@ -137,7 +148,7 @@ export class WebSocketClient {
 export const wsClient = new WebSocketClient();
 
 // React hook for WebSocket using the singleton
-export function useWebSocket(onMessage: MessageHandler) {
+export function useWebSocket(onMessage: MessageHandler, guildId?: string, onSessionExpired?: () => void) {
     const [isConnected, setIsConnected] = useState(wsClient.isConnected);
     const onMessageRef = useRef(onMessage);
 
@@ -149,7 +160,17 @@ export function useWebSocket(onMessage: MessageHandler) {
         // Subscribe to connection changes
         const unsubscribeConn = wsClient.addConnectionHandlers(
             () => setIsConnected(true),
-            () => setIsConnected(false)
+            (event) => {
+                setIsConnected(false);
+                if (event && event.reason && (event.reason.includes("No user in session") || event.reason.includes("Rejected WS connection"))) {
+                    if (onSessionExpired) {
+                        onSessionExpired();
+                    } else {
+                        // Fallback if no handler provided (e.g. login page)
+                        console.warn("Session expired handling not implemented in this context");
+                    }
+                }
+            }
         );
 
         // Subscribe to messages
@@ -158,14 +179,14 @@ export function useWebSocket(onMessage: MessageHandler) {
         });
 
         // Ensure we are connected
-        wsClient.connect();
+        wsClient.connect(guildId);
 
         // Heartbeat interval
         const interval = setInterval(() => {
             if (wsClient.isConnected) {
-                wsClient.send({ type: 'PING' });
+                wsClient.send({type: 'PING'});
             } else {
-                wsClient.connect(); // Force check if somehow stuck
+                wsClient.connect(guildId); // Force check if somehow stuck
             }
         }, 15000);
 
@@ -176,5 +197,5 @@ export function useWebSocket(onMessage: MessageHandler) {
         };
     }, []);
 
-    return { isConnected, ws: wsClient };
+    return {isConnected, ws: wsClient};
 }

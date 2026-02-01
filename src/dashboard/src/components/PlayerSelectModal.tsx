@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { X, Search, Check } from 'lucide-react';
-import { useTranslation } from '../lib/i18n';
-import { Player } from '../types';
+import React, {useState} from 'react';
+import {Check, Search, X} from 'lucide-react';
+import {useTranslation} from '../lib/i18n';
+import {Player} from '../types';
 
 interface PlayerSelectModalProps {
     title: string;
@@ -11,8 +11,8 @@ interface PlayerSelectModalProps {
     filter?: (p: Player) => boolean;
 }
 
-export const PlayerSelectModal: React.FC<PlayerSelectModalProps> = ({ title, players, onSelect, onClose, filter }) => {
-    const { t } = useTranslation();
+export const PlayerSelectModal: React.FC<PlayerSelectModalProps> = ({title, players, onSelect, onClose, filter}) => {
+    const {t} = useTranslation();
     const [search, setSearch] = useState('');
 
     const filteredPlayers = players
@@ -20,20 +20,24 @@ export const PlayerSelectModal: React.FC<PlayerSelectModalProps> = ({ title, pla
         .filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || (p.userId && p.userId.includes(search)));
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[80vh]">
-                <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div
+                className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[80vh]">
+                <div
+                    className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
                     <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                         {title}
                     </h2>
-                    <button onClick={onClose} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
-                        <X className="w-5 h-5" />
+                    <button onClick={onClose}
+                            className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
+                        <X className="w-5 h-5"/>
                     </button>
                 </div>
 
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"/>
                         <input
                             type="text"
                             placeholder={t('search.placeholder') || "Search players..."}
@@ -53,7 +57,10 @@ export const PlayerSelectModal: React.FC<PlayerSelectModalProps> = ({ title, pla
                         filteredPlayers.map(p => (
                             <button
                                 key={p.id}
-                                onClick={() => { onSelect(p.id); onClose(); }}
+                                onClick={() => {
+                                    onSelect(p.id);
+                                    onClose();
+                                }}
                                 className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group text-left"
                             >
                                 <div className="relative">
@@ -71,12 +78,15 @@ export const PlayerSelectModal: React.FC<PlayerSelectModalProps> = ({ title, pla
                                     {/* Status indicators if needed, e.g. role icons */}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-slate-900 dark:text-slate-200 truncate">{p.name}</div>
+                                    <div
+                                        className="font-medium text-slate-900 dark:text-slate-200 truncate">{p.name}</div>
                                     <div className="text-xs text-slate-500 truncate flex gap-1">
-                                        {p.roles.map(r => <span key={r} className="bg-slate-200 dark:bg-slate-800 px-1 rounded">{r}</span>)}
+                                        {p.roles.map(r => <span key={r}
+                                                                className="bg-slate-200 dark:bg-slate-800 px-1 rounded">{r}</span>)}
                                     </div>
                                 </div>
-                                <Check className="w-4 h-4 text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <Check
+                                    className="w-4 h-4 text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"/>
                             </button>
                         ))
                     )}

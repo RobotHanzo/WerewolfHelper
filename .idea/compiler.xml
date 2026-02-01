@@ -12,4 +12,11 @@
     </annotationProcessing>
     <bytecodeTargetLevel target="17" />
   </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="WerewolfHelper" options="-parameters" />
+      <module name="WerewolfHelper.test" options="-parameters" />
+      <module name="dev.robothanzo.werewolf.WerewolfHelper.main" options="-parameters" />
+    </option>
+  </component>
 </project>

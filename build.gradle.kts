@@ -1,8 +1,7 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-
 plugins {
     java
-    id("com.gradleup.shadow") version "9.3.1"
+    id("org.springframework.boot") version "4.0.2"
+    id("io.spring.dependency-management") version "1.1.7"
 }
 
 group = "dev.robothanzo.werewolf"
@@ -15,17 +14,17 @@ repositories {
 }
 
 dependencies {
+    // Spring Boot
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-data-mongodb")
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.mongodb:mongodb-spring-session:4.0.0-rc1")
+    
+    // Discord
     implementation("net.dv8tion:JDA:6.3.0")
     implementation("club.minnced:discord-webhooks:0.8.4")
-    implementation("org.mongodb:mongodb-driver-sync:5.6.2")
-    implementation("ch.qos.logback:logback-classic:1.5.27")
     implementation("com.github.RobotHanzo:JDAInteractions:v0.1.4")
-
-    // Web Server Dependencies
-    implementation("io.javalin:javalin:6.7.0")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.21.0")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.21.0")
-    implementation("org.slf4j:slf4j-api:2.0.17")
     implementation("com.github.Mokulu:discord-oauth2-api:1.0.4")
 
     // JDA Audio supplements
@@ -37,25 +36,25 @@ dependencies {
 
     compileOnly("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+}
+
+configurations.all {
+    exclude(group = "org.slf4j", module = "slf4j-reload4j")
 }
 
 tasks {
-    compileJava {
-        options.encoding = Charsets.UTF_8.name()
-        options.release.set(25)
-    }
-
-    jar {
-        manifest {
-            attributes["Main-Class"] = "dev.robothanzo.werewolf.WerewolfHelper"
+    java {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(25))
         }
     }
 
-    named<ShadowJar>("shadowJar") {
-        archiveClassifier.set("")
+    compileJava {
+        options.encoding = Charsets.UTF_8.name()
     }
 
-    build {
-        dependsOn(shadowJar)
+    bootJar {
+        mainClass.set("dev.robothanzo.werewolf.WerewolfApplication")
     }
 }

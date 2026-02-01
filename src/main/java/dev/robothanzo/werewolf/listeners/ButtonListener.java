@@ -1,12 +1,14 @@
 package dev.robothanzo.werewolf.listeners;
 
+import dev.robothanzo.werewolf.WerewolfApplication;
+import dev.robothanzo.werewolf.commands.Player;
 import dev.robothanzo.werewolf.commands.Poll;
 import dev.robothanzo.werewolf.database.documents.Session;
+import dev.robothanzo.werewolf.model.Candidate;
+import dev.robothanzo.werewolf.model.PoliceSession;
 import dev.robothanzo.werewolf.utils.CmdUtils;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent;
-import dev.robothanzo.werewolf.commands.Player;
-import dev.robothanzo.werewolf.commands.Speech;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,8 +20,9 @@ public class ButtonListener extends ListenerAdapter {
     @Override
     public void onButtonInteraction(@NotNull ButtonInteractionEvent event) {
         String customId = event.getButton().getCustomId();
-        if (customId == null) return;
-        
+        if (customId == null)
+            return;
+
         String[] id = customId.split(":");
 
         switch (id[0]) {
@@ -31,22 +34,30 @@ public class ButtonListener extends ListenerAdapter {
                 Player.destroyPolice(event);
                 return;
             }
-            case "rolesList" -> {
-                Poll.sendRolesList(event);
-                return;
-            }
             case "terminateTimer" -> {
-                Speech.terminateTimer(event);
+                event.deferReply(true).queue();
+                if (CmdUtils.isAdmin(event)) {
+                    try {
+                        WerewolfApplication.speechService.stopTimer(event.getChannel().getIdLong());
+                        event.getHook().editOriginal(":white_check_mark:").queue();
+                    } catch (Exception e) {
+                        event.getHook().editOriginal(":x:").queue();
+                    }
+                } else {
+                    event.getHook().editOriginal(":x:").queue();
+                }
                 return;
             }
         }
 
-        if (!customId.startsWith("vote")) return;
+        if (!customId.startsWith("vote"))
+            return;
 
         event.deferReply(true).queue();
 
         Session session = CmdUtils.getSession(event);
-        if (session == null) return;
+        if (session == null)
+            return;
         Session.Player player = null;
         boolean check = false;
         for (Session.Player p : session.fetchAlivePlayers().values()) {
@@ -65,28 +76,43 @@ public class ButtonListener extends ListenerAdapter {
             return;
         }
         if (customId.startsWith("votePolice")) {
-            if (Poll.Police.candidates.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
-                Map<Integer, Poll.Candidate> candidates = Poll.Police.candidates.get(Objects.requireNonNull(event.getGuild()).getIdLong());
+            long guildId = Objects.requireNonNull(event.getGuild()).getIdLong();
+            if (WerewolfApplication.policeService.getSessions().containsKey(guildId)) {
+                PoliceSession policeSession = WerewolfApplication.policeService.getSessions().get(guildId);
+                Map<Integer, Candidate> candidates = policeSession.getCandidates();
+
                 if (candidates.containsKey(player.getId())) {
                     event.getHook().editOriginal(":x: 你曾經參選過或正在參選，不得投票").queue();
                     return;
                 }
-                Poll.Candidate electedCandidate = candidates.get(Integer.parseInt(customId.replaceAll("votePolice", "")));
-                handleVote(event, candidates, electedCandidate);
+                Candidate electedCandidate = candidates
+                        .get(Integer.parseInt(customId.replaceAll("votePolice", "")));
+                if (electedCandidate != null) {
+                    handleVote(event, candidates, electedCandidate);
+                    // Broadcast update immediately
+                    WerewolfApplication.gameSessionService.broadcastSessionUpdate(session);
+                } else {
+                    event.getHook().editOriginal(":x: 找不到候選人").queue();
+                }
             } else {
                 event.getHook().editOriginal(":x: 投票已過期").queue();
             }
         }
         if (customId.startsWith("voteExpel")) {
             if (Poll.expelCandidates.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
-                Poll.Candidate votingCandidate = Poll.expelCandidates.get(Objects.requireNonNull(event.getGuild()).getIdLong()).get(player.getId());
+                Candidate votingCandidate = Poll.expelCandidates
+                        .get(Objects.requireNonNull(event.getGuild()).getIdLong()).get(player.getId());
                 if (votingCandidate != null && votingCandidate.isExpelPK()) {
                     event.getHook().editOriginal(":x: 你正在和別人進行放逐辯論，不得投票").queue();
                     return;
                 }
-                Map<Integer, Poll.Candidate> candidates = Poll.expelCandidates.get(Objects.requireNonNull(event.getGuild()).getIdLong());
-                Poll.Candidate electedCandidate = candidates.get(Integer.parseInt(customId.replaceAll("voteExpel", "")));
+                Map<Integer, Candidate> candidates = Poll.expelCandidates
+                        .get(Objects.requireNonNull(event.getGuild()).getIdLong());
+                Candidate electedCandidate = candidates
+                        .get(Integer.parseInt(customId.replaceAll("voteExpel", "")));
                 handleVote(event, candidates, electedCandidate);
+                // Broadcast update immediately for expel (user requested realtime voting)
+                WerewolfApplication.gameSessionService.broadcastSessionUpdate(session);
             } else {
                 event.getHook().editOriginal(":x: 投票已過期").queue();
             }
@@ -100,9 +126,10 @@ public class ButtonListener extends ListenerAdapter {
         }
     }
 
-    public void handleVote(@NotNull ButtonInteractionEvent event, Map<Integer, Poll.Candidate> candidates, Poll.Candidate electedCandidate) {
+    public void handleVote(@NotNull ButtonInteractionEvent event, Map<Integer, Candidate> candidates,
+                           Candidate electedCandidate) {
         boolean handled = false;
-        for (Poll.Candidate candidate : new LinkedList<>(candidates.values())) {
+        for (Candidate candidate : new LinkedList<>(candidates.values())) {
             if (candidate.getElectors().contains(event.getUser().getIdLong())) {
                 if (Objects.equals(candidate.getPlayer().getUserId(), electedCandidate.getPlayer().getUserId())) {
                     electedCandidate.getElectors().remove(event.getUser().getIdLong());

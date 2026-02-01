@@ -1,10 +1,10 @@
-import { Sun, Moon } from 'lucide-react';
-import { useTheme } from '../lib/ThemeProvider';
-import { useTranslation } from '../lib/i18n';
+import {Moon, Sun} from 'lucide-react';
+import {useTheme} from '../lib/ThemeProvider';
+import {useTranslation} from '../lib/i18n';
 
 export const ThemeToggle: React.FC = () => {
-    const { theme, toggleTheme } = useTheme();
-    const { t } = useTranslation();
+    const {theme, toggleTheme} = useTheme();
+    const {t} = useTranslation();
 
     return (
         <button
@@ -13,9 +13,9 @@ export const ThemeToggle: React.FC = () => {
             title={theme === 'dark' ? t('tooltips.switchToLight') : t('tooltips.switchToDark')}
         >
             {theme === 'dark' ? (
-                <Sun className="w-5 h-5 text-yellow-500" />
+                <Sun className="w-5 h-5 text-yellow-500"/>
             ) : (
-                <Moon className="w-5 h-5 text-indigo-600" />
+                <Moon className="w-5 h-5 text-indigo-600"/>
             )}
         </button>
     );

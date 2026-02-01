@@ -17,6 +17,13 @@ public class DiscordActionRunner {
     public static class ActionTask {
         public RestAction<?> action;
         public String description;
+        public Consumer<Object> onSuccess;
+
+        public ActionTask(RestAction<?> action, String description) {
+            this.action = action;
+            this.description = description;
+            this.onSuccess = null;
+        }
     }
 
     /**
@@ -25,17 +32,19 @@ public class DiscordActionRunner {
      * @param tasks            List of actions to perform
      * @param statusLogger     Consumer for status messages
      * @param progressCallback Consumer for progress percentage
-     * @param startPercent     The percentage to start from for this batch of actions
+     * @param startPercent     The percentage to start from for this batch of
+     *                         actions
      * @param endPercent       The percentage to reach after all actions are done
      * @param timeoutSeconds   Maximum time to wait for all actions to complete
      * @throws Exception if wait is interrupted or timed out
      */
-    public static void runActions(List<ActionTask> tasks, Consumer<String> statusLogger, 
-                                 Consumer<Integer> progressCallback, int startPercent, 
-                                 int endPercent, int timeoutSeconds) throws Exception {
+    public static void runActions(List<ActionTask> tasks, Consumer<String> statusLogger,
+                                  Consumer<Integer> progressCallback, int startPercent,
+                                  int endPercent, int timeoutSeconds) throws Exception {
         int total = tasks.size();
         if (total == 0) {
-            if (progressCallback != null) progressCallback.accept(endPercent);
+            if (progressCallback != null)
+                progressCallback.accept(endPercent);
             return;
         }
 
@@ -45,10 +54,14 @@ public class DiscordActionRunner {
 
         for (ActionTask task : tasks) {
             task.getAction().queue(success -> {
-                if (statusLogger != null) statusLogger.accept("  - [完成] " + task.getDescription());
+                if (statusLogger != null)
+                    statusLogger.accept("  - [完成] " + task.getDescription());
+                if (task.getOnSuccess() != null)
+                    task.getOnSuccess().accept(success);
                 handleTaskCompletion(completed, total, allDone, progressCallback, startPercent, range);
             }, error -> {
-                if (statusLogger != null) statusLogger.accept("  - [失敗] " + task.getDescription() + ": " + error.getMessage());
+                if (statusLogger != null)
+                    statusLogger.accept("  - [失敗] " + task.getDescription() + ": " + error.getMessage());
                 handleTaskCompletion(completed, total, allDone, progressCallback, startPercent, range);
             });
         }
@@ -56,7 +69,8 @@ public class DiscordActionRunner {
         try {
             allDone.get(timeoutSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
-            if (statusLogger != null) statusLogger.accept("警告: 部分 Discord 變更操作逾時或中斷 (" + e.getMessage() + ")");
+            if (statusLogger != null)
+                statusLogger.accept("警告: 部分 Discord 變更操作逾時或中斷 (" + e.getMessage() + ")");
             throw e;
         }
     }
