@@ -1,10 +1,12 @@
 package dev.robothanzo.werewolf;
 
+import club.minnced.discord.jdave.interop.JDaveSessionFactory;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import dev.robothanzo.jda.interactions.JDAInteractions;
 import dev.robothanzo.werewolf.database.Database;
+import dev.robothanzo.werewolf.server.WebServer;
 import dev.robothanzo.werewolf.listeners.ButtonListener;
 import dev.robothanzo.werewolf.listeners.GuildJoinListener;
 import dev.robothanzo.werewolf.listeners.MemberJoinListener;
@@ -13,6 +15,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.audio.AudioModuleConfig;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
@@ -39,6 +42,7 @@ public class WerewolfHelper {
             "守墓人", "魔術師", "黑市商人", "邱比特", "盜賊", "石像鬼", "狼兄", "狼弟", "複製人", "血月使者", "惡靈騎士", "通靈師", "機械狼", "獵魔人"
     );
     public static JDA jda;
+    public static WebServer webServer;
     public static AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
 
     @SneakyThrows
@@ -53,10 +57,19 @@ public class WerewolfHelper {
                 .enableCache(EnumSet.allOf(CacheFlag.class))
                 .disableCache(CacheFlag.ACTIVITY, CacheFlag.CLIENT_STATUS, CacheFlag.ONLINE_STATUS)
                 .addEventListeners(new GuildJoinListener(), new MemberJoinListener(), new MessageListener(), new ButtonListener())
+                .setAudioModuleConfig(new AudioModuleConfig().withDaveSessionFactory(new JDaveSessionFactory()))
                 .build();
         new JDAInteractions("dev.robothanzo.werewolf.commands").registerInteractions(jda).queue();
         jda.awaitReady();
         jda.getPresence().setActivity(Activity.competing("狼人殺 by Hanzo"));
+        
+        // Start web server in separate thread
+        webServer = new WebServer(8080);
+        webServer.setJDA(jda);
+        Thread serverThread = new Thread(webServer);
+        serverThread.setDaemon(true);
+        serverThread.start();
+        log.info("Dashboard web server started on port 8080");
 //        new JDAInteractions("dev.robothanzo.werewolf.commands")
 //                .registerInteractions(jda.getGuildById(dotenv.get("GUILD"))).queue();
     }

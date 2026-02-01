@@ -42,7 +42,7 @@ public class Player {
             EntitySelectMenu.Builder selectMenu = EntitySelectMenu.create("selectNewPolice", EntitySelectMenu.SelectTarget.USER)
                     .setMinValues(1)
                     .setMaxValues(1);
-            for (Session.Player p : session.getPlayers().values()) {
+            for (Session.Player p : session.fetchAlivePlayers().values()) {
                 assert p.getUserId() != null;
                 if (Objects.equals(p.getUserId(), player.getUserId())) continue;
                 User user = WerewolfHelper.jda.getUserById(p.getUserId());
@@ -69,11 +69,51 @@ public class Player {
         Role spectatorRole = Objects.requireNonNull(guild.getRoleById(session.getSpectatorRoleId()));
         for (Map.Entry<String, Session.Player> player : new LinkedList<>(session.getPlayers().entrySet())) {
             if (Objects.equals(user.getIdLong(), player.getValue().getUserId())) {
-                assert player.getValue().getRoles() != null;
-                if (player.getValue().getRoles().isEmpty()) {
+                
+                // Check if already fully dead
+                if (!player.getValue().isAlive()) {
                     return false;
                 }
-                Session.Result result = session.hasEnded(player.getValue().getRoles().getFirst());
+
+                assert player.getValue().getRoles() != null;
+
+                // Soft kill logic: Find first alive role and kill it
+                List<String> roles = player.getValue().getRoles();
+                List<String> deadRoles = player.getValue().getDeadRoles();
+                if (deadRoles == null) {
+                    deadRoles = new ArrayList<>();
+                    player.getValue().setDeadRoles(deadRoles);
+                }
+
+                String killedRole = null;
+                for (String role : roles) {
+                    long totalCount = roles.stream().filter(r -> r.equals(role)).count();
+                    long deadCount = deadRoles.stream().filter(r -> r.equals(role)).count();
+                    
+                    if (deadCount < totalCount) {
+                        killedRole = role;
+                        deadRoles.add(role);
+                        break; 
+                    }
+                }
+
+            // Persist the dead role update immediately to ensure consistency
+            Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
+
+            // Log the death
+            if (killedRole != null) {
+                Map<String, Object> metadata = new HashMap<>();
+                metadata.put("playerId", player.getValue().getId());
+                metadata.put("playerName", player.getValue().getNickname());
+                metadata.put("killedRole", killedRole);
+                metadata.put("isExpelled", isExpelled);
+                session.addLog(dev.robothanzo.werewolf.database.documents.LogType.PLAYER_DIED, 
+                    player.getValue().getNickname() + " 的 " + killedRole + " 身份已死亡", 
+                    metadata);
+            }
+
+            // Check game ended logic with the newly killed role
+                Session.Result result = session.hasEnded(killedRole);
                 if (result != Session.Result.NOT_ENDED) {
                     TextChannel channel = guild.getTextChannelById(session.getSpectatorTextChannelId());
                     String judgePing = "<@&" + session.getJudgeRoleId() + "> ";
@@ -86,37 +126,58 @@ public class Player {
                         lastWords = false;
                     }
                 }
-                if (player.getValue().getRoles().size() == 2) {
-                    player.getValue().getRoles().removeFirst();
+                
+                // Check if player is still alive (has remaining roles)
+                if (player.getValue().isAlive()) {
+                    // Calculate remaining roles for the message
+                    List<String> remainingRoles = new ArrayList<>(player.getValue().getRoles());
+                    if (player.getValue().getDeadRoles() != null) {
+                        for (String deadRole : player.getValue().getDeadRoles()) {
+                            remainingRoles.remove(deadRole);
+                        }
+                    }
+                    String remainingRoleName = remainingRoles.isEmpty() ? "未知" : remainingRoles.getFirst();
+
+                    // Not fully dead, passed out one role
                     Objects.requireNonNull(guild.getTextChannelById(player.getValue().getChannelId()))
-                            .sendMessage("因為你死了，所以你的角色變成了 " + player.getValue().getRoles().getFirst()).queue();
+                            .sendMessage("因為你死了，所以你的角色變成了 " + remainingRoleName).queue();
                     Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
                     if (lastWords) {
                         Speech.lastWordsSpeech(guild, Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())), player.getValue(), null);
                     }
                     return true;
                 }
-                if (player.getValue().getRoles().size() == 1) {
-                    Runnable die = () -> transferPolice(session, guild, player.getValue(), () -> {
-                        var newSession = CmdUtils.getSession(guild); // We need to update the session as it may have been tampered with by transferPolice
-                        if (newSession == null) return;
-                        user.modifyNickname("[死人] " + user.getEffectiveName()).queue();
-                        if (player.getValue().isIdiot() && isExpelled) {
-                            player.getValue().getRoles().removeFirst();
-                            newSession.getPlayers().put(player.getKey(), player.getValue());
-                            Session.fetchCollection().updateOne(eq("guildId", newSession.getGuildId()), set("players", newSession.getPlayers()));
-                            Objects.requireNonNull(guild.getTextChannelById(newSession.getCourtTextChannelId())).sendMessage(user.getAsMention() + " 是白癡，所以他會待在場上並繼續發言").queue();
-                        } else {
-                            guild.modifyMemberRoles(user, spectatorRole).queue();
-                            newSession.getPlayers().remove(player.getKey());
-                            Session.fetchCollection().updateOne(eq("guildId", newSession.getGuildId()), set("players", newSession.getPlayers()));
-                        }
-                    });
-                    if (lastWords) {
-                        Speech.lastWordsSpeech(guild, Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())), player.getValue(), die);
+                
+                // Fully dead logic
+                String finalKilledRole = killedRole;
+                Runnable die = () -> transferPolice(session, guild, player.getValue(), () -> {
+                    var newSession = CmdUtils.getSession(guild); // We need to update the session as it may have been tampered with by transferPolice
+                    if (newSession == null) return;
+                    
+                    // We need to fetch the updated player object from the new session to make sure we have latest police status etc.
+                    // But assume player state is managed by references or we need to re-fetch.
+                    // For safety, let's use the object we have but ensure police status is false if transferred.
+                    // Actually transferPolice callback runs AFTER transfer.
+                    
+                    if (player.getValue().isIdiot() && isExpelled) {
+                        player.getValue().getDeadRoles().remove(finalKilledRole);
+                        
+                        newSession.getPlayers().put(player.getKey(), player.getValue());
+                        Session.fetchCollection().updateOne(eq("guildId", newSession.getGuildId()), set("players", newSession.getPlayers()));
+                        WerewolfHelper.webServer.broadcastSessionUpdate(newSession);
+                        Objects.requireNonNull(guild.getTextChannelById(newSession.getCourtTextChannelId())).sendMessage(user.getAsMention() + " 是白癡，所以他會待在場上並繼續發言").queue();
                     } else {
-                        die.run();
+                        guild.modifyMemberRoles(user, spectatorRole).queue();
+                        Session.fetchCollection().updateOne(eq("guildId", newSession.getGuildId()), set("players", newSession.getPlayers()));
+                        player.getValue().updateNickname(user);
+                        WerewolfHelper.webServer.broadcastSessionUpdate(newSession);
                     }
+                });
+                
+                if (lastWords) {
+                    Speech.lastWordsSpeech(guild, Objects.requireNonNull(guild.getTextChannelById(session.getCourtTextChannelId())), player.getValue(), die);
+                } else {
+                    die.run();
                 }
                 return true;
             }
@@ -124,6 +185,72 @@ public class Player {
         guild.addRoleToMember(user, spectatorRole).queue(); // if they aren't found, they will become spectators
         user.modifyNickname("[旁觀] " + user.getEffectiveName()).queue();
         return true;
+    }
+
+    public static boolean playerRevived(Session session, Member user, String roleToRevive) {
+        Guild guild = Objects.requireNonNull(WerewolfHelper.jda.getGuildById(session.getGuildId()));
+        Role spectatorRole = Objects.requireNonNull(guild.getRoleById(session.getSpectatorRoleId()));
+        
+        for (Map.Entry<String, Session.Player> player : session.getPlayers().entrySet()) {
+            if (Objects.equals(user.getIdLong(), player.getValue().getUserId())) {
+                List<String> deadRoles = player.getValue().getDeadRoles();
+                if (deadRoles == null || !deadRoles.contains(roleToRevive)) {
+                    return false; // Role is not dead or invalid
+                }
+
+                // Check if player WAS fully dead before this revival
+                boolean wasFullyDead = !player.getValue().isAlive();
+
+                // Revive the role
+                deadRoles.remove(roleToRevive);
+                
+                // Update session immediately
+                Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
+
+                // Log the revival
+                Map<String, Object> metadata = new HashMap<>();
+                metadata.put("playerId", player.getValue().getId());
+                metadata.put("playerName", player.getValue().getNickname());
+                metadata.put("revivedRole", roleToRevive);
+                session.addLog(dev.robothanzo.werewolf.database.documents.LogType.PLAYER_REVIVED, 
+                    player.getValue().getNickname() + " 的 " + roleToRevive + " 身份已復活", 
+                    metadata);
+
+                // Handle transition from Dead -> Alive
+                if (wasFullyDead) {
+                    guild.removeRoleFromMember(user, spectatorRole).queue();
+                }
+                player.getValue().updateNickname(user);
+
+                // Calculate remaining roles for message
+                List<String> remainingRoles = new ArrayList<>(player.getValue().getRoles());
+                for (String deadRole : deadRoles) {
+                    remainingRoles.remove(deadRole);
+                }
+                String currentRoleName = remainingRoles.isEmpty() ? "未知" : remainingRoles.getFirst();
+
+                // Restore Role Logic using Session values
+                long roleId = player.getValue().getRoleId();
+                if (roleId != 0) {
+                    Role role = guild.getRoleById(roleId);
+                    if (role != null) {
+                        guild.addRoleToMember(user, role).queue();
+                    }
+                }
+
+                // Send notification
+                TextChannel channel = guild.getTextChannelById(player.getValue().getChannelId());
+                if (channel != null) {
+                    channel.sendMessage("因為你復活了，所以你的角色變成了 " + currentRoleName).queue();
+                }
+                
+                
+                // Broadcast updates after all changes including nickname
+                WerewolfHelper.webServer.broadcastSessionUpdate(session);
+                return true;
+            }
+        }
+        return false;
     }
 
     public static void selectNewPolice(EntitySelectInteractionEvent event) {
@@ -159,17 +286,32 @@ public class Player {
                     Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()), set("players." + session.getRecipientId() + ".police", true));
                     log.info("Transferred police to " + session.getRecipientId() + " in guild " + event.getGuild().getIdLong());
                     transferPoliceSessions.remove(event.getGuild().getIdLong());
-                    Long recipientDiscordId = Objects.requireNonNull(CmdUtils.getSession(event)).getPlayers().get(session.getRecipientId().toString()).getUserId();
+                    
+                    // Update Recipient Nickname
+                    Session.Player recipientPlayer = Objects.requireNonNull(CmdUtils.getSession(event)).getPlayers().get(session.getRecipientId().toString());
+                    recipientPlayer.setPolice(true);
+                    Long recipientDiscordId = recipientPlayer.getUserId();
                     if (recipientDiscordId != null) {
                         Member recipient = event.getGuild().getMemberById(recipientDiscordId);
                         if (recipient != null) {
-                            recipient.modifyNickname(recipient.getEffectiveName() + " [警長]").queue();
+                            recipientPlayer.updateNickname(recipient);
                             event.reply(":white_check_mark: 警徽已移交給 " + recipient.getAsMention()).queue();
                         }
                     }
+
+                    // Update Sender Nickname
                     Member sender = event.getGuild().getMemberById(session.getSenderId());
+                    Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()), set("players." + Objects.requireNonNull(CmdUtils.getSession(event)).getPlayers().entrySet().stream().filter(e -> Objects.equals(e.getValue().getUserId(), session.getSenderId())).findFirst().get().getKey() + ".police", false));
+
                     if (sender != null) {
-                        sender.modifyNickname(sender.getEffectiveName().replace(" [警長]", "")).queue();
+                         // We need the player object for sender to correctly regenerate name (e.g. if they are dead?)
+                         // Usually transfer logic happens when dead, but could be alive transfer.
+                         var senderEntry = Objects.requireNonNull(CmdUtils.getSession(event)).getPlayers().entrySet().stream().filter(e -> Objects.equals(e.getValue().getUserId(), session.getSenderId())).findFirst();
+                         if (senderEntry.isPresent()) {
+                             Session.Player senderPlayer = senderEntry.get().getValue();
+                             senderPlayer.setPolice(false);
+                             senderPlayer.updateNickname(sender);
+                         }
                     }
                     if (session.getCallback() != null) session.getCallback().run();
                 } else {
@@ -210,6 +352,7 @@ public class Player {
                 event.reply(":white_check_mark: 你目前的順序: " + String.join("、", player.getRoles())).queue();
                 Session.fetchCollection().updateOne(eq("guildId", Objects.requireNonNull(event.getGuild()).getIdLong()),
                         set("players", session.getPlayers()));
+                WerewolfHelper.webServer.broadcastSessionUpdate(session);
                 return;
             }
         }
@@ -261,101 +404,18 @@ public class Player {
         if (!CmdUtils.isAdmin(event)) return;
         Session session = CmdUtils.getSession(event);
         if (session == null) return;
-        List<Member> pending = new LinkedList<>();
-        for (Member member : Objects.requireNonNull(event.getGuild()).getMembers()) {
-            if ((!member.getUser().isBot()) &&
-                    (!member.getRoles().contains(event.getGuild().getRoleById(session.getJudgeRoleId()))) &&
-                    (!member.getRoles().contains(event.getGuild().getRoleById(session.getSpectatorRoleId())))) {
-                pending.add(member);
-            }
+
+        try {
+            dev.robothanzo.werewolf.server.SessionAPI.assignRoles(event.getGuild().getIdLong(), event.getJDA(), 
+                msg -> log.info("[Assign] " + msg), 
+                p -> {} 
+            );
+            event.getHook().editOriginal(":white_check_mark: 身分分配完成！").queue();
+        } catch (Exception e) {
+            event.getHook().editOriginal(":x: " + e.getMessage()).queue();
         }
-        Collections.shuffle(pending, new Random());
-        if (pending.size() != session.getPlayers().size()) {
-            event.getHook().editOriginal(
-                    ":x: 玩家數量不符合設定之，請確認是否已給予旁觀者應有之身分(使用`/player died`)，是則請使用`/server set players`來更改總玩家人數").queue();
-            return;
-        }
-        if (pending.size() != (session.getRoles().size() / (session.isDoubleIdentities() ? 2 : 1))) {
-            event.getHook().editOriginal(
-                    ":x: 玩家身分數量不符合身分數量，請確認是否正確啟用/停用雙身分模式(使用`/server set double_identities`)，並檢查是否正確設定身分(使用`/server roles list`檢查)").queue();
-            return;
-        }
-        List<String> roles = session.getRoles();
-        Collections.shuffle(roles);
-        int gaveJinBaoBao = 0;
-        for (Session.Player player : session.getPlayers().values()) {
-            event.getGuild().addRoleToMember(pending.get(player.getId() - 1),
-                    Objects.requireNonNull(event.getGuild().getRoleById(player.getRoleId()))).queue();
-            event.getGuild().modifyNickname(pending.get(player.getId() - 1), "玩家" + player.getId()).queue();
-            player.setUserId(pending.get(player.getId() - 1).getIdLong());
-            List<String> rs = new LinkedList<>();
-            // at least one jin bao bao in a double identities game
-            boolean isJinBaoBao = false;
-            rs.add(roles.removeFirst());
-            if (rs.getFirst().equals("白癡")) {
-                player.setIdiot(true);
-            }
-            if (rs.getFirst().equals("平民") && gaveJinBaoBao == 0 && session.isDoubleIdentities()) {
-                rs = List.of("平民", "平民");
-                roles.remove("平民");
-                gaveJinBaoBao++;
-                isJinBaoBao = true;
-            } else if (session.isDoubleIdentities()) {
-                boolean shouldRemove = true;
-                rs.add(roles.getFirst());
-                if (rs.contains("複製人")) {
-                    player.setDuplicated(true);
-                    if (rs.getFirst().equals("複製人")) {
-                        rs.set(0, rs.get(1));
-                    } else {
-                        rs.set(1, rs.getFirst());
-                    }
-                }
-                if (rs.getFirst().equals("平民") && rs.get(1).equals("平民")) {
-                    if (gaveJinBaoBao >= 2) {
-                        for (var r : new ArrayList<>(roles)) {
-                            if (!r.equals("平民")) {
-                                rs.set(1, r);
-                                roles.remove(r);
-                                shouldRemove = false;
-                                break;
-                            }
-                        }
-                    }
-                    if (rs.getFirst().equals("平民") && rs.get(1).equals("平民")) { // just in case they still got a jin bao bao
-                        isJinBaoBao = true;
-                        gaveJinBaoBao++;
-                    }
-                }
-                if (rs.getFirst().contains("狼")) {
-                    Collections.reverse(rs);
-                }
-                if (shouldRemove)
-                    roles.removeFirst();
-            }
-            player.setJinBaoBao(isJinBaoBao && session.isDoubleIdentities());
-            player.setRoles(rs);
-            var action = Objects.requireNonNull(event.getGuild().getTextChannelById(player.getChannelId())).sendMessageEmbeds(new EmbedBuilder()
-                    .setTitle("你抽到的身分是 (若為狼人或金寶寶請使用自己的頻道來和隊友討論及確認身分)")
-                    .setDescription(String.join("、", rs) + (player.isJinBaoBao() ? " (金寶寶)" : "") +
-                            (player.isDuplicated() ? " (複製人)" : ""))
-                    .setColor(MsgUtils.getRandomColor()).build());
-            if (session.isDoubleIdentities()) {
-                action.setComponents(ActionRow.of(Button.primary("changeRoleOrder", "更換身分順序 (請在收到身分後全分聽完再使用，逾時不候)")));
-                CmdUtils.schedule(() -> {
-                    Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()),
-                            set("players." + player.getId() + ".rolePositionLocked", true));
-                    Objects.requireNonNull(event.getGuild().getTextChannelById(player.getChannelId())).sendMessage("身分順序已鎖定").queue();
-                }, 120000);
-            }
-            action.queue();
-            Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()),
-                    set("players", session.getPlayers()));
-        }
-        Session.fetchCollection().updateOne(eq("guildId", event.getGuild().getIdLong()),
-                set("hasAssignedRoles", true));
-        event.getHook().editOriginal(":white_check_mark:").queue();
     }
+
 
     @Subcommand(description = "列出每個玩家的身分資訊")
     public void roles(SlashCommandInteractionEvent event) {
@@ -369,7 +429,7 @@ public class Player {
         for (String p : session.getPlayers().keySet().stream().sorted(MsgUtils.getAlphaNumComparator()).toList()) {
             Session.Player player = session.getPlayers().get(p);
             assert player.getRoles() != null;
-            embedBuilder.addField("玩家" + p,
+            embedBuilder.addField(player.getNickname(),
                     String.join("、", player.getRoles()) + (player.isPolice() ? " (警長)" : "") +
                             (player.isJinBaoBao() ? " (金寶寶)" : player.isDuplicated() ? " (複製人)" : ""), true);
         }
@@ -389,17 +449,13 @@ public class Player {
                 player.setPolice(false);
                 Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
                 Member member = event.getGuild().getMemberById(Objects.requireNonNull(player.getUserId()));
-                if (member != null) {
-                    member.modifyNickname(member.getEffectiveName().replace(" [警長]", "")).queue();
-                }
+                if (member != null) player.updateNickname(member);
             }
             if (Objects.equals(player.getUserId(), user.getIdLong())) {
                 player.setPolice(true);
                 Session.fetchCollection().updateOne(eq("guildId", session.getGuildId()), set("players", session.getPlayers()));
                 Member member = event.getGuild().getMemberById(Objects.requireNonNull(player.getUserId()));
-                if (member != null) {
-                    member.modifyNickname(member.getEffectiveName() + " [警長]").queue();
-                }
+                if (member != null) player.updateNickname(member);
             }
         }
         event.getHook().editOriginal(":white_check_mark:").queue();

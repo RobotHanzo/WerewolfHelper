@@ -92,8 +92,9 @@ public class SetupHelper {
                                             TextChannel ch = guild.getTextChannelById(p.getChannelId());
                                             if (ch != null) {
                                                 try {
-                                                    long allowBits = Permission.VIEW_CHANNEL.getRawValue() | Permission.MESSAGE_SEND.getRawValue();
-                                                    ch.upsertPermissionOverride(deadRole).setPermissions(allowBits, 0L).queue();
+                                                    long allowBits = Permission.VIEW_CHANNEL.getRawValue();
+                                                    long denyBits = Permission.MESSAGE_SEND.getRawValue();
+                                                    ch.upsertPermissionOverride(deadRole).setPermissions(allowBits, denyBits).queue();
                                                 } catch (Exception ignore) {
                                                 }
                                             }
@@ -199,12 +200,13 @@ public class SetupHelper {
             return;
         }
 
+        var id = Session.Player.ID_FORMAT.format(current);
         guild.createRole()
-                .setName("玩家" + current)
+                .setName("玩家" + id)
                 .setColor(MsgUtils.getRandomColor())
                 .setHoisted(true)
                 .queue(playerRole ->
-                        guild.createTextChannel("玩家" + current)
+                        guild.createTextChannel("玩家" + id)
                                 // Do not add spectator/dead overrides here (spectator is created later)
                                 .addPermissionOverride(playerRole, List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND), List.of())
                                 .addPermissionOverride(publicRole, List.of(), List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND, Permission.USE_APPLICATION_COMMANDS))

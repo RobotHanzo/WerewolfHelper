@@ -11,6 +11,7 @@ import dev.robothanzo.werewolf.utils.CmdUtils;
 import dev.robothanzo.werewolf.utils.MsgUtils;
 import lombok.Builder;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
@@ -32,6 +33,7 @@ import org.jetbrains.annotations.Nullable;
 import java.time.Duration;
 import java.util.*;
 
+@Slf4j
 @Command
 public class Speech {
     public static Map<Long, SpeechSession> speechSessions = new HashMap<>();
@@ -122,17 +124,23 @@ public class Speech {
             return;
         }
         Session.Player target = null;
-        for (Session.Player player : session.getPlayers().values()) {
+        for (Session.Player player : session.fetchAlivePlayers().values()) { // selectOrder
             assert player.getUserId() != null;
-            if (player.getUserId() == event.getUser().getIdLong() && !player.isPolice()) {
-                event.getHook().editOriginal(":x: 你不是警長").queue();
-                return;
-            }
-            if (player.isPolice()) {
-                target = player;
+            if (player.getUserId() == event.getUser().getIdLong()) {
+                if (player.isPolice()) {
+                    target = player;
+                    break;
+                } else {
+                    event.getHook().editOriginal(":x: 你不是警長").queue();
+                    return;
+                }
             }
         }
-        changeOrder(event.getGuild(), order, session.getPlayers().values(), target);
+        if (target == null) {
+            event.getHook().editOriginal(":x: 你不是警長").queue();
+            return;
+        }
+        changeOrder(event.getGuild(), order, session.fetchAlivePlayers().values(), target);
         event.getHook().editOriginal(":white_check_mark: 請按下確認以開始發言流程").queue();
         event.getMessage().editMessageEmbeds(new EmbedBuilder(event.getInteraction().getMessage().getEmbeds().getFirst())
                 .setDescription("警長已選擇 " + order.toEmoji().getName() + " " + order + "\n請按下確認").build()).queue();
@@ -149,7 +157,7 @@ public class Speech {
         }
         SpeechSession speechSession = speechSessions.get(Objects.requireNonNull(event.getGuild()).getIdLong());
         boolean check = false;
-        for (Session.Player player : session.getPlayers().values()) {
+        for (Session.Player player : session.fetchAlivePlayers().values()) {
             assert player.getUserId() != null;
             if (player.getUserId() == event.getUser().getIdLong()) {
                 if (player.isPolice()) {
@@ -204,12 +212,13 @@ public class Speech {
                     } else {
                         if (session.getInterruptVotes().contains(event.getUser().getIdLong())) {
                             event.getHook().editOriginal(":white_check_mark: 成功取消下台投票，距離該玩家下台還缺" +
-                                    (gameSession.getPlayers().size() / 2 - session.getInterruptVotes().size()) + "票").queue();
+                                    (gameSession.fetchAlivePlayers().size() / 2 - session.getInterruptVotes().size()) + "票").queue();
                         } else {
                             event.getHook().editOriginal(":white_check_mark: 下台投票成功，距離該玩家下台還缺" +
-                                    (gameSession.getPlayers().size() / 2 - session.getInterruptVotes().size()) + "票").queue();
+                                    (gameSession.fetchAlivePlayers().size() / 2 - session.getInterruptVotes().size()) + "票").queue();
                             session.getInterruptVotes().add(event.getUser().getIdLong());
-                            if (session.getInterruptVotes().size() > (gameSession.getPlayers().size() / 2)) {
+                            WerewolfHelper.webServer.broadcastSessionUpdate(gameSession);
+                            if (session.getInterruptVotes().size() > (gameSession.fetchAlivePlayers().size() / 2)) {
                                 List<String> voterMentions = new LinkedList<>();
                                 for (long voter : session.getInterruptVotes()) {
                                     voterMentions.add("<@!" + voter + ">");
@@ -234,25 +243,29 @@ public class Speech {
     public void start(SlashCommandInteractionEvent event, @Option(value = "time", description = "計時時間(m為分鐘s為秒數，例: 10m、10s、1m30s)") Duration time) {
         if (!CmdUtils.isAdmin(event)) return;
         event.reply(":white_check_mark:").setEphemeral(true).queue();
+        startTimer(event.getGuild(), event.getChannel().asTextChannel(),
+                Objects.requireNonNull(Objects.requireNonNull(event.getMember()).getVoiceState()).getChannel(),
+                (int) time.getSeconds());
+    }
+
+    public static void startTimer(Guild guild, TextChannel textChannel, AudioChannel voiceChannel, int seconds) {
         Thread thread = new Thread(() -> {
-            Message message = event.getChannel().sendMessage(time.getSeconds() + "秒的計時開始，" + TimeFormat.TIME_LONG.after(time) + "後結束")
+            Message message = textChannel.sendMessage(seconds + "秒的計時開始，" + TimeFormat.TIME_LONG.after(Duration.ofSeconds(seconds)) + "後結束")
                     .setComponents(ActionRow.of(Button.danger("terminateTimer", "強制結束計時"))).complete();
             try {
-                if (time.getSeconds() > 30) {
-                    Thread.sleep(time.toMillis() - 30000);
+                if (seconds > 30) {
+                    Thread.sleep((seconds - 30) * 1000L);
                     try {
-                        Audio.play(Audio.Resource.TIMER_30S_REMAINING, Objects.requireNonNull(Objects.requireNonNull(Objects.requireNonNull(
-                                event.getGuild()).getMember(event.getUser())).getVoiceState()).getChannel());
-                    } catch (NullPointerException ignored) {
+                        if (voiceChannel != null) Audio.play(Audio.Resource.TIMER_30S_REMAINING, voiceChannel);
+                    } catch (Exception ignored) {
                     }
                     Thread.sleep(30000);
                 } else {
-                    Thread.sleep(time.toMillis());
+                    Thread.sleep(seconds * 1000L);
                 }
                 try {
-                    Audio.play(Audio.Resource.TIMER_ENDED, Objects.requireNonNull(Objects.requireNonNull(Objects.requireNonNull(
-                            event.getGuild()).getMember(event.getUser())).getVoiceState()).getChannel());
-                } catch (NullPointerException ignored) {
+                    if (voiceChannel != null) Audio.play(Audio.Resource.TIMER_ENDED, voiceChannel);
+                } catch (Exception ignored) {
                 }
                 message.editMessage(message.getContentRaw() + " (已結束)").queue();
                 message.reply("計時結束").queue();
@@ -261,7 +274,7 @@ public class Speech {
             }
         });
         thread.start();
-        timers.put(event.getChannel().getIdLong(), thread);
+        timers.put(textChannel.getIdLong(), thread);
     }
 
     @Subcommand(description = "開始自動發言流程")
@@ -274,21 +287,27 @@ public class Speech {
             event.getHook().editOriginal("已經在發言流程中，請先終止上一個流程再繼續").queue();
             return;
         }
-        speechSessions.put(event.getGuild().getIdLong(), SpeechSession.builder()
-                .guildId(event.getGuild().getIdLong())
-                .channelId(event.getChannel().getIdLong())
+        startAutoSpeech(event.getGuild(), event.getChannel().asTextChannel(), session);
+        event.getHook().editOriginal(":white_check_mark:").queue();
+    }
+
+    public static void startAutoSpeech(Guild guild, TextChannel channel, Session session) {
+        if (speechSessions.containsKey(guild.getIdLong())) return;
+        speechSessions.put(guild.getIdLong(), SpeechSession.builder()
+                .guildId(guild.getIdLong())
+                .channelId(channel.getIdLong())
                 .session(session)
                 .build());
 
-        for (Session.Player player : session.getPlayers().values()) {
+        for (Session.Player player : session.fetchAlivePlayers().values()) {
             assert player.getUserId() != null;
             try {
                 if (session.isMuteAfterSpeech())
-                    Objects.requireNonNull(Objects.requireNonNull(event.getGuild()).getMemberById(player.getUserId())).mute(true).queue();
-            } catch (IllegalStateException ignored) {
+                    Objects.requireNonNull(guild.getMemberById(player.getUserId())).mute(true).queue();
+            } catch (Exception ignored) {
             }
             if (player.isPolice()) {
-                event.getHook().editOriginalEmbeds(new EmbedBuilder().setTitle("警長請選擇發言順序")
+                channel.sendMessageEmbeds(new EmbedBuilder().setTitle("警長請選擇發言順序")
                                 .setDescription("警長尚未選擇順序")
                                 .setColor(MsgUtils.getRandomColor()).build())
                         .setComponents(ActionRow.of(StringSelectMenu.create("selectOrder")
@@ -300,17 +319,17 @@ public class Speech {
             }
         }
 
-        List<Session.Player> shuffledPlayers = new LinkedList<>(session.getPlayers().values());
+        List<Session.Player> shuffledPlayers = new LinkedList<>(session.fetchAlivePlayers().values());
         Collections.shuffle(shuffledPlayers);
         Order order = Order.getRandomOrder();
-        changeOrder(event.getGuild(), order, session.getPlayers().values(), shuffledPlayers.getFirst());
-        event.getHook().editOriginalEmbeds(new EmbedBuilder().setTitle("找不到警長，自動抽籤發言順序")
+        changeOrder(guild, order, session.fetchAlivePlayers().values(), shuffledPlayers.getFirst());
+        channel.sendMessageEmbeds(new EmbedBuilder().setTitle("找不到警長，自動抽籤發言順序")
                 .setDescription("抽到的順序: 玩家" + shuffledPlayers.getFirst().getId() + order.toString())
                 .setColor(MsgUtils.getRandomColor()).build()).queue();
-        speechSessions.get(event.getGuild().getIdLong()).next();
+        speechSessions.get(guild.getIdLong()).next();
 
-        for (TextChannel channel : event.getGuild().getTextChannels()) {
-            channel.sendMessage("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯我是白天分隔線⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯").queue();
+        for (TextChannel c : guild.getTextChannels()) {
+            c.sendMessage("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯我是白天分隔線⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯").queue();
         }
     }
 
@@ -321,35 +340,71 @@ public class Speech {
         if (!speechSessions.containsKey(Objects.requireNonNull(event.getGuild()).getIdLong())) {
             event.getHook().editOriginal("不在發言流程中").queue();
         } else {
-            speechSessions.get(event.getGuild().getIdLong()).getOrder().clear();
-            speechSessions.get(Objects.requireNonNull(event.getGuild()).getIdLong()).interrupt();
+            interrupt(event.getGuild().getIdLong());
             event.getHook().editOriginal(":white_check_mark:").queue();
+        }
+    }
+
+    public static void interrupt(long guildId) {
+        if (speechSessions.containsKey(guildId)) {
+            SpeechSession speechSession = speechSessions.get(guildId);
+            Guild guild = WerewolfHelper.jda.getGuildById(guildId);
+            if (guild != null) {
+                TextChannel channel = guild.getTextChannelById(speechSession.getChannelId());
+                if (channel != null) {
+                    channel.sendMessage("法官已強制終止發言流程").queue();
+                }
+            }
+            speechSession.getOrder().clear();
+            speechSession.interrupt();
+        }
+    }
+
+    public static void skip(long guildId) {
+        if (speechSessions.containsKey(guildId)) {
+            SpeechSession speechSession = speechSessions.get(guildId);
+            Guild guild = WerewolfHelper.jda.getGuildById(guildId);
+            if (guild != null) {
+                TextChannel channel = guild.getTextChannelById(speechSession.getChannelId());
+                if (channel != null) {
+                    channel.sendMessage("法官已強制該玩家下台").queue();
+                }
+            }
+            speechSession.next();
         }
     }
 
     @Subcommand(description = "解除所有人的靜音")
     public void unmute_all(SlashCommandInteractionEvent event) {
         if (!CmdUtils.isAdmin(event)) return;
-        for (Member member : Objects.requireNonNull(event.getGuild()).getMembers()) {
+        unmuteAll(event.getGuild());
+        event.reply(":white_check_mark:").queue();
+    }
+
+    public static void unmuteAll(Guild guild) {
+        for (Member member : guild.getMembers()) {
             try {
                 member.mute(false).queue();
             } catch (IllegalStateException ignored) {
             }
         }
-        event.reply(":white_check_mark:").queue();
     }
 
     @Subcommand(description = "靜音所有人")
     public void mute_all(SlashCommandInteractionEvent event) {
         if (!CmdUtils.isAdmin(event)) return;
-        for (Member member : Objects.requireNonNull(event.getGuild()).getMembers()) {
+        muteAll(event.getGuild());
+        event.reply(":white_check_mark:").queue();
+    }
+
+    public static void muteAll(Guild guild) {
+        for (Member member : guild.getMembers()) {
             try {
                 if (member.getPermissions().contains(Permission.ADMINISTRATOR)) continue;
                 member.mute(true).queue();
             } catch (IllegalStateException ignored) {
             }
         }
-        event.reply(":white_check_mark:").queue();
     }
 
     public enum Order {
@@ -386,12 +441,17 @@ public class Speech {
         private Long lastSpeaker;
         @Nullable
         private Runnable finishedCallback;
+        @Builder.Default
+        private long currentSpeechEndTime = 0;
+        @Builder.Default
+        private int totalSpeechTime = 0;
 
         public void interrupt() {
             if (speakingThread != null) {
                 speakingThread.interrupt();
             }
             speechSessions.remove(guildId);
+            WerewolfHelper.webServer.broadcastSessionUpdate(session);
         }
 
         public void next() {
@@ -425,10 +485,15 @@ public class Speech {
                 return;
             }
             final Session.Player player = order.getFirst();
+            lastSpeaker = player.getUserId();
+            int time = player.isPolice() ? 210 : 180;
+            totalSpeechTime = time;
+            currentSpeechEndTime = System.currentTimeMillis() + (time * 1000L);
+            order.removeFirst();
+            WerewolfHelper.webServer.broadcastSessionUpdate(session);
+
             speakingThread = new Thread(() -> {
-                lastSpeaker = player.getUserId();
                 assert lastSpeaker != null;
-                int time = player.isPolice() ? 210 : 180;
                 try {
                     Objects.requireNonNull(guild.getMemberById(lastSpeaker)).mute(false).queue();
                 } catch (IllegalStateException ignored) {
@@ -441,7 +506,7 @@ public class Speech {
                         )).complete();
                 AudioChannel channel = guild.getVoiceChannelById(session.getCourtVoiceChannelId());
                 try {
-                    Thread.sleep((time - 30) * 1000);
+                    Thread.sleep((time - 30) * 1000L);
                     Audio.play(Audio.Resource.TIMER_30S_REMAINING, channel);
                     Thread.sleep(35000); // 5 extra seconds to allocate space for latency and notification sounds
                     Audio.play(Audio.Resource.TIMER_ENDED, channel);
@@ -457,7 +522,6 @@ public class Speech {
                 }
             });
             speakingThread.start();
-            order.removeFirst();
         }
     }
 }

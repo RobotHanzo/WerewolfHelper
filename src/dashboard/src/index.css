@@ -6,7 +6,7 @@
   * {
     transition: background-color 0.2s ease, border-color 0.2s ease;
   }
-  
+
   body {
     @apply bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100;
   }
@@ -14,9 +14,163 @@
 
 /* Custom Scrollbar */
 .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
+
 .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes flash-highlight {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+    border-color: #6366f1;
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-flash {
+  animation: flash-highlight 0.5s ease-in-out;
+}
+
+@keyframes slide-right-in {
+  from {
+    transform: translateX(-100%);
+    opacity: 0.5;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-left-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0.5;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-right-in {
+  animation: slide-right-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-left-in {
+  animation: slide-left-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Animations Logic for Tailwind-Animate compatibility */
+.animate-in {
+  animation-duration: 0.5s;
+  animation-fill-mode: forwards;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  --tw-enter-opacity: initial;
+  --tw-enter-scale: initial;
+  --tw-enter-translate-x: initial;
+  --tw-enter-translate-y: initial;
+}
+
+.fade-in {
+  --tw-enter-opacity: 0;
+  animation-name: enter;
+}
+
+.zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
+
+.zoom-in-75 {
+  --tw-enter-scale: 0.75;
+}
+
+.slide-in-from-bottom-2 {
+  --tw-enter-translate-y: 0.5rem;
+}
+
+.slide-in-from-bottom-4 {
+  --tw-enter-translate-y: 1rem;
+}
+
+.slide-in-from-right {
+  --tw-enter-translate-x: 100%;
+}
+
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0) scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), 1);
+  }
+}
+
+/* Custom Swiping Animations */
+@keyframes swipe-out-left {
+  to {
+    transform: translateX(-120%) scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes swipe-in-right {
+  from {
+    transform: translateX(120%) scale(0.9);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-swipe-out {
+  animation: swipe-out-left 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-swipe-in {
+  animation: swipe-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-up {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out forwards;
+}
+
+.animate-scale-up {
+  animation: scale-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
