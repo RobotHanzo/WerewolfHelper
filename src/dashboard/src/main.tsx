@@ -1,7 +1,7 @@
 import {createRoot} from 'react-dom/client';
 import {BrowserRouter} from 'react-router-dom';
-import {ThemeProvider} from './lib/ThemeProvider';
-import {AuthProvider} from './contexts/AuthContext';
+import {ThemeProvider} from '@/lib/ThemeProvider';
+import {AuthProvider} from '@/features/auth/contexts/AuthContext';
 import App from './App';
 import './index.css';
 
