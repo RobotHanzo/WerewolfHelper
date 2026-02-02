@@ -20,7 +20,7 @@ dependencies {
     implementation("org.mongodb:mongodb-driver-sync:5.1.3")
     implementation("ch.qos.logback:logback-classic:1.5.7")
     implementation("com.github.RobotHanzo:JDAInteractions:v0.1.4")
-    implementation("dev.arbjerg:lavaplayer:2.2.1")
+    implementation("dev.arbjerg:lavaplayer:2.2.6")
     compileOnly("org.projectlombok:lombok:1.18.34")
     annotationProcessor("org.projectlombok:lombok:1.18.34")
 }
