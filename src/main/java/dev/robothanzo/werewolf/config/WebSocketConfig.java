@@ -20,6 +20,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(globalWebSocketHandler, "/ws")
                 .addInterceptors(new org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor())
-                .setAllowedOrigins("*");
+                .setAllowedOrigins(
+                        "http://localhost:5173",
+                        "https://wolf.robothanzo.dev",
+                        "http://wolf.robothanzo.dev");
     }
 }

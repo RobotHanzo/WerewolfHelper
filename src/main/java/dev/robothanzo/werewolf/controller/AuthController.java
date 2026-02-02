@@ -7,6 +7,7 @@ import io.mokulu.discord.oauth.DiscordAPI;
 import io.mokulu.discord.oauth.DiscordOAuth;
 import io.mokulu.discord.oauth.model.TokensResponse;
 import io.mokulu.discord.oauth.model.User;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -41,12 +42,19 @@ public class AuthController {
     }
 
     @GetMapping("/callback")
-    public void callback(@RequestParam String code, @RequestParam String state, HttpSession session,
-                         HttpServletResponse response) throws IOException {
+    public void callback(@RequestParam String code, @RequestParam String state, 
+                         HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
             TokensResponse tokenResponse = discordOAuth.getTokens(code);
             DiscordAPI discordAPI = new DiscordAPI(tokenResponse.getAccessToken());
             User user = discordAPI.fetchUser();
+
+            // Prevent session fixation: invalidate old session and create new one
+            HttpSession oldSession = request.getSession(false);
+            if (oldSession != null) {
+                oldSession.invalidate();
+            }
+            HttpSession session = request.getSession(true);
 
             // Store user in Session
             AuthSession authSession = AuthSession.builder()

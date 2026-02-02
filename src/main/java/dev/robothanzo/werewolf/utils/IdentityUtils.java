@@ -2,6 +2,8 @@ package dev.robothanzo.werewolf.utils;
 
 import dev.robothanzo.werewolf.database.documents.AuthSession;
 import dev.robothanzo.werewolf.database.documents.UserRole;
+import dev.robothanzo.werewolf.service.DiscordService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -9,7 +11,10 @@ import org.springframework.stereotype.Component;
 import java.util.Optional;
 
 @Component
+@RequiredArgsConstructor
 public class IdentityUtils {
+
+    private final DiscordService discordService;
 
     public Optional<AuthSession> getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -21,7 +26,14 @@ public class IdentityUtils {
 
     public boolean hasAccess(long guildId) {
         return getCurrentUser()
-                .map(user -> String.valueOf(guildId).equals(user.getGuildId()))
+                .map(user -> {
+                    // First check if the guild ID matches what's stored in the session
+                    if (!String.valueOf(guildId).equals(user.getGuildId())) {
+                        return false;
+                    }
+                    // Then verify the user is still actually a member of the guild
+                    return discordService.getMember(guildId, user.getUserId()) != null;
+                })
                 .orElse(false);
     }
 
