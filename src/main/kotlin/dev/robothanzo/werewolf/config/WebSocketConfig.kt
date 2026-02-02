@@ -17,8 +17,7 @@ class WebSocketConfig(private val globalWebSocketHandler: GlobalWebSocketHandler
             .addInterceptors(HttpSessionHandshakeInterceptor())
             .setAllowedOrigins(
                 "http://localhost:5173",
-                "https://wolf.robothanzo.dev",
-                "http://wolf.robothanzo.dev"
+                "https://wolf.robothanzo.dev"
             )
     }
 }
