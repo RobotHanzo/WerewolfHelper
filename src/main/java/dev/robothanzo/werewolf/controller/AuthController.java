@@ -68,7 +68,7 @@ public class AuthController {
 
             if (!"no_guild".equals(state)) {
                 try {
-                    // Validate it's a number
+                    // Validate it's a number - prevents open redirect attacks
                     long gid = Long.parseLong(state);
                     authSession.setGuildId(state); // Store as String
 
@@ -80,14 +80,22 @@ public class AuthController {
                     } else {
                         authSession.setRole(UserRole.SPECTATOR);
                     }
+                    
+                    session.setAttribute("user", authSession);
+                    response.sendRedirect(
+                            System.getenv().getOrDefault("DASHBOARD_URL", "http://localhost:5173") + "/server/" + state);
+                } catch (NumberFormatException e) {
+                    // Invalid guild ID format - redirect to server selection instead
+                    log.warn("Invalid guild ID in OAuth state: {}", state);
+                    authSession.setRole(UserRole.PENDING);
+                    session.setAttribute("user", authSession);
+                    response.sendRedirect(System.getenv().getOrDefault("DASHBOARD_URL", "http://localhost:5173") + "/");
                 } catch (Exception e) {
                     log.warn("Failed to set initial guild info: {}", state, e);
                     authSession.setRole(UserRole.PENDING);
+                    session.setAttribute("user", authSession);
+                    response.sendRedirect(System.getenv().getOrDefault("DASHBOARD_URL", "http://localhost:5173") + "/");
                 }
-
-                session.setAttribute("user", authSession);
-                response.sendRedirect(
-                        System.getenv().getOrDefault("DASHBOARD_URL", "http://localhost:5173") + "/server/" + state);
             } else {
                 authSession.setRole(UserRole.PENDING);
                 session.setAttribute("user", authSession);
