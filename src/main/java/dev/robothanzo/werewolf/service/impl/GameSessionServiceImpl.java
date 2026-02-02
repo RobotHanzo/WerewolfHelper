@@ -247,9 +247,14 @@ public class GameSessionServiceImpl implements GameSessionService {
         }
 
         players.sort((a, b) -> {
-            int idA = Integer.parseInt((String) a.get("id"));
-            int idB = Integer.parseInt((String) b.get("id"));
-            return Integer.compare(idA, idB);
+            try {
+                int idA = Integer.parseInt((String) a.get("id"));
+                int idB = Integer.parseInt((String) b.get("id"));
+                return Integer.compare(idA, idB);
+            } catch (NumberFormatException e) {
+                // If parsing fails, treat as equal or use string comparison as fallback
+                return 0;
+            }
         });
 
         return players;

@@ -88,7 +88,10 @@ public class WerewolfApplication {
                     new File(WerewolfApplication.class.getProtectionDomain().getCodeSource().getLocation().toURI()));
             File soundFolder = new File("sounds");
             if (!soundFolder.exists()) {
-                soundFolder.mkdir();
+                if (!soundFolder.mkdir()) {
+                    log.error("Failed to create sounds directory");
+                    return;
+                }
             }
             // Logic to clean and extract (simplified from original to avoid full deletion
             // risk if not intent)

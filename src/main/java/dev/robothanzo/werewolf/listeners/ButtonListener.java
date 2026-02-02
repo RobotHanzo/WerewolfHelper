@@ -85,14 +85,18 @@ public class ButtonListener extends ListenerAdapter {
                     event.getHook().editOriginal(":x: 你曾經參選過或正在參選，不得投票").queue();
                     return;
                 }
-                Candidate electedCandidate = candidates
-                        .get(Integer.parseInt(customId.replaceAll("votePolice", "")));
-                if (electedCandidate != null) {
-                    handleVote(event, candidates, electedCandidate);
-                    // Broadcast update immediately
-                    WerewolfApplication.gameSessionService.broadcastSessionUpdate(session);
-                } else {
-                    event.getHook().editOriginal(":x: 找不到候選人").queue();
+                try {
+                    int candidateId = Integer.parseInt(customId.replace("votePolice", ""));
+                    Candidate electedCandidate = candidates.get(candidateId);
+                    if (electedCandidate != null) {
+                        handleVote(event, candidates, electedCandidate);
+                        // Broadcast update immediately
+                        WerewolfApplication.gameSessionService.broadcastSessionUpdate(session);
+                    } else {
+                        event.getHook().editOriginal(":x: 找不到候選人").queue();
+                    }
+                } catch (NumberFormatException e) {
+                    event.getHook().editOriginal(":x: 無效的投票選項").queue();
                 }
             } else {
                 event.getHook().editOriginal(":x: 投票已過期").queue();
@@ -106,13 +110,17 @@ public class ButtonListener extends ListenerAdapter {
                     event.getHook().editOriginal(":x: 你正在和別人進行放逐辯論，不得投票").queue();
                     return;
                 }
-                Map<Integer, Candidate> candidates = Poll.expelCandidates
-                        .get(Objects.requireNonNull(event.getGuild()).getIdLong());
-                Candidate electedCandidate = candidates
-                        .get(Integer.parseInt(customId.replaceAll("voteExpel", "")));
-                handleVote(event, candidates, electedCandidate);
-                // Broadcast update immediately for expel (user requested realtime voting)
-                WerewolfApplication.gameSessionService.broadcastSessionUpdate(session);
+                try {
+                    Map<Integer, Candidate> candidates = Poll.expelCandidates
+                            .get(Objects.requireNonNull(event.getGuild()).getIdLong());
+                    int candidateId = Integer.parseInt(customId.replace("voteExpel", ""));
+                    Candidate electedCandidate = candidates.get(candidateId);
+                    handleVote(event, candidates, electedCandidate);
+                    // Broadcast update immediately for expel (user requested realtime voting)
+                    WerewolfApplication.gameSessionService.broadcastSessionUpdate(session);
+                } catch (NumberFormatException e) {
+                    event.getHook().editOriginal(":x: 無效的投票選項").queue();
+                }
             } else {
                 event.getHook().editOriginal(":x: 投票已過期").queue();
             }
