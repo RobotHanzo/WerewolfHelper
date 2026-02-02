@@ -15,7 +15,12 @@ public class SessionConfig {
         DefaultCookieSerializer serializer = new DefaultCookieSerializer();
         serializer.setSameSite("Lax");
         serializer.setUseHttpOnlyCookie(true);
-        serializer.setUseSecureCookie(!"http://localhost:5173".equals(System.getenv().getOrDefault("DASHBOARD_URL", "http://localhost:5173")));
+        
+        // Use secure cookies for HTTPS environments (production)
+        String dashboardUrl = System.getenv().getOrDefault("DASHBOARD_URL", "http://localhost:5173");
+        boolean isSecureEnvironment = dashboardUrl.startsWith("https://");
+        serializer.setUseSecureCookie(isSecureEnvironment);
+        
         return serializer;
     }
 }

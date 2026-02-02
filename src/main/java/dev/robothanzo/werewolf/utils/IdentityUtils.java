@@ -8,13 +8,33 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @RequiredArgsConstructor
 public class IdentityUtils {
 
     private final DiscordService discordService;
+    
+    // Simple cache to reduce Discord API calls - entries expire after they're created
+    private static class MembershipCacheEntry {
+        final boolean isMember;
+        final long timestamp;
+        
+        MembershipCacheEntry(boolean isMember) {
+            this.isMember = isMember;
+            this.timestamp = System.currentTimeMillis();
+        }
+        
+        boolean isExpired() {
+            // Cache for 5 minutes
+            return System.currentTimeMillis() - timestamp > 300_000;
+        }
+    }
+    
+    private final Map<String, MembershipCacheEntry> membershipCache = new ConcurrentHashMap<>();
 
     public Optional<AuthSession> getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -31,8 +51,24 @@ public class IdentityUtils {
                     if (!String.valueOf(guildId).equals(user.getGuildId())) {
                         return false;
                     }
-                    // Then verify the user is still actually a member of the guild
-                    return discordService.getMember(guildId, user.getUserId()) != null;
+                    
+                    // Check cache first
+                    String cacheKey = guildId + ":" + user.getUserId();
+                    MembershipCacheEntry cached = membershipCache.get(cacheKey);
+                    if (cached != null && !cached.isExpired()) {
+                        return cached.isMember;
+                    }
+                    
+                    // Cache miss or expired - verify the user is still actually a member of the guild
+                    boolean isMember = discordService.getMember(guildId, user.getUserId()) != null;
+                    membershipCache.put(cacheKey, new MembershipCacheEntry(isMember));
+                    
+                    // Clean up expired entries periodically (simple approach)
+                    if (membershipCache.size() > 1000) {
+                        membershipCache.entrySet().removeIf(e -> e.getValue().isExpired());
+                    }
+                    
+                    return isMember;
                 })
                 .orElse(false);
     }
