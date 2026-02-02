@@ -35,9 +35,6 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
 
     const [showSessionExpired, setShowSessionExpired] = useState(false);
 
-    // Helpers to update overlay
-    const setOverlayVisible = (visible: boolean) => setOverlayState(prev => ({...prev, visible}));
-
     // Helper to map session data to GameState players
     const mapSessionToPlayers = (sessionData: any): Player[] => {
         return sessionData.players.map((player: any) => ({
