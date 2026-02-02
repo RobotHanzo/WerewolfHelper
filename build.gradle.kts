@@ -21,8 +21,8 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.5.7")
     implementation("com.github.RobotHanzo:JDAInteractions:v0.1.4")
     implementation("dev.arbjerg:lavaplayer:2.2.1")
-    compileOnly("org.projectlombok:lombok:1.18.34")
-    annotationProcessor("org.projectlombok:lombok:1.18.34")
+    compileOnly("org.projectlombok:lombok:1.18.42")
+    annotationProcessor("org.projectlombok:lombok:1.18.42")
 }
 
 tasks {
