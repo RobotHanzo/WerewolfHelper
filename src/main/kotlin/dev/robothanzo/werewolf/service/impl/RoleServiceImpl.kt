@@ -12,7 +12,6 @@ import dev.robothanzo.werewolf.utils.runActions
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
-import net.dv8tion.jda.api.entities.Member
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.*
@@ -30,10 +29,8 @@ class RoleServiceImpl(
             val session = sessionRepository.findByGuildId(guildId)
                 .orElseThrow { RuntimeException("Session not found") }
 
-            val roles = ArrayList(session.roles)
-            for (i in 0 until amount) {
-                roles.add(roleName)
-            }
+            val roles = session.roles.toMutableList()
+            repeat(amount) { roles.add(roleName) }
             session.roles = roles
             sessionRepository.save(session)
 
@@ -49,10 +46,8 @@ class RoleServiceImpl(
             val session = sessionRepository.findByGuildId(guildId)
                 .orElseThrow { RuntimeException("Session not found") }
 
-            val roles = ArrayList(session.roles)
-            for (i in 0 until amount) {
-                roles.remove(roleName)
-            }
+            val roles = session.roles.toMutableList()
+            repeat(amount) { roles.remove(roleName) }
             session.roles = roles
             sessionRepository.save(session)
 
@@ -87,16 +82,12 @@ class RoleServiceImpl(
             val jda = discordService.jda
             val guild = jda!!.getGuildById(guildId) ?: throw Exception("Guild not found")
 
-            val pending: MutableList<Member> = LinkedList()
-            for (member in guild.members) {
-                if ((!member.user.isBot) &&
-                    (!member.isOwner) &&
-                    (!member.roles.contains(guild.getRoleById(session.judgeRoleId))) &&
-                    (!member.roles.contains(guild.getRoleById(session.spectatorRoleId)))
-                ) {
-                    pending.add(member)
-                }
-            }
+            val pending = guild.members.filter { member ->
+                !member.user.isBot &&
+                        !member.isOwner &&
+                        member.idLong != session.judgeRoleId && // Assuming judgeRoleId is used for role check
+                        !member.roles.any { it.idLong == session.judgeRoleId || it.idLong == session.spectatorRoleId }
+            }.toMutableList()
 
             progressCallback(10)
             statusLogger("正在驗證玩家與身分數量...")
@@ -104,21 +95,18 @@ class RoleServiceImpl(
             pending.shuffle(Random())
             if (pending.size != session.players.size) {
                 throw Exception(
-                    "玩家數量不符合設定值。請確認是否已給予旁觀者應有之身分(使用 `/player died`)，或檢查 `/server set players` 設定的人數。\n(待分配: "
-                            + pending.size + ", 需要: " + session.players.size + ")"
+                    "玩家數量不符合設定值。請確認是否已給予旁觀者應有之身分(使用 `/player died`)，或檢查 `/server set players` 設定的人數。\n(待分配: ${pending.size}, 需要: ${session.players.size})"
                 )
             }
 
             val rolesPerPlayer = if (session.doubleIdentities) 2 else 1
             if (pending.size != (session.roles.size / rolesPerPlayer)) {
                 throw Exception(
-                    "玩家身分數量不符合身分清單數量。請確認是否正確啟用雙身分模式，並檢查 `/server roles list`。\n(目前玩家: " + pending.size
-                            + ", 身分總數: " + session.roles.size + ")"
+                    "玩家身分數量不符合身分清單數量。請確認是否正確啟用雙身分模式，並檢查 `/server roles list`。\n(目前玩家: ${pending.size}, 身分總數: ${session.roles.size})"
                 )
             }
 
-            val roles = ArrayList(session.roles)
-            roles.shuffle()
+            val roles = session.roles.shuffled().toMutableList()
 
             var gaveJinBaoBao = 0
             statusLogger("正在分配身分並更新伺服器狀態...")
@@ -143,16 +131,14 @@ class RoleServiceImpl(
                 }
 
                 // 2. Logic for role selection (JinBaoBao, etc.)
-                var rs: MutableList<String> = LinkedList()
-                var isJinBaoBao = false
-                rs.add(roles.removeFirst())
+                var rs = mutableListOf(roles.removeFirst())
 
                 if (rs.first() == "白癡") {
                     player.idiot = true
                 }
 
                 if (rs.first() == "平民" && gaveJinBaoBao == 0 && session.doubleIdentities) {
-                    rs = LinkedList(listOf("平民", "平民"))
+                    rs = mutableListOf("平民", "平民")
                     roles.remove("平民")
                     gaveJinBaoBao++
                     isJinBaoBao = true
@@ -192,7 +178,7 @@ class RoleServiceImpl(
 
                 player.jinBaoBao = isJinBaoBao && session.doubleIdentities
                 player.roles = rs
-                player.deadRoles = ArrayList()
+                player.deadRoles = mutableListOf()
                 player.userId = member.idLong
 
                 // 3. Prepare Nickname Task
@@ -261,8 +247,7 @@ class RoleServiceImpl(
                 .setTitle("身分列表")
                 .setColor(MsgUtils.randomColor)
 
-            val sortedPlayers = ArrayList(session.players.values)
-            sortedPlayers.sortBy { it.id }
+            val sortedPlayers = session.players.values.sortedBy { it.id }
 
             for (p in sortedPlayers) {
                 val rolesStr = ((p.roles?.joinToString("、") ?: "無") +

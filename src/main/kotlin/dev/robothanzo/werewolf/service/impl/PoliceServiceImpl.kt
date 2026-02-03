@@ -21,7 +21,6 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 @Service
@@ -81,12 +80,12 @@ class PoliceServiceImpl(
                     event.guild!!.getTextChannelById(session.courtTextChannelId)
                         ?.sendMessage(event.user.asMention + " 已取消參選")?.queue()
 
-                    val metadata: MutableMap<String, Any> = HashMap()
+                    val metadata = mutableMapOf<String, Any>()
                     metadata["playerId"] = candidate.value.player!!.id
                     metadata["playerName"] = candidate.value.player!!.nickname
                     session.addLog(
                         LogType.POLICE_UNENROLLED,
-                        candidate.value.player!!.nickname + " 已取消參選警長", metadata
+                        "${candidate.value.player!!.nickname} 已取消參選警長", metadata
                     )
                     gameSessionService.broadcastSessionUpdate(session)
                 } else {
@@ -106,12 +105,12 @@ class PoliceServiceImpl(
                 policeSession.candidates[player.id] = Candidate(player = player)
                 event.hook.editOriginal(":white_check_mark: 已參選").queue()
 
-                val metadata: MutableMap<String, Any> = HashMap()
+                val metadata = mutableMapOf<String, Any>()
                 metadata["playerId"] = player.id
                 metadata["playerName"] = player.nickname
                 session.addLog(
                     LogType.POLICE_ENROLLED,
-                    player.nickname + " 已參選警長", metadata
+                    "${player.nickname} 已參選警長", metadata
                 )
 
                 gameSessionService.broadcastSessionUpdate(session)
@@ -177,12 +176,10 @@ class PoliceServiceImpl(
                     return
                 }
 
-                val candidateMentions: MutableList<String> = LinkedList()
-                for (candidate in policeSession.candidates.values.stream()
-                    .sorted(Candidate.getComparator())
-                    .toList()) {
-                    candidateMentions.add("<@!" + candidate.player!!.userId + ">")
-                }
+                val candidateMentions = policeSession.candidates.values.asSequence()
+                    .sortedWith(Candidate.getComparator())
+                    .map { "<@!${it.player!!.userId}>" }
+                    .toMutableList()
 
                 if (policeSession.candidates.size == 1) {
                     if (policeSession.message != null)
@@ -196,10 +193,7 @@ class PoliceServiceImpl(
                     policeSession.message!!.replyEmbeds(
                         EmbedBuilder().setTitle("參選警長結束")
                             .setDescription(
-                                "參選的有: " + java.lang.String.join(
-                                    "、",
-                                    candidateMentions
-                                ) + "\n備註:你可隨時再按一次按鈕以取消參選"
+                                "參選的有: ${candidateMentions.joinToString("、")}\n備註:你可隨時再按一次按鈕以取消參選"
                             )
                             .setColor(MsgUtils.randomColor).build()
                     ).queue()
@@ -273,20 +267,21 @@ class PoliceServiceImpl(
             .setDescription("30秒後立刻計票，請加快手速!\n若要改票可直接按下要改成的對象\n若要改為棄票需按下原本投給的使用者")
             .setColor(MsgUtils.randomColor)
 
-        val buttons: MutableList<Button> = LinkedList()
-        for (player in policeSession.candidates.values.stream().sorted(Candidate.getComparator()).toList()) {
-            if (player.quit)
-                continue
-            val user = channel.guild.getMemberById(player.player!!.userId!!)
-            if (user != null) {
-                buttons.add(
-                    Button.primary(
-                        "votePolice" + player.player!!.id,
-                        player.player!!.nickname + " (" + user.user.name + ")"
+        val buttons = mutableListOf<Button>()
+        policeSession.candidates.values.asSequence()
+            .sortedWith(Candidate.getComparator())
+            .filter { !it.quit }
+            .forEach { player ->
+                val user = channel.guild.getMemberById(player.player!!.userId!!)
+                if (user != null) {
+                    buttons.add(
+                        Button.primary(
+                            "votePolice${player.player!!.id}",
+                            "${player.player!!.nickname} (${user.user.name})"
+                        )
                     )
-                )
+                }
             }
-        }
 
         channel.sendMessageEmbeds(embedBuilder.build())
             .setComponents(MsgUtils.spreadButtonsAcrossActionRows(buttons))
@@ -320,7 +315,7 @@ class PoliceServiceImpl(
             val resultEmbed = EmbedBuilder().setTitle("警長投票").setColor(MsgUtils.randomColor)
                 .setDescription("獲勝玩家: <@!" + winner.player!!.userId + ">")
 
-            val wrapper: MutableMap<Long, Map<Int, Candidate>> = HashMap()
+            val wrapper = mutableMapOf<Long, Map<Int, Candidate>>()
             wrapper[channel.guild.idLong] = policeSession.candidates
             Poll.sendVoteResult(
                 policeSession.session!!, channel, policeSession.message!!, resultEmbed, wrapper,
@@ -334,7 +329,7 @@ class PoliceServiceImpl(
                 val resultEmbed = EmbedBuilder().setTitle("警長投票")
                     .setColor(MsgUtils.randomColor)
                     .setDescription("發生平票")
-                val wrapper: MutableMap<Long, Map<Int, Candidate>> = HashMap()
+                val wrapper = mutableMapOf<Long, Map<Int, Candidate>>()
                 wrapper[channel.guild.idLong] = policeSession.candidates
                 Poll.sendVoteResult(
                     policeSession.session!!, channel, policeSession.message!!, resultEmbed,
@@ -348,7 +343,7 @@ class PoliceServiceImpl(
                     .setDescription("平票第二次，警徽撕毀")
                 if (policeSession.message != null)
                     policeSession.message!!.reply("平票第二次，警徽撕毀").queue()
-                val wrapper: MutableMap<Long, Map<Int, Candidate>> = HashMap()
+                val wrapper = mutableMapOf<Long, Map<Int, Candidate>>()
                 wrapper[channel.guild.idLong] = policeSession.candidates
                 Poll.sendVoteResult(
                     policeSession.session!!, channel, policeSession.message!!, resultEmbed,
@@ -395,12 +390,12 @@ class PoliceServiceImpl(
         }
         sessionRepository.save(session)
 
-        val metadata: MutableMap<String, Any> = HashMap()
+        val metadata = mutableMapOf<String, Any>()
         metadata["playerId"] = winner.player!!.id
         metadata["playerName"] = winner.player!!.nickname
         session.addLog(
             LogType.POLICE_ELECTED,
-            winner.player!!.nickname + " 當選警長", metadata
+            "${winner.player!!.nickname} 當當選警長", metadata
         )
 
         gameSessionService.broadcastSessionUpdate(session)
@@ -431,7 +426,7 @@ class PoliceServiceImpl(
                 .setMaxValues(1)
 
             for (p in session.fetchAlivePlayers().values) {
-                if (Objects.equals(p.userId, player.userId)) continue
+                if (p.userId == player.userId) continue
                 val user = discordService.jda!!.getUserById(p.userId!!) // Assuming user cached or available
                 if (user != null) {
                     transferSession.possibleRecipientIds.add(p.userId!!)
@@ -476,7 +471,7 @@ class PoliceServiceImpl(
                 if (session.senderId == event.user.idLong) {
                     val guildSession = sessionRepository.findByGuildId(event.guild!!.idLong).orElse(null) ?: return
                     for (player in guildSession.players.values) {
-                        if (Objects.equals(player.userId, target.idLong)) {
+                        if (player.userId == target.idLong) {
                             session.recipientId = player.id
                             event.reply(":white_check_mark: 請按下移交來完成移交動作").setEphemeral(true).queue()
                             break

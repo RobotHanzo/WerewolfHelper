@@ -13,7 +13,6 @@ import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 @Service
@@ -49,12 +48,12 @@ class PlayerServiceImpl(
         onProgress("開始同步 Discord 狀態...")
 
         val players = session.players
-        val deleteTasks: MutableList<ActionTask> = ArrayList()
-        val createRoleTasks: MutableList<ActionTask> = ArrayList()
-        val createChannelTasks: MutableList<ActionTask> = ArrayList()
+        val deleteTasks = mutableListOf<ActionTask>()
+        val createRoleTasks = mutableListOf<ActionTask>()
+        val createChannelTasks = mutableListOf<ActionTask>()
 
         // Phase 1: Identify deletions
-        val existingPlayerIds = LinkedList(players.keys)
+        val existingPlayerIds = players.keys.toMutableList()
         for (idStr in existingPlayerIds) {
             val pid = idStr.toInt()
             if (pid > count) {
@@ -64,7 +63,7 @@ class PlayerServiceImpl(
                     deleteTasks.add(
                         ActionTask(
                             role.delete(),
-                            "刪除身分組: " + role.name
+                            "刪除身分組: ${role.name}"
                         )
                     )
                 }
@@ -73,7 +72,7 @@ class PlayerServiceImpl(
                     deleteTasks.add(
                         ActionTask(
                             channel.delete(),
-                            "刪除頻道: " + channel.name
+                            "刪除頻道: ${channel.name}"
                         )
                     )
                 }
@@ -164,7 +163,7 @@ class PlayerServiceImpl(
                 .orElseThrow { RuntimeException("Session not found") }
             val player = session.players[playerId] ?: throw Exception("Player not found")
 
-            val finalRoles = ArrayList(roles)
+            val finalRoles = roles.toMutableList()
             val isDuplicated = roles.contains("複製人")
             player.duplicated = isDuplicated
             if (isDuplicated && finalRoles.size == 2) {
@@ -187,8 +186,7 @@ class PlayerServiceImpl(
                 val guild = jda.getGuildById(guildId)
                 if (guild != null) {
                     val channel = guild.getTextChannelById(player.channelId)
-                    channel?.sendMessage("法官已將你的身份更改為: " + roles.joinToString(", ")) // Converting List to varargs or just string join? String.join takes Iterable in Java 8+ but Kotlin standard library has joinToString.
-                        // Java String.join is static method.
+                    channel?.sendMessage("法官已將你的身份更改為: ${roles.joinToString(", ")}")
                         ?.queue()
                 }
             }
@@ -213,7 +211,11 @@ class PlayerServiceImpl(
             if (roles == null || roles.size < 2)
                 throw Exception("Not enough roles to switch")
 
-            Collections.swap(roles, 0, 1)
+            roles.let {
+                val first = it[0]
+                it[0] = it[1]
+                it[1] = first
+            }
             sessionRepository.save(session)
 
             val jda = discordService.jda
@@ -221,7 +223,7 @@ class PlayerServiceImpl(
                 val guild = jda.getGuildById(guildId)
                 if (guild != null) {
                     val channel = guild.getTextChannelById(player.channelId)
-                    channel?.sendMessage("你已交換了角色順序，現在主要角色為: " + roles[0])?.queue()
+                    channel?.sendMessage("你已交換了角色順序，現在主要角色為: ${roles[0]}")?.queue()
                 }
             }
             gameSessionService.broadcastUpdate(guildId)

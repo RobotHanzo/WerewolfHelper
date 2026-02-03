@@ -57,10 +57,7 @@ class SpeechServiceImpl(
         )
         speechSessions[guild.idLong] = speechSession
 
-        val order = SpeechOrder.getRandomOrder()
-        val shuffledPlayers = LinkedList(players)
-        shuffledPlayers.shuffle()
-        val target = shuffledPlayers.first
+        val target = players.shuffled().first()
 
         if (enrollMessage != null) {
             enrollMessage.replyEmbeds(
@@ -81,8 +78,7 @@ class SpeechServiceImpl(
         player: Session.Player,
         callback: (() -> Unit)?
     ) {
-        val orderList: MutableList<Session.Player> = LinkedList()
-        orderList.add(player)
+        val orderList = mutableListOf(player)
 
         val speechSession = SpeechSession(
             guildId = guild.idLong,
@@ -250,14 +246,9 @@ class SpeechServiceImpl(
 
                             gameSessionService.broadcastSessionUpdate(session)
                             if (speechSession.interruptVotes.size > (session.fetchAlivePlayers().size / 2)) {
-                                val voterMentions: MutableList<String> = LinkedList()
-                                for (voter in speechSession.interruptVotes) {
-                                    voterMentions.add("<@!$voter>")
-                                }
+                                val voterMentions = speechSession.interruptVotes.map { "<@!$it>" }
                                 event.message.reply(
-                                    "人民的法槌已強制該玩家下台，有投票的有: " + voterMentions.joinToString(
-                                        "、"
-                                    )
+                                    "人民的法槌已強制該玩家下台，有投票的有: ${voterMentions.joinToString("、")}"
                                 )
                                     .queue()
                                 nextSpeaker(guildId)
@@ -330,10 +321,9 @@ class SpeechServiceImpl(
         }
 
         // No police found, auto random
-        val shuffled = LinkedList(session.fetchAlivePlayers().values)
-        shuffled.shuffle()
+        val shuffled = session.fetchAlivePlayers().values.shuffled()
         val randOrder = SpeechOrder.getRandomOrder()
-        changeOrder(guildId, randOrder, session.fetchAlivePlayers().values, shuffled.first)
+        changeOrder(guildId, randOrder, session.fetchAlivePlayers().values, shuffled.first())
         if (channel != null) {
             channel.sendMessageEmbeds(
                 EmbedBuilder()
@@ -443,14 +433,12 @@ class SpeechServiceImpl(
         if (speechSession == null)
             return
 
-        val players = LinkedList(playersRaw)
-        players.sort()
-
-        val prePolice = LinkedList<Session.Player>()
+        val sortedPlayers = playersRaw.sortedBy { it.id }
         var police: Session.Player? = null
-        val postPolice = LinkedList<Session.Player>()
+        val prePolice = mutableListOf<Session.Player>()
+        val postPolice = mutableListOf<Session.Player>()
 
-        for (player in players) {
+        for (player in sortedPlayers) {
             if (player.id == target.id) {
                 police = player
                 continue
@@ -461,17 +449,13 @@ class SpeechServiceImpl(
                 postPolice.add(player)
         }
 
-        val orderList: MutableList<Session.Player> = LinkedList()
-        if (order == SpeechOrder.UP) {
-            prePolice.reverse()
-            orderList.addAll(prePolice)
-            postPolice.reverse()
-            orderList.addAll(postPolice)
+        val orderList = if (order == SpeechOrder.UP) {
+            prePolice.reversed() + postPolice.reversed()
         } else {
-            orderList.addAll(postPolice)
-            orderList.addAll(prePolice)
+            postPolice + prePolice
+        }.toMutableList().apply {
+            police?.let { add(it) }
         }
-        police?.let { orderList.add(it) }
 
         speechSession.order.clear()
         speechSession.order.addAll(orderList)

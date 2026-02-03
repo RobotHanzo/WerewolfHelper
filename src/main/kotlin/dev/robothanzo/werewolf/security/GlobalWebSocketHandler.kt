@@ -8,6 +8,7 @@ import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.handler.TextWebSocketHandler
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.stream.Stream
 
 @Component
@@ -17,7 +18,7 @@ class GlobalWebSocketHandler : TextWebSocketHandler() {
     // In a real app with auth, you might map userId -> Session or guildId ->
     // List<Session>
     // Map guild ID -> Set of Sessions
-    private val guildSessions = java.util.concurrent.ConcurrentHashMap<String, MutableSet<WebSocketSession>>()
+    private val guildSessions = ConcurrentHashMap<String, MutableSet<WebSocketSession>>()
 
     @Throws(Exception::class)
     override fun afterConnectionEstablished(session: WebSocketSession) {
@@ -62,7 +63,7 @@ class GlobalWebSocketHandler : TextWebSocketHandler() {
             return
         }
 
-        guildSessions.computeIfAbsent(requestedGuildId) { java.util.concurrent.ConcurrentHashMap.newKeySet() }
+        guildSessions.computeIfAbsent(requestedGuildId) { ConcurrentHashMap.newKeySet() }
             .add(session)
 
         log.info(

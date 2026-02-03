@@ -112,14 +112,10 @@ class GameSessionServiceImpl(
 
             val candidatesList = mutableListOf<Map<String, Any>>()
             for (c in policeSession.candidates.values) {
-                val candidateJson: MutableMap<String, Any> = LinkedHashMap()
+                val candidateJson = mutableMapOf<String, Any>()
                 candidateJson["id"] = c.player!!.id.toString()
                 candidateJson["quit"] = c.quit
-                val voters = mutableListOf<String>()
-                for (voterId in c.electors) {
-                    voters.add(voterId.toString())
-                }
-                candidateJson["voters"] = voters
+                candidateJson["voters"] = c.electors.map { it.toString() }
                 candidatesList.add(candidateJson)
             }
             policeJson["candidates"] = candidatesList
@@ -127,7 +123,7 @@ class GameSessionServiceImpl(
             policeJson["state"] = "NONE"
             policeJson["allowEnroll"] = false
             policeJson["allowUnEnroll"] = false
-            policeJson["candidates"] = Collections.emptyList<Any>()
+            policeJson["candidates"] = emptyList<Any>()
         }
         json["police"] = policeJson
 
@@ -138,19 +134,15 @@ class GameSessionServiceImpl(
         if (Poll.expelCandidates.containsKey(gid)) {
             val expelCandidatesList = mutableListOf<Map<String, Any>>()
             for (c in Poll.expelCandidates[gid]!!.values) {
-                val candidateJson: MutableMap<String, Any> = LinkedHashMap()
+                val candidateJson = mutableMapOf<String, Any>()
                 candidateJson["id"] = c.player!!.id.toString()
-                val voters: MutableList<String> = ArrayList()
-                for (voterId in c.electors) {
-                    voters.add(voterId.toString())
-                }
-                candidateJson["voters"] = voters
+                candidateJson["voters"] = c.electors.map { it.toString() }
                 expelCandidatesList.add(candidateJson)
             }
             expelJson["candidates"] = expelCandidatesList
             expelJson["voting"] = true
         } else {
-            expelJson["candidates"] = Collections.emptyList<Any>()
+            expelJson["candidates"] = emptyList<Any>()
             expelJson["voting"] = false
         }
         json["expel"] = expelJson
@@ -166,15 +158,12 @@ class GameSessionServiceImpl(
         val logsJson = mutableListOf<Map<String, Any>>()
         if (session.logs != null) {
             for (log in session.logs) {
-                val logJson: MutableMap<String, Any> = LinkedHashMap()
+                val logJson = mutableMapOf<String, Any>()
                 logJson["id"] = log.id ?: ""
                 logJson["timestamp"] = formatTimestamp(log.timestamp)
                 logJson["type"] = log.type?.getSeverity() ?: "INFO"
                 logJson["message"] = log.message ?: ""
-                val metadata = log.metadata
-                if (metadata != null && metadata.isNotEmpty()) {
-                    logJson["metadata"] = metadata
-                }
+                log.metadata?.let { if (it.isNotEmpty()) logJson["metadata"] = it }
                 logsJson.add(logJson)
             }
         }
@@ -296,7 +285,7 @@ class GameSessionServiceImpl(
             if (member.user.isBot)
                 continue
 
-            val memberMap: MutableMap<String, Any> = LinkedHashMap()
+            val memberMap = mutableMapOf<String, Any>()
             memberMap["userId"] = member.id
             memberMap["username"] = member.user.name
             memberMap["name"] = member.effectiveName
@@ -320,7 +309,7 @@ class GameSessionServiceImpl(
             val judgeA = a["isJudge"] as Boolean
             val judgeB = b["isJudge"] as Boolean
             if (judgeA != judgeB)
-                if (judgeB) 1 else -1;
+                if (judgeB) 1 else -1
             else
                 (a["name"] as String).compareTo((b["name"] as String))
         }
