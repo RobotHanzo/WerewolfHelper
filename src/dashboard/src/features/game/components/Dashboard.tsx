@@ -117,6 +117,8 @@ export const Dashboard = () => {
                     speech={gameState.speech}
                     players={gameState.players}
                     readonly={user?.role === 'SPECTATOR' || isSpectatorSimulation}
+                    currentStep={gameState.currentStep}
+                    currentState={gameState.currentState}
                 />
                 <div
                     className="flex-1 overflow-hidden relative flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-900/30">

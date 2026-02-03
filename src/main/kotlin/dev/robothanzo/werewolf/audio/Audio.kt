@@ -5,20 +5,24 @@ import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import dev.robothanzo.werewolf.WerewolfApplication
-import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import org.slf4j.LoggerFactory
 import java.util.*
 
 object Audio {
     private val log = LoggerFactory.getLogger(Audio::class.java)
 
-    fun play(resource: Resource, channel: AudioChannel) {
+    fun VoiceChannel.play(resource: Resource) {
         try {
-            val audioManager = channel.guild.audioManager
-            audioManager.openAudioConnection(channel)
-            val player = WerewolfApplication.playerManager!!.createPlayer()
-            audioManager.sendingHandler = AudioPlayerSendHandler(player)
-            WerewolfApplication.playerManager!!.loadItem(
+            val audioManager = this.guild.audioManager
+            val player = WerewolfApplication.playerManager.createPlayer()
+            if (audioManager.sendingHandler == null) {
+                audioManager.sendingHandler = AudioPlayerSendHandler(player)
+            }
+
+            audioManager.openAudioConnection(this)
+
+            WerewolfApplication.playerManager.loadItem(
                 "sounds/$resource.mp3",
                 object : AudioLoadResultHandler {
                     override fun trackLoaded(track: AudioTrack) {

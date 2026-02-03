@@ -266,7 +266,7 @@ class Server {
         ) {
             event.deferReply().queue()
             if (!CmdUtils.isAdmin(event)) return
-            val session = CmdUtils.getSession(event) ?: return
+            CmdUtils.getSession(event) ?: return
             Session.fetchCollection().updateOne(
                 eq("guildId", event.guild!!.idLong),
                 set("doubleIdentities", value)
@@ -281,7 +281,7 @@ class Server {
         ) {
             event.deferReply().queue()
             if (!CmdUtils.isAdmin(event)) return
-            val session = CmdUtils.getSession(event) ?: return
+            CmdUtils.getSession(event) ?: return
             Session.fetchCollection().updateOne(
                 eq("guildId", event.guild!!.idLong),
                 set("muteAfterSpeech", value)

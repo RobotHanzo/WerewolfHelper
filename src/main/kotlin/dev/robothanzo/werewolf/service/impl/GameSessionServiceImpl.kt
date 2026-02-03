@@ -5,6 +5,7 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.commands.Poll
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.database.documents.UserRole
+import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.security.GlobalWebSocketHandler
 import dev.robothanzo.werewolf.security.SessionRepository
 import dev.robothanzo.werewolf.service.DiscordService
@@ -12,6 +13,7 @@ import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.SpeechService
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.time.LocalDateTime
@@ -24,9 +26,11 @@ class GameSessionServiceImpl(
     private val sessionRepository: SessionRepository,
     private val discordService: DiscordService,
     private val webSocketHandler: GlobalWebSocketHandler,
-    private val speechService: SpeechService
+    private val speechService: SpeechService,
+    @Lazy stepList: List<GameStep>
 ) : GameSessionService {
     private val log = LoggerFactory.getLogger(GameSessionServiceImpl::class.java)
+    private val steps = stepList.associateBy { it.id }
 
     @PostConstruct
     fun init() {
@@ -63,6 +67,19 @@ class GameSessionServiceImpl(
         json["muteAfterSpeech"] = session.muteAfterSpeech
         json["hasAssignedRoles"] = session.hasAssignedRoles
         json["roles"] = session.roles
+        json["currentState"] = session.currentState
+        json["currentStep"] = steps[session.currentState]?.name ?: session.currentState
+        json["day"] = session.day
+        json["stateData"] = session.stateData
+
+        val now = System.currentTimeMillis()
+        val remaining = if (session.currentStepEndTime > now) {
+            (session.currentStepEndTime - now) / 1000
+        } else {
+            0
+        }
+        json["timerSeconds"] = remaining
+
         json["players"] = playersToJSON(session)
 
         // Add speech info if available

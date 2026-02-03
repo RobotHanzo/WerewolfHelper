@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import React, {useState} from 'react';
 import {AlertTriangle, MessageSquare} from 'lucide-react';
 import {LogEntry} from '@/types';
 import {useTranslation} from '@/lib/i18n';
@@ -14,6 +14,14 @@ export const GameLog: React.FC<GameLogProps> = ({logs, onGlobalAction, readonly 
     const {t} = useTranslation();
     const [resetConfirming, setResetConfirming] = useState(false);
 
+    const scrollRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [logs]);
+
     return (
         <div
             className={`flex flex-col gap-4 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md rounded-xl border border-slate-300 dark:border-slate-800 p-4 overflow-hidden ${className || 'h-[calc(100vh-140px)]'}`}>
@@ -24,6 +32,7 @@ export const GameLog: React.FC<GameLogProps> = ({logs, onGlobalAction, readonly 
             </div>
 
             <div
+                ref={scrollRef}
                 className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent">
                 {logs.map(log => (
                     <div key={log.id}

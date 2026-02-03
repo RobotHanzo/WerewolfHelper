@@ -124,6 +124,17 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
                 police: data.police,
                 expel: data.expel, // Ensure expel is updated too
                 logs: data.logs || prev.logs,
+                currentState: data.currentState,
+                currentStep: data.currentStep,
+                stateData: data.stateData,
+                timerSeconds: typeof data.timerSeconds === 'number' ? data.timerSeconds : prev.timerSeconds,
+                phase: (() => {
+                    const s = data.currentState;
+                    if (!s || s === 'SETUP' || s === 'LOBBY') return 'LOBBY';
+                    if (s.includes('NIGHT')) return 'NIGHT';
+                    if (s.includes('DAY') || s.includes('VOTE') || s.includes('ELECTION')) return 'DAY'; // Treat voting/election as day for UI
+                    return 'DAY'; // Default to DAY for standard game phases
+                })()
             }));
         }
     }, guildId, () => setShowSessionExpired(true));
@@ -167,6 +178,17 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
                     police: sessionData.police,
                     expel: sessionData.expel,
                     logs: sessionData.logs || [],
+                    currentState: sessionData.currentState,
+                    currentStep: sessionData.currentStep,
+                    stateData: sessionData.stateData,
+                    timerSeconds: typeof sessionData.timerSeconds === 'number' ? sessionData.timerSeconds : 0,
+                    phase: (() => {
+                        const s = sessionData.currentState;
+                        if (!s || s === 'SETUP' || s === 'LOBBY') return 'LOBBY';
+                        if (s.includes('NIGHT')) return 'NIGHT';
+                        if (s.includes('DAY') || s.includes('VOTE') || s.includes('ELECTION')) return 'DAY';
+                        return 'DAY';
+                    })()
                 }));
             } catch (error) {
                 console.error('Failed to load session data:', error);

@@ -34,7 +34,13 @@ data class Session(
     var muteAfterSpeech: Boolean = true,
     var roles: MutableList<String> = LinkedList(),
     var players: MutableMap<String, Player> = HashMap(),
-    var logs: MutableList<LogEntry> = ArrayList()
+    var logs: MutableList<LogEntry> = ArrayList(),
+
+    // Game State Machine Fields
+    var currentState: String = "SETUP", // Default to setup
+    var stateData: MutableMap<String, Any> = HashMap(),
+    var currentStepEndTime: Long = 0,
+    var day: Int = 0
 ) {
     fun fetchAlivePlayers(): Map<String, Player> {
         val alivePlayers = HashMap<String, Player>()

@@ -125,7 +125,7 @@ class AuthController(
 
         return try {
             val gid = guildId.toLong()
-            val guild = discordService.getGuild(gid)
+            discordService.getGuild(gid)
                 ?: return ResponseEntity.badRequest().body(mapOf("success" to false, "error" to "Guild not found"))
 
             val member = discordService.getMember(gid, user.userId)

@@ -36,6 +36,7 @@ enum class LogType {
     GAME_ENDED,
     GAME_RESET,
     COMMAND_EXECUTED,
+    SYSTEM, // General system messages
 
     // Judge Actions
     PLAYER_PROMOTED_JUDGE,

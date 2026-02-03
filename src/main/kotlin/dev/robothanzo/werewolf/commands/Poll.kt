@@ -4,6 +4,7 @@ import dev.robothanzo.jda.interactions.annotations.slash.Command
 import dev.robothanzo.jda.interactions.annotations.slash.Subcommand
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.audio.Audio
+import dev.robothanzo.werewolf.audio.Audio.play
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.Candidate
 import dev.robothanzo.werewolf.utils.CmdUtils
@@ -14,15 +15,12 @@ import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
-import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import dev.robothanzo.jda.interactions.annotations.Button as AnnotationButton
 
 @Command
 class Poll {
     companion object {
-        private val log = LoggerFactory.getLogger(Poll::class.java)
-
         @JvmField
         val expelCandidates: MutableMap<Long, MutableMap<Int, Candidate>> = ConcurrentHashMap()
 
@@ -47,9 +45,11 @@ class Poll {
 
         fun startExpelPoll(session: Session, channel: GuildMessageChannel, allowPK: Boolean) {
             val voiceChannel = channel.guild.getVoiceChannelById(session.courtVoiceChannelId)
-            if (voiceChannel != null) {
-                Audio.play(Audio.Resource.EXPEL_POLL, voiceChannel)
-            }
+            voiceChannel?.play(Audio.Resource.EXPEL_POLL)
+            CmdUtils.schedule({
+                val vc = channel.guild.getVoiceChannelById(session.courtVoiceChannelId)
+                vc?.play(Audio.Resource.POLL_10S_REMAINING)
+            }, 20000)
 
             val embedBuilder = EmbedBuilder().apply {
                 setTitle("驅逐投票")
@@ -80,9 +80,7 @@ class Poll {
 
             CmdUtils.schedule({
                 val vc = channel.guild.getVoiceChannelById(session.courtVoiceChannelId)
-                if (vc != null) {
-                    Audio.play(Audio.Resource.POLL_10S_REMAINING, vc)
-                }
+                vc?.play(Audio.Resource.POLL_10S_REMAINING)
             }, 20000)
 
             CmdUtils.schedule({
@@ -104,7 +102,7 @@ class Poll {
                         setColor(MsgUtils.randomColor)
                         setDescription("放逐玩家: <@!" + winner.player.userId + ">")
                     }
-                    sendVoteResult(session, channel, message, resultEmbed, expelCandidates, false)
+                    sendVoteResult(session, channel, message, resultEmbed, expelCandidates)
 
                     expelCandidates.remove(channel.guild.idLong)
 
@@ -124,7 +122,7 @@ class Poll {
                             setColor(MsgUtils.randomColor)
                             setDescription("發生平票")
                         }
-                        sendVoteResult(session, channel, message, resultEmbed, expelCandidates, false)
+                        sendVoteResult(session, channel, message, resultEmbed, expelCandidates)
 
                         handleExpelPK(session, channel, message, winners)
                     } else {
@@ -134,7 +132,7 @@ class Poll {
                             setDescription("再次發生平票，本次驅逐無人出局")
                         }
                         message?.reply("再次平票，無人出局")?.queue()
-                        sendVoteResult(session, channel, message, resultEmbed, expelCandidates, false)
+                        sendVoteResult(session, channel, message, resultEmbed, expelCandidates)
                         expelCandidates.remove(channel.guild.idLong)
                     }
                 }
@@ -144,7 +142,7 @@ class Poll {
         fun sendVoteResult(
             session: Session, channel: GuildMessageChannel, message: Message?,
             resultEmbed: EmbedBuilder,
-            candidates: Map<Long, Map<Int, Candidate>>, police: Boolean
+            candidates: Map<Long, Map<Int, Candidate>>
         ) {
             val voted = mutableListOf<Long>()
 
@@ -175,10 +173,8 @@ class Poll {
                 false
             )
 
-            if (message != null)
-                message.channel.sendMessageEmbeds(resultEmbed.build()).queue()
-            else
-                channel.sendMessageEmbeds(resultEmbed.build()).queue()
+            message?.channel?.sendMessageEmbeds(resultEmbed.build())?.queue()
+                ?: channel.sendMessageEmbeds(resultEmbed.build()).queue()
         }
     }
 
@@ -223,8 +219,9 @@ class Poll {
         fun start(event: SlashCommandInteractionEvent) {
             event.deferReply().queue()
             if (!CmdUtils.isAdmin(event)) return
+            val guild = event.guild ?: return
 
-            WerewolfApplication.policeService.forceStartVoting(event.guild!!.idLong)
+            WerewolfApplication.policeService.forceStartVoting(guild.idLong)
             event.hook.editOriginal(":white_check_mark:").queue()
         }
 

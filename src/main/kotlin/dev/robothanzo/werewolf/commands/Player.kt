@@ -112,7 +112,7 @@ class Player {
     fun assign(event: SlashCommandInteractionEvent) {
         event.deferReply().queue()
         if (!CmdUtils.isAdmin(event)) return
-        val session = CmdUtils.getSession(event) ?: return
+        CmdUtils.getSession(event) ?: return
 
         try {
             WerewolfApplication.roleService.assignRoles(

@@ -1,6 +1,7 @@
 package dev.robothanzo.werewolf.service.impl
 
 import dev.robothanzo.werewolf.audio.Audio
+import dev.robothanzo.werewolf.audio.Audio.play
 import dev.robothanzo.werewolf.commands.Poll
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
@@ -49,9 +50,10 @@ class PoliceServiceImpl(
 
     override fun enrollPolice(event: ButtonInteractionEvent) {
         event.deferReply(true).queue()
-        val session = CmdUtils.getSession(event.guild!!) ?: return
+        val guild = event.guild ?: return
+        val session = CmdUtils.getSession(guild) ?: return
 
-        val policeSession = sessions[event.guild!!.idLong]
+        val policeSession = sessions[guild.idLong]
         if (policeSession == null) {
             event.hook.editOriginal(":x: 無法參選，時間已到").queue()
             return
@@ -60,32 +62,35 @@ class PoliceServiceImpl(
         val iterator = policeSession.candidates.entries.iterator()
         while (iterator.hasNext()) {
             val candidate = iterator.next()
-            if (event.user.idLong == candidate.value.player!!.userId) {
+            if (event.user.idLong == candidate.value.player.userId) {
                 if (policeSession.state.canEnroll()) { // ENROLLMENT -> Remove completely
                     iterator.remove()
                     event.hook.editOriginal(":white_check_mark: 已取消參選").queue()
 
                     val metadata: MutableMap<String, Any> = HashMap()
-                    metadata["playerId"] = candidate.value.player!!.id
-                    metadata["playerName"] = candidate.value.player!!.nickname
+                    metadata["playerId"] = candidate.value.player.id
+                    metadata["playerName"] = candidate.value.player.nickname
                     session.addLog(
                         LogType.POLICE_UNENROLLED,
-                        candidate.value.player!!.nickname + " 已取消參選警長", metadata
+                        buildString {
+                            append(candidate.value.player.nickname)
+                            append(" 已取消參選警長")
+                        }, metadata
                     )
                     gameSessionService.broadcastSessionUpdate(session)
 
                 } else if (policeSession.state.canQuit()) { // UNENROLLMENT -> Mark quit
                     candidate.value.quit = true
                     event.hook.editOriginal(":white_check_mark: 已取消參選").queue()
-                    event.guild!!.getTextChannelById(session.courtTextChannelId)
+                    event.guild?.getTextChannelById(session.courtTextChannelId)
                         ?.sendMessage(event.user.asMention + " 已取消參選")?.queue()
 
                     val metadata = mutableMapOf<String, Any>()
-                    metadata["playerId"] = candidate.value.player!!.id
-                    metadata["playerName"] = candidate.value.player!!.nickname
+                    metadata["playerId"] = candidate.value.player.id
+                    metadata["playerName"] = candidate.value.player.nickname
                     session.addLog(
                         LogType.POLICE_UNENROLLED,
-                        "${candidate.value.player!!.nickname} 已取消參選警長", metadata
+                        "${candidate.value.player.nickname} 已取消參選警長", metadata
                     )
                     gameSessionService.broadcastSessionUpdate(session)
                 } else {
@@ -141,16 +146,14 @@ class PoliceServiceImpl(
                 policeSession.stageEndTime = System.currentTimeMillis() + 30000
                 policeSession.candidates.clear()
 
-                policeSession.session!!.addLog(
+                policeSession.session.addLog(
                     LogType.POLICE_ENROLLMENT_STARTED,
                     "警長參選已開始", null
                 )
-                gameSessionService.broadcastSessionUpdate(policeSession.session!!)
+                gameSessionService.broadcastSessionUpdate(policeSession.session)
 
-                val vc = guild.getVoiceChannelById(policeSession.session!!.courtVoiceChannelId)
-                if (vc != null) {
-                    Audio.play(Audio.Resource.POLICE_ENROLL, vc)
-                }
+                val vc = guild.getVoiceChannelById(policeSession.session.courtVoiceChannelId)
+                vc?.play(Audio.Resource.POLICE_ENROLL)
                 val embed = EmbedBuilder()
                     .setTitle("參選警長").setDescription("30秒後立刻進入辯論，請加快手速!")
                     .setColor(MsgUtils.randomColor)
@@ -160,64 +163,56 @@ class PoliceServiceImpl(
                     .queue { msg -> policeSession.message = msg }
 
                 CmdUtils.schedule({
-                    val vc10s = guild.getVoiceChannelById(policeSession.session!!.courtVoiceChannelId)
-                    if (vc10s != null) {
-                        Audio.play(Audio.Resource.ENROLL_10S_REMAINING, vc10s)
-                    }
+                    val vc10s = guild.getVoiceChannelById(policeSession.session.courtVoiceChannelId)
+                    vc10s?.play(Audio.Resource.ENROLL_10S_REMAINING)
                 }, 20000)
                 CmdUtils.schedule({ next(guildId) }, 30000)
             }
 
             PoliceSession.State.ENROLLMENT -> {
                 if (policeSession.candidates.isEmpty()) {
-                    if (policeSession.message != null)
-                        policeSession.message!!.reply("無人參選，警徽撕毀").queue()
+                    policeSession.message?.reply("無人參選，警徽撕毀")?.queue()
                     interrupt(guildId)
                     return
                 }
 
                 val candidateMentions = policeSession.candidates.values.asSequence()
                     .sortedWith(Candidate.getComparator())
-                    .map { "<@!${it.player!!.userId}>" }
+                    .map { "<@!${it.player.userId}>" }
                     .toMutableList()
 
                 if (policeSession.candidates.size == 1) {
-                    if (policeSession.message != null)
-                        policeSession.message!!.reply("只有" + candidateMentions.first() + "參選，直接當選").queue()
-                    setPolice(policeSession.session!!, policeSession.candidates.values.iterator().next(), channel)
+                    policeSession.message?.reply("只有" + candidateMentions.first() + "參選，直接當選")?.queue()
+                    setPolice(policeSession.session, policeSession.candidates.values.iterator().next(), channel)
                     interrupt(guildId)
                     return
                 }
 
-                if (policeSession.message != null) {
-                    policeSession.message!!.replyEmbeds(
-                        EmbedBuilder().setTitle("參選警長結束")
-                            .setDescription(
-                                "參選的有: ${candidateMentions.joinToString("、")}\n備註:你可隨時再按一次按鈕以取消參選"
-                            )
-                            .setColor(MsgUtils.randomColor).build()
-                    ).queue()
-                }
+                policeSession.message?.replyEmbeds(
+                    EmbedBuilder().setTitle("參選警長結束")
+                        .setDescription(
+                            "參選的有: ${candidateMentions.joinToString("、")}\n備註:你可隨時再按一次按鈕以取消參選"
+                        )
+                        .setColor(MsgUtils.randomColor).build()
+                )?.queue()
 
                 policeSession.state = PoliceSession.State.SPEECH
-                gameSessionService.broadcastSessionUpdate(policeSession.session!!)
+                gameSessionService.broadcastSessionUpdate(policeSession.session)
 
                 // Start speech
                 speechService.startSpeechPoll(
                     guild, policeSession.message!!,
-                    policeSession.candidates.values.mapNotNull { it.player }
+                    policeSession.candidates.values.map { it.player }
                 ) { next(guildId) }
             }
 
             PoliceSession.State.SPEECH -> {
                 policeSession.state = PoliceSession.State.UNENROLLMENT
                 policeSession.stageEndTime = System.currentTimeMillis() + 20000
-                gameSessionService.broadcastSessionUpdate(policeSession.session!!)
+                gameSessionService.broadcastSessionUpdate(policeSession.session)
 
-                if (policeSession.message != null) {
-                    policeSession.message!!.channel.sendMessage("政見發表結束，參選人有20秒進行退選，20秒後將自動開始投票")
-                        .queue()
-                }
+                policeSession.message?.channel?.sendMessage("政見發表結束，參選人有20秒進行退選，20秒後將自動開始投票")
+                    ?.queue()
 
                 CmdUtils.schedule({ next(guildId) }, 20000)
             }
@@ -227,14 +222,13 @@ class PoliceServiceImpl(
                 policeSession.stageEndTime = System.currentTimeMillis() + 30000
 
                 if (policeSession.candidates.values.stream().allMatch { it.quit }) {
-                    if (policeSession.message != null)
-                        policeSession.message!!.reply("所有人退選，警徽撕毀").queue()
+                    policeSession.message?.reply("所有人退選，警徽撕毀")?.queue()
                     interrupt(guildId)
                     return
                 }
 
-                gameSessionService.broadcastSessionUpdate(policeSession.session!!)
-                startVoting(channel, false, policeSession)
+                gameSessionService.broadcastSessionUpdate(policeSession.session)
+                startVoting(channel, true, policeSession)
             }
 
             else -> {
@@ -246,7 +240,7 @@ class PoliceServiceImpl(
     override fun interrupt(guildId: Long) {
         val policeSession = sessions.remove(guildId)
         if (policeSession != null) {
-            gameSessionService.broadcastSessionUpdate(policeSession.session!!)
+            gameSessionService.broadcastSessionUpdate(policeSession.session)
         }
     }
 
@@ -259,10 +253,12 @@ class PoliceServiceImpl(
     }
 
     private fun startVoting(channel: GuildMessageChannel, allowPK: Boolean, policeSession: PoliceSession) {
-        val vc = channel.guild.getVoiceChannelById(policeSession.session!!.courtVoiceChannelId)
-        if (vc != null) {
-            Audio.play(Audio.Resource.POLICE_POLL, vc)
-        }
+        val vc = channel.guild.getVoiceChannelById(policeSession.session.courtVoiceChannelId)
+        vc?.play(Audio.Resource.POLICE_POLL)
+        CmdUtils.schedule({
+            val vc = channel.guild.getVoiceChannelById(policeSession.session.courtVoiceChannelId)
+            vc?.play(Audio.Resource.POLL_10S_REMAINING)
+        }, 20000)
         val embedBuilder = EmbedBuilder().setTitle("警長投票")
             .setDescription("30秒後立刻計票，請加快手速!\n若要改票可直接按下要改成的對象\n若要改為棄票需按下原本投給的使用者")
             .setColor(MsgUtils.randomColor)
@@ -272,12 +268,12 @@ class PoliceServiceImpl(
             .sortedWith(Candidate.getComparator())
             .filter { !it.quit }
             .forEach { player ->
-                val user = channel.guild.getMemberById(player.player!!.userId!!)
+                val user = channel.guild.getMemberById(player.player.userId!!)
                 if (user != null) {
                     buttons.add(
                         Button.primary(
-                            "votePolice${player.player!!.id}",
-                            "${player.player!!.nickname} (${user.user.name})"
+                            "votePolice${player.player.id}",
+                            "${player.player.nickname} (${user.user.name})"
                         )
                     )
                 }
@@ -288,10 +284,8 @@ class PoliceServiceImpl(
             .queue()
 
         CmdUtils.schedule({
-            val vc = channel.guild.getVoiceChannelById(policeSession.session!!.courtVoiceChannelId)
-            if (vc != null) {
-                Audio.play(Audio.Resource.POLL_10S_REMAINING, vc)
-            }
+            val vc = channel.guild.getVoiceChannelById(policeSession.session.courtVoiceChannelId)
+            vc?.play(Audio.Resource.POLL_10S_REMAINING)
         }, 20000)
         CmdUtils.schedule({
             finishVoting(channel, allowPK, policeSession)
@@ -301,28 +295,25 @@ class PoliceServiceImpl(
     private fun finishVoting(channel: GuildMessageChannel, allowPK: Boolean, policeSession: PoliceSession) {
         val winners = Candidate.getWinner(policeSession.candidates.values, null)
         if (winners.isEmpty()) {
-            if (policeSession.message != null)
-                policeSession.message!!.reply("沒有人投票，警徽撕毀").queue()
+            policeSession.message?.reply("沒有人投票，警徽撕毀")?.queue()
             interrupt(policeSession.guildId)
             return
         }
 
         if (winners.size == 1) {
             val winner = winners.first()
-            if (policeSession.message != null)
-                policeSession.message!!.reply("投票已結束，<@!" + winner.player!!.userId + "> 獲勝").queue()
+            policeSession.message?.reply("投票已結束，<@!" + winner.player.userId + "> 獲勝")?.queue()
 
             val resultEmbed = EmbedBuilder().setTitle("警長投票").setColor(MsgUtils.randomColor)
-                .setDescription("獲勝玩家: <@!" + winner.player!!.userId + ">")
+                .setDescription("獲勝玩家: <@!" + winner.player.userId + ">")
 
             val wrapper = mutableMapOf<Long, Map<Int, Candidate>>()
             wrapper[channel.guild.idLong] = policeSession.candidates
             Poll.sendVoteResult(
-                policeSession.session!!, channel, policeSession.message!!, resultEmbed, wrapper,
-                true
+                policeSession.session, channel, policeSession.message!!, resultEmbed, wrapper
             )
 
-            setPolice(policeSession.session!!, winner, channel)
+            setPolice(policeSession.session, winner, channel)
             interrupt(policeSession.guildId)
         } else {
             if (allowPK) {
@@ -332,8 +323,8 @@ class PoliceServiceImpl(
                 val wrapper = mutableMapOf<Long, Map<Int, Candidate>>()
                 wrapper[channel.guild.idLong] = policeSession.candidates
                 Poll.sendVoteResult(
-                    policeSession.session!!, channel, policeSession.message!!, resultEmbed,
-                    wrapper, true
+                    policeSession.session, channel, policeSession.message!!, resultEmbed,
+                    wrapper
                 )
 
                 handlePK(channel, winners, policeSession)
@@ -341,13 +332,12 @@ class PoliceServiceImpl(
                 val resultEmbed = EmbedBuilder().setTitle("警長投票")
                     .setColor(MsgUtils.randomColor)
                     .setDescription("平票第二次，警徽撕毀")
-                if (policeSession.message != null)
-                    policeSession.message!!.reply("平票第二次，警徽撕毀").queue()
+                policeSession.message?.reply("平票第二次，警徽撕毀")?.queue()
                 val wrapper = mutableMapOf<Long, Map<Int, Candidate>>()
                 wrapper[channel.guild.idLong] = policeSession.candidates
                 Poll.sendVoteResult(
-                    policeSession.session!!, channel, policeSession.message!!, resultEmbed,
-                    wrapper, true
+                    policeSession.session, channel, policeSession.message!!, resultEmbed,
+                    wrapper
                 )
                 interrupt(policeSession.guildId)
             }
@@ -355,47 +345,45 @@ class PoliceServiceImpl(
     }
 
     private fun handlePK(channel: GuildMessageChannel, winners: List<Candidate>, policeSession: PoliceSession) {
-        if (policeSession.message != null)
-            policeSession.message!!.reply("平票，請PK").queue()
+        policeSession.message?.reply("平票，請PK")?.queue()
 
         // Clear votes and reset candidates to only winners
         val newCandidates: MutableMap<Int, Candidate> = ConcurrentHashMap()
         for (winner in winners) {
             winner.electors.clear()
-            newCandidates[winner.player!!.id] = winner
+            newCandidates[winner.player.id] = winner
         }
         policeSession.candidates.clear()
         policeSession.candidates.putAll(newCandidates)
 
         speechService.startSpeechPoll(
             channel.guild, policeSession.message!!,
-            newCandidates.values.mapNotNull { it.player }
+            newCandidates.values.map { it.player }
         ) {
             policeSession.state = PoliceSession.State.VOTING
             policeSession.stageEndTime = System.currentTimeMillis() + 30000
-            gameSessionService.broadcastSessionUpdate(policeSession.session!!)
+            gameSessionService.broadcastSessionUpdate(policeSession.session)
             startVoting(channel, false, policeSession)
         }
     }
 
     private fun setPolice(session: Session, winner: Candidate, channel: GuildMessageChannel) {
         val member = channel.guild
-            .getMemberById(winner.player!!.userId!!)
-        if (member != null)
-            member.modifyNickname(member.effectiveName + " [警長]").queue()
+            .getMemberById(winner.player.userId!!)
+        member?.modifyNickname(member.effectiveName + " [警長]")?.queue()
 
-        val p = session.players[winner.player!!.id.toString()]
+        val p = session.players[winner.player.id.toString()]
         if (p != null) {
             p.police = true
         }
         sessionRepository.save(session)
 
         val metadata = mutableMapOf<String, Any>()
-        metadata["playerId"] = winner.player!!.id
-        metadata["playerName"] = winner.player!!.nickname
+        metadata["playerId"] = winner.player.id
+        metadata["playerName"] = winner.player.nickname
         session.addLog(
             LogType.POLICE_ELECTED,
-            "${winner.player!!.nickname} 當當選警長", metadata
+            "${winner.player.nickname} 當當選警長", metadata
         )
 
         gameSessionService.broadcastSessionUpdate(session)
@@ -427,13 +415,15 @@ class PoliceServiceImpl(
 
             for (p in session.fetchAlivePlayers().values) {
                 if (p.userId == player.userId) continue
-                val user = discordService.jda!!.getUserById(p.userId!!) // Assuming user cached or available
-                if (user != null) {
-                    transferSession.possibleRecipientIds.add(p.userId!!)
+                p.userId?.let { uid ->
+                    val user = discordService.jda?.getUserById(uid) // Assuming the user is cached or available
+                    if (user != null) {
+                        transferSession.possibleRecipientIds.add(uid)
+                    }
                 }
             }
 
-            val courtChannel = guild.getTextChannelById(session.courtTextChannelId)!!
+            val courtChannel = guild.getTextChannelById(session.courtTextChannelId) ?: return
             val message = courtChannel.sendMessageEmbeds(
                 EmbedBuilder()
                     .setTitle("移交警徽").setColor(MsgUtils.randomColor)
@@ -461,67 +451,59 @@ class PoliceServiceImpl(
     }
 
     override fun selectNewPolice(event: EntitySelectInteractionEvent) {
-        if (transferSessions.containsKey(event.guild!!.idLong)) {
-            val target = event.mentions.members.first()
-            val session = transferSessions[event.guild!!.idLong]!!
+        val guild = event.guild ?: return
+        val session = transferSessions[guild.idLong] ?: return
+        val target = event.mentions.members.first()
 
-            if (!session.possibleRecipientIds.contains(target.idLong)) {
-                event.reply(":x: 你不能移交警徽給這個人").setEphemeral(true).queue()
-            } else {
-                if (session.senderId == event.user.idLong) {
-                    val guildSession = sessionRepository.findByGuildId(event.guild!!.idLong).orElse(null) ?: return
-                    for (player in guildSession.players.values) {
-                        if (player.userId == target.idLong) {
-                            session.recipientId = player.id
-                            event.reply(":white_check_mark: 請按下移交來完成移交動作").setEphemeral(true).queue()
-                            break
-                        }
+        if (!session.possibleRecipientIds.contains(target.idLong)) {
+            event.reply(":x: 你不能移交警徽給這個人").setEphemeral(true).queue()
+        } else {
+            if (session.senderId == event.user.idLong) {
+                val guildSession = sessionRepository.findByGuildId(guild.idLong).orElse(null) ?: return
+                for (player in guildSession.players.values) {
+                    if (player.userId == target.idLong) {
+                        session.recipientId = player.id
+                        event.reply(":white_check_mark: 請按下移交來完成移交動作").setEphemeral(true).queue()
+                        break
                     }
-                } else {
-                    event.reply(":x: 你不是原本的警長").setEphemeral(true).queue()
                 }
+            } else {
+                event.reply(":x: 你不是原本的警長").setEphemeral(true).queue()
             }
         }
     }
 
     override fun confirmNewPolice(event: ButtonInteractionEvent) {
-        if (transferSessions.containsKey(event.guild!!.idLong)) {
-            val session = transferSessions[event.guild!!.idLong]!!
+        val guild = event.guild ?: return
+        if (transferSessions.containsKey(guild.idLong)) {
+            val session = transferSessions[guild.idLong]!!
             if (session.senderId == event.user.idLong) {
                 if (session.recipientId != null) {
-                    // Update Recipient
-                    val recipientPlayer = sessionRepository.findByGuildId(event.guild!!.idLong).get()
-                        .players[session.recipientId.toString()]!!
-                    recipientPlayer.police = true
+                    val guildSession = sessionRepository.findByGuildId(guild.idLong).orElse(null) ?: return
 
-                    // We need to update DB directly for specific fields if we want atomicity, 
-                    // but here we are loading session. 
-                    // To follow original logic: set("players." + session.getRecipientId() + ".police", true)
-                    // But using repository save is fine for now as we are in single thread mostly per request.
-                    // Wait, original logic used MongoDB Updates.set.
-                    // I should reproduce the side effects: Nickname update and DB update.
-
-                    // Update session object
-                    val guildSession = sessionRepository.findByGuildId(event.guild!!.idLong).get()
-                    guildSession.players[session.recipientId.toString()]!!.police = true
-
-                    val recipientMember = event.guild!!.getMemberById(recipientPlayer.userId!!)
-                    if (recipientMember != null) {
-                        recipientPlayer.updateNickname(recipientMember)
-                        event.reply(":white_check_mark: 警徽已移交給 " + recipientMember.asMention).queue()
+                    val recipientPlayer = guildSession.players[session.recipientId.toString()]
+                    if (recipientPlayer != null) {
+                        recipientPlayer.police = true
+                        recipientPlayer.userId?.let { uid ->
+                            val recipientMember = guild.getMemberById(uid)
+                            if (recipientMember != null) {
+                                recipientPlayer.updateNickname(recipientMember)
+                                event.reply(":white_check_mark: 警徽已移交給 " + recipientMember.asMention).queue()
+                            }
+                        }
                     }
 
                     // Update Sender
                     val senderEntry = guildSession.players.values.firstOrNull { it.userId == session.senderId }
                     senderEntry?.police = false
-                    val senderMember = event.guild!!.getMemberById(session.senderId)
+                    val senderMember = guild.getMemberById(session.senderId)
                     if (senderEntry != null && senderMember != null) {
                         senderEntry.updateNickname(senderMember)
                     }
 
                     sessionRepository.save(guildSession)
-                    log.info("Transferred police to {} in guild {}", session.recipientId, event.guild!!.idLong)
-                    transferSessions.remove(event.guild!!.idLong)
+                    log.info("Transferred police to {} in guild {}", session.recipientId, guild.idLong)
+                    transferSessions.remove(guild.idLong)
 
                     session.callback?.invoke()
 
@@ -535,10 +517,11 @@ class PoliceServiceImpl(
     }
 
     override fun destroyPolice(event: ButtonInteractionEvent) {
-        if (transferSessions.containsKey(event.guild!!.idLong)) {
-            val session = transferSessions[event.guild!!.idLong]!!
+        val guild = event.guild ?: return
+        if (transferSessions.containsKey(guild.idLong)) {
+            val session = transferSessions[guild.idLong]!!
             if (session.senderId == event.user.idLong) {
-                transferSessions.remove(event.guild!!.idLong)
+                transferSessions.remove(guild.idLong)
                 event.reply(":white_check_mark: 警徽已撕毀").setEphemeral(false).queue()
                 session.callback?.invoke()
             } else {

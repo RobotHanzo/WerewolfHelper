@@ -1,6 +1,7 @@
 package dev.robothanzo.werewolf.service.impl
 
 import dev.robothanzo.werewolf.audio.Audio
+import dev.robothanzo.werewolf.audio.Audio.play
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.SpeechOrder
 import dev.robothanzo.werewolf.model.SpeechSession
@@ -16,12 +17,10 @@ import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.utils.TimeFormat
-import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import java.time.Duration
@@ -34,9 +33,6 @@ class SpeechServiceImpl(
     private val discordService: DiscordService,
     @Lazy private val gameSessionService: GameSessionService
 ) : SpeechService {
-
-    private val log = LoggerFactory.getLogger(SpeechServiceImpl::class.java)
-
     private val speechSessions: MutableMap<Long, SpeechSession> = ConcurrentHashMap()
     private val timers: MutableMap<Long, Thread> = ConcurrentHashMap()
 
@@ -59,14 +55,12 @@ class SpeechServiceImpl(
         val order = SpeechOrder.getRandomOrder()
         val target = players.shuffled().first()
 
-        if (enrollMessage != null) {
-            enrollMessage.replyEmbeds(
-                EmbedBuilder()
-                    .setTitle("隨機抽取投票辯論順序")
-                    .setDescription("抽到的順序: 玩家" + target.id + order.toString())
-                    .setColor(MsgUtils.randomColor).build()
-            ).queue()
-        }
+        enrollMessage?.replyEmbeds(
+            EmbedBuilder()
+                .setTitle("隨機抽取投票辯論順序")
+                .setDescription("抽到的順序: 玩家" + target.id + order.toString())
+                .setColor(MsgUtils.randomColor).build()
+        )?.queue()
 
         changeOrder(guild.idLong, order, players, target)
         nextSpeaker(guild.idLong)
@@ -92,9 +86,7 @@ class SpeechServiceImpl(
     }
 
     override fun setSpeechOrder(guildId: Long, order: SpeechOrder) {
-        val session = sessionRepository.findByGuildId(guildId).orElse(null)
-        if (session == null)
-            return
+        val session = sessionRepository.findByGuildId(guildId).orElse(null) ?: return
 
         var target: Session.Player? = null
         for (player in session.fetchAlivePlayers().values) {
@@ -118,10 +110,9 @@ class SpeechServiceImpl(
 
     override fun handleOrderSelection(event: StringSelectInteractionEvent) {
         event.deferReply(true).queue()
-        val guildId = event.guild!!.idLong
-        val session = sessionRepository.findByGuildId(guildId).orElse(null)
-        if (session == null)
-            return
+        val guild = event.guild ?: return
+        val guildId = guild.idLong
+        val session = sessionRepository.findByGuildId(guildId).orElse(null) ?: return
 
         val order = SpeechOrder.fromString(event.selectedOptions.first().value)
         if (!speechSessions.containsKey(guildId)) {
@@ -159,10 +150,9 @@ class SpeechServiceImpl(
 
     override fun confirmOrder(event: ButtonInteractionEvent) {
         event.deferReply(true).queue()
-        val guildId = event.guild!!.idLong
-        val session = sessionRepository.findByGuildId(guildId).orElse(null)
-        if (session == null)
-            return
+        val guild = event.guild ?: return
+        val guildId = guild.idLong
+        val session = sessionRepository.findByGuildId(guildId).orElse(null) ?: return
 
         val speechSession = speechSessions[guildId]
         if (speechSession == null) {
@@ -194,7 +184,8 @@ class SpeechServiceImpl(
 
     override fun skipSpeech(event: ButtonInteractionEvent) {
         event.deferReply().queue()
-        val guildId = event.guild!!.idLong
+        val guild = event.guild ?: return
+        val guildId = guild.idLong
         val speechSession = speechSessions[guildId]
 
         if (speechSession != null) {
@@ -213,18 +204,19 @@ class SpeechServiceImpl(
 
     override fun interruptSpeech(event: ButtonInteractionEvent) {
         event.deferReply(true).queue()
-        val guildId = event.guild!!.idLong
+        val guild = event.guild ?: return
+        val guildId = guild.idLong
         val speechSession = speechSessions[guildId]
 
         if (speechSession != null) {
-            if (speechSession.lastSpeaker != null && !event.member!!.hasPermission(Permission.ADMINISTRATOR)) {
+            val member = event.member ?: return
+            if (speechSession.lastSpeaker != null && !member.hasPermission(Permission.ADMINISTRATOR)) {
                 if (event.user.idLong == speechSession.lastSpeaker) {
                     event.hook.editOriginal(":x: 若要跳過發言請按左邊的跳過按鈕").queue()
                 } else {
-                    val session = speechSession.session!!
-                    if (event.member!!.roles
-                            .contains(event.guild!!.getRoleById(session.spectatorRoleId))
-                    ) {
+                    val session = speechSession.session
+                    val spectatorRole = guild.getRoleById(session.spectatorRoleId)
+                    if (spectatorRole != null && member.roles.contains(spectatorRole)) {
                         event.hook.editOriginal(":x: 旁觀者不得投票").queue()
                     } else {
                         if (speechSession.interruptVotes.contains(event.user.idLong)) {
@@ -270,9 +262,7 @@ class SpeechServiceImpl(
         if (speechSessions.containsKey(guildId))
             return
 
-        val session = sessionRepository.findByGuildId(guildId).orElse(null)
-        if (session == null)
-            return
+        val session = sessionRepository.findByGuildId(guildId).orElse(null) ?: return
 
         val speechSession = SpeechSession(
             guildId = guildId,
@@ -293,28 +283,24 @@ class SpeechServiceImpl(
                             guild.mute(member, true).queue()
                         }
                     }
-                } catch (ignored: Exception) {
+                } catch (_: Exception) {
                 }
             }
             if (player.police) {
-                if (channel != null) {
-                    channel.sendMessageEmbeds(
-                        EmbedBuilder()
-                            .setTitle("警長請選擇發言順序")
-                            .setDescription("警長尚未選擇順序")
-                            .setColor(MsgUtils.randomColor).build()
-                    )
-                        .setComponents(
-                            ActionRow.of(
-                                StringSelectMenu.create("selectOrder")
-                                    .addOption(SpeechOrder.UP.toString(), "up", SpeechOrder.UP.toEmoji())
-                                    .addOption(SpeechOrder.DOWN.toString(), "down", SpeechOrder.DOWN.toEmoji())
-                                    .setPlaceholder("請警長按此選擇發言順序").build()
-                            ),
-                            ActionRow.of(Button.success("confirmOrder", "確認選取"))
-                        )
-                        .queue()
-                }
+                channel?.sendMessageEmbeds(
+                    EmbedBuilder()
+                        .setTitle("警長請選擇發言順序")
+                        .setDescription("警長尚未選擇順序")
+                        .setColor(MsgUtils.randomColor).build()
+                )?.setComponents(
+                    ActionRow.of(
+                        StringSelectMenu.create("selectOrder")
+                            .addOption(SpeechOrder.UP.toString(), "up", SpeechOrder.UP.toEmoji())
+                            .addOption(SpeechOrder.DOWN.toString(), "down", SpeechOrder.DOWN.toEmoji())
+                            .setPlaceholder("請警長按此選擇發言順序").build()
+                    ),
+                    ActionRow.of(Button.success("confirmOrder", "確認選取"))
+                )?.queue()
                 gameSessionService.broadcastUpdate(guildId)
                 return
             }
@@ -324,14 +310,12 @@ class SpeechServiceImpl(
         val shuffled = session.fetchAlivePlayers().values.shuffled()
         val randOrder = SpeechOrder.getRandomOrder()
         changeOrder(guildId, randOrder, session.fetchAlivePlayers().values, shuffled.first())
-        if (channel != null) {
-            channel.sendMessageEmbeds(
-                EmbedBuilder()
-                    .setTitle("找不到警長，自動抽籤發言順序")
-                    .setDescription("抽到的順序: 玩家${shuffled.first().id}$randOrder")
-                    .setColor(MsgUtils.randomColor).build()
-            ).queue()
-        }
+        channel?.sendMessageEmbeds(
+            EmbedBuilder()
+                .setTitle("找不到警長，自動抽籤發言順序")
+                .setDescription("抽到的順序: 玩家${shuffled.first().id}$randOrder")
+                .setColor(MsgUtils.randomColor).build()
+        )?.queue()
 
         for (c in guild.textChannels) {
             c.sendMessage("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯我是白天分隔線⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯").queue()
@@ -358,17 +342,15 @@ class SpeechServiceImpl(
             try {
                 if (seconds > 30) {
                     Thread.sleep((seconds - 30) * 1000L)
-                    if (voiceChannel != null)
-                        Audio.play(Audio.Resource.TIMER_30S_REMAINING, voiceChannel)
+                    voiceChannel?.play(Audio.Resource.TIMER_30S_REMAINING)
                     Thread.sleep(30000)
                 } else {
                     Thread.sleep(seconds * 1000L)
                 }
-                if (voiceChannel != null)
-                    Audio.play(Audio.Resource.TIMER_ENDED, voiceChannel)
+                voiceChannel?.play(Audio.Resource.TIMER_ENDED)
                 message.editMessage(message.contentRaw + " (已結束)").queue()
                 message.reply("計時結束").queue()
-            } catch (e: InterruptedException) {
+            } catch (_: InterruptedException) {
                 message.reply("計時被終止").queue()
             }
         }
@@ -412,15 +394,13 @@ class SpeechServiceImpl(
     }
 
     override fun setAllMute(guildId: Long, mute: Boolean) {
-        val guild = discordService.getGuild(guildId)
-        if (guild == null)
-            return
+        val guild = discordService.getGuild(guildId) ?: return
         for (member in guild.members) {
             if (member.hasPermission(Permission.ADMINISTRATOR))
                 continue
             try {
                 guild.mute(member, mute).queue()
-            } catch (ignored: Exception) {
+            } catch (_: Exception) {
             }
         }
     }
@@ -429,9 +409,7 @@ class SpeechServiceImpl(
         guildId: Long, order: SpeechOrder, playersRaw: Collection<Session.Player>,
         target: Session.Player
     ) {
-        val speechSession = speechSessions[guildId]
-        if (speechSession == null)
-            return
+        val speechSession = speechSessions[guildId] ?: return
 
         val sortedPlayers = playersRaw.sortedBy { it.id }
         var police: Session.Player? = null
@@ -463,23 +441,21 @@ class SpeechServiceImpl(
     }
 
     private fun nextSpeaker(guildId: Long) {
-        val speechSession = speechSessions[guildId]
-        if (speechSession == null)
-            return
+        val speechSession = speechSessions[guildId] ?: return
 
         speechSession.interruptVotes.clear()
         stopCurrentSpeaker(speechSession)
 
         val guild = discordService.getGuild(guildId) ?: return
-        val session = speechSession.session!!
+        val session = speechSession.session
 
-        if (speechSession.lastSpeaker != null) {
-            val member = guild.getMemberById(speechSession.lastSpeaker!!)
+        speechSession.lastSpeaker?.let { lastSpeakerId ->
+            val member = guild.getMemberById(lastSpeakerId)
             if (member != null) {
                 try {
                     if (session.muteAfterSpeech)
                         guild.mute(member, true).queue()
-                } catch (ignored: Exception) {
+                } catch (_: Exception) {
                 }
             }
         }
@@ -496,24 +472,26 @@ class SpeechServiceImpl(
 
         val player = speechSession.order.removeFirst()
         speechSession.lastSpeaker = player.userId
-        val time = if (player.police) 210 else 180
+        val time = getSpeakerDuration(player.police)
         speechSession.totalSpeechTime = time
         speechSession.currentSpeechEndTime = System.currentTimeMillis() + (time * 1000L)
 
+        // Update session timer to match TOTAL remaining time
+        val totalDuration = time + getTotalQueueDuration(speechSession.order)
+        session.currentStepEndTime = System.currentTimeMillis() + (totalDuration * 1000L)
+        sessionRepository.save(session)
         gameSessionService.broadcastSessionUpdate(session)
 
         val t = thread(start = true) {
             try {
-                val member = guild.getMemberById(player.userId!!)
-                if (member != null) {
-                    guild.mute(member, false).queue()
+                player.userId?.let { userId ->
+                    val member = guild.getMemberById(userId)
+                    member?.let { guild.mute(it, false).queue() }
                 }
-            } catch (ignored: Exception) {
+            } catch (_: Exception) {
             }
 
-            val channel = guild.getTextChannelById(speechSession.channelId) as TextChannel?
-            if (channel == null)
-                return@thread
+            val channel = guild.getTextChannelById(speechSession.channelId) ?: return@thread
 
             val message = channel.sendMessage("<@!" + player.userId + "> 你有" + time + "秒可以發言\n")
                 .setComponents(
@@ -527,19 +505,16 @@ class SpeechServiceImpl(
             val voiceChannel = guild.getVoiceChannelById(session.courtVoiceChannelId)
             try {
                 Thread.sleep((time - 30) * 1000L)
-                if (voiceChannel != null)
-                    Audio.play(Audio.Resource.TIMER_30S_REMAINING, voiceChannel)
+                voiceChannel?.play(Audio.Resource.TIMER_30S_REMAINING)
                 Thread.sleep(35000)
-                if (voiceChannel != null)
-                    Audio.play(Audio.Resource.TIMER_ENDED, voiceChannel)
+                voiceChannel?.play(Audio.Resource.TIMER_ENDED)
                 message.reply("計時結束").queue()
                 nextSpeaker(guildId)
-            } catch (ignored: InterruptedException) {
-                if (voiceChannel != null)
-                    Audio.play(Audio.Resource.TIMER_ENDED, voiceChannel)
+            } catch (_: InterruptedException) {
+                voiceChannel?.play(Audio.Resource.TIMER_ENDED)
             } catch (ignored: Exception) {
-                if (voiceChannel != null)
-                    Audio.play(Audio.Resource.TIMER_ENDED, voiceChannel)
+                ignored.printStackTrace()
+                voiceChannel?.play(Audio.Resource.TIMER_ENDED)
                 message.reply("發言中斷（可能發言者離開或發生錯誤）").queue()
                 nextSpeaker(guildId)
             }
@@ -552,5 +527,16 @@ class SpeechServiceImpl(
             session.speakingThread!!.interrupt()
             session.speakingThread = null
         }
+    }
+    private fun getSpeakerDuration(isPolice: Boolean): Int {
+        return if (isPolice) 210 else 180
+    }
+
+    private fun getTotalQueueDuration(queue: List<Session.Player>): Int {
+        var duration = 0
+        for (p in queue) {
+            duration += getSpeakerDuration(p.police)
+        }
+        return duration
     }
 }

@@ -10,11 +10,12 @@ import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.utils.ActionTask
 import dev.robothanzo.werewolf.utils.runActions
 import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 
 @Service
 class GameActionServiceImpl(
-    private val gameSessionService: GameSessionService,
+    @Lazy private val gameSessionService: GameSessionService,
     private val discordService: DiscordService,
     private val sessionRepository: SessionRepository
 ) : GameActionService {
@@ -456,5 +457,35 @@ class GameActionServiceImpl(
         if (percent != null)
             data["percent"] = percent
         gameSessionService.broadcastEvent("PROGRESS", data)
+    }
+
+    override fun muteAll(guildId: Long, mute: Boolean) {
+        val session = sessionRepository.findByGuildId(guildId)
+            .orElseThrow { RuntimeException("Session not found") }
+
+        val jda = discordService.jda
+        val guild = jda!!.getGuildById(guildId) ?: return
+
+        // Mute voice channel logic if applicable (typically mute everyone in court voice channel)
+        if (session.courtVoiceChannelId != 0L) {
+            val voiceChannel = guild.getVoiceChannelById(session.courtVoiceChannelId)
+            if (voiceChannel != null) {
+                // This is a naive implementation; improved one would iterate members or use channel overrides
+                // But for basic bot logic, we often rely on SpeechService to manage specific mutes.
+                // However, user asked for "muteAll".
+                // Let's defer to SpeechService's setAllMute logic but implemented here or call it?
+                // For now, I'll invoke speechService if available or implement basic member mute.
+                // Given `GameActionServiceImpl` dependencies, injecting `SpeechService` might cause cycles.
+
+                // Let's implement directly: Mute all members in the VC
+                for (member in voiceChannel.members) {
+                    // Check if member is judge? Judge usually shouldn't be muted?
+                    // Logic: Mute everyone if mute=true.
+                    if (!member.user.isBot) {
+                        member.mute(mute).queue()
+                    }
+                }
+            }
+        }
     }
 }

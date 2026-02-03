@@ -22,17 +22,8 @@ export const useGameActions = (
         customPlayers?: any[];
     }>({visible: false, type: null});
 
-    const addLog = (msg: string) => {
-        setGameState(prev => ({
-            ...prev,
-            logs: [{
-                id: Date.now().toString() + Math.random().toString(36).slice(2),
-                timestamp: new Date().toLocaleTimeString(),
-                message: msg,
-                type: 'info' as const
-            }, ...prev.logs].slice(0, 50)
-        }));
-    };
+    // Removed addLog function
+
 
     const handleAction = async (playerId: string, actionType: string) => {
         if (!guildId) return;
@@ -44,8 +35,6 @@ export const useGameActions = (
             return;
         }
 
-        const playerName = player.name;
-        addLog(t('gameLog.adminCommand', {action: actionType, player: playerName}));
 
         try {
             if (actionType === 'kill') {
@@ -77,21 +66,16 @@ export const useGameActions = (
 
         } catch (error) {
             console.error('Action failed:', error);
-            addLog(t('errors.actionFailed', {action: actionType}));
+
         }
     };
 
     const handleGlobalAction = (action: string) => {
-        addLog(t('gameLog.adminGlobalCommand', {action}));
+
         if (action === 'start_game') {
             setGameState(prev => ({
                 ...prev, phase: 'NIGHT', dayCount: 1, timerSeconds: 30,
-                logs: [...prev.logs, {
-                    id: Date.now().toString() + Math.random().toString(36).slice(2),
-                    timestamp: new Date().toLocaleTimeString(),
-                    message: t('gameLog.gameStarted'),
-                    type: 'alert'
-                }]
+                logs: [...prev.logs]
             }));
             // Also call API to start game logic on backend
             const performStart = async () => {
@@ -106,19 +90,29 @@ export const useGameActions = (
             performStart();
 
         } else if (action === 'next_phase') {
-            setGameState(prev => {
-                const phases: GamePhase[] = ['NIGHT', 'DAY', 'VOTING'];
-                const currentIdx = phases.indexOf(prev.phase as any);
-                const nextPhase = currentIdx > -1 ? phases[(currentIdx + 1) % phases.length] : 'NIGHT';
-                return {
-                    ...prev,
-                    phase: nextPhase,
-                    timerSeconds: nextPhase === 'NIGHT' ? 30 : 60,
-                    dayCount: nextPhase === 'NIGHT' ? prev.dayCount + 1 : prev.dayCount
-                };
-            });
+            if (guildId) {
+                // Use new API if available
+                api.nextState(guildId).then(() => {
+
+                }).catch(err => {
+                    console.error("Next state failed", err);
+
+                });
+            } else {
+                setGameState(prev => {
+                    const phases: GamePhase[] = ['NIGHT', 'DAY', 'VOTING'];
+                    const currentIdx = phases.indexOf(prev.phase as any);
+                    const nextPhase = currentIdx > -1 ? phases[(currentIdx + 1) % phases.length] : 'NIGHT';
+                    return {
+                        ...prev,
+                        phase: nextPhase,
+                        timerSeconds: nextPhase === 'NIGHT' ? 30 : 60,
+                        dayCount: nextPhase === 'NIGHT' ? prev.dayCount + 1 : prev.dayCount
+                    };
+                });
+            }
         } else if (action === 'pause') {
-            addLog(t('gameLog.gamePaused'));
+
         } else if (action === 'reset') {
             const performReset = async () => {
                 setOverlayState({
@@ -146,7 +140,6 @@ export const useGameActions = (
                     console.error("Reset failed", error);
                     setOverlayState(prev => {
                         const errorMsg = `${t('errors.error')}: ${error.message || t('errors.unknownError')}`;
-                        // Dedup log
                         const logs = [...prev.logs];
                         if (!logs.some(l => l.includes(error.message))) {
                             logs.push(errorMsg);
@@ -162,7 +155,7 @@ export const useGameActions = (
             };
             performReset();
         } else if (action === 'random_assign') {
-            addLog(t('gameLog.randomizeRoles'));
+
 
             const performRandomAssign = async () => {
                 setOverlayState({
@@ -190,9 +183,7 @@ export const useGameActions = (
                     console.error("Assign failed", error);
                     setOverlayState(prev => {
                         const errorMsg = `${t('errors.error')}: ${error.message || t('errors.unknownError')}`;
-                        // Dedup log: Check if the error message content is already present in any log
                         const logs = [...prev.logs];
-                        // We check broadly for the error message part to catch both raw backend messages and formatted ones
                         if (!logs.some(l => l.includes(error.message))) {
                             logs.push(errorMsg);
                         }
@@ -210,9 +201,9 @@ export const useGameActions = (
         } else if (action === 'timer_start') {
             setShowTimerModal(true);
         } else if (action === 'mute_all') {
-            if (guildId) api.muteAll(guildId).then(() => addLog(t('gameLog.manualCommand', {cmd: 'Mute All'})));
+            if (guildId) api.muteAll(guildId);
         } else if (action === 'unmute_all') {
-            if (guildId) api.unmuteAll(guildId).then(() => addLog(t('gameLog.manualCommand', {cmd: 'Unmute All'})));
+            if (guildId) api.unmuteAll(guildId);
         } else if (action === 'assign_judge' || action === 'demote_judge') {
             if (guildId) {
                 api.getGuildMembers(guildId).then(members => {
@@ -240,7 +231,7 @@ export const useGameActions = (
                     });
                 }).catch(err => {
                     console.error("Failed to fetch members", err);
-                    addLog(t('errors.error'));
+
                 });
             }
         } else if (action === 'force_police') {
@@ -251,7 +242,6 @@ export const useGameActions = (
     const handleTimerStart = (seconds: number) => {
         if (guildId) {
             api.manualStartTimer(guildId, seconds);
-            addLog(t('gameLog.manualCommand', {cmd: `Timer ${seconds}s`}));
         }
     };
 
@@ -261,13 +251,10 @@ export const useGameActions = (
 
         if (playerSelectModal.type === 'ASSIGN_JUDGE') {
             await api.updateUserRole(guildId, player.userId, 'JUDGE');
-            addLog(t('gameLog.manualCommand', {cmd: `Promote ${player.name} to Judge`}));
         } else if (playerSelectModal.type === 'DEMOTE_JUDGE') {
             await api.updateUserRole(guildId, player.userId, 'SPECTATOR');
-            addLog(t('gameLog.manualCommand', {cmd: `Demote ${player.name}`}));
         } else if (playerSelectModal.type === 'FORCE_POLICE') {
             await api.setPolice(guildId, player.userId);
-            addLog(t('gameLog.manualCommand', {cmd: `Force Police ${player.name}`}));
         }
 
         // Close modal after action?
@@ -287,6 +274,6 @@ export const useGameActions = (
         setDeathConfirmPlayerId,
         playerSelectModal,
         setPlayerSelectModal,
-        addLog
+
     };
 };

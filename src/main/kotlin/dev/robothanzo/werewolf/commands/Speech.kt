@@ -22,7 +22,7 @@ class Speech {
         event.deferReply(false).queue()
         if (!CmdUtils.isAdmin(event)) return
 
-        val session = CmdUtils.getSession(event) ?: return
+        CmdUtils.getSession(event) ?: return
 
         WerewolfApplication.speechService.startAutoSpeechFlow(
             event.guild!!.idLong,

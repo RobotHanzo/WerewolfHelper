@@ -182,6 +182,29 @@ export class ApiClient {
         return this.request(`/api/sessions/${guildId}/reset`, {method: 'POST'});
     }
 
+    // Game State Machine
+    async getGameState(guildId: string) {
+        return this.request(`/api/sessions/${guildId}/state`);
+    }
+
+    async nextState(guildId: string) {
+        return this.request(`/api/sessions/${guildId}/state/next`, {method: 'POST'});
+    }
+
+    async setState(guildId: string, stepId: string) {
+        return this.request(`/api/sessions/${guildId}/state/set`, {
+            method: 'POST',
+            body: JSON.stringify({stepId})
+        });
+    }
+
+    async stateAction(guildId: string, action: any) {
+        return this.request(`/api/sessions/${guildId}/state/action`, {
+            method: 'POST',
+            body: JSON.stringify(action)
+        });
+    }
+
     // New Commands (Timer, Voice, Roles)
     async manualStartTimer(guildId: string, duration: number) {
         return this.request(`/api/sessions/${guildId}/speech/manual-start`, {

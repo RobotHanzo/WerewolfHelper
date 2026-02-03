@@ -4,10 +4,7 @@ import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.UserRole
 import dev.robothanzo.werewolf.security.annotations.CanManageGuild
 import dev.robothanzo.werewolf.security.annotations.CanViewGuild
-import dev.robothanzo.werewolf.service.GameActionService
-import dev.robothanzo.werewolf.service.GameSessionService
-import dev.robothanzo.werewolf.service.PlayerService
-import dev.robothanzo.werewolf.service.RoleService
+import dev.robothanzo.werewolf.service.*
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -17,8 +14,60 @@ class GameController(
     private val playerService: PlayerService,
     private val roleService: RoleService,
     private val gameActionService: GameActionService,
-    private val gameSessionService: GameSessionService
+    private val gameSessionService: GameSessionService,
+    private val gameStateService: GameStateService
 ) {
+
+    // --- Game State ---
+    @GetMapping("/state")
+    @CanViewGuild
+    fun getGameState(@PathVariable guildId: Long): ResponseEntity<*> {
+        val session = gameSessionService.getSession(guildId)
+            .orElseThrow { Exception("Session not found") }
+        return ResponseEntity.ok(
+            mapOf(
+                "success" to true,
+                "currentState" to session.currentState,
+                "currentStep" to gameStateService.getCurrentStep(session)?.name,
+                "day" to session.day,
+                "stateData" to session.stateData
+            )
+        )
+    }
+
+    @PostMapping("/state/next")
+    @CanManageGuild
+    fun nextState(@PathVariable guildId: Long): ResponseEntity<*> {
+        val session = gameSessionService.getSession(guildId)
+            .orElseThrow { Exception("Session not found") }
+        gameStateService.nextStep(session)
+        return ResponseEntity.ok(mapOf("success" to true))
+    }
+
+    @PostMapping("/state/set")
+    @CanManageGuild
+    fun setState(
+        @PathVariable guildId: Long,
+        @RequestBody body: Map<String, String>
+    ): ResponseEntity<*> {
+        val session = gameSessionService.getSession(guildId)
+            .orElseThrow { Exception("Session not found") }
+        val stepId = body["stepId"] ?: throw IllegalArgumentException("stepId is missing")
+        gameStateService.startStep(session, stepId)
+        return ResponseEntity.ok(mapOf("success" to true))
+    }
+
+    @PostMapping("/state/action")
+    @CanManageGuild
+    fun stateAction(
+        @PathVariable guildId: Long,
+        @RequestBody body: Map<String, Any>
+    ): ResponseEntity<*> {
+        val session = gameSessionService.getSession(guildId)
+            .orElseThrow { Exception("Session not found") }
+        val result = gameStateService.handleInput(session, body)
+        return ResponseEntity.ok(result)
+    }
 
     // --- Players ---
     @GetMapping("/players")
@@ -211,6 +260,10 @@ class GameController(
                 .orElseThrow { Exception("Session not found") }
             session.addLog(LogType.GAME_STARTED, "遊戲正式開始！", null)
             gameSessionService.saveSession(session)
+
+            // Start the first step (Night Phase)
+            gameStateService.startStep(session, "NIGHT_PHASE")
+            
             gameSessionService.broadcastSessionUpdate(session)
             ResponseEntity.ok(mapOf("success" to true))
         } catch (e: Exception) {

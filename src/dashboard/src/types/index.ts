@@ -43,6 +43,9 @@ export interface GameState {
     speech?: SpeechState;
     police?: PoliceState;
     expel?: ExpelState;
+    currentState?: string; // New State Machine State (e.g. "SETUP", "NIGHT_PHASE")
+    currentStep?: string; // Display name
+    stateData?: any;
 }
 
 export interface PoliceState {

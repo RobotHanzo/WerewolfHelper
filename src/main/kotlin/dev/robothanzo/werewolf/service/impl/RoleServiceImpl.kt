@@ -64,20 +64,20 @@ class RoleServiceImpl(
         return session.roles
     }
 
-    override fun assignRoles(guildId: Long, statusLogger: (String) -> Unit, progressCallback: (Int) -> Unit) {
+    override fun assignRoles(guildId: Long, statusCallback: (String) -> Unit, progressCallback: (Int) -> Unit) {
         try {
             val session = sessionRepository.findByGuildId(guildId)
                 .orElseThrow { RuntimeException("Session not found") }
 
             if (session.hasAssignedRoles) {
-                throw Exception("Roles already assigned")
+                throw Exception("身分已分配，重新分配前請先重置遊戲。")
             }
 
             val totalPlayers = session.players.size
             log.info("Starting role assignment for guild {} with {} players", guildId, totalPlayers)
 
             progressCallback(0)
-            statusLogger("正在掃描伺服器玩家...")
+            statusCallback("正在掃描伺服器玩家...")
 
             val jda = discordService.jda
             val guild = jda!!.getGuildById(guildId) ?: throw Exception("Guild not found")
@@ -90,7 +90,7 @@ class RoleServiceImpl(
             }.toMutableList()
 
             progressCallback(10)
-            statusLogger("正在驗證玩家與身分數量...")
+            statusCallback("正在驗證玩家與身分數量...")
 
             pending.shuffle(Random())
             if (pending.size != session.players.size) {
@@ -109,7 +109,7 @@ class RoleServiceImpl(
             val roles = session.roles.shuffled().toMutableList()
 
             var gaveJinBaoBao = 0
-            statusLogger("正在分配身分並更新伺服器狀態...")
+            statusCallback("正在分配身分並更新伺服器狀態...")
 
             val playersList = ArrayList(session.players.values)
             playersList.sortBy { it.id }
@@ -194,11 +194,11 @@ class RoleServiceImpl(
                             )
                         )
                     } else {
-                        statusLogger("  - [警告] 無法更新 ${member.effectiveName} 的暱稱 (權限不足)")
+                        statusCallback("  - [警告] 無法更新 ${member.effectiveName} 的暱稱 (權限不足)")
                     }
                 }
 
-                statusLogger("  - 已分配身分: " + rs.joinToString(", ") + if (player.jinBaoBao) " (金寶寶)" else "")
+                statusCallback("  - 已分配身分: " + rs.joinToString(", ") + if (player.jinBaoBao) " (金寶寶)" else "")
 
                 // 4. Send Channel Message
                 val playerChannel = guild.getTextChannelById(player.channelId)
@@ -281,15 +281,15 @@ class RoleServiceImpl(
             }
 
             if (priorityTasks.isNotEmpty()) {
-                statusLogger("正在執行 Discord 變更: 身分與暱稱 (共 " + priorityTasks.size + " 項)...")
-                priorityTasks.runActions(statusLogger, progressCallback, 10, 60, 60)
+                statusCallback("正在執行 Discord 變更: 身分與暱稱 (共 " + priorityTasks.size + " 項)...")
+                priorityTasks.runActions(statusCallback, progressCallback, 10, 60, 60)
             }
 
             if (notificationTasks.isNotEmpty()) {
-                statusLogger("正在執行 Discord 變更: 發送通知 (共 " + notificationTasks.size + " 項)...")
-                notificationTasks.runActions(statusLogger, progressCallback, 60, 95, 120)
+                statusCallback("正在執行 Discord 變更: 發送通知 (共 " + notificationTasks.size + " 項)...")
+                notificationTasks.runActions(statusCallback, progressCallback, 60, 95, 120)
             } else {
-                statusLogger("沒有偵測到需要執行的通知任務。")
+                statusCallback("沒有偵測到需要執行的通知任務。")
                 progressCallback(95)
             }
 
@@ -299,12 +299,12 @@ class RoleServiceImpl(
             sessionRepository.save(session)
 
             progressCallback(100)
-            statusLogger("身分分配完成！")
+            statusCallback("身分分配完成！")
 
             gameSessionService.broadcastUpdate(guildId)
         } catch (e: Exception) {
             val errorMessage = e.message ?: "Unknown error"
-            statusLogger("錯誤: $errorMessage")
+            statusCallback("錯誤: $errorMessage")
             log.error("Failed to assign roles: {}", errorMessage, e)
             throw RuntimeException(errorMessage, e)
         }

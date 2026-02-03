@@ -11,6 +11,8 @@ interface GameHeaderProps {
     speech?: SpeechState;
     players?: Player[];
     readonly?: boolean;
+    currentStep?: string;
+    currentState?: string;
 }
 
 export const GameHeader: React.FC<GameHeaderProps> = ({
@@ -20,7 +22,9 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                                                           onGlobalAction,
                                                           speech,
                                                           players,
-                                                          readonly = false
+                                                          readonly = false,
+                                                          currentStep,
+                                                          currentState
                                                       }) => {
     const {t} = useTranslation();
     const btnStyle = "px-4 py-2 rounded-lg font-medium transition-all active:scale-95 flex items-center justify-center gap-2";
@@ -41,8 +45,9 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                     <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100">
                         {phase === 'DAY' ? <Sun className="w-5 h-5 text-orange-500"/> :
                             <Moon className="w-5 h-5 text-indigo-500 dark:text-indigo-400"/>}
-                        <span
-                            className="font-bold text-lg">{t(`phases.${phase}`)} {dayCount > 0 && `#${dayCount}`}</span>
+                        <span className="font-bold text-lg">
+                            {currentStep ? currentStep : t(`phases.${phase}`)} {dayCount > 0 && `#${dayCount}`}
+                        </span>
                     </div>
                 </div>
 
@@ -97,12 +102,21 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                             <button onClick={() => onGlobalAction('pause')} className={`${btnStyle} ${btnSecondary}`}>
                                 <Pause className="w-4 h-4"/>
                             </button>
-                            <button
-                                onClick={() => onGlobalAction('next_phase')}
-                                className={`${btnStyle} ${btnSecondary}`}
-                            >
-                                <SkipForward className="w-4 h-4"/> {t('gameHeader.nextPhase')}
-                            </button>
+                            {currentState === 'SPEECH_PHASE' ? (
+                                <Link
+                                    to="speech"
+                                    className={`${btnStyle} ${btnSecondary} hover:bg-indigo-100 dark:hover:bg-indigo-900/50`}
+                                >
+                                    <Mic className="w-4 h-4"/> {t('gameHeader.manageSpeech') || "Manage Speech"}
+                                </Link>
+                            ) : (
+                                <button
+                                    onClick={() => onGlobalAction('next_phase')}
+                                    className={`${btnStyle} ${btnSecondary}`}
+                                >
+                                    <SkipForward className="w-4 h-4"/> {t('gameHeader.nextPhase')}
+                                </button>
+                            )}
                         </>
                     )
                 )}
