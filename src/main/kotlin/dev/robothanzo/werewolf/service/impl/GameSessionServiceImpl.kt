@@ -55,7 +55,7 @@ class GameSessionServiceImpl(
     }
 
     override fun sessionToJSON(session: Session): Map<String, Any> {
-        val json: MutableMap<String, Any> = LinkedHashMap()
+        val json = mutableMapOf<String, Any>()
         val jda = discordService.jda
 
         json["guildId"] = session.guildId.toString()
@@ -68,9 +68,9 @@ class GameSessionServiceImpl(
         // Add speech info if available
         if (speechService.getSpeechSession(session.guildId) != null) {
             val speechSession = speechService.getSpeechSession(session.guildId)!!
-            val speechJson: MutableMap<String, Any> = LinkedHashMap()
+            val speechJson = mutableMapOf<String, Any>()
 
-            val orderIds: MutableList<String> = ArrayList()
+            val orderIds = mutableListOf<String>()
             for (p in speechSession.order) {
                 orderIds.add(p.id.toString())
             }
@@ -90,7 +90,7 @@ class GameSessionServiceImpl(
             speechJson["endTime"] = speechSession.currentSpeechEndTime
             speechJson["totalTime"] = speechSession.totalSpeechTime
 
-            val interruptVotes: MutableList<String> = ArrayList()
+            val interruptVotes = mutableListOf<String>()
             for (uid in speechSession.interruptVotes) {
                 interruptVotes.add(uid.toString())
             }
@@ -100,7 +100,7 @@ class GameSessionServiceImpl(
         }
 
         // Add Police/Poll info
-        val policeJson: MutableMap<String, Any> = LinkedHashMap()
+        val policeJson = mutableMapOf<String, Any>()
         val gid = session.guildId
 
         val policeSession = WerewolfApplication.policeService!!.sessions[gid]
@@ -110,12 +110,12 @@ class GameSessionServiceImpl(
             policeJson["allowEnroll"] = policeSession.state.canEnroll()
             policeJson["allowUnEnroll"] = policeSession.state.canQuit()
 
-            val candidatesList: MutableList<Map<String, Any>> = ArrayList()
+            val candidatesList = mutableListOf<Map<String, Any>>()
             for (c in policeSession.candidates.values) {
                 val candidateJson: MutableMap<String, Any> = LinkedHashMap()
                 candidateJson["id"] = c.player!!.id.toString()
                 candidateJson["quit"] = c.quit
-                val voters: MutableList<String> = ArrayList()
+                val voters = mutableListOf<String>()
                 for (voterId in c.electors) {
                     voters.add(voterId.toString())
                 }
@@ -132,11 +132,11 @@ class GameSessionServiceImpl(
         json["police"] = policeJson
 
         // Add Expel info
-        val expelJson: MutableMap<String, Any> = LinkedHashMap()
+        val expelJson = mutableMapOf<String, Any>()
         // Assuming dev.robothanzo.werewolf.commands.Poll.expelCandidates is accessible
         // Using fully qualified name for static access to Java
         if (Poll.expelCandidates.containsKey(gid)) {
-            val expelCandidatesList: MutableList<Map<String, Any>> = ArrayList()
+            val expelCandidatesList = mutableListOf<Map<String, Any>>()
             for (c in Poll.expelCandidates[gid]!!.values) {
                 val candidateJson: MutableMap<String, Any> = LinkedHashMap()
                 candidateJson["id"] = c.player!!.id.toString()
@@ -163,7 +163,7 @@ class GameSessionServiceImpl(
             }
         }
 
-        val logsJson: MutableList<Map<String, Any>> = ArrayList()
+        val logsJson = mutableListOf<Map<String, Any>>()
         if (session.logs != null) {
             for (log in session.logs) {
                 val logJson: MutableMap<String, Any> = LinkedHashMap()
@@ -192,11 +192,11 @@ class GameSessionServiceImpl(
     }
 
     override fun playersToJSON(session: Session): List<Map<String, Any>> {
-        val players: MutableList<Map<String, Any>> = ArrayList()
+        val players = mutableListOf<Map<String, Any>>()
         val jda = discordService.jda
 
         for ((_, player) in session.players) {
-            val playerJson: MutableMap<String, Any> = LinkedHashMap()
+            val playerJson = mutableMapOf<String, Any>()
 
             playerJson["id"] = player.id.toString()
             playerJson["roleId"] = player.roleId.toString()
@@ -250,7 +250,7 @@ class GameSessionServiceImpl(
     }
 
     override fun sessionToSummaryJSON(session: Session): Map<String, Any> {
-        val summary: MutableMap<String, Any> = LinkedHashMap()
+        val summary = mutableMapOf<String, Any>()
         summary["guildId"] = session.guildId.toString()
 
         var guildName = "Unknown Server"
@@ -290,7 +290,7 @@ class GameSessionServiceImpl(
 
         val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
 
-        val membersJson: MutableList<Map<String, Any>> = ArrayList()
+        val membersJson = mutableListOf<Map<String, Any>>()
 
         for (member in guild.members) {
             if (member.user.isBot)
@@ -388,11 +388,18 @@ class GameSessionServiceImpl(
 
     override fun broadcastEvent(type: String, data: Map<String, Any>) {
         try {
+            val guildIdObj = data["guildId"]
+            if (guildIdObj == null) {
+                log.warn("Cannot broadcast event type {} without guildId in data", type)
+                return
+            }
+            val guildId = if (guildIdObj is Long) guildIdObj.toString() else guildIdObj as String
+
             val mapper = jacksonObjectMapper()
             val envelope = mapOf("type" to type, "data" to data)
             val jsonMessage = mapper.writeValueAsString(envelope)
 
-            webSocketHandler.broadcast(jsonMessage)
+            webSocketHandler.broadcastToGuild(guildId, jsonMessage)
         } catch (e: Exception) {
             log.error("Failed to broadcast event", e)
         }

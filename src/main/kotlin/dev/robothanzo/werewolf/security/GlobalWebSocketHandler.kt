@@ -8,7 +8,6 @@ import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.handler.TextWebSocketHandler
 import java.io.IOException
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.stream.Stream
 
 @Component
@@ -17,7 +16,8 @@ class GlobalWebSocketHandler : TextWebSocketHandler() {
     // Maintain a list of sessions.
     // In a real app with auth, you might map userId -> Session or guildId ->
     // List<Session>
-    private val sessions = CopyOnWriteArrayList<WebSocketSession>()
+    // Map guild ID -> Set of Sessions
+    private val guildSessions = java.util.concurrent.ConcurrentHashMap<String, MutableSet<WebSocketSession>>()
 
     @Throws(Exception::class)
     override fun afterConnectionEstablished(session: WebSocketSession) {
@@ -62,7 +62,9 @@ class GlobalWebSocketHandler : TextWebSocketHandler() {
             return
         }
 
-        sessions.add(session)
+        guildSessions.computeIfAbsent(requestedGuildId) { java.util.concurrent.ConcurrentHashMap.newKeySet() }
+            .add(session)
+
         log.info(
             "WebSocket connection established for user {} in guild {}: {}",
             user.userId,
@@ -72,11 +74,22 @@ class GlobalWebSocketHandler : TextWebSocketHandler() {
     }
 
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
-        sessions.remove(session)
+        val user = session.attributes["user"] as? AuthSession
+        if (user?.guildId != null) {
+            guildSessions[user.guildId]?.remove(session)
+            // Clean up empty sets to prevent memory leaks
+            if (guildSessions[user.guildId]?.isEmpty() == true) {
+                guildSessions.remove(user.guildId)
+            }
+        } else {
+            // Fallback cleanup if user attr is missing
+            guildSessions.values.forEach { it.remove(session) }
+        }
         log.info("WebSocket connection closed: " + session.id)
     }
 
-    fun broadcast(message: String) {
+    fun broadcastToGuild(guildId: String, message: String) {
+        val sessions = guildSessions[guildId] ?: return
         for (session in sessions) {
             if (session.isOpen) {
                 synchronized(session) {

@@ -11,7 +11,6 @@ import dev.robothanzo.werewolf.utils.ActionTask
 import dev.robothanzo.werewolf.utils.runActions
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.util.*
 
 @Service
 class GameActionServiceImpl(
@@ -39,15 +38,15 @@ class GameActionServiceImpl(
         progressCallback(5)
         statusCallback("正在掃描需要清理的身分組...")
 
-        val tasks: MutableList<ActionTask> = ArrayList()
+        val tasks = mutableListOf<ActionTask>()
         val spectatorRole = guild.getRoleById(session.spectatorRoleId)
 
         for (player in session.players.values) {
             val currentUserId = player.userId
 
             player.userId = null
-            player.roles = ArrayList()
-            player.deadRoles = ArrayList()
+            player.roles = mutableListOf()
+            player.deadRoles = mutableListOf()
             player.police = false
             player.idiot = false
             player.jinBaoBao = false
@@ -103,7 +102,7 @@ class GameActionServiceImpl(
 
         statusCallback("正在更新資料庫並清理日誌...")
 
-        session.logs = ArrayList()
+        session.logs = mutableListOf()
         session.hasAssignedRoles = false
         session.addLog(LogType.GAME_RESET, "遊戲已重置", null)
 
@@ -133,17 +132,17 @@ class GameActionServiceImpl(
             var success = false
 
             // Logic absorbed from Player.java playerDied
-            for ((key, player) in LinkedList(session.players.entries)) {
+            for ((_, player) in session.players) {
                 if (member!!.idLong == player.userId) {
                     if (!player.isAlive) {
                         break // Already dead
                     }
 
                     // Soft kill logic
-                    val roles = player.roles ?: ArrayList()
+                    val roles = player.roles ?: mutableListOf()
                     var deadRoles = player.deadRoles
                     if (deadRoles == null) {
-                        deadRoles = ArrayList()
+                        deadRoles = mutableListOf()
                         player.deadRoles = deadRoles
                     }
 
@@ -162,7 +161,7 @@ class GameActionServiceImpl(
                     sessionRepository.save(session) // Persist dead role update
 
                     if (killedRole != null) {
-                        val metadata: MutableMap<String, Any> = HashMap()
+                        val metadata = mutableMapOf<String, Any>()
                         metadata["playerId"] = player.id
                         metadata["playerName"] = player.nickname
                         metadata["killedRole"] = killedRole
@@ -196,7 +195,7 @@ class GameActionServiceImpl(
                     }
 
                     if (player.isAlive) {
-                        val remainingRoles = ArrayList(player.roles)
+                        val remainingRoles = player.roles?.toMutableList() ?: mutableListOf()
                         if (player.deadRoles != null) {
                             for (deadRole in player.deadRoles!!) {
                                 remainingRoles.remove(deadRole)
@@ -314,7 +313,7 @@ class GameActionServiceImpl(
                 throw Exception("Player has no dead roles to revive")
             }
 
-            val rolesToRevive = ArrayList(targetPlayer.deadRoles)
+            val rolesToRevive = targetPlayer.deadRoles?.toMutableList() ?: mutableListOf()
             for (role in rolesToRevive) {
                 reviveRole(guildId, userId, role)
             }
@@ -353,7 +352,7 @@ class GameActionServiceImpl(
 
                     sessionRepository.save(session)
 
-                    val metadata: MutableMap<String, Any> = HashMap()
+                    val metadata = mutableMapOf<String, Any>()
                     metadata["playerId"] = player.id
                     metadata["playerName"] = player.nickname
                     metadata["revivedRole"] = role
@@ -364,7 +363,7 @@ class GameActionServiceImpl(
                     }
                     player.updateNickname(member)
 
-                    val remainingRoles = ArrayList(player.roles)
+                    val remainingRoles = player.roles?.toMutableList() ?: mutableListOf()
                     if (player.deadRoles != null) {
                         for (deadRole in player.deadRoles!!) {
                             remainingRoles.remove(deadRole)
@@ -450,7 +449,7 @@ class GameActionServiceImpl(
     }
 
     override fun broadcastProgress(guildId: Long, message: String?, percent: Int?) {
-        val data: MutableMap<String, Any> = HashMap()
+        val data = mutableMapOf<String, Any>()
         data["guildId"] = guildId.toString()
         if (message != null)
             data["message"] = message
