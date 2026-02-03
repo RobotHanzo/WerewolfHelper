@@ -16,7 +16,7 @@ interface DiscordService {
      *
      * @return the JDA instance
      */
-    val jda: JDA?
+    val jda: JDA
 
     /**
      * Retrieves a Discord guild by its ID.

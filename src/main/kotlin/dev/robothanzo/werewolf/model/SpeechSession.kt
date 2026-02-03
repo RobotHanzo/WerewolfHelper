@@ -13,5 +13,6 @@ data class SpeechSession(
     var lastSpeaker: Long? = null,
     var finishedCallback: (() -> Unit)? = null,
     var currentSpeechEndTime: Long = 0,
-    var totalSpeechTime: Int = 0
+    var totalSpeechTime: Int = 0,
+    var shouldStopCurrentSpeaker: Boolean = false
 )

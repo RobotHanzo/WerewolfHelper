@@ -27,7 +27,7 @@ class GameSessionServiceImpl(
     private val discordService: DiscordService,
     private val webSocketHandler: GlobalWebSocketHandler,
     private val speechService: SpeechService,
-    @Lazy stepList: List<GameStep>
+    @param:Lazy stepList: List<GameStep>
 ) : GameSessionService {
     private val log = LoggerFactory.getLogger(GameSessionServiceImpl::class.java)
     private val steps = stepList.associateBy { it.id }
@@ -79,12 +79,12 @@ class GameSessionServiceImpl(
             0
         }
         json["timerSeconds"] = remaining
+        json["isManualStep"] = session.currentStepEndTime == 0L
 
         json["players"] = playersToJSON(session)
 
         // Add speech info if available
-        if (speechService.getSpeechSession(session.guildId) != null) {
-            val speechSession = speechService.getSpeechSession(session.guildId)!!
+        speechService.getSpeechSession(session.guildId)?.let { speechSession ->
             val speechJson = mutableMapOf<String, Any>()
 
             val orderIds = mutableListOf<String>()
@@ -120,7 +120,7 @@ class GameSessionServiceImpl(
         val policeJson = mutableMapOf<String, Any>()
         val gid = session.guildId
 
-        val policeSession = WerewolfApplication.policeService!!.sessions[gid]
+        val policeSession = WerewolfApplication.policeService.sessions[gid]
         if (policeSession != null) {
             policeJson["state"] = policeSession.state.name
             policeJson["stageEndTime"] = policeSession.stageEndTime
@@ -130,7 +130,7 @@ class GameSessionServiceImpl(
             val candidatesList = mutableListOf<Map<String, Any>>()
             for (c in policeSession.candidates.values) {
                 val candidateJson = mutableMapOf<String, Any>()
-                candidateJson["id"] = c.player!!.id.toString()
+                candidateJson["id"] = c.player.id.toString()
                 candidateJson["quit"] = c.quit
                 candidateJson["voters"] = c.electors.map { it.toString() }
                 candidatesList.add(candidateJson)
@@ -152,7 +152,7 @@ class GameSessionServiceImpl(
             val expelCandidatesList = mutableListOf<Map<String, Any>>()
             for (c in Poll.expelCandidates[gid]!!.values) {
                 val candidateJson = mutableMapOf<String, Any>()
-                candidateJson["id"] = c.player!!.id.toString()
+                candidateJson["id"] = c.player.id.toString()
                 candidateJson["voters"] = c.electors.map { it.toString() }
                 expelCandidatesList.add(candidateJson)
             }
@@ -173,16 +173,14 @@ class GameSessionServiceImpl(
         }
 
         val logsJson = mutableListOf<Map<String, Any>>()
-        if (session.logs != null) {
-            for (log in session.logs) {
-                val logJson = mutableMapOf<String, Any>()
-                logJson["id"] = log.id ?: ""
-                logJson["timestamp"] = formatTimestamp(log.timestamp)
-                logJson["type"] = log.type?.getSeverity() ?: "INFO"
-                logJson["message"] = log.message ?: ""
-                log.metadata?.let { if (it.isNotEmpty()) logJson["metadata"] = it }
-                logsJson.add(logJson)
-            }
+        for (log in session.logs) {
+            val logJson = mutableMapOf<String, Any>()
+            logJson["id"] = log.id ?: ""
+            logJson["timestamp"] = formatTimestamp(log.timestamp)
+            logJson["type"] = log.type?.getSeverity() ?: "INFO"
+            logJson["message"] = log.message ?: ""
+            log.metadata?.let { if (it.isNotEmpty()) logJson["metadata"] = it }
+            logsJson.add(logJson)
         }
         json["logs"] = logsJson
 
@@ -267,7 +265,7 @@ class GameSessionServiceImpl(
                 guildName = guild.name
                 guildIcon = guild.iconUrl
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             log.warn("Failed to fetch guild info for summary: {}", session.guildId)
         }
 
@@ -382,14 +380,20 @@ class GameSessionServiceImpl(
 
     override fun broadcastUpdate(guildId: Long) {
         val sessionOpt = getSession(guildId)
-        if (sessionOpt.isPresent) {
-            val updateData = sessionToJSON(sessionOpt.get())
-            broadcastEvent("UPDATE", updateData)
-        }
+        sessionOpt.ifPresent { broadcastSessionUpdate(it) }
     }
 
     override fun broadcastSessionUpdate(session: Session) {
-        broadcastUpdate(session.guildId)
+        try {
+            val updateData = sessionToJSON(session)
+            broadcastEvent("UPDATE", updateData)
+        } catch (e: InterruptedException) {
+            // Clear the interrupted flag so it doesn't affect other operations
+            Thread.interrupted()
+            log.warn("Broadcast was interrupted, but continuing")
+        } catch (e: Exception) {
+            log.error("Failed to broadcast session update", e)
+        }
     }
 
     override fun broadcastEvent(type: String, data: Map<String, Any>) {
@@ -406,6 +410,10 @@ class GameSessionServiceImpl(
             val jsonMessage = mapper.writeValueAsString(envelope)
 
             webSocketHandler.broadcastToGuild(guildId, jsonMessage)
+        } catch (e: InterruptedException) {
+            // Thread was interrupted - clear the flag and continue
+            Thread.interrupted()
+            log.warn("Broadcast thread was interrupted")
         } catch (e: Exception) {
             log.error("Failed to broadcast event", e)
         }

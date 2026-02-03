@@ -46,6 +46,7 @@ export interface GameState {
     currentState?: string; // New State Machine State (e.g. "SETUP", "NIGHT_PHASE")
     currentStep?: string; // Display name
     stateData?: any;
+    isManualStep?: boolean; // True if duration is -1 (manual advance)
 }
 
 export interface PoliceState {

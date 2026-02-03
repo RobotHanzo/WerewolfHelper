@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class GameActionServiceImpl(
-    @Lazy private val gameSessionService: GameSessionService,
+    @param:Lazy private val gameSessionService: GameSessionService,
     private val discordService: DiscordService,
     private val sessionRepository: SessionRepository
 ) : GameActionService {
@@ -33,8 +33,8 @@ class GameActionServiceImpl(
         progressCallback(0)
         statusCallback("正在連線至 Discord...")
 
-        val jda = discordService.jda
-        val guild = jda!!.getGuildById(guildId) ?: throw Exception("Guild not found")
+        val jda = discordService.jda ?: throw Exception("JDA not initialized")
+        val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
 
         progressCallback(5)
         statusCallback("正在掃描需要清理的身分組...")
@@ -120,9 +120,10 @@ class GameActionServiceImpl(
             val session = sessionRepository.findByGuildId(guildId)
                 .orElseThrow { RuntimeException("Session not found") }
 
-            val jda = discordService.jda
-            val guild = jda!!.getGuildById(guildId) ?: throw Exception("Guild not found")
-            val spectatorRole = guild.getRoleById(session.spectatorRoleId)!!
+            val jda = discordService.jda ?: throw Exception("JDA not initialized")
+            val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
+            val spectatorRole =
+                guild.getRoleById(session.spectatorRoleId) ?: throw Exception("Spectator role not found")
 
             var member = guild.getMemberById(userId)
             if (member == null) {
@@ -134,7 +135,7 @@ class GameActionServiceImpl(
 
             // Logic absorbed from Player.java playerDied
             for ((_, player) in session.players) {
-                if (member!!.idLong == player.userId) {
+                if (member?.idLong == player.userId) {
                     if (!player.isAlive) {
                         break // Already dead
                     }
@@ -197,15 +198,14 @@ class GameActionServiceImpl(
 
                     if (player.isAlive) {
                         val remainingRoles = player.roles?.toMutableList() ?: mutableListOf()
-                        if (player.deadRoles != null) {
-                            for (deadRole in player.deadRoles!!) {
-                                remainingRoles.remove(deadRole)
-                            }
+                        player.deadRoles?.forEach { deadRole ->
+                            remainingRoles.remove(deadRole)
                         }
+                        
                         val remainingRoleName = if (remainingRoles.isEmpty()) "未知" else remainingRoles.first()
 
-                        guild.getTextChannelById(player.channelId)!!
-                            .sendMessage("因為你死了，所以你的角色變成了 $remainingRoleName").queue()
+                        guild.getTextChannelById(player.channelId)
+                            ?.sendMessage("因為你死了，所以你的角色變成了 $remainingRoleName")?.queue()
 
                         sessionRepository.save(session)
 
@@ -265,12 +265,9 @@ class GameActionServiceImpl(
                 }
             }
 
-            if (!success) {
+            if (!success && member != null) {
                 // Player not found in session map, allow spectator role?
-                // Player.java logic:
-                // guild.addRoleToMember(user, spectatorRole).queue();
-                // user.modifyNickname("[旁觀] " + user.getEffectiveName()).queue();
-                guild.addRoleToMember(member!!, spectatorRole).queue()
+                guild.addRoleToMember(member, spectatorRole).queue()
                 member.modifyNickname("[旁觀] " + member.effectiveName).queue()
             }
 
@@ -294,8 +291,8 @@ class GameActionServiceImpl(
             val session = sessionRepository.findByGuildId(guildId)
                 .orElseThrow { RuntimeException("Session not found") }
 
-            val jda = discordService.jda
-            val guild = jda!!.getGuildById(guildId) ?: throw Exception("Guild not found")
+            val jda = discordService.jda ?: throw Exception("JDA not initialized")
+            val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
 
             var member = guild.getMemberById(userId)
             if (member == null) {
@@ -310,7 +307,7 @@ class GameActionServiceImpl(
                 }
             }
 
-            if (targetPlayer == null || targetPlayer.deadRoles == null || targetPlayer.deadRoles!!.isEmpty()) {
+            if (targetPlayer == null || targetPlayer.deadRoles.isNullOrEmpty()) {
                 throw Exception("Player has no dead roles to revive")
             }
 
@@ -330,9 +327,10 @@ class GameActionServiceImpl(
             val session = sessionRepository.findByGuildId(guildId)
                 .orElseThrow { RuntimeException("Session not found") }
 
-            val jda = discordService.jda
-            val guild = jda!!.getGuildById(guildId) ?: throw Exception("Guild not found")
-            val spectatorRole = guild.getRoleById(session.spectatorRoleId)!!
+            val jda = discordService.jda ?: throw Exception("JDA not initialized")
+            val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
+            val spectatorRole =
+                guild.getRoleById(session.spectatorRoleId) ?: throw Exception("Spectator role not found")
 
             var member = guild.getMemberById(userId)
             if (member == null) {
@@ -341,7 +339,7 @@ class GameActionServiceImpl(
 
             var success = false
             for (player in session.players.values) {
-                if (member!!.idLong == player.userId) {
+                if (member?.idLong == player.userId) {
                     val deadRoles = player.deadRoles
                     if (deadRoles == null || !deadRoles.contains(role)) {
                         // Not dead with this role
@@ -365,11 +363,10 @@ class GameActionServiceImpl(
                     player.updateNickname(member)
 
                     val remainingRoles = player.roles?.toMutableList() ?: mutableListOf()
-                    if (player.deadRoles != null) {
-                        for (deadRole in player.deadRoles!!) {
-                            remainingRoles.remove(deadRole)
-                        }
+                    player.deadRoles?.forEach { deadRole ->
+                        remainingRoles.remove(deadRole)
                     }
+                    
                     val currentRoleName = if (remainingRoles.isEmpty()) "未知" else remainingRoles.first()
 
                     val roleId = player.roleId
@@ -405,14 +402,14 @@ class GameActionServiceImpl(
             val session = sessionRepository.findByGuildId(guildId)
                 .orElseThrow { RuntimeException("Session not found") }
 
-            val jda = discordService.jda
-            val guild = jda!!.getGuildById(guildId) ?: throw Exception("Guild not found")
+            val jda = discordService.jda ?: throw Exception("JDA not initialized")
+            val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
 
             for (player in session.players.values) {
                 if (player.police) {
                     player.police = false
-                    if (player.userId != null) {
-                        val member = guild.getMemberById(player.userId!!)
+                    player.userId?.let { uid ->
+                        val member = guild.getMemberById(uid)
                         if (member != null)
                             player.updateNickname(member)
                     }
@@ -431,8 +428,8 @@ class GameActionServiceImpl(
             if (targetPlayer == null)
                 throw Exception("Player not found")
 
-            if (targetPlayer.userId != null) {
-                val member = guild.getMemberById(targetPlayer.userId!!)
+            targetPlayer.userId?.let { uid ->
+                val member = guild.getMemberById(uid)
                 if (member != null) {
                     targetPlayer.updateNickname(member)
                     val courtChannel = guild.getTextChannelById(session.courtTextChannelId)
@@ -463,8 +460,8 @@ class GameActionServiceImpl(
         val session = sessionRepository.findByGuildId(guildId)
             .orElseThrow { RuntimeException("Session not found") }
 
-        val jda = discordService.jda
-        val guild = jda!!.getGuildById(guildId) ?: return
+        val jda = discordService.jda ?: return
+        val guild = jda.getGuildById(guildId) ?: return
 
         // Mute voice channel logic if applicable (typically mute everyone in court voice channel)
         if (session.courtVoiceChannelId != 0L) {

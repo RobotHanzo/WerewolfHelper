@@ -1,3 +1,5 @@
+import org.springframework.boot.gradle.tasks.run.BootRun
+
 plugins {
     java
     id("org.springframework.boot") version "4.0.2"
@@ -70,5 +72,9 @@ tasks {
 
     bootJar {
         mainClass.set("dev.robothanzo.werewolf.WerewolfApplication")
+    }
+
+    named<BootRun>("bootRun") {
+        jvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
     }
 }

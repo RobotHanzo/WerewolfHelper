@@ -22,6 +22,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
         timerSeconds: 0,
         players: INITIAL_PLAYERS,
         logs: [],
+        isManualStep: false,
     });
 
     const [overlayState, setOverlayState] = useState<OverlayState>({
@@ -120,7 +121,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
                 players: players,
                 doubleIdentities: data.doubleIdentities,
                 availableRoles: data.roles || [],
-                speech: data.speech,
+                speech: data.speech || undefined,
                 police: data.police,
                 expel: data.expel, // Ensure expel is updated too
                 logs: data.logs || prev.logs,
@@ -128,6 +129,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
                 currentStep: data.currentStep,
                 stateData: data.stateData,
                 timerSeconds: typeof data.timerSeconds === 'number' ? data.timerSeconds : prev.timerSeconds,
+                isManualStep: data.isManualStep || false,
                 phase: (() => {
                     const s = data.currentState;
                     if (!s || s === 'SETUP' || s === 'LOBBY') return 'LOBBY';
@@ -174,7 +176,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
                     players: players,
                     doubleIdentities: sessionData.doubleIdentities,
                     availableRoles: sessionData.roles || [],
-                    speech: sessionData.speech,
+                    speech: sessionData.speech || undefined,
                     police: sessionData.police,
                     expel: sessionData.expel,
                     logs: sessionData.logs || [],
@@ -182,6 +184,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
                     currentStep: sessionData.currentStep,
                     stateData: sessionData.stateData,
                     timerSeconds: typeof sessionData.timerSeconds === 'number' ? sessionData.timerSeconds : 0,
+                    isManualStep: sessionData.isManualStep || false,
                     phase: (() => {
                         const s = sessionData.currentState;
                         if (!s || s === 'SETUP' || s === 'LOBBY') return 'LOBBY';

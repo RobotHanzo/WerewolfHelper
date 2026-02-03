@@ -41,8 +41,8 @@ class PlayerServiceImpl(
         val session = sessionRepository.findByGuildId(guildId)
             .orElseThrow { RuntimeException("Session not found") }
 
-        val jda = discordService.jda
-        val guild = jda!!.getGuildById(guildId) ?: throw Exception("Guild not found")
+        val jda = discordService.jda ?: throw Exception("JDA not initialized")
+        val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
 
         onPercent(0)
         onProgress("開始同步 Discord 狀態...")
@@ -58,27 +58,28 @@ class PlayerServiceImpl(
             val pid = idStr.toInt()
             if (pid > count) {
                 val player = players.remove(idStr)
-                val role = guild.getRoleById(player!!.roleId)
-                if (role != null) {
-                    deleteTasks.add(
-                        ActionTask(
-                            role.delete(),
-                            "刪除身分組: ${role.name}"
+                if (player != null) {
+                    val role = guild.getRoleById(player.roleId)
+                    if (role != null) {
+                        deleteTasks.add(
+                            ActionTask(
+                                role.delete(),
+                                "刪除身分組: ${role.name}"
+                            )
                         )
-                    )
-                }
-                val channel = guild.getTextChannelById(player.channelId)
-                if (channel != null) {
-                    deleteTasks.add(
-                        ActionTask(
-                            channel.delete(),
-                            "刪除頻道: ${channel.name}"
+                    }
+                    val channel = guild.getTextChannelById(player.channelId)
+                    if (channel != null) {
+                        deleteTasks.add(
+                            ActionTask(
+                                channel.delete(),
+                                "刪除頻道: ${channel.name}"
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
-
         // Run Deletions (0% -> 30%)
         if (deleteTasks.isNotEmpty()) {
             deleteTasks.runActions(onProgress, onPercent, 0, 30, 60)
@@ -154,7 +155,6 @@ class PlayerServiceImpl(
         sessionRepository.save(session)
         onPercent(100)
         onProgress("同步完成！")
-        gameSessionService.broadcastUpdate(guildId)
     }
 
     override fun updatePlayerRoles(guildId: Long, playerId: String, roles: List<String>) {
@@ -190,8 +190,6 @@ class PlayerServiceImpl(
                         ?.queue()
                 }
             }
-
-            gameSessionService.broadcastUpdate(guildId)
         } catch (e: Exception) {
             log.error("Failed to update player roles: {}", e.message, e)
             throw RuntimeException("Failed to update player roles", e)
@@ -226,7 +224,7 @@ class PlayerServiceImpl(
                     channel?.sendMessage("你已交換了角色順序，現在主要角色為: ${roles[0]}")?.queue()
                 }
             }
-            gameSessionService.broadcastUpdate(guildId)
+
         } catch (e: Exception) {
             log.error("Switch role order failed: {}", e.message, e)
             throw RuntimeException("Failed to switch role order", e)
@@ -241,7 +239,6 @@ class PlayerServiceImpl(
 
             player.rolePositionLocked = locked
             sessionRepository.save(session)
-            gameSessionService.broadcastUpdate(guildId)
         } catch (e: Exception) {
             log.error("Failed to set role position lock: {}", e.message, e)
             throw RuntimeException("Failed to set role position lock", e)

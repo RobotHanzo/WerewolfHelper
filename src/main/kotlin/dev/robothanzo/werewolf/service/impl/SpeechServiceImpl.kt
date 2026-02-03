@@ -31,7 +31,7 @@ import kotlin.concurrent.thread
 class SpeechServiceImpl(
     private val sessionRepository: SessionRepository,
     private val discordService: DiscordService,
-    @Lazy private val gameSessionService: GameSessionService
+    @param:Lazy private val gameSessionService: GameSessionService
 ) : SpeechService {
     private val speechSessions: MutableMap<Long, SpeechSession> = ConcurrentHashMap()
     private val timers: MutableMap<Long, Thread> = ConcurrentHashMap()
@@ -278,9 +278,9 @@ class SpeechServiceImpl(
             if (player.userId != null) {
                 try {
                     if (session.muteAfterSpeech) {
-                        val member = guild.getMemberById(player.userId!!)
-                        if (member != null) {
-                            guild.mute(member, true).queue()
+                        player.userId?.let { uid ->
+                            val member = guild.getMemberById(uid)
+                            member?.let { guild.mute(it, true).queue() }
                         }
                     }
                 } catch (_: Exception) {
@@ -446,6 +446,12 @@ class SpeechServiceImpl(
         speechSession.interruptVotes.clear()
         stopCurrentSpeaker(speechSession)
 
+        // Clear interrupt flag from thread interruption to prevent WebSocket errors
+        Thread.interrupted()
+
+        // Reset the stop flag for the new speaker's timer
+        speechSession.shouldStopCurrentSpeaker = false
+
         val guild = discordService.getGuild(guildId) ?: return
         val session = speechSession.session
 
@@ -479,8 +485,13 @@ class SpeechServiceImpl(
         // Update session timer to match TOTAL remaining time
         val totalDuration = time + getTotalQueueDuration(speechSession.order)
         session.currentStepEndTime = System.currentTimeMillis() + (totalDuration * 1000L)
-        sessionRepository.save(session)
-        gameSessionService.broadcastSessionUpdate(session)
+
+        try {
+            sessionRepository.save(session)
+        } catch (e: Exception) {
+            println("Warning: Failed to save session during nextSpeaker: ${e.message}")
+            // Continue anyway - clients already have the updated timer
+        }
 
         val t = thread(start = true) {
             try {
@@ -505,28 +516,35 @@ class SpeechServiceImpl(
             val voiceChannel = guild.getVoiceChannelById(session.courtVoiceChannelId)
             try {
                 Thread.sleep((time - 30) * 1000L)
-                voiceChannel?.play(Audio.Resource.TIMER_30S_REMAINING)
-                Thread.sleep(35000)
-                voiceChannel?.play(Audio.Resource.TIMER_ENDED)
-                message.reply("計時結束").queue()
-                nextSpeaker(guildId)
+                if (!speechSession.shouldStopCurrentSpeaker) {
+                    voiceChannel?.play(Audio.Resource.TIMER_30S_REMAINING)
+                    Thread.sleep(32000) // Extra 2 seconds to account for delays
+                }
+                if (!speechSession.shouldStopCurrentSpeaker) {
+                    voiceChannel?.play(Audio.Resource.TIMER_ENDED)
+                    message.reply("計時結束").queue()
+                    nextSpeaker(guildId)
+                }
             } catch (_: InterruptedException) {
-                voiceChannel?.play(Audio.Resource.TIMER_ENDED)
+                if (!speechSession.shouldStopCurrentSpeaker) {
+                    voiceChannel?.play(Audio.Resource.TIMER_ENDED)
+                }
             } catch (ignored: Exception) {
-                ignored.printStackTrace()
-                voiceChannel?.play(Audio.Resource.TIMER_ENDED)
-                message.reply("發言中斷（可能發言者離開或發生錯誤）").queue()
-                nextSpeaker(guildId)
+                if (!speechSession.shouldStopCurrentSpeaker) {
+                    ignored.printStackTrace()
+                    voiceChannel?.play(Audio.Resource.TIMER_ENDED)
+                    message.reply("發言中斷（可能發言者離開或發生錯誤）").queue()
+                    nextSpeaker(guildId)
+                }
             }
         }
         speechSession.speakingThread = t
     }
 
     private fun stopCurrentSpeaker(session: SpeechSession) {
-        if (session.speakingThread != null) {
-            session.speakingThread!!.interrupt()
-            session.speakingThread = null
-        }
+        session.shouldStopCurrentSpeaker = true
+        session.speakingThread?.interrupt()
+        session.speakingThread = null
     }
     private fun getSpeakerDuration(isPolice: Boolean): Int {
         return if (isPolice) 210 else 180

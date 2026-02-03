@@ -13,7 +13,7 @@ object CmdUtils {
     val timer: Timer = Timer()
 
     fun isAdmin(event: ButtonInteractionEvent): Boolean {
-        if (event.guild == null || !event.member!!.permissions.contains(Permission.ADMINISTRATOR)) {
+        if (event.guild == null || event.member?.permissions?.contains(Permission.ADMINISTRATOR) != true) {
             event.hook.editOriginal(":x: 你沒有管理員").queue()
             return false
         }
@@ -21,7 +21,7 @@ object CmdUtils {
     }
 
     fun isAdmin(event: SlashCommandInteractionEvent): Boolean {
-        if (event.guild == null || !event.member!!.permissions.contains(Permission.ADMINISTRATOR)) {
+        if (event.guild == null || event.member?.permissions?.contains(Permission.ADMINISTRATOR) != true) {
             event.hook.editOriginal(":x: 你沒有管理員").queue()
             return false
         }
@@ -50,7 +50,7 @@ object CmdUtils {
     }
 
     fun getSession(event: ButtonInteractionEvent): Session? {
-        return getSession(event.guild!!)
+        return getSession(event.guild)
     }
 
     fun getSession(event: SlashCommandInteractionEvent): Session? {

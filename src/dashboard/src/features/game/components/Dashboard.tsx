@@ -119,6 +119,8 @@ export const Dashboard = () => {
                     readonly={user?.role === 'SPECTATOR' || isSpectatorSimulation}
                     currentStep={gameState.currentStep}
                     currentState={gameState.currentState}
+                    guildId={guildId}
+                    isManualStep={gameState.isManualStep}
                 />
                 <div
                     className="flex-1 overflow-hidden relative flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-900/30">
@@ -267,7 +269,12 @@ export const Dashboard = () => {
                     isOpen={showSessionExpired}
                     onClose={() => {
                         setShowSessionExpired(false);
-                        window.location.href = '/api/auth/login';
+                        // Disconnect websocket and redirect to login
+                        logout().then(() => {
+                            navigate('/login', {replace: true});
+                        }).catch(() => {
+                            navigate('/login', {replace: true});
+                        });
                     }}
                 />
 

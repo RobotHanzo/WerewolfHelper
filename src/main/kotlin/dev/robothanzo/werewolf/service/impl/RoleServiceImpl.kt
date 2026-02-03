@@ -33,8 +33,6 @@ class RoleServiceImpl(
             repeat(amount) { roles.add(roleName) }
             session.roles = roles
             sessionRepository.save(session)
-
-            gameSessionService.broadcastUpdate(guildId)
         } catch (e: Exception) {
             log.error("Failed to add role: {}", e.message, e)
             throw RuntimeException("Failed to add role", e)
@@ -50,8 +48,6 @@ class RoleServiceImpl(
             repeat(amount) { roles.remove(roleName) }
             session.roles = roles
             sessionRepository.save(session)
-
-            gameSessionService.broadcastUpdate(guildId)
         } catch (e: Exception) {
             log.error("Failed to remove role: {}", e.message, e)
             throw RuntimeException("Failed to remove role", e)
@@ -79,8 +75,8 @@ class RoleServiceImpl(
             progressCallback(0)
             statusCallback("正在掃描伺服器玩家...")
 
-            val jda = discordService.jda
-            val guild = jda!!.getGuildById(guildId) ?: throw Exception("Guild not found")
+            val jda = discordService.jda ?: throw Exception("JDA not initialized")
+            val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
 
             val pending = guild.members.filter { member ->
                 !member.user.isBot &&
@@ -300,8 +296,6 @@ class RoleServiceImpl(
 
             progressCallback(100)
             statusCallback("身分分配完成！")
-
-            gameSessionService.broadcastUpdate(guildId)
         } catch (e: Exception) {
             val errorMessage = e.message ?: "Unknown error"
             statusCallback("錯誤: $errorMessage")

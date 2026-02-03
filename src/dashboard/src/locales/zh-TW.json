@@ -48,11 +48,12 @@
     "lastWords": "遺言"
   },
   "gameHeader": {
-    "currentPhase": "當前階段",
-    "timer": "計時器",
+    "currentPhase": "目前階段",
+    "timer": "剩餘時間",
     "startGame": "開始遊戲",
     "nextPhase": "下一階段",
-    "lastWords": "遺言"
+    "lastWords": "遺言",
+    "manageSpeech": "管理發言"
   },
   "phases": {
     "LOBBY": "大廳",
@@ -181,8 +182,8 @@
   "speechManager": {
     "startAuto": "開始自動發言",
     "startPoliceEnroll": "啟動警長參選",
-    "skip": "強制換人",
-    "interrupt": "終止流程",
+    "skip": "強制下台",
+    "interrupt": "終止發言流程",
     "noActiveSpeech": "目前沒有正在進行的自動發言流程。",
     "noActiveSpeechJudge": "目前沒有正在進行的自動發言流程。身為法官，您可以隨時開始新的流程。",
     "activeSpeech": "發言進行中",

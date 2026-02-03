@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component
 
 @Component
 class SpeechStep(
-    @Lazy private val speechService: dev.robothanzo.werewolf.service.SpeechService
+    @param:Lazy private val speechService: dev.robothanzo.werewolf.service.SpeechService
 ) : GameStep {
     override val id = "SPEECH_PHASE"
     override val name = "發言流程"

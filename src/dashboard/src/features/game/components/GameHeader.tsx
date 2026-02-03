@@ -1,4 +1,4 @@
-import {Link} from 'react-router-dom';
+import {Link, useNavigate} from 'react-router-dom';
 import {Mic, Moon, Pause, Play, SkipForward, Sun} from 'lucide-react';
 import {GamePhase, Player, SpeechState} from '@/types';
 import {useTranslation} from '@/lib/i18n';
@@ -13,6 +13,8 @@ interface GameHeaderProps {
     readonly?: boolean;
     currentStep?: string;
     currentState?: string;
+    guildId?: string;
+    isManualStep?: boolean;
 }
 
 export const GameHeader: React.FC<GameHeaderProps> = ({
@@ -24,9 +26,12 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                                                           players,
                                                           readonly = false,
                                                           currentStep,
-                                                          currentState
+                                                          currentState,
+                                                          guildId,
+                                                          isManualStep = false
                                                       }) => {
     const {t} = useTranslation();
+    const navigate = useNavigate();
     const btnStyle = "px-4 py-2 rounded-lg font-medium transition-all active:scale-95 flex items-center justify-center gap-2";
     const btnPrimary = "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/20 dark:shadow-indigo-900/20";
     const btnSecondary = "bg-slate-300 dark:bg-slate-700 hover:bg-slate-400 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200";
@@ -76,16 +81,20 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                     </>
                 )}
 
-                <div className="h-8 w-px bg-slate-300 dark:bg-slate-700"/>
+                {!isManualStep && (
+                    <>
+                        <div className="h-8 w-px bg-slate-300 dark:bg-slate-700"/>
 
-                <div className="flex flex-col">
-                    <span
-                        className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">{t('gameHeader.timer')}</span>
-                    <div
-                        className={`font-mono font-bold text-xl ${timerSeconds < 10 ? 'text-red-500 dark:text-red-400' : 'text-slate-800 dark:text-slate-200'}`}>
-                        {Math.floor(timerSeconds / 60)}:{String(timerSeconds % 60).padStart(2, '0')}
-                    </div>
-                </div>
+                        <div className="flex flex-col">
+                            <span
+                                className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">{t('gameHeader.timer')}</span>
+                            <div
+                                className={`font-mono font-bold text-xl ${timerSeconds < 10 ? 'text-red-500 dark:text-red-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                                {Math.floor(timerSeconds / 60)}:{String(timerSeconds % 60).padStart(2, '0')}
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
             <div className="flex items-center gap-3">
@@ -103,12 +112,23 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                                 <Pause className="w-4 h-4"/>
                             </button>
                             {currentState === 'SPEECH_PHASE' ? (
-                                <Link
-                                    to="speech"
-                                    className={`${btnStyle} ${btnSecondary} hover:bg-indigo-100 dark:hover:bg-indigo-900/50`}
-                                >
-                                    <Mic className="w-4 h-4"/> {t('gameHeader.manageSpeech') || "Manage Speech"}
-                                </Link>
+                                // Check if speech session has ended but state is stuck
+                                // Speech session ends when: no speech object exists OR no current speaker and empty order
+                                !speech || (!speech?.currentSpeakerId && speech?.order?.length === 0) ? (
+                                    <button
+                                        onClick={() => onGlobalAction('next_phase')}
+                                        className={`${btnStyle} ${btnSecondary}`}
+                                    >
+                                        <SkipForward className="w-4 h-4"/> {t('gameHeader.nextPhase')}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => navigate(`/server/${guildId}/speech`, {replace: true})}
+                                        className={`${btnStyle} ${btnSecondary} hover:bg-indigo-100 dark:hover:bg-indigo-900/50`}
+                                    >
+                                        <Mic className="w-4 h-4"/> {t('gameHeader.manageSpeech') || "Manage Speech"}
+                                    </button>
+                                )
                             ) : (
                                 <button
                                     onClick={() => onGlobalAction('next_phase')}

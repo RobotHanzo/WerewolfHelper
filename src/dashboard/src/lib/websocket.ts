@@ -82,6 +82,21 @@ export class WebSocketClient {
                 console.log(`WebSocket closed (code: ${event.code}, reason: ${event.reason}), reconnecting...`);
                 this.ws = null;
                 this.onDisconnectHandlers.forEach(h => h(event));
+
+                // Check if this is a session-related rejection (1000 is normal close, 1008 is policy violation)
+                const isSessionRejection = event.code === 1008 || event.code === 1000 || event.code === 1001;
+                const isSessionError = event.reason && (
+                    event.reason.includes("No user in session") ||
+                    event.reason.includes("Rejected WS connection") ||
+                    event.reason.includes("expired") ||
+                    event.reason.includes("Session")
+                );
+
+                if (isSessionRejection && isSessionError) {
+                    // Don't reconnect for session rejections, let the handlers deal with it
+                    return;
+                }
+                
                 this.reconnect();
             };
         } catch (error) {
@@ -162,7 +177,18 @@ export function useWebSocket(onMessage: MessageHandler, guildId?: string, onSess
             () => setIsConnected(true),
             (event) => {
                 setIsConnected(false);
-                if (event && event.reason && (event.reason.includes("No user in session") || event.reason.includes("Rejected WS connection"))) {
+
+                // Check for session expiration or rejection
+                const isSessionRejection = event.code === 1008 || event.code === 1000 || event.code === 1001;
+                const isSessionError = event.reason && (
+                    event.reason.includes("No user in session") ||
+                    event.reason.includes("Rejected WS connection") ||
+                    event.reason.includes("expired") ||
+                    event.reason.includes("Session")
+                );
+
+                if (isSessionRejection && isSessionError) {
+                    console.warn('Session expired or rejected:', event.reason);
                     if (onSessionExpired) {
                         onSessionExpired();
                     } else {

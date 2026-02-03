@@ -188,6 +188,11 @@ class PoliceServiceImpl(
                     return
                 }
 
+                if (policeSession.message == null) {
+                    interrupt(guildId)
+                    return
+                }
+
                 policeSession.message?.replyEmbeds(
                     EmbedBuilder().setTitle("參選警長結束")
                         .setDescription(
@@ -268,14 +273,16 @@ class PoliceServiceImpl(
             .sortedWith(Candidate.getComparator())
             .filter { !it.quit }
             .forEach { player ->
-                val user = channel.guild.getMemberById(player.player.userId!!)
-                if (user != null) {
-                    buttons.add(
-                        Button.primary(
-                            "votePolice${player.player.id}",
-                            "${player.player.nickname} (${user.user.name})"
+                player.player.userId?.let { uid ->
+                    val user = channel.guild.getMemberById(uid)
+                    if (user != null) {
+                        buttons.add(
+                            Button.primary(
+                                "votePolice${player.player.id}",
+                                "${player.player.nickname} (${user.user.name})"
+                            )
                         )
-                    )
+                    }
                 }
             }
 
@@ -300,9 +307,11 @@ class PoliceServiceImpl(
             return
         }
 
+        val message = policeSession.message ?: return
+
         if (winners.size == 1) {
             val winner = winners.first()
-            policeSession.message?.reply("投票已結束，<@!" + winner.player.userId + "> 獲勝")?.queue()
+            message.reply("投票已結束，<@!" + winner.player.userId + "> 獲勝").queue()
 
             val resultEmbed = EmbedBuilder().setTitle("警長投票").setColor(MsgUtils.randomColor)
                 .setDescription("獲勝玩家: <@!" + winner.player.userId + ">")
@@ -310,7 +319,7 @@ class PoliceServiceImpl(
             val wrapper = mutableMapOf<Long, Map<Int, Candidate>>()
             wrapper[channel.guild.idLong] = policeSession.candidates
             Poll.sendVoteResult(
-                policeSession.session, channel, policeSession.message!!, resultEmbed, wrapper
+                policeSession.session, channel, message, resultEmbed, wrapper
             )
 
             setPolice(policeSession.session, winner, channel)
@@ -323,7 +332,7 @@ class PoliceServiceImpl(
                 val wrapper = mutableMapOf<Long, Map<Int, Candidate>>()
                 wrapper[channel.guild.idLong] = policeSession.candidates
                 Poll.sendVoteResult(
-                    policeSession.session, channel, policeSession.message!!, resultEmbed,
+                    policeSession.session, channel, message, resultEmbed,
                     wrapper
                 )
 
@@ -332,11 +341,11 @@ class PoliceServiceImpl(
                 val resultEmbed = EmbedBuilder().setTitle("警長投票")
                     .setColor(MsgUtils.randomColor)
                     .setDescription("平票第二次，警徽撕毀")
-                policeSession.message?.reply("平票第二次，警徽撕毀")?.queue()
+                message.reply("平票第二次，警徽撕毀").queue()
                 val wrapper = mutableMapOf<Long, Map<Int, Candidate>>()
                 wrapper[channel.guild.idLong] = policeSession.candidates
                 Poll.sendVoteResult(
-                    policeSession.session, channel, policeSession.message!!, resultEmbed,
+                    policeSession.session, channel, message, resultEmbed,
                     wrapper
                 )
                 interrupt(policeSession.guildId)
@@ -356,8 +365,9 @@ class PoliceServiceImpl(
         policeSession.candidates.clear()
         policeSession.candidates.putAll(newCandidates)
 
+        val msg = policeSession.message ?: return
         speechService.startSpeechPoll(
-            channel.guild, policeSession.message!!,
+            channel.guild, msg,
             newCandidates.values.map { it.player }
         ) {
             policeSession.state = PoliceSession.State.VOTING
@@ -368,9 +378,10 @@ class PoliceServiceImpl(
     }
 
     private fun setPolice(session: Session, winner: Candidate, channel: GuildMessageChannel) {
-        val member = channel.guild
-            .getMemberById(winner.player.userId!!)
-        member?.modifyNickname(member.effectiveName + " [警長]")?.queue()
+        winner.player.userId?.let { uid ->
+            val member = channel.guild.getMemberById(uid)
+            member?.modifyNickname(member.effectiveName + " [警長]")?.queue()
+        }
 
         val p = session.players[winner.player.id.toString()]
         if (p != null) {
@@ -400,7 +411,7 @@ class PoliceServiceImpl(
         callback: (() -> Unit)?
     ) {
         if (player.police) {
-            val senderId = player.userId!!
+            val senderId = player.userId ?: return
             val transferSession = TransferPoliceSession(
                 guildId = guild.idLong,
                 senderId = senderId,
@@ -476,7 +487,7 @@ class PoliceServiceImpl(
     override fun confirmNewPolice(event: ButtonInteractionEvent) {
         val guild = event.guild ?: return
         if (transferSessions.containsKey(guild.idLong)) {
-            val session = transferSessions[guild.idLong]!!
+            val session = transferSessions[guild.idLong] ?: return
             if (session.senderId == event.user.idLong) {
                 if (session.recipientId != null) {
                     val guildSession = sessionRepository.findByGuildId(guild.idLong).orElse(null) ?: return
@@ -519,7 +530,7 @@ class PoliceServiceImpl(
     override fun destroyPolice(event: ButtonInteractionEvent) {
         val guild = event.guild ?: return
         if (transferSessions.containsKey(guild.idLong)) {
-            val session = transferSessions[guild.idLong]!!
+            val session = transferSessions[guild.idLong] ?: return
             if (session.senderId == event.user.idLong) {
                 transferSessions.remove(guild.idLong)
                 event.reply(":white_check_mark: 警徽已撕毀").setEphemeral(false).queue()

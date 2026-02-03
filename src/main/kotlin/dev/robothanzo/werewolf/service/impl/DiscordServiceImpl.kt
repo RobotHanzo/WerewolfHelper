@@ -30,7 +30,18 @@ import java.util.*
 @Service
 class DiscordServiceImpl : DiscordService {
     private val log = LoggerFactory.getLogger(DiscordServiceImpl::class.java)
-    override var jda: JDA? = null
+    override var jda: JDA = JDABuilder.createDefault(System.getenv("TOKEN"))
+        .enableIntents(GatewayIntent.GUILD_MEMBERS, GatewayIntent.MESSAGE_CONTENT)
+        .setChunkingFilter(ChunkingFilter.ALL)
+        .setMemberCachePolicy(MemberCachePolicy.ALL)
+        .enableCache(EnumSet.allOf(CacheFlag::class.java))
+        .disableCache(CacheFlag.ACTIVITY, CacheFlag.CLIENT_STATUS, CacheFlag.ONLINE_STATUS)
+        .addEventListeners(
+            GuildJoinListener(), MemberJoinListener(), MessageListener(),
+            ButtonListener()
+        )
+        .setAudioModuleConfig(AudioModuleConfig().withDaveSessionFactory(JDaveSessionFactory()))
+        .build()
 
     @PostConstruct
     fun init() {
@@ -40,33 +51,12 @@ class DiscordServiceImpl : DiscordService {
             Database.initDatabase()
 
             AudioSourceManagers.registerLocalSource(WerewolfApplication.playerManager)
-
-            val token = System.getenv("TOKEN")
-            if (token == null || token.isEmpty()) {
-                log.error("TOKEN environment variable not set!")
-                return
-            }
-
-            jda = JDABuilder.createDefault(token)
-                .enableIntents(GatewayIntent.GUILD_MEMBERS, GatewayIntent.MESSAGE_CONTENT)
-                .setChunkingFilter(ChunkingFilter.ALL)
-                .setMemberCachePolicy(MemberCachePolicy.ALL)
-                .enableCache(EnumSet.allOf(CacheFlag::class.java))
-                .disableCache(CacheFlag.ACTIVITY, CacheFlag.CLIENT_STATUS, CacheFlag.ONLINE_STATUS)
-                .addEventListeners(
-                    GuildJoinListener(), MemberJoinListener(), MessageListener(),
-                    ButtonListener()
-                )
-                .setAudioModuleConfig(AudioModuleConfig().withDaveSessionFactory(JDaveSessionFactory()))
-                .build()
-
             JDAInteractions("dev.robothanzo.werewolf.commands").registerInteractions(jda).queue()
-            jda!!.awaitReady()
-            jda!!.presence.activity = Activity.competing("狼人殺 by Hanzo")
-            log.info("JDA Initialized: {}", jda!!.selfUser.asTag)
+            jda.awaitReady()
+            jda.presence.activity = Activity.competing("狼人殺 by Hanzo")
+            log.info("JDA Initialized: {}", jda.selfUser.asTag)
 
-            // Set legacy static instance for backward compatibility
-            WerewolfApplication.jda = jda!!
+            WerewolfApplication.jda = jda
         } catch (e: Exception) {
             log.error("Failed to initialize JDA", e)
             throw RuntimeException(e)
@@ -74,12 +64,12 @@ class DiscordServiceImpl : DiscordService {
     }
 
     override fun getGuild(guildId: Long): Guild? {
-        return jda!!.getGuildById(guildId)
+        return jda?.getGuildById(guildId)
     }
 
     override fun getMember(guildId: Long, userId: String?): Member? {
         val guild = getGuild(guildId) ?: return null
-        return guild.getMemberById(userId!!)
+        return userId?.let { guild.getMemberById(it) }
     }
 
     override fun getTextChannel(guildId: Long, channelId: Long): TextChannel? {
