@@ -132,6 +132,7 @@ class RoleServiceImpl(
 
                 // 2. Logic for role selection (JinBaoBao, etc.)
                 var rs = mutableListOf(roles.removeFirst())
+                var isJinBaoBao = false
 
                 if (rs.first() == "白癡") {
                     player.idiot = true

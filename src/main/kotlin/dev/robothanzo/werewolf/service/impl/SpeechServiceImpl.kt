@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import java.time.Duration
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
 
@@ -57,6 +56,7 @@ class SpeechServiceImpl(
         )
         speechSessions[guild.idLong] = speechSession
 
+        val order = SpeechOrder.getRandomOrder()
         val target = players.shuffled().first()
 
         if (enrollMessage != null) {
@@ -328,7 +328,7 @@ class SpeechServiceImpl(
             channel.sendMessageEmbeds(
                 EmbedBuilder()
                     .setTitle("找不到警長，自動抽籤發言順序")
-                    .setDescription("抽到的順序: 玩家" + shuffled.first.id + randOrder.toString())
+                    .setDescription("抽到的順序: 玩家${shuffled.first().id}$randOrder")
                     .setColor(MsgUtils.randomColor).build()
             ).queue()
         }
