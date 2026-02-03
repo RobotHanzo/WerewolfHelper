@@ -1,9 +1,0 @@
-package dev.robothanzo.werewolf.config;
-
-import org.mongodb.spring.session.config.annotation.web.http.EnableMongoHttpSession;
-import org.springframework.context.annotation.Configuration;
-
-@Configuration
-@EnableMongoHttpSession(collectionName = "http_sessions")
-public class SessionConfig {
-}
