@@ -86,7 +86,11 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
                         newState.error = undefined;
                         newState.title = t('progressOverlay.processing');
                     } else if (data.message) {
-                        newState.logs = [...prev.logs, data.message];
+                        const trimmedMessage = data.message.trim();
+                        // Check if specific message already exists to avoid any duplicates
+                        if (!prev.logs.some(log => log.trim() === trimmedMessage)) {
+                            newState.logs = [...prev.logs, data.message];
+                        }
                     }
 
                     if (isError) {
@@ -170,7 +174,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
         };
 
         loadGameState();
-    }, [guildId, user, t]);
+    }, [guildId, user]);
 
     return {
         gameState,

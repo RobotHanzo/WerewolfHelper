@@ -144,12 +144,20 @@ export const useGameActions = (
                     }));
                 } catch (error: any) {
                     console.error("Reset failed", error);
-                    setOverlayState(prev => ({
-                        ...prev,
-                        status: 'error',
-                        logs: [...prev.logs, `${t('errors.error')}: ${error.message || t('errors.unknownError')}`],
-                        error: error.message || t('errors.resetFailed')
-                    }));
+                    setOverlayState(prev => {
+                        const errorMsg = `${t('errors.error')}: ${error.message || t('errors.unknownError')}`;
+                        // Dedup log
+                        const logs = [...prev.logs];
+                        if (!logs.some(l => l.includes(error.message))) {
+                            logs.push(errorMsg);
+                        }
+                        return {
+                            ...prev,
+                            status: 'error',
+                            logs: logs,
+                            error: error.message || t('errors.resetFailed')
+                        };
+                    });
                 }
             };
             performReset();
@@ -180,12 +188,22 @@ export const useGameActions = (
                     }));
                 } catch (error: any) {
                     console.error("Assign failed", error);
-                    setOverlayState(prev => ({
-                        ...prev,
-                        status: 'error',
-                        logs: [...prev.logs, `${t('errors.error')}: ${error.message || t('errors.unknownError')}`],
-                        error: error.message || t('errors.assignFailed')
-                    }));
+                    setOverlayState(prev => {
+                        const errorMsg = `${t('errors.error')}: ${error.message || t('errors.unknownError')}`;
+                        // Dedup log: Check if the error message content is already present in any log
+                        const logs = [...prev.logs];
+                        // We check broadly for the error message part to catch both raw backend messages and formatted ones
+                        if (!logs.some(l => l.includes(error.message))) {
+                            logs.push(errorMsg);
+                        }
+
+                        return {
+                            ...prev,
+                            status: 'error',
+                            logs: logs,
+                            error: error.message || t('errors.assignFailed')
+                        };
+                    });
                 }
             };
             performRandomAssign();

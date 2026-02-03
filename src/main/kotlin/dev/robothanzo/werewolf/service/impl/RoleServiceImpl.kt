@@ -293,8 +293,10 @@ class RoleServiceImpl(
 
             gameSessionService.broadcastUpdate(guildId)
         } catch (e: Exception) {
-            log.error("Failed to assign roles: {}", e.message, e)
-            throw RuntimeException("Failed to assign roles", e)
+            val errorMessage = e.message ?: "Unknown error"
+            statusLogger("錯誤: $errorMessage")
+            log.error("Failed to assign roles: {}", errorMessage, e)
+            throw RuntimeException(errorMessage, e)
         }
     }
 }

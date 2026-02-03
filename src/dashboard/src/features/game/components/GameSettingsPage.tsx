@@ -23,7 +23,9 @@ export const GameSettingsPage: React.FC = () => {
     const [selectedRole, setSelectedRole] = useState<string>('');
     const [updatingRoles, setUpdatingRoles] = useState(false);
     const [updatingPlayerCount, setUpdatingPlayerCount] = useState(false);
+    const [assigningRoles, setAssigningRoles] = useState(false);
     const [pendingFields, setPendingFields] = useState<Record<string, boolean>>({});
+    const [error, setError] = useState<string | null>(null);
 
     const AVAILABLE_ROLES = [
         "平民", "狼人", "女巫", "預言家", "獵人",
@@ -136,11 +138,16 @@ export const GameSettingsPage: React.FC = () => {
     };
 
     const handleRandomAssign = async () => {
-        if (!guildId) return;
+        if (!guildId || assigningRoles) return;
+        setError(null);
+        setAssigningRoles(true);
         try {
             await api.assignRoles(guildId);
         } catch (error: any) {
             console.error("Assign failed", error);
+            setError(error.message || t('errors.assignFailed'));
+        } finally {
+            setAssigningRoles(false);
         }
     };
 
@@ -327,12 +334,31 @@ export const GameSettingsPage: React.FC = () => {
                         </div>
                         <button
                             onClick={handleRandomAssign}
-                            className="text-xs flex items-center gap-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 px-3 py-1.5 rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
+                            disabled={assigningRoles}
+                            className="text-xs flex items-center gap-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 px-3 py-1.5 rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Dices className="w-4 h-4"/>
+                            {assigningRoles ? <Loader2 className="w-4 h-4 animate-spin"/> :
+                                <Dices className="w-4 h-4"/>}
                             {t('messages.randomAssignRoles')}
                         </button>
                     </h3>
+
+                    {error && (
+                        <div
+                            className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-lg flex items-start gap-3 text-sm animate-in fade-in slide-in-from-top-2">
+                            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5"/>
+                            <div className="flex-1">
+                                <p className="font-medium">{t('errors.error')}</p>
+                                <p className="opacity-90">{error}</p>
+                            </div>
+                            <button
+                                onClick={() => setError(null)}
+                                className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded transition-colors"
+                            >
+                                <Minus className="w-4 h-4 rotate-45"/>
+                            </button>
+                        </div>
+                    )}
 
                     {/* Add Role Control */}
                     <div className="flex gap-2">
