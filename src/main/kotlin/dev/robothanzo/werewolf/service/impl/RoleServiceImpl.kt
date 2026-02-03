@@ -114,7 +114,8 @@ class RoleServiceImpl(
             val playersList = ArrayList(session.players.values)
             playersList.sortBy { it.id }
 
-            val tasks: MutableList<ActionTask> = ArrayList()
+            val priorityTasks: MutableList<ActionTask> = ArrayList()
+            val notificationTasks: MutableList<ActionTask> = ArrayList()
 
             for (player in playersList) {
                 val member = pending[player.id - 1]
@@ -122,7 +123,7 @@ class RoleServiceImpl(
                 // 1. Prepare Discord Role Task
                 val playerRole = guild.getRoleById(player.roleId)
                 if (playerRole != null) {
-                    tasks.add(
+                    priorityTasks.add(
                         ActionTask(
                             guild.addRoleToMember(member, playerRole),
                             "已套用身分組: " + playerRole.name + " 給 " + member.effectiveName
@@ -185,12 +186,16 @@ class RoleServiceImpl(
                 // 3. Prepare Nickname Task
                 val newNickname = player.nickname
                 if (member.effectiveName != newNickname) {
-                    tasks.add(
-                        ActionTask(
-                            member.modifyNickname(newNickname),
-                            "已更新暱稱: $newNickname"
+                    if (guild.selfMember.canInteract(member)) {
+                        priorityTasks.add(
+                            ActionTask(
+                                member.modifyNickname(newNickname),
+                                "已更新暱稱: $newNickname"
+                            )
                         )
-                    )
+                    } else {
+                        statusLogger("  - [警告] 無法更新 ${member.effectiveName} 的暱稱 (權限不足)")
+                    }
                 }
 
                 statusLogger("  - 已分配身分: " + rs.joinToString(", ") + if (player.jinBaoBao) " (金寶寶)" else "")
@@ -230,7 +235,7 @@ class RoleServiceImpl(
                             ch?.sendMessage("身分順序已鎖定")?.queue()
                         }, 120000)
                     }
-                    tasks.add(
+                    notificationTasks.add(
                         ActionTask(
                             action,
                             "已發送私密頻道訊息予 " + member.effectiveName
@@ -265,7 +270,7 @@ class RoleServiceImpl(
                 if (channelId != 0L) {
                     val channel = guild.getTextChannelById(channelId)
                     if (channel != null) {
-                        tasks.add(
+                        notificationTasks.add(
                             ActionTask(
                                 channel.sendMessage(notificationMsg).setEmbeds(summaryEmbed.build()),
                                 "已發送身分列表與控制台連結至頻道: " + channel.name
@@ -275,11 +280,16 @@ class RoleServiceImpl(
                 }
             }
 
-            if (tasks.isNotEmpty()) {
-                statusLogger("正在執行 Discord 變更 (共 " + tasks.size + " 項)...")
-                tasks.runActions(statusLogger, progressCallback, 10, 95, 60)
+            if (priorityTasks.isNotEmpty()) {
+                statusLogger("正在執行 Discord 變更: 身分與暱稱 (共 " + priorityTasks.size + " 項)...")
+                priorityTasks.runActions(statusLogger, progressCallback, 10, 60, 60)
+            }
+
+            if (notificationTasks.isNotEmpty()) {
+                statusLogger("正在執行 Discord 變更: 發送通知 (共 " + notificationTasks.size + " 項)...")
+                notificationTasks.runActions(statusLogger, progressCallback, 60, 95, 120)
             } else {
-                statusLogger("沒有偵測到需要執行的 Discord 變更。")
+                statusLogger("沒有偵測到需要執行的通知任務。")
                 progressCallback(95)
             }
 
