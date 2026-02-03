@@ -1,8 +1,8 @@
 package dev.robothanzo.werewolf.service.impl
 
+import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.SpeechSession
-import dev.robothanzo.werewolf.security.SessionRepository
 import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.GameSessionService
 import org.junit.jupiter.api.Assertions.*

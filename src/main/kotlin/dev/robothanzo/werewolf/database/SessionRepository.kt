@@ -1,4 +1,4 @@
-package dev.robothanzo.werewolf.security
+package dev.robothanzo.werewolf.database
 
 import dev.robothanzo.werewolf.database.documents.Session
 import org.springframework.data.mongodb.repository.MongoRepository

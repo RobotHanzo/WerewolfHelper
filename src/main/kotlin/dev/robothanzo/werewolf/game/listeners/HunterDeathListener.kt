@@ -1,8 +1,8 @@
 package dev.robothanzo.werewolf.game.listeners
 
+import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.RoleEventType
-import dev.robothanzo.werewolf.security.SessionRepository
 import org.springframework.stereotype.Component
 
 /**

@@ -1,4 +1,4 @@
-package dev.robothanzo.werewolf.security
+package dev.robothanzo.werewolf.database
 
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Session

@@ -3,11 +3,11 @@ package dev.robothanzo.werewolf.service.impl
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.commands.Poll
+import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.database.documents.UserRole
 import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.security.GlobalWebSocketHandler
-import dev.robothanzo.werewolf.security.SessionRepository
 import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.SpeechService

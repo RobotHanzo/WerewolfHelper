@@ -1,8 +1,8 @@
 package dev.robothanzo.werewolf.service.impl
 
+import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.PoliceSession
-import dev.robothanzo.werewolf.security.SessionRepository
 import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.SpeechService

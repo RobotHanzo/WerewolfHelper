@@ -3,11 +3,11 @@ package dev.robothanzo.werewolf.service.impl
 import dev.robothanzo.werewolf.audio.Audio
 import dev.robothanzo.werewolf.audio.Audio.play
 import dev.robothanzo.werewolf.commands.Poll
+import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.Candidate
 import dev.robothanzo.werewolf.model.PoliceSession
-import dev.robothanzo.werewolf.security.SessionRepository
 import dev.robothanzo.werewolf.service.*
 import dev.robothanzo.werewolf.utils.CmdUtils
 import dev.robothanzo.werewolf.utils.MsgUtils

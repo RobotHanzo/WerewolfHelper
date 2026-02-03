@@ -1,9 +1,9 @@
 package dev.robothanzo.werewolf.service.impl
 
+import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.*
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
-import dev.robothanzo.werewolf.security.SessionRepository
 import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.NightResolutionResult
 import dev.robothanzo.werewolf.service.RoleActionService
