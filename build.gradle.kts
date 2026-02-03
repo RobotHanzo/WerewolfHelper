@@ -2,6 +2,8 @@ plugins {
     java
     id("org.springframework.boot") version "4.0.2"
     id("io.spring.dependency-management") version "1.1.7"
+    kotlin("jvm") version "2.3.0"
+    kotlin("plugin.spring") version "2.3.0"
 }
 
 group = "dev.robothanzo.werewolf"
@@ -20,11 +22,15 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.mongodb:mongodb-spring-session:4.0.0-rc1")
-    
+
+    // Kotlin
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+
     // Discord
     implementation("net.dv8tion:JDA:6.3.0")
     implementation("club.minnced:discord-webhooks:0.8.4")
-    implementation("com.github.RobotHanzo:JDAInteractions:v0.1.4")
+    implementation("com.github.RobotHanzo:JDAInteractions:0.2.0")
     implementation("com.github.Mokulu:discord-oauth2-api:1.0.4")
 
     // JDA Audio supplements
@@ -52,6 +58,13 @@ tasks {
 
     compileJava {
         options.encoding = Charsets.UTF_8.name()
+    }
+
+    compileKotlin {
+        compilerOptions {
+            freeCompilerArgs.addAll("-Xjsr305=strict")
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25)
+        }
     }
 
     bootJar {

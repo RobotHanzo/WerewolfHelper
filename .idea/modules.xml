@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/WerewolfHelper.main.iml" filepath="$PROJECT_DIR$/.idea/modules/WerewolfHelper.main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/dev.robothanzo.werewolf.WerewolfHelper.main.iml" filepath="$PROJECT_DIR$/.idea/modules/dev.robothanzo.werewolf.WerewolfHelper.main.iml" />
     </modules>
   </component>
 </project>
