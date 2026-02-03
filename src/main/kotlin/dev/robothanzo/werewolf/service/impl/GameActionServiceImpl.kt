@@ -17,7 +17,8 @@ import org.springframework.stereotype.Service
 class GameActionServiceImpl(
     @param:Lazy private val gameSessionService: GameSessionService,
     private val discordService: DiscordService,
-    private val sessionRepository: SessionRepository
+    private val sessionRepository: SessionRepository,
+    private val roleEventService: dev.robothanzo.werewolf.service.RoleEventService
 ) : GameActionService {
     private val log = LoggerFactory.getLogger(GameActionServiceImpl::class.java)
 
@@ -167,6 +168,7 @@ class GameActionServiceImpl(
                         metadata["playerId"] = player.id
                         metadata["playerName"] = player.nickname
                         metadata["killedRole"] = killedRole
+                        metadata["userId"] = userId
                         metadata["isExpelled"] =
                             false // markPlayerDead is usually manual or command based, not expel? Or generic. Assuming generic non-expel for now or handled elsewhere?
                         // original logic had isExpelled param. GameActionService does not?
@@ -176,6 +178,17 @@ class GameActionServiceImpl(
                             LogType.PLAYER_DIED,
                             player.nickname + " 的 " + killedRole + " 身份已死亡",
                             metadata
+                        )
+
+                        // Trigger role event for ON_DEATH listeners (e.g., Hunter revenge)
+                        roleEventService.notifyListeners(
+                            session,
+                            dev.robothanzo.werewolf.game.model.RoleEventType.ON_DEATH,
+                            mapOf(
+                                "userId" to userId,
+                                "killedRole" to killedRole,
+                                "playerId" to player.id
+                            )
                         )
 
                         val courtChannel = guild.getTextChannelById(session.courtTextChannelId)

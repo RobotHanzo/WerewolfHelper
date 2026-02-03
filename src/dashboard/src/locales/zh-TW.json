@@ -17,6 +17,7 @@
   },
   "sidebar": {
     "dashboard": "儀表板",
+    "playersManagement": "玩家管理",
     "switchServer": "切換伺服器",
     "gameSettings": "遊戲設定",
     "integrationGuide": "整合指南",
@@ -30,7 +31,45 @@
     "backToJudge": "返回法官模式"
   },
   "actions": {
-    "kill": "殺死"
+    "kill": "殺死",
+    "nightPhase": "夜晚行動",
+    "daytimeActions": "白天行動",
+    "labels": {
+      "WEREWOLF_KILL": "狼人擊殺",
+      "SEER_CHECK": "預言查驗",
+      "WITCH_ANTIDOTE": "女巫解藥",
+      "WITCH_POISON": "女巫毒藥",
+      "GUARD_PROTECT": "守衛守護"
+    },
+    "timing": {
+      "NIGHT": "夜晚",
+      "DAY": "白天",
+      "ANYTIME": "任何時候"
+    },
+    "ui": {
+      "availableNightActions": "可用夜晚行動",
+      "yourAvailableActions": "你的可用行動",
+      "selectTargetsFor": "選擇目標：{action}",
+      "selectTargetsCount": "請選擇 {count} 個目標",
+      "selectTargetsCountForAction": "請選擇 {count} 個目標以執行 {action}",
+      "selectActionAndTargets": "請選擇行動與目標",
+      "submitAction": "提交行動",
+      "submitting": "提交中...",
+      "actionSubmitted": "行動已提交",
+      "submitFailed": "提交失敗：{error}",
+      "error": "錯誤：{error}",
+      "selected": "已選"
+    },
+    "errors": {
+      "Actor not alive": "執行者已死亡",
+      "Action not found": "找不到此行動",
+      "Action usage limit reached": "此行動使用次數已達上限",
+      "Invalid target count": "目標數量不正確",
+      "Target player not found": "找不到目標玩家",
+      "Target must be alive": "目標必須存活",
+      "Actor does not have role": "執行者不具備此角色",
+      "actorMissingRole": "執行者不具備角色 {role}"
+    }
   },
   "accessDenied": {
     "title": "存取限制",
@@ -48,12 +87,41 @@
     "lastWords": "遺言"
   },
   "gameHeader": {
+    "day": "天數",
     "currentPhase": "目前階段",
     "timer": "剩餘時間",
     "startGame": "開始遊戲",
     "nextPhase": "下一階段",
     "lastWords": "遺言",
     "manageSpeech": "管理發言"
+  },
+  "dashboard": {
+    "title": "遊戲總覽",
+    "subtitle": "管理當前階段並快速跳轉",
+    "startGame": "開始遊戲",
+    "nextStep": "下一階段",
+    "currentStep": "目前階段",
+    "currentStepId": "階段代碼",
+    "dayCount": "天數",
+    "timer": "計時器",
+    "stepNavigator": "階段導覽",
+    "allStages": "所有階段",
+    "setupDescription": "配置遊戲設定並為玩家分配角色",
+    "dayPhaseDescription": "玩家討論並準備投票放逐嫌疑人",
+    "deathAnnouncementDescription": "宣布死亡玩家的身分與結局",
+    "timeRemaining": "剩餘時間",
+    "noDeaths": "昨夜無人死亡",
+    "eliminated": "已死亡",
+    "gameStageTitle": "遊戲階段"
+  },
+  "steps": {
+    "setup": "遊戲設置",
+    "night": "天黑請閉眼",
+    "day": "天亮了",
+    "sheriffElection": "警長參選",
+    "deathAnnouncement": "宣布死訊",
+    "speech": "發言流程",
+    "voting": "放逐投票"
   },
   "phases": {
     "LOBBY": "大廳",
@@ -64,6 +132,7 @@
   },
   "players": {
     "title": "玩家",
+    "management": "玩家管理",
     "alive": "存活",
     "dead": "死亡",
     "kill": "殺死",
@@ -203,7 +272,10 @@
     "waitingForPoliceSub": "警長正在選擇發言順序 (警上/警下)",
     "forceUp": "強制往上",
     "forceDown": "強制往下",
-    "judgeOverride": "法官強制操作"
+    "judgeOverride": "法官強制操作",
+    "judgeManualOverride": "法官手動執行",
+    "judgeManualActions": "法官手動行動",
+    "noPlayersWithAvailableActions": "沒有玩家有可用的行動"
   },
   "progressOverlay": {
     "operationFailed": "操作失敗",
@@ -263,7 +335,27 @@
     "amount": "數量",
     "add": "新增",
     "remove": "移除",
-    "backToDashboard": "返回儀表板"
+    "backToDashboard": "返回儀表板",
+    "customRoles": "自訂角色",
+    "createCustomRole": "建立自訂角色",
+    "customRolesDescription": "為您的遊戲建立和管理自訂角色。每個自訂角色可以有多個具有不同優先級的行動。",
+    "specialSettings": "特殊設定",
+    "witchCanSaveSelf": "女巫可以救自己",
+    "witchCanSaveSelfDesc": "女巫是否允許使用女巫解藥來救自己"
+  },
+  "customRoleEditor": {
+    "title": "建立自訂角色",
+    "basicInfo": "基本資訊",
+    "roleName": "角色名稱",
+    "roleNamePlaceholder": "輸入角色名稱...",
+    "actions": "行動",
+    "addAction": "新增行動",
+    "actionName": "行動名稱",
+    "actionPriority": "優先級",
+    "actionTarget": "目標",
+    "priority": "優先級",
+    "save": "儲存",
+    "cancel": "取消"
   },
   "settingsModal": {
     "backendUrl": "後端伺服器網址",

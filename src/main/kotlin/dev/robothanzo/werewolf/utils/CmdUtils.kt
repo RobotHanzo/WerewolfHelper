@@ -65,11 +65,13 @@ object CmdUtils {
         return session
     }
 
-    fun schedule(runnable: () -> Unit, delay: Long) {
-        timer.schedule(object : TimerTask() {
+    fun schedule(runnable: () -> Unit, delay: Long): TimerTask {
+        val task = object : TimerTask() {
             override fun run() {
                 runnable()
             }
-        }, delay)
+        }
+        timer.schedule(task, delay)
+        return task
     }
 }

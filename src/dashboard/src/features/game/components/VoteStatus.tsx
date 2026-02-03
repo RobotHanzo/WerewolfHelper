@@ -9,6 +9,7 @@ interface VoteStatusProps {
     endTime?: number;
     players: Player[];
     title?: string;
+    onTimerExpired?: () => void;
 }
 
 export const VoteStatus: React.FC<VoteStatusProps> = ({
@@ -16,7 +17,8 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                                                           totalVoters,
                                                           endTime,
                                                           players,
-                                                          title
+                                                          title,
+                                                          onTimerExpired
                                                       }) => {
     const {t} = useTranslation();
     const [timeLeft, setTimeLeft] = useState(0);
@@ -29,9 +31,14 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
         const interval = setInterval(() => {
             const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
             setTimeLeft(remaining);
+
+            // Trigger callback when timer expires
+            if (remaining === 0 && onTimerExpired) {
+                onTimerExpired();
+            }
         }, 100);
         return () => clearInterval(interval);
-    }, [endTime]);
+    }, [endTime, onTimerExpired]);
 
     // Calculate total votes cast
     const totalVotes = candidates.reduce((acc, c) => acc + c.voters.length, 0);

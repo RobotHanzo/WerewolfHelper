@@ -27,7 +27,9 @@ class GameSessionServiceImpl(
     private val discordService: DiscordService,
     private val webSocketHandler: GlobalWebSocketHandler,
     private val speechService: SpeechService,
-    @param:Lazy stepList: List<GameStep>
+    @Lazy stepList: List<GameStep>,
+    @param:Lazy
+    private val expelService: dev.robothanzo.werewolf.service.ExpelService
 ) : GameSessionService {
     private val log = LoggerFactory.getLogger(GameSessionServiceImpl::class.java)
     private val steps = stepList.associateBy { it.id }
@@ -47,6 +49,17 @@ class GameSessionServiceImpl(
 
     override fun createSession(guildId: Long): Session {
         val session = Session(guildId = guildId)
+
+        // Initialize default settings based on guild member count
+        // 10 players: witchCanSaveSelf=true
+        // 12+ players: witchCanSaveSelf=false
+        val jda = discordService.jda
+        val guild = jda.getGuildById(guildId)
+        val memberCount = guild?.memberCount ?: 10
+
+        session.settings["witchCanSaveSelf"] = memberCount < 12
+        session.settings["customRoles"] = mutableMapOf<String, Any>()
+        
         return sessionRepository.save(session)
     }
 
@@ -158,18 +171,21 @@ class GameSessionServiceImpl(
             }
             expelJson["candidates"] = expelCandidatesList
             expelJson["voting"] = true
+            // Add endTime if expel session exists
+            val expelSession = expelService.getExpelSession(gid)
+            if (expelSession != null) {
+                expelJson["endTime"] = expelSession.endTime
+            }
         } else {
             expelJson["candidates"] = emptyList<Any>()
             expelJson["voting"] = false
         }
         json["expel"] = expelJson
 
-        if (jda != null) {
-            val guild = jda.getGuildById(session.guildId)
-            if (guild != null) {
-                json["guildName"] = guild.name
-                json["guildIcon"] = guild.iconUrl ?: ""
-            }
+        val guild = jda.getGuildById(session.guildId)
+        if (guild != null) {
+            json["guildName"] = guild.name
+            json["guildIcon"] = guild.iconUrl ?: ""
         }
 
         val logsJson = mutableListOf<Map<String, Any>>()
@@ -217,7 +233,7 @@ class GameSessionServiceImpl(
             playerJson["rolePositionLocked"] = player.rolePositionLocked
 
             var foundMember = false
-            if (jda != null && player.userId != null) {
+            if (player.userId != null) {
                 val guild = jda.getGuildById(session.guildId)
                 if (guild != null) {
                     val member = guild.getMemberById(player.userId!!)
@@ -290,8 +306,7 @@ class GameSessionServiceImpl(
         val session = sessionRepository.findByGuildId(guildId)
             .orElseThrow { Exception("Session not found") }
 
-        val jda = discordService.jda ?: throw Exception("JDA instance is required")
-
+        val jda = discordService.jda
         val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
 
         val membersJson = mutableListOf<Map<String, Any>>()
@@ -337,7 +352,7 @@ class GameSessionServiceImpl(
         val session = sessionRepository.findByGuildId(guildId)
             .orElseThrow { Exception("Session not found") }
 
-        val jda = discordService.jda ?: throw Exception("JDA instance is required")
+        val jda = discordService.jda
         val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
 
         var member = guild.getMemberById(userId)

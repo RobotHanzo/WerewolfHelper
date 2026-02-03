@@ -33,7 +33,7 @@ export const GameLog: React.FC<GameLogProps> = ({logs, onGlobalAction, readonly 
 
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-400 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-slate-500 dark:[&::-webkit-scrollbar-thumb]:hover:bg-slate-500">
                 {logs.map(log => (
                     <div key={log.id}
                          className="text-sm flex gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">

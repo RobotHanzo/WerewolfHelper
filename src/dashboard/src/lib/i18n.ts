@@ -7,26 +7,44 @@ type Translations = typeof zhTW;
 const translations: Translations = zhTW;
 
 export const useTranslation = () => {
-    const t = (key: TranslationKey, params?: Record<string, string>): string => {
+    const t = (
+        key: TranslationKey,
+        fallbackOrParams?: string | Record<string, string>,
+        params?: Record<string, string>
+    ): string => {
         const keys = key.split('.');
         let value: any = translations;
+
+        const fallback = typeof fallbackOrParams === 'string' ? fallbackOrParams : undefined;
+        const variables = typeof fallbackOrParams === 'object' ? fallbackOrParams : params;
 
         for (const k of keys) {
             if (value && typeof value === 'object' && k in value) {
                 value = value[k];
             } else {
-                return key; // Return key if translation not found
+                const base = fallback ?? key;
+                return variables
+                    ? Object.entries(variables).reduce(
+                        (str, [paramKey, val]) => str.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), val),
+                        base
+                    )
+                    : base;
             }
         }
 
         if (typeof value !== 'string') {
-            return key;
+            const base = fallback ?? key;
+            return variables
+                ? Object.entries(variables).reduce(
+                    (str, [paramKey, val]) => str.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), val),
+                    base
+                )
+                : base;
         }
 
-        // Replace parameters in the translation string
-        if (params) {
-            return Object.entries(params).reduce(
-                (str, [key, val]) => str.replace(`{${key}}`, val),
+        if (variables) {
+            return Object.entries(variables).reduce(
+                (str, [paramKey, val]) => str.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), val),
                 value
             );
         }

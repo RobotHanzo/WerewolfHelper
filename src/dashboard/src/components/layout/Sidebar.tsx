@@ -8,6 +8,7 @@ interface SidebarProps {
     onLogout: () => void;
     onSettingsClick: () => void;
     onDashboardClick: () => void;
+    onPlayersClick: () => void;
     onSpectatorClick: () => void;
     onSpeechClick: () => void;
     onSwitchServer: () => void;
@@ -20,6 +21,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                                     onLogout,
                                                     onSettingsClick,
                                                     onDashboardClick,
+                                                    onPlayersClick,
                                                     onSpectatorClick,
                                                     onSpeechClick,
                                                     onSwitchServer,
@@ -31,7 +33,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const {user} = useAuth();
     const location = useLocation();
 
-    const isDashboardActive = location.pathname.endsWith(user?.guildId ? `/server/${user.guildId}` : '/') && !location.pathname.includes('/settings') && !location.pathname.includes('/spectator') && !location.pathname.includes('/speech');
+    const isDashboardActive = location.pathname.endsWith(user?.guildId ? `/server/${user.guildId}` : '/') && !location.pathname.includes('/settings') && !location.pathname.includes('/spectator') && !location.pathname.includes('/speech') && !location.pathname.includes('/players');
+    const isPlayersActive = location.pathname.includes('/players');
     const isSettingsActive = location.pathname.includes('/settings');
     const isSpectatorActive = location.pathname.includes('/spectator');
     const isSpeechActive = location.pathname.includes('/speech');
@@ -60,6 +63,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         >
                             <Activity className="w-5 h-5"/>
                             <span className="font-medium">{t('sidebar.dashboard')}</span>
+                        </button>
+                        <button
+                            onClick={onPlayersClick}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors ${isPlayersActive
+                                ? 'bg-indigo-100 dark:bg-indigo-600/10 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-600/20'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 border-transparent'
+                            }`}
+                        >
+                            <Activity className="w-5 h-5"/>
+                            <span className="font-medium">{t('sidebar.playersManagement')}</span>
                         </button>
                         <button
                             onClick={onSettingsClick}

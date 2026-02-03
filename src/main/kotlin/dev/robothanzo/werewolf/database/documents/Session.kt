@@ -39,7 +39,10 @@ data class Session(
     var currentState: String = "SETUP", // Default to setup
     var stateData: MutableMap<String, Any> = HashMap(),
     var currentStepEndTime: Long = 0,
-    var day: Int = 0
+    var day: Int = 0,
+
+    // Game Settings
+    var settings: MutableMap<String, Any> = HashMap()
 ) {
     fun fetchAlivePlayers(): Map<String, Player> {
         val alivePlayers = HashMap<String, Player>()
@@ -130,6 +133,7 @@ data class Session(
         var idiot: Boolean = false,
         var police: Boolean = false,
         var rolePositionLocked: Boolean = false,
+        var actionSubmitted: Boolean = false, // Track if player has submitted an action this phase
         var userId: Long? = null,
         var roles: MutableList<String>? = LinkedList(), // stuff like wolf, villager...etc
         var deadRoles: MutableList<String>? = LinkedList()

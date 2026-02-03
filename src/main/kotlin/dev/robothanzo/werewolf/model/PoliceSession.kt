@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.model
 
 import dev.robothanzo.werewolf.database.documents.Session
 import net.dv8tion.jda.api.entities.Message
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 data class PoliceSession(
@@ -11,7 +12,9 @@ data class PoliceSession(
     var state: State = State.NONE,
     var stageEndTime: Long = 0,
     val candidates: MutableMap<Int, Candidate> = ConcurrentHashMap(),
-    var message: Message? = null
+    var message: Message? = null,
+    var poll10sTask: TimerTask? = null,
+    var pollFinishTask: TimerTask? = null
 ) {
     enum class State {
         NONE, ENROLLMENT, SPEECH, UNENROLLMENT, VOTING, FINISHED;

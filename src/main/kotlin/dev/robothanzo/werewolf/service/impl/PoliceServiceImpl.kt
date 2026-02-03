@@ -239,6 +239,10 @@ class PoliceServiceImpl(
     override fun interrupt(guildId: Long) {
         val policeSession = sessions.remove(guildId)
         if (policeSession != null) {
+            cancelPollTasks(policeSession)
+            val guild = discordService.getGuild(guildId)
+            val channel = guild?.getTextChannelById(policeSession.session.courtTextChannelId)
+            channel?.sendMessage("警長投票已終止")?.queue()
         }
     }
 
@@ -251,12 +255,9 @@ class PoliceServiceImpl(
     }
 
     private fun startVoting(channel: GuildMessageChannel, allowPK: Boolean, policeSession: PoliceSession) {
+        cancelPollTasks(policeSession)
         val vc = channel.guild.getVoiceChannelById(policeSession.session.courtVoiceChannelId)
         vc?.play(Audio.Resource.POLICE_POLL)
-        CmdUtils.schedule({
-            val vc = channel.guild.getVoiceChannelById(policeSession.session.courtVoiceChannelId)
-            vc?.play(Audio.Resource.POLL_10S_REMAINING)
-        }, 20000)
         val embedBuilder = EmbedBuilder().setTitle("警長投票")
             .setDescription("30秒後立刻計票，請加快手速!\n若要改票可直接按下要改成的對象\n若要改為棄票需按下原本投給的使用者")
             .setColor(MsgUtils.randomColor)
@@ -283,16 +284,22 @@ class PoliceServiceImpl(
             .setComponents(MsgUtils.spreadButtonsAcrossActionRows(buttons))
             .queue()
 
-        CmdUtils.schedule({
+        policeSession.poll10sTask = CmdUtils.schedule({
             val vc = channel.guild.getVoiceChannelById(policeSession.session.courtVoiceChannelId)
             vc?.play(Audio.Resource.POLL_10S_REMAINING)
         }, 20000)
-        CmdUtils.schedule({
+        policeSession.pollFinishTask = CmdUtils.schedule({
             finishVoting(channel, allowPK, policeSession)
         }, 30000)
     }
 
     private fun finishVoting(channel: GuildMessageChannel, allowPK: Boolean, policeSession: PoliceSession) {
+        if (sessions[policeSession.guildId] !== policeSession) {
+            return
+        }
+        if (policeSession.state != PoliceSession.State.VOTING) {
+            return
+        }
         val winners = Candidate.getWinner(policeSession.candidates.values, null)
         if (winners.isEmpty()) {
             policeSession.message?.reply("沒有人投票，警徽撕毀")?.queue()
@@ -368,6 +375,13 @@ class PoliceServiceImpl(
             gameSessionService.broadcastSessionUpdate(policeSession.session)
             startVoting(channel, false, policeSession)
         }
+    }
+
+    private fun cancelPollTasks(policeSession: PoliceSession) {
+        policeSession.poll10sTask?.cancel()
+        policeSession.poll10sTask = null
+        policeSession.pollFinishTask?.cancel()
+        policeSession.pollFinishTask = null
     }
 
     private fun setPolice(session: Session, winner: Candidate, channel: GuildMessageChannel) {

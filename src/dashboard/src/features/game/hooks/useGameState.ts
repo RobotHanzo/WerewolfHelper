@@ -18,7 +18,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
     const {t} = useTranslation();
     const [gameState, setGameState] = useState<GameState>({
         phase: 'LOBBY',
-        dayCount: 0,
+        day: 0,
         timerSeconds: 0,
         players: INITIAL_PLAYERS,
         logs: [],
@@ -128,6 +128,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
                 currentState: data.currentState,
                 currentStep: data.currentStep,
                 stateData: data.stateData,
+                day: data.day || 0,
                 timerSeconds: typeof data.timerSeconds === 'number' ? data.timerSeconds : prev.timerSeconds,
                 isManualStep: data.isManualStep || false,
                 phase: (() => {
@@ -183,6 +184,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
                     currentState: sessionData.currentState,
                     currentStep: sessionData.currentStep,
                     stateData: sessionData.stateData,
+                    day: sessionData.day || 0,
                     timerSeconds: typeof sessionData.timerSeconds === 'number' ? sessionData.timerSeconds : 0,
                     isManualStep: sessionData.isManualStep || false,
                     phase: (() => {

@@ -9,6 +9,16 @@ enum class LogType {
     POLICE_DESTROYED,
     POLICE_FORCED,
 
+    // Role Action Events
+    ACTION_SUBMITTED,
+    ACTION_RESOLVED,
+    WEREWOLF_ATTACK,
+    WITCH_ANTIDOTE,
+    WITCH_POISON,
+    SEER_CHECK,
+    HUNTER_REVENGE,
+    GUARD_PROTECT,
+
     // Speech Events
     SPEECH_STARTED,
     SPEECH_ENDED,

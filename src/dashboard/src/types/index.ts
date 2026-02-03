@@ -34,7 +34,7 @@ export type GamePhase = 'LOBBY' | 'NIGHT' | 'DAY' | 'VOTING' | 'GAME_OVER';
 
 export interface GameState {
     phase: GamePhase;
-    dayCount: number;
+    day: number;
     timerSeconds: number;
     doubleIdentities?: boolean;
     availableRoles?: string[];

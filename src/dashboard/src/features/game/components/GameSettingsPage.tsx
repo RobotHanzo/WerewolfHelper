@@ -3,6 +3,7 @@ import {AlertCircle, Check, Dices, Loader2, Minus, Plus, Users} from 'lucide-rea
 import {useParams} from 'react-router-dom';
 import {useTranslation} from '@/lib/i18n';
 import {api} from '@/lib/api';
+import {CustomRoleEditor} from '../../../features/settings/CustomRoleEditor';
 
 export const GameSettingsPage: React.FC = () => {
     const {guildId} = useParams<{ guildId: string }>();
@@ -15,6 +16,8 @@ export const GameSettingsPage: React.FC = () => {
     const [doubleIdentities, setDoubleIdentities] = useState(false);
     const [roles, setRoles] = useState<string[]>([]);
     const [roleCounts, setRoleCounts] = useState<Record<string, number>>({});
+    const [showCustomRoleEditor, setShowCustomRoleEditor] = useState(false);
+    const [witchCanSaveSelf, setWitchCanSaveSelf] = useState(true);
 
     // State for initial values (to track changes)
     const [initialPlayerCount, setInitialPlayerCount] = useState<number>(12);
@@ -437,6 +440,55 @@ export const GameSettingsPage: React.FC = () => {
                 </div>
             </div>
 
+            {/* Custom Roles Section */}
+            <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2 flex justify-between items-center">
+                    <span>{t('gameSettings.customRoles') || 'Custom Roles'}</span>
+                    <button
+                        onClick={() => setShowCustomRoleEditor(true)}
+                        className="text-xs flex items-center gap-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-3 py-1.5 rounded-full hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
+                    >
+                        <Plus className="w-4 h-4"/>
+                        {t('gameSettings.createCustomRole') || 'Create Custom Role'}
+                    </button>
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                    {t('gameSettings.customRolesDescription') || 'Create and manage custom roles for your game. Each custom role can have multiple actions with different priorities.'}
+                </p>
+            </div>
+
+            {/* Witch Settings Section */}
+            <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">
+                    {t('gameSettings.specialSettings') || 'Special Settings'}
+                </h3>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <span
+                            className="text-slate-900 dark:text-slate-200 font-medium block">{t('gameSettings.witchCanSaveSelf') || '女巫 Can Save Herself'}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                            {t('gameSettings.witchCanSaveSelfDesc') || 'Whether the witch (女巫) is allowed to use 女巫解藥 to save themselves'}
+                        </span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={witchCanSaveSelf}
+                            onChange={(e) => setWitchCanSaveSelf(e.target.checked)}
+                            className="sr-only peer"
+                        />
+                        <div
+                            className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            {showCustomRoleEditor && guildId && (
+                <CustomRoleEditor
+                    guildId={guildId}
+                    onClose={() => setShowCustomRoleEditor(false)}
+                />
+            )}
         </>
     );
 };

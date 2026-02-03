@@ -24,9 +24,7 @@ class GameStateServiceImpl(
     // Simple robust ordered flow for now, can be made dynamic later
     private val gameFlow = listOf(
         "NIGHT_PHASE",
-        // "ROLE_ACTION_PHASE", // Placeholder
-        "DAY_PHASE",
-        "SHERIFF_ELECTION", // Conditional
+        "SHERIFF_ELECTION", // Day 1 only
         "DEATH_ANNOUNCEMENT",
         "SPEECH_PHASE",
         "VOTING_PHASE"
@@ -54,9 +52,15 @@ class GameStateServiceImpl(
 
         val nextStep = steps[stepId] ?: throw IllegalArgumentException("Unknown step: $stepId")
 
+        val pendingActionsSnapshot = session.stateData["pendingActions"]
+
         session.currentState = stepId
         // Reset state data for new step (unless we want to pass data, but clear is safer for now)
         session.stateData = HashMap()
+
+        if (pendingActionsSnapshot != null) {
+            session.stateData["pendingActions"] = pendingActionsSnapshot
+        }
 
         // Timer Logic
         val duration = nextStep.getDurationSeconds(session)
@@ -72,7 +76,6 @@ class GameStateServiceImpl(
         session.addLog(LogType.SYSTEM, "進入階段: ${nextStep.name}")
 
         nextStep.onStart(session, this)
-        sessionService.broadcastSessionUpdate(session)
     }
 
     override fun nextStep(session: Session) {
@@ -113,6 +116,15 @@ class GameStateServiceImpl(
 
     override fun handleInput(session: Session, input: Map<String, Any>): Map<String, Any> {
         val step = steps[session.currentState] ?: throw IllegalStateException("No active step")
-        return step.handleInput(session, input)
+        val result = step.handleInput(session, input)
+        // Save session after handling input to persist any changes
+        if (result["success"] == true) {
+            sessionService.saveSession(session)
+            // If votingEnded flag is set, automatically advance to next step
+            if (result["votingEnded"] == true) {
+                nextStep(session)
+            }
+        }
+        return result
     }
 }
