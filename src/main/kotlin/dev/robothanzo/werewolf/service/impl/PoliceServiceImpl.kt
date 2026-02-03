@@ -77,7 +77,6 @@ class PoliceServiceImpl(
                             append(" 已取消參選警長")
                         }, metadata
                     )
-                    gameSessionService.broadcastSessionUpdate(session)
 
                 } else if (policeSession.state.canQuit()) { // UNENROLLMENT -> Mark quit
                     candidate.value.quit = true
@@ -92,7 +91,6 @@ class PoliceServiceImpl(
                         LogType.POLICE_UNENROLLED,
                         "${candidate.value.player.nickname} 已取消參選警長", metadata
                     )
-                    gameSessionService.broadcastSessionUpdate(session)
                 } else {
                     event.hook.editOriginal(":x: 無法取消參選，投票已開始").queue()
                 }
@@ -118,7 +116,6 @@ class PoliceServiceImpl(
                     "${player.nickname} 已參選警長", metadata
                 )
 
-                gameSessionService.broadcastSessionUpdate(session)
                 return
             }
         }
@@ -150,7 +147,6 @@ class PoliceServiceImpl(
                     LogType.POLICE_ENROLLMENT_STARTED,
                     "警長參選已開始", null
                 )
-                gameSessionService.broadcastSessionUpdate(policeSession.session)
 
                 val vc = guild.getVoiceChannelById(policeSession.session.courtVoiceChannelId)
                 vc?.play(Audio.Resource.POLICE_ENROLL)
@@ -202,7 +198,6 @@ class PoliceServiceImpl(
                 )?.queue()
 
                 policeSession.state = PoliceSession.State.SPEECH
-                gameSessionService.broadcastSessionUpdate(policeSession.session)
 
                 // Start speech
                 speechService.startSpeechPoll(
@@ -214,7 +209,6 @@ class PoliceServiceImpl(
             PoliceSession.State.SPEECH -> {
                 policeSession.state = PoliceSession.State.UNENROLLMENT
                 policeSession.stageEndTime = System.currentTimeMillis() + 20000
-                gameSessionService.broadcastSessionUpdate(policeSession.session)
 
                 policeSession.message?.channel?.sendMessage("政見發表結束，參選人有20秒進行退選，20秒後將自動開始投票")
                     ?.queue()
@@ -245,7 +239,6 @@ class PoliceServiceImpl(
     override fun interrupt(guildId: Long) {
         val policeSession = sessions.remove(guildId)
         if (policeSession != null) {
-            gameSessionService.broadcastSessionUpdate(policeSession.session)
         }
     }
 

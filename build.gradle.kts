@@ -46,6 +46,7 @@ dependencies {
     compileOnly("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
 }
 
 configurations.all {
@@ -68,6 +69,10 @@ tasks {
             freeCompilerArgs.addAll("-Xjsr305=strict")
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25)
         }
+    }
+
+    test {
+        useJUnitPlatform()
     }
 
     bootJar {

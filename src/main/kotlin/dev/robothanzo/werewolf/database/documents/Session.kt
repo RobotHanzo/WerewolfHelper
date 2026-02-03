@@ -1,8 +1,7 @@
 package dev.robothanzo.werewolf.database.documents
 
 import com.mongodb.client.MongoCollection
-import com.mongodb.client.model.Filters.eq
-import com.mongodb.client.model.Updates
+import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.Database
 import net.dv8tion.jda.api.entities.Member
 import org.bson.codecs.pojo.annotations.BsonId
@@ -217,12 +216,7 @@ data class Session(
             metadata = metadata
         )
         logs.add(entry)
-
-        // Persist to database
-        fetchCollection().updateOne(
-            eq("guildId", guildId),
-            Updates.push("logs", entry)
-        )
+        WerewolfApplication.gameSessionService.saveSession(this)
     }
 
     companion object {

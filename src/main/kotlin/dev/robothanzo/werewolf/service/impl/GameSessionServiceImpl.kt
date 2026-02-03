@@ -375,7 +375,6 @@ class GameSessionServiceImpl(
         }
 
         saveSession(session)
-        broadcastSessionUpdate(session)
     }
 
     override fun broadcastUpdate(guildId: Long) {
