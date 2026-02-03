@@ -16,10 +16,14 @@ export const GameSettingsPage: React.FC = () => {
     const [roles, setRoles] = useState<string[]>([]);
     const [roleCounts, setRoleCounts] = useState<Record<string, number>>({});
 
-    // New State Variables
+    // State for initial values (to track changes)
+    const [initialPlayerCount, setInitialPlayerCount] = useState<number>(12);
+
     const [playerCount, setPlayerCount] = useState<number>(12);
     const [selectedRole, setSelectedRole] = useState<string>('');
     const [updatingRoles, setUpdatingRoles] = useState(false);
+    const [updatingPlayerCount, setUpdatingPlayerCount] = useState(false);
+    const [pendingFields, setPendingFields] = useState<Record<string, boolean>>({});
 
     const AVAILABLE_ROLES = [
         "平民", "狼人", "女巫", "預言家", "獵人",
@@ -30,14 +34,11 @@ export const GameSettingsPage: React.FC = () => {
 
     const isFirstLoad = useRef(true);
 
-    // Auto-save effect
-    useEffect(() => {
-        if (isFirstLoad.current) {
-            isFirstLoad.current = false;
-            return;
-        }
+    const playerCountChanged = playerCount !== initialPlayerCount;
 
-        if (loading) return;
+    // Auto-save effect for toggles
+    useEffect(() => {
+        if (isFirstLoad.current || loading) return;
 
         const saveSettings = async () => {
             if (!guildId) return;
@@ -47,12 +48,13 @@ export const GameSettingsPage: React.FC = () => {
                     muteAfterSpeech,
                     doubleIdentities
                 });
-            } catch (e) {
-                console.error("Failed to update settings", e);
-            } finally {
                 setJustSaved(true);
-                setTimeout(() => setSaving(false), 500);
                 setTimeout(() => setJustSaved(false), 2000);
+                setPendingFields({});
+            } catch (e) {
+                console.error("Failed to auto-save settings", e);
+            } finally {
+                setSaving(false);
             }
         };
 
@@ -76,6 +78,7 @@ export const GameSettingsPage: React.FC = () => {
             // Set player count from current players length
             if (Array.isArray(sessionData.players)) {
                 setPlayerCount(sessionData.players.length);
+                setInitialPlayerCount(sessionData.players.length);
             }
 
             setRoles(rolesData.filter((r: unknown): r is string => typeof r === 'string') || []);
@@ -104,12 +107,13 @@ export const GameSettingsPage: React.FC = () => {
     }, [roles]);
 
     const handleAddRole = async (role: string) => {
-        if (!guildId || updatingRoles) return;
+        if (!guildId || updatingRoles || !role.trim()) return;
         setUpdatingRoles(true);
         try {
-            await api.addRole(guildId, role, 1);
+            await api.addRole(guildId, role.trim(), 1);
             const newRoles = await api.getRoles(guildId) as string[];
             setRoles(newRoles.filter((r: unknown): r is string => typeof r === 'string') || []);
+            setSelectedRole('');
         } catch (e) {
             console.error("Failed to add role", e);
         } finally {
@@ -141,13 +145,29 @@ export const GameSettingsPage: React.FC = () => {
     };
 
     const handlePlayerCountUpdate = async () => {
-        if (!guildId) return;
+        if (!guildId || updatingPlayerCount) return;
+        setUpdatingPlayerCount(true);
         try {
             await api.setPlayerCount(guildId, playerCount);
-            loadSettings();
+            setInitialPlayerCount(playerCount);
+            // No need to loadSettings() here, as only initialPlayerCount needs to be updated
         } catch (error: any) {
             console.error("Update failed", error);
+        } finally {
+            setUpdatingPlayerCount(false);
         }
+    };
+
+    const toggleMute = (checked: boolean) => {
+        if (saving || pendingFields['mute']) return;
+        setMuteAfterSpeech(checked);
+        setPendingFields(prev => ({...prev, mute: true}));
+    };
+
+    const toggleDoubleIdentities = (checked: boolean) => {
+        if (saving || pendingFields['double']) return;
+        setDoubleIdentities(checked);
+        setPendingFields(prev => ({...prev, double: true}));
     };
 
     if (loading) {
@@ -163,9 +183,26 @@ export const GameSettingsPage: React.FC = () => {
             <div className="space-y-8">
                 {/* General Settings */}
                 <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">
-                        {t('settings.general')}
-                    </h3>
+                    <div
+                        className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+                                {t('settings.general')}
+                            </h3>
+                            {(saving || justSaved || Object.keys(pendingFields).length > 0) && (
+                                <span
+                                    className={`text-xs flex items-center gap-1.5 font-medium px-2 py-0.5 rounded-full transition-all ${(saving || Object.keys(pendingFields).length > 0)
+                                        ? 'text-slate-500 bg-slate-100 dark:bg-slate-800 animate-pulse'
+                                        : 'text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                                    }`}>
+                                    {(saving || Object.keys(pendingFields).length > 0) ?
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin"/> :
+                                        <Check className="w-3.5 h-3.5"/>}
+                                    {(saving || Object.keys(pendingFields).length > 0) ? t('messages.saving') : t('messages.saved')}
+                                </span>
+                            )}
+                        </div>
+                    </div>
 
                     <div className="flex items-center justify-between">
                         <div>
@@ -176,22 +213,14 @@ export const GameSettingsPage: React.FC = () => {
                             </span>
                         </div>
                         <div className="flex items-center gap-3">
-                            {(saving || justSaved) && (
-                                <div className="flex items-center justify-center w-5 h-5">
-                                    {saving ? (
-                                        <Loader2 className="w-4 h-4 animate-spin text-slate-400"/>
-                                    ) : (
-                                        <Check className="w-4 h-4 text-emerald-500"/>
-                                    )}
-                                </div>
-                            )}
+                            {pendingFields['mute'] && <Loader2 className="w-4 h-4 animate-spin text-indigo-500"/>}
                             <label
-                                className={`relative inline-flex items-center ${saving ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+                                className={`relative inline-flex items-center ${pendingFields['mute'] ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                                 <input
                                     type="checkbox"
                                     checked={muteAfterSpeech}
-                                    onChange={(e) => !saving && setMuteAfterSpeech(e.target.checked)}
-                                    disabled={saving}
+                                    onChange={(e) => toggleMute(e.target.checked)}
+                                    disabled={saving || pendingFields['mute']}
                                     className="sr-only peer"
                                 />
                                 <div
@@ -209,22 +238,14 @@ export const GameSettingsPage: React.FC = () => {
                             </span>
                         </div>
                         <div className="flex items-center gap-3">
-                            {(saving || justSaved) && (
-                                <div className="flex items-center justify-center w-5 h-5">
-                                    {saving ? (
-                                        <Loader2 className="w-4 h-4 animate-spin text-slate-400"/>
-                                    ) : (
-                                        <Check className="w-4 h-4 text-emerald-500"/>
-                                    )}
-                                </div>
-                            )}
+                            {pendingFields['double'] && <Loader2 className="w-4 h-4 animate-spin text-indigo-500"/>}
                             <label
-                                className={`relative inline-flex items-center ${saving ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+                                className={`relative inline-flex items-center ${pendingFields['double'] ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                                 <input
                                     type="checkbox"
                                     checked={doubleIdentities}
-                                    onChange={(e) => !saving && setDoubleIdentities(e.target.checked)}
-                                    disabled={saving}
+                                    onChange={(e) => toggleDoubleIdentities(e.target.checked)}
+                                    disabled={saving || pendingFields['double']}
                                     className="sr-only peer"
                                 />
                                 <div
@@ -239,29 +260,60 @@ export const GameSettingsPage: React.FC = () => {
                     <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">
                         {t('settings.playerCount')}
                     </h3>
-                    <div className="flex items-end gap-4">
+                    <div
+                        className="flex items-center gap-6 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                         <div className="flex-1">
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                                 {t('settings.totalPlayers')}
                             </label>
-                            <input
-                                type="number"
-                                min="1"
-                                max="50"
-                                value={playerCount}
-                                onChange={(e) => setPlayerCount(parseInt(e.target.value) || 0)}
-                                className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-lg px-4 py-2 text-slate-900 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500"
-                            />
-                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
                                 {t('settings.playerCountDesc')}
                             </p>
                         </div>
-                        <button
-                            onClick={handlePlayerCountUpdate}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors h-10 mb-0.5"
-                        >
-                            {t('buttons.update')}
-                        </button>
+
+                        {(playerCountChanged || updatingPlayerCount) && (
+                            <button
+                                onClick={handlePlayerCountUpdate}
+                                disabled={updatingPlayerCount || !playerCountChanged}
+                                className={`px-6 py-2 rounded-xl transition-all shadow-lg font-bold text-sm flex items-center gap-2 ${playerCountChanged
+                                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 dark:shadow-none'
+                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800'
+                                }`}
+                            >
+                                {updatingPlayerCount ? <Loader2 className="w-4 h-4 animate-spin"/> :
+                                    <Check className="w-4 h-4"/>}
+                                {t('buttons.update')}
+                            </button>
+                        )}
+
+                        <div
+                            className="flex items-center gap-4 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <button
+                                onClick={() => playerCount > 1 && setPlayerCount(prev => prev - 1)}
+                                disabled={updatingPlayerCount || playerCount <= 1}
+                                className="w-10 h-10 flex items-center justify-center text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <Minus className="w-6 h-6"/>
+                            </button>
+
+                            <div className="flex flex-col items-center min-w-[3rem]">
+                                {updatingPlayerCount ? (
+                                    <Loader2 className="w-6 h-6 animate-spin text-indigo-500"/>
+                                ) : (
+                                    <span className="text-2xl font-black text-slate-900 dark:text-white tabular-nums">
+                                        {playerCount}
+                                    </span>
+                                )}
+                            </div>
+
+                            <button
+                                onClick={() => playerCount < 50 && setPlayerCount(prev => prev + 1)}
+                                disabled={updatingPlayerCount || playerCount >= 50}
+                                className="w-10 h-10 flex items-center justify-center text-slate-500 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <Plus className="w-6 h-6"/>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -302,7 +354,7 @@ export const GameSettingsPage: React.FC = () => {
                         </div>
                         <button
                             onClick={() => handleAddRole(selectedRole)}
-                            disabled={updatingRoles}
+                            disabled={updatingRoles || !selectedRole.trim()}
                             className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors"
                         >
                             {updatingRoles ? <Loader2 className="w-5 h-5 animate-spin"/> : <Plus className="w-5 h-5"/>}

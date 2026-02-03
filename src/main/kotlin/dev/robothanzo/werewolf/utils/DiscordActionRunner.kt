@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger
 data class ActionTask(
     val action: RestAction<*>,
     val description: String,
-    val onSuccess: ((Any) -> Unit)? = null
+    val onSuccess: ((Any?) -> Unit)? = null
 )
 
 /**
@@ -32,7 +32,7 @@ fun Collection<ActionTask>.runActions(
     val range = endPercent - startPercent
 
     for (task in this) {
-        task.action.queue({ success: Any ->
+        task.action.queue({ success: Any? ->
             statusLogger?.invoke("  - [完成] " + task.description)
             task.onSuccess?.invoke(success)
             handleTaskCompletion(completed, total, allDone, progressCallback, startPercent, range)
