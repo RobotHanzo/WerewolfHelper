@@ -55,6 +55,11 @@ interface ActionUIService {
     ): Boolean
 
     /**
+     * Get an active prompt by id
+     */
+    fun getPrompt(promptId: String): ActionPrompt?
+
+    /**
      * Record a vote in a group action
      */
     fun submitGroupVote(

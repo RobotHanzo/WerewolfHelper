@@ -3,6 +3,8 @@ package dev.robothanzo.werewolf.discord
 import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID
 import dev.robothanzo.werewolf.service.ActionUIService
+import dev.robothanzo.werewolf.service.GameActionService
+import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.RoleActionService
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
@@ -20,7 +22,11 @@ class ActionSelectionListener(
     @param:Lazy
     private val actionUIService: ActionUIService,
     @param:Lazy
-    private val roleActionService: RoleActionService
+    private val roleActionService: RoleActionService,
+    @param:Lazy
+    private val gameActionService: GameActionService,
+    @param:Lazy
+    private val gameSessionService: GameSessionService
 ) : ListenerAdapter() {
     private val log = LoggerFactory.getLogger(ActionSelectionListener::class.java)
 
@@ -129,7 +135,48 @@ class ActionSelectionListener(
 
         event.reply("✅ 已選擇目標").setEphemeral(true).queue()
 
-        // TODO: Transition to next player's action prompt or start night resolution
+        // Submit action if prompt is complete, then clear prompt and advance night if no prompts remain
+        val prompt = actionUIService.getPrompt(playerId)
+        if (prompt != null && prompt.selectedAction != null && !prompt.selectedTargets.isNullOrEmpty()) {
+            // submit the action as PLAYER
+            roleActionService.submitAction(
+                guildId,
+                prompt.selectedAction!!.actionId,
+                prompt.userId,
+                prompt.selectedTargets ?: emptyList(),
+                "PLAYER"
+            )
+        }
+
+        // Remove prompt from active set and session state
+        actionUIService.clearPrompt(playerId)
+        @Suppress("UNCHECKED_CAST")
+        val promptsMap =
+            (session.stateData.getOrDefault("actionPrompts", mutableMapOf<String, Any>()) as MutableMap<String, Any>)
+        promptsMap.remove(playerId)
+        session.stateData["actionPrompts"] = promptsMap
+        sessionRepository.save(session)
+
+        // If no more active prompts remain, resolve night actions
+        if (promptsMap.isEmpty()) {
+            try {
+                val resolution = roleActionService.resolveNightActions(session)
+                // Apply deaths
+                for ((cause, uids) in resolution.deaths) {
+                    for (uid in uids) {
+                        gameActionService.markPlayerDead(session, uid, false, cause)
+                    }
+                }
+
+                // Broadcast update
+                gameSessionService.broadcastUpdate(guildId)
+            } catch (e: Exception) {
+                log.error("Failed to resolve night actions: {}", e.message, e)
+            }
+        } else {
+            // Otherwise, optionally notify next players or do nothing since their prompts are independent
+            // Optionally, you could trigger reminders or send the next prompt explicitly here
+        }
     }
 
     private fun handleGroupTargetSelection(

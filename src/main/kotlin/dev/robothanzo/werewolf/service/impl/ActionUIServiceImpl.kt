@@ -188,6 +188,10 @@ class ActionUIServiceImpl(
         return true
     }
 
+    override fun getPrompt(promptId: String): ActionPrompt? {
+        return activePrompts[promptId]
+    }
+
     override fun submitGroupVote(
         guildId: Long,
         groupStateId: String,
