@@ -1,7 +1,7 @@
 package dev.robothanzo.werewolf.listeners
 
+import dev.robothanzo.jda.interactions.annotations.Button
 import dev.robothanzo.werewolf.WerewolfApplication
-import dev.robothanzo.werewolf.commands.Player
 import dev.robothanzo.werewolf.commands.Poll
 import dev.robothanzo.werewolf.model.Candidate
 import dev.robothanzo.werewolf.utils.CmdUtils
@@ -36,12 +36,12 @@ class ButtonListener : ListenerAdapter() {
 
         when (id[0]) {
             "confirmNewPolice" -> {
-                Player.confirmNewPolice(event)
+                WerewolfApplication.policeService.confirmNewPolice(event)
                 return
             }
 
             "destroyPolice" -> {
-                Player.destroyPolice(event)
+                WerewolfApplication.policeService.destroyPolice(event)
                 return
             }
 
@@ -275,7 +275,7 @@ class ButtonListener : ListenerAdapter() {
 
     override fun onEntitySelectInteraction(event: EntitySelectInteractionEvent) {
         if ("selectNewPolice" == event.componentId) {
-            Player.selectNewPolice(event)
+            WerewolfApplication.policeService.selectNewPolice(event)
         }
     }
 
@@ -304,6 +304,29 @@ class ButtonListener : ListenerAdapter() {
         if (!handled) {
             electedCandidate.electors.add(event.user.idLong)
             event.hook.editOriginal(":white_check_mark: 已投給玩家${electedCandidate.player.id}").queue()
+        }
+    }
+
+    @Button
+    fun enrollPolice(event: ButtonInteractionEvent) {
+        WerewolfApplication.policeService.enrollPolice(event)
+    }
+
+    @Button
+    fun changeRoleOrder(event: ButtonInteractionEvent) {
+        if (event.guild == null) return
+        event.deferReply().queue()
+        val session = CmdUtils.getSession(event) ?: return
+        val player = session.getPlayer(event.user.idLong)
+        if (player == null) {
+            event.hook.editOriginal(":x: 你不是玩家").queue()
+            return
+        }
+        try {
+            WerewolfApplication.playerService.switchRoleOrder(player)
+            event.hook.editOriginal(":white_check_mark: 交換成功").queue()
+        } catch (e: Exception) {
+            event.hook.editOriginal(":x: " + e.message).queue()
         }
     }
 }

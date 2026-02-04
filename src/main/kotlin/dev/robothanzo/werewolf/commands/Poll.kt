@@ -1,7 +1,6 @@
 package dev.robothanzo.werewolf.commands
 
 import dev.robothanzo.jda.interactions.annotations.slash.Command
-import dev.robothanzo.jda.interactions.annotations.slash.Subcommand
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.audio.Audio
 import dev.robothanzo.werewolf.audio.Audio.play
@@ -14,10 +13,7 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
-import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import java.util.concurrent.ConcurrentHashMap
-import dev.robothanzo.jda.interactions.annotations.Button as AnnotationButton
 
 @Command
 class Poll {
@@ -177,59 +173,6 @@ class Poll {
 
             message?.channel?.sendMessageEmbeds(resultEmbed.build())?.queue()
                 ?: channel.sendMessageEmbeds(resultEmbed.build()).queue()
-        }
-    }
-
-    @Subcommand(description = "啟動驅逐投票")
-    fun expel(event: SlashCommandInteractionEvent) {
-        event.deferReply().queue()
-        if (!CmdUtils.isAdmin(event)) return
-        val session = CmdUtils.getSession(event.guild!!) ?: return
-
-        val candidates = session.players.values.asSequence()
-            .filter { it.isAlive }
-            .map { Candidate(player = it, expelPK = true) }
-            .associateByTo(ConcurrentHashMap()) { it.player.id }
-            
-        expelCandidates[event.guild!!.idLong] = candidates
-        startExpelPoll(session, event.channel as GuildMessageChannel, true)
-        event.hook.editOriginal(":white_check_mark:").queue()
-    }
-
-    @Subcommand
-    class Police {
-        @Subcommand(description = "啟動警長參選投票")
-        fun enroll(event: SlashCommandInteractionEvent) {
-            event.deferReply().queue()
-            if (!CmdUtils.isAdmin(event)) return
-            val session = CmdUtils.getSession(event.guild!!) ?: return
-
-            if (WerewolfApplication.policeService.sessions.containsKey(event.guild!!.idLong)) {
-                event.hook.editOriginal(":x: 警長選舉已在進行中").queue()
-                return
-            }
-
-            WerewolfApplication.policeService.startEnrollment(
-                session,
-                event.channel as GuildMessageChannel,
-                null
-            )
-            event.hook.editOriginal(":white_check_mark:").queue()
-        }
-
-        @Subcommand(description = "啟動警長投票 (會自動開始，請只在出問題時使用)")
-        fun start(event: SlashCommandInteractionEvent) {
-            event.deferReply().queue()
-            if (!CmdUtils.isAdmin(event)) return
-            val guild = event.guild ?: return
-
-            WerewolfApplication.policeService.forceStartVoting(guild.idLong)
-            event.hook.editOriginal(":white_check_mark:").queue()
-        }
-
-        @AnnotationButton
-        fun enrollPolice(event: ButtonInteractionEvent) {
-            WerewolfApplication.policeService.enrollPolice(event)
         }
     }
 }

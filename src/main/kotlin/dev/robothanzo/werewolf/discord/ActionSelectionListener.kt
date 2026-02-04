@@ -137,13 +137,13 @@ class ActionSelectionListener(
 
         // Submit action if prompt is complete, then clear prompt and advance night if no prompts remain
         val prompt = actionUIService.getPrompt(playerId)
-        if (prompt != null && prompt.selectedAction != null && !prompt.selectedTargets.isNullOrEmpty()) {
+        if (prompt != null && prompt.selectedAction != null && prompt.selectedTargets.isNotEmpty()) {
             // submit the action as PLAYER
             roleActionService.submitAction(
                 guildId,
-                prompt.selectedAction!!.actionId,
+                prompt.selectedAction.actionId,
                 prompt.userId,
-                prompt.selectedTargets ?: emptyList(),
+                prompt.selectedTargets,
                 "PLAYER"
             )
         }
