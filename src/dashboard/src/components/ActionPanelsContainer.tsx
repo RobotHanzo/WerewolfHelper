@@ -5,14 +5,12 @@ import {useTranslation} from '@/lib/i18n';
 interface ActionPanelsContainerProps {
     guildId: string;
     gameState: GameState;
-    userId: string;
     isJudge: boolean;
 }
 
 export function ActionPanelsContainer({
                                           guildId,
                                           gameState,
-                                          userId,
                                           isJudge,
                                       }: ActionPanelsContainerProps) {
     const {t} = useTranslation();

@@ -5,11 +5,11 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class SessionPlayerTest {
-    private lateinit var player: Session.Player
+    private lateinit var player: Player
 
     @BeforeEach
     fun setup() {
-        player = Session.Player(
+        player = Player(
             id = 1,
             roleId = 100L,
             channelId = 200L
@@ -96,31 +96,31 @@ class SessionPlayerTest {
 
     @Test
     fun testIsWolfRole() {
-        assertTrue(Session.Player.isWolf("狼人"))
-        assertTrue(Session.Player.isWolf("特殊狼人"))
-        assertFalse(Session.Player.isWolf("平民"))
-        assertFalse(Session.Player.isWolf("獵人"))
+        assertTrue(Player.isWolf("狼人"))
+        assertTrue(Player.isWolf("特殊狼人"))
+        assertFalse(Player.isWolf("平民"))
+        assertFalse(Player.isWolf("獵人"))
     }
 
     @Test
     fun testIsGodRole() {
-        assertTrue(Session.Player.isGod("獵人"))
-        assertTrue(Session.Player.isGod("預言家"))
-        assertTrue(Session.Player.isGod("守衛"))
-        assertFalse(Session.Player.isGod("狼人"))
-        assertFalse(Session.Player.isGod("平民"))
+        assertTrue(Player.isGod("獵人"))
+        assertTrue(Player.isGod("預言家"))
+        assertTrue(Player.isGod("守衛"))
+        assertFalse(Player.isGod("狼人"))
+        assertFalse(Player.isGod("平民"))
     }
 
     @Test
     fun testIsVillagerRole() {
-        assertTrue(Session.Player.isVillager("平民"))
-        assertFalse(Session.Player.isVillager("狼人"))
-        assertFalse(Session.Player.isVillager("獵人"))
+        assertTrue(Player.isVillager("平民"))
+        assertFalse(Player.isVillager("狼人"))
+        assertFalse(Player.isVillager("獵人"))
     }
 
     @Test
     fun testPlayerIDFormat() {
-        val format = Session.Player.ID_FORMAT
+        val format = Player.ID_FORMAT
         assertNotNull(format)
         val formatted = format.format(1L)
         assertEquals("01", formatted)
@@ -128,8 +128,8 @@ class SessionPlayerTest {
 
     @Test
     fun testMultiplePlayersIndependence() {
-        val player1 = Session.Player(id = 1, roleId = 100L, channelId = 200L)
-        val player2 = Session.Player(id = 2, roleId = 101L, channelId = 201L)
+        val player1 = Player(id = 1, roleId = 100L, channelId = 200L)
+        val player2 = Player(id = 2, roleId = 101L, channelId = 201L)
 
         player1.police = true
         player2.idiot = true

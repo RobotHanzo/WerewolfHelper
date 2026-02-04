@@ -5,6 +5,7 @@ import dev.robothanzo.werewolf.audio.Audio.play
 import dev.robothanzo.werewolf.commands.Poll
 import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.LogType
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.Candidate
 import dev.robothanzo.werewolf.model.PoliceSession
@@ -415,10 +416,14 @@ class PoliceServiceImpl(
 
     override fun transferPolice(
         session: Session,
-        guild: Guild,
-        player: Session.Player,
+        guild: Guild?,
+        player: Player,
         callback: (() -> Unit)?
     ) {
+        if (guild == null) {
+            callback?.invoke()
+            return
+        }
         if (player.police) {
             val senderId = player.userId ?: return
             val transferSession = TransferPoliceSession(
@@ -509,7 +514,10 @@ class PoliceServiceImpl(
                         recipientPlayer.userId?.let { uid ->
                             val recipientMember = guild.getMemberById(uid)
                             if (recipientMember != null) {
-                                recipientPlayer.updateNickname(recipientMember)
+                                val newName = recipientPlayer.nickname
+                                if (recipientMember.effectiveName != newName) {
+                                    recipientMember.modifyNickname(newName).queue()
+                                }
                                 event.reply(":white_check_mark: 警徽已移交給 " + recipientMember.asMention).queue()
                             }
                         }
@@ -520,7 +528,10 @@ class PoliceServiceImpl(
                     senderEntry?.police = false
                     val senderMember = guild.getMemberById(session.senderId)
                     if (senderEntry != null && senderMember != null) {
-                        senderEntry.updateNickname(senderMember)
+                        val senderNewName = senderEntry.nickname
+                        if (senderMember.effectiveName != senderNewName) {
+                            senderMember.modifyNickname(senderNewName).queue()
+                        }
                     }
 
                     sessionRepository.save(guildSession)

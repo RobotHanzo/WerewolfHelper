@@ -1,9 +1,10 @@
 package dev.robothanzo.werewolf.service.impl
 
-import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.LogType
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.GameActionService
 import dev.robothanzo.werewolf.service.GameSessionService
@@ -24,24 +25,21 @@ class GameActionServiceImpl(
 
     @Throws(Exception::class)
     override fun resetGame(
-        guildId: Long,
+        session: Session,
         statusCallback: (String) -> Unit,
         progressCallback: (Int) -> Unit
     ) {
-        val session = sessionRepository.findByGuildId(guildId)
-            .orElseThrow { RuntimeException("Session not found") }
-
+        val guildId = session.guildId
         progressCallback(0)
         statusCallback("正在連線至 Discord...")
 
-        val jda = discordService.jda ?: throw Exception("JDA not initialized")
+        val jda = discordService.jda
         val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
 
         progressCallback(5)
         statusCallback("正在掃描需要清理的身分組...")
 
         val tasks = mutableListOf<ActionTask>()
-        val spectatorRole = guild.getRoleById(session.spectatorRoleId)
 
         for (player in session.players.values) {
             val currentUserId = player.userId
@@ -58,6 +56,7 @@ class GameActionServiceImpl(
             if (currentUserId != null) {
                 val member = guild.getMemberById(currentUserId)
                 if (member != null) {
+                    val spectatorRole = guild.getRoleById(session.spectatorRoleId)
                     if (spectatorRole != null) {
                         tasks.add(
                             ActionTask(
@@ -106,6 +105,10 @@ class GameActionServiceImpl(
 
         session.logs = mutableListOf()
         session.hasAssignedRoles = false
+        session.currentState = "SETUP"
+        session.stateData = mutableMapOf()
+        session.currentStepEndTime = 0L
+        session.day = 0
         session.addLog(LogType.GAME_RESET, "遊戲已重置", null)
 
         sessionRepository.save(session)
@@ -116,175 +119,18 @@ class GameActionServiceImpl(
         gameSessionService.broadcastUpdate(guildId)
     }
 
-    override fun markPlayerDead(guildId: Long, userId: Long, allowLastWords: Boolean) {
-        try {
-            val session = sessionRepository.findByGuildId(guildId)
-                .orElseThrow { RuntimeException("Session not found") }
+    override fun markPlayerDead(
+        session: Session,
+        userId: Long,
+        allowLastWords: Boolean,
+        cause: DeathCause
+    ) {
+        val player = session.getPlayer(userId) ?: throw RuntimeException("Player not found")
 
-            val jda = discordService.jda
-            val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
-            val spectatorRole =
-                guild.getRoleById(session.spectatorRoleId) ?: throw Exception("Spectator role not found")
-
-            var member = guild.getMemberById(userId)
-            if (member == null) {
-                member = guild.retrieveMemberById(userId).complete()
-            }
-
-            var lastWords = allowLastWords
-            var success = false
-
-            // Logic absorbed from Player.java playerDied
-            for ((_, player) in session.players) {
-                if (member?.idLong == player.userId) {
-                    if (!player.isAlive) {
-                        break // Already dead
-                    }
-
-                    // Soft kill logic
-                    val roles = player.roles ?: mutableListOf()
-                    var deadRoles = player.deadRoles
-                    if (deadRoles == null) {
-                        deadRoles = mutableListOf()
-                        player.deadRoles = deadRoles
-                    }
-
-                    var killedRole: String? = null
-                    for (role in roles) {
-                        val totalCount = roles.stream().filter { r -> r == role }.count()
-                        val deadCount = deadRoles.stream().filter { r -> r == role }.count()
-
-                        if (deadCount < totalCount) {
-                            killedRole = role
-                            deadRoles.add(role)
-                            break
-                        }
-                    }
-
-                    sessionRepository.save(session) // Persist dead role update
-
-                    if (killedRole != null) {
-                        val metadata = mutableMapOf<String, Any>()
-                        metadata["playerId"] = player.id
-                        metadata["playerName"] = player.nickname
-                        metadata["killedRole"] = killedRole
-                        metadata["userId"] = userId
-                        metadata["isExpelled"] =
-                            false // markPlayerDead is usually manual or command based, not expel? Or generic. Assuming generic non-expel for now or handled elsewhere?
-                        // original logic had isExpelled param. GameActionService does not?
-                        // Command Player.died passes false for isExpelled.
-
-                        session.addLog(
-                            LogType.PLAYER_DIED,
-                            player.nickname + " 的 " + killedRole + " 身份已死亡",
-                            metadata
-                        )
-
-                        // Trigger role event for ON_DEATH listeners (e.g., Hunter revenge)
-                        roleEventService.notifyListeners(
-                            session,
-                            dev.robothanzo.werewolf.game.model.RoleEventType.ON_DEATH,
-                            mapOf(
-                                "userId" to userId,
-                                "killedRole" to killedRole,
-                                "playerId" to player.id
-                            )
-                        )
-                        session.sendToCourt("**:skull: " + member.asMention + " 已死亡**")
-                    }
-
-                    val result = session.hasEnded(killedRole)
-                    if (result != Session.Result.NOT_ENDED) {
-                        val judgePing = "<@&" + session.judgeRoleId + "> "
-                        if (result == Session.Result.WOLVES_DIED) {
-                            session.sendToSpectator(judgePing + "遊戲結束，**好**人獲勝，原因：" + result.reason)
-                        } else {
-                            session.sendToSpectator(judgePing + "遊戲結束，**狼**人獲勝，原因：" + result.reason)
-                        }
-                        lastWords = false
-                    }
-
-                    if (player.isAlive) {
-                        val remainingRoles = player.roles?.toMutableList() ?: mutableListOf()
-                        player.deadRoles?.forEach { deadRole ->
-                            remainingRoles.remove(deadRole)
-                        }
-                        
-                        val remainingRoleName = if (remainingRoles.isEmpty()) "未知" else remainingRoles.first()
-                        player.send("因為你死了，所以你的角色變成了 $remainingRoleName")
-                        sessionRepository.save(session)
-
-                        if (lastWords) {
-                            // Ideally access SpeechService. But GameActionServiceImpl might not have it injected?
-                            // Need to check dependencies.
-                            // If missing, I might need to add it or use Application context if cyclic dep.
-                            // Assuming for now I can't easily call startLastWordsSpeech if simpler approach exists or just ignore lastwords automation for this refactor step if critical?
-                            // Player.java called WerewolfApplication.speechService.
-                            WerewolfApplication.speechService.startLastWordsSpeech(
-                                guild,
-                                session.courtTextChannelId,
-                                player,
-                                null
-                            )
-                        }
-                        success = true
-                        break
-                    }
-
-                    // Fully dead
-                    val die = {
-                        WerewolfApplication.policeService.transferPolice(session, guild, player) {
-                            // Callback after transfer
-                            // Re-fetch session in case it changed?
-                            val newSession =
-                                sessionRepository.findByGuildId(guildId).orElse(null) ?: return@transferPolice
-
-                            // We need to re-find player object
-                            val newPlayer = newSession.players[player.id.toString()] ?: return@transferPolice
-
-                            // Actually we need to check if white idiot logic applies.
-                            // isExpelled is false here based on usage.
-                            // So ordinary death.
-
-                            guild.modifyMemberRoles(member, spectatorRole).queue()
-
-                            // Update DB
-                            sessionRepository.save(newSession)
-                            newPlayer.updateNickname(member)
-                            gameSessionService.broadcastSessionUpdate(newSession)
-                        }
-                    }
-
-                    if (lastWords) {
-                        WerewolfApplication.speechService.startLastWordsSpeech(
-                            guild,
-                            session.courtTextChannelId,
-                            player,
-                            die
-                        )
-                    } else {
-                        die()
-                    }
-                    success = true
-                    break
-                }
-            }
-
-            if (!success && member != null) {
-                // Player not found in session map, allow spectator role?
-                guild.addRoleToMember(member, spectatorRole).queue()
-                member.modifyNickname("[旁觀] " + member.effectiveName).queue()
-            }
-
-            sessionRepository.save(session)
-            gameSessionService.broadcastUpdate(guildId)
-        } catch (e: Exception) {
-            log.error("Failed to mark player dead: {}", e.message, e)
-            throw RuntimeException("Failed to mark player dead", e)
-        }
+        player.died(cause, allowLastWords)
     }
 
-    override fun revivePlayer(guildId: Long, userId: Long) {
+    override fun revivePlayer(session: Session, userId: Long) {
         // Logic for generic revive (maybe revive all roles? or just one?)
         // Player.java logic was reviveRole(..., roleToRevive)
         // revivePlayer in interface takes userId. 
@@ -293,24 +139,15 @@ class GameActionServiceImpl(
         // However, looking at usage in `GameActionServiceImpl` previously, it looped through all dead roles and revived them.
 
         try {
-            val session = sessionRepository.findByGuildId(guildId)
-                .orElseThrow { RuntimeException("Session not found") }
-
-            val jda = discordService.jda ?: throw Exception("JDA not initialized")
-            val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
+            val jda = discordService.jda
+            val guild = jda.getGuildById(session.guildId) ?: throw Exception("Guild not found")
 
             var member = guild.getMemberById(userId)
             if (member == null) {
                 member = guild.retrieveMemberById(userId).complete()
             }
 
-            var targetPlayer: Session.Player? = null
-            for (p in session.players.values) {
-                if (p.userId != null && p.userId == userId) {
-                    targetPlayer = p
-                    break
-                }
-            }
+            val targetPlayer: Player? = session.getPlayer(userId)
 
             if (targetPlayer == null || targetPlayer.deadRoles.isNullOrEmpty()) {
                 throw Exception("Player has no dead roles to revive")
@@ -318,7 +155,7 @@ class GameActionServiceImpl(
 
             val rolesToRevive = targetPlayer.deadRoles?.toMutableList() ?: mutableListOf()
             for (role in rolesToRevive) {
-                reviveRole(guildId, userId, role)
+                reviveRole(session, userId, role)
             }
             // updates broadcasted in reviveRole
         } catch (e: Exception) {
@@ -327,15 +164,10 @@ class GameActionServiceImpl(
         }
     }
 
-    override fun reviveRole(guildId: Long, userId: Long, role: String) {
+    override fun reviveRole(session: Session, userId: Long, role: String) {
         try {
-            val session = sessionRepository.findByGuildId(guildId)
-                .orElseThrow { RuntimeException("Session not found") }
-
-            val jda = discordService.jda ?: throw Exception("JDA not initialized")
-            val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
-            val spectatorRole =
-                guild.getRoleById(session.spectatorRoleId) ?: throw Exception("Spectator role not found")
+            val guildId = session.guildId
+            val guild = session.guild ?: throw Exception("Guild not found")
 
             var member = guild.getMemberById(userId)
             if (member == null) {
@@ -361,11 +193,16 @@ class GameActionServiceImpl(
                     metadata["playerName"] = player.nickname
                     metadata["revivedRole"] = role
                     session.addLog(LogType.PLAYER_REVIVED, player.nickname + " 的 " + role + " 身份已復活", metadata)
-
                     if (wasFullyDead) {
-                        guild.removeRoleFromMember(member, spectatorRole).queue()
+                        val spectatorRole = guild.getRoleById(session.spectatorRoleId)
+                        if (spectatorRole != null) {
+                            guild.removeRoleFromMember(member, spectatorRole).queue()
+                        }
                     }
-                    player.updateNickname(member)
+                    val newName = player.nickname
+                    if (member.effectiveName != newName) {
+                        member.modifyNickname(newName).queue()
+                    }
 
                     val remainingRoles = player.roles?.toMutableList() ?: mutableListOf()
                     player.deadRoles?.forEach { deadRole ->
@@ -399,12 +236,10 @@ class GameActionServiceImpl(
         }
     }
 
-    override fun setPolice(guildId: Long, userId: Long) {
+    override fun setPolice(session: Session, userId: Long) {
         try {
-            val session = sessionRepository.findByGuildId(guildId)
-                .orElseThrow { RuntimeException("Session not found") }
-
-            val jda = discordService.jda ?: throw Exception("JDA not initialized")
+            val guildId = session.guildId
+            val jda = discordService.jda
             val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
 
             for (player in session.players.values) {
@@ -412,13 +247,17 @@ class GameActionServiceImpl(
                     player.police = false
                     player.userId?.let { uid ->
                         val member = guild.getMemberById(uid)
-                        if (member != null)
-                            player.updateNickname(member)
+                        if (member != null) {
+                            val newName = player.nickname
+                            if (member.effectiveName != newName) {
+                                member.modifyNickname(newName).queue()
+                            }
+                        }
                     }
                 }
             }
 
-            var targetPlayer: Session.Player? = null
+            var targetPlayer: Player? = null
             for (player in session.players.values) {
                 if (player.userId != null && player.userId == userId) {
                     player.police = true
@@ -433,7 +272,10 @@ class GameActionServiceImpl(
             targetPlayer.userId?.let { uid ->
                 val member = guild.getMemberById(uid)
                 if (member != null) {
-                    targetPlayer.updateNickname(member)
+                    val newName = targetPlayer.nickname
+                    if (member.effectiveName != newName) {
+                        member.modifyNickname(newName).queue()
+                    }
                     val courtChannel = guild.getTextChannelById(session.courtTextChannelId)
                     courtChannel?.sendMessage(":white_check_mark: 警徽已移交給 " + member.asMention)
                         ?.queue()
@@ -459,11 +301,10 @@ class GameActionServiceImpl(
     }
 
     override fun muteAll(guildId: Long, mute: Boolean) {
-        val session = sessionRepository.findByGuildId(guildId)
-            .orElseThrow { RuntimeException("Session not found") }
-
-        val jda = discordService.jda ?: return
+        val jda = discordService.jda
         val guild = jda.getGuildById(guildId) ?: return
+
+        val session = sessionRepository.findByGuildId(guildId).orElse(null) ?: return
 
         // Mute voice channel logic if applicable (typically mute everyone in court voice channel)
         if (session.courtVoiceChannelId != 0L) {

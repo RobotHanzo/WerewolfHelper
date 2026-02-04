@@ -74,33 +74,33 @@ interface GameSessionService {
     /**
      * Retrieves all members of a guild for management purposes.
      *
-     * @param guildId the ID of the guild
+     * @param session the session
      * @return a list of member maps containing user details and roles
      * @throws Exception if an error occurs during retrieval
      */
     @Throws(Exception::class)
-    fun getGuildMembers(guildId: Long): List<Map<String, Any>>
+    fun getGuildMembers(session: Session): List<Map<String, Any>>
 
     /**
      * Updates the custom role for a user within a guild.
      *
-     * @param guildId the ID of the guild
+     * @param session the session
      * @param userId  the ID of the user
      * @param role    the new role to assign
      * @throws Exception if an error occurs during the update
      */
     @Throws(Exception::class)
-    fun updateUserRole(guildId: Long, userId: Long, role: UserRole)
+    fun updateUserRole(session: Session, userId: Long, role: UserRole)
 
     /**
      * Updates the settings for a game session.
      *
-     * @param guildId  the ID of the guild
+     * @param session  the session
      * @param settings a map of setting keys and values to update
      * @throws Exception if an error occurs during the update
      */
     @Throws(Exception::class)
-    fun updateSettings(guildId: Long, settings: Map<String, Any>)
+    fun updateSettings(session: Session, settings: Map<String, Any>)
 
     /**
      * Broadcasts a session update to all connected WebSocket clients for a guild.

@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.listeners
 
 import club.minnced.discord.webhook.WebhookClient
 import club.minnced.discord.webhook.send.WebhookMessageBuilder
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.utils.CmdUtils
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
@@ -39,7 +40,7 @@ class MessageListener : ListenerAdapter() {
         return false
     }
 
-    private fun shouldSend(player: Session.Player, session: Session): Boolean {
+    private fun shouldSend(player: Player, session: Session): Boolean {
         // Kotlin handles nullability; assuming roles is not null per logic
         val roles = player.roles
         if (roles.isNullOrEmpty()) return false

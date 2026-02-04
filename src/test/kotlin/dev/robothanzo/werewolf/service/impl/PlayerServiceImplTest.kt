@@ -1,6 +1,7 @@
 package dev.robothanzo.werewolf.service.impl
 
 import dev.robothanzo.werewolf.database.SessionRepository
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.GameSessionService
@@ -14,7 +15,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.util.*
 
 class PlayerServiceImplTest {
     @Mock
@@ -32,6 +32,10 @@ class PlayerServiceImplTest {
     fun setup() {
         MockitoAnnotations.openMocks(this)
         playerService = PlayerServiceImpl(sessionRepository, discordService, gameSessionService)
+
+        // Initialize WerewolfApplication.jda to a mock so Player.send() doesn't throw
+        val mockJda = org.mockito.Mockito.mock(net.dv8tion.jda.api.JDA::class.java)
+        dev.robothanzo.werewolf.WerewolfApplication.jda = mockJda
     }
 
     @Test
@@ -43,88 +47,79 @@ class PlayerServiceImplTest {
             mapOf("id" to "2", "nickname" to "玩家2")
         )
 
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.of(session))
         whenever(gameSessionService.playersToJSON(session)).thenReturn(mockPlayersList)
 
-        val result = playerService.getPlayersJSON(guildId)
+        val result = playerService.getPlayersJSON(session)
 
         assertEquals(2, result.size)
         verify(gameSessionService).playersToJSON(session)
     }
 
     @Test
-    fun testGetPlayersJSONSessionNotFound() {
-        val guildId = 123L
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.empty())
+    fun testGetPlayersJSONWithEmptySession() {
+        val session = Session(guildId = 123L)
+        whenever(gameSessionService.playersToJSON(session)).thenReturn(emptyList())
 
-        assertThrows<RuntimeException> {
-            playerService.getPlayersJSON(guildId)
-        }
+        val result = playerService.getPlayersJSON(session)
+
+        assertTrue(result.isEmpty())
     }
 
     @Test
-    fun testSetPlayerCountSessionNotFound() {
-        val guildId = 123L
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.empty())
+    fun testSetPlayerCountWithoutJdaThrows() {
+        val session = Session(guildId = 123L)
+        whenever(discordService.jda).thenReturn(null)
 
-        assertThrows<RuntimeException> {
-            playerService.setPlayerCount(guildId, 5, {}, {})
+        assertThrows<Exception> {
+            playerService.setPlayerCount(session, 5, {}, {})
         }
     }
 
     @Test
     fun testUpdatePlayerRolesSuccess() {
         val guildId = 123L
-        val playerId = "1"
         val session = Session(guildId = guildId)
-        val player = Session.Player(id = 1, roleId = 100L, channelId = 200L)
+        val player = Player(id = 1, roleId = 100L, channelId = 200L)
+        player.session = session
         session.players["1"] = player
 
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.of(session))
         whenever(sessionRepository.save(any())).thenReturn(session)
 
         val roles = listOf("狼人", "平民")
-        playerService.updatePlayerRoles(guildId, playerId, roles)
+        playerService.updatePlayerRoles(player, roles)
 
         assertEquals(roles, player.roles)
         verify(sessionRepository).save(session)
     }
 
     @Test
-    fun testUpdatePlayerRolesSessionNotFound() {
-        val guildId = 123L
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.empty())
-
-        assertThrows<RuntimeException> {
-            playerService.updatePlayerRoles(guildId, "1", listOf("狼人"))
-        }
-    }
-
-    @Test
     fun testUpdatePlayerRolesPlayerNotFound() {
-        val guildId = 123L
-        val session = Session(guildId = guildId)
+        val session = Session(guildId = 123L)
 
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.of(session))
+        // Player not present in session
+        val missingPlayer = Player(id = 999, roleId = 0L, channelId = 0L)
+        missingPlayer.session = session
 
-        assertThrows<RuntimeException> {
-            playerService.updatePlayerRoles(guildId, "999", listOf("狼人"))
-        }
+        val roles = listOf("狼人")
+        playerService.updatePlayerRoles(missingPlayer, roles)
+
+        // The provided player instance should be updated even if not stored in session.players
+        assertEquals(roles, missingPlayer.roles)
+        verify(sessionRepository).save(session)
     }
 
     @Test
     fun testSwitchRoleOrderSuccess() {
         val guildId = 123L
-        val playerId = "1"
         val session = Session(guildId = guildId)
-        val player = Session.Player(id = 1, roleId = 100L, channelId = 200L)
+        val player = Player(id = 1, roleId = 100L, channelId = 0L)
         player.roles = mutableListOf("狼人", "平民")
+        player.session = session
         session.players["1"] = player
 
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.of(session))
         whenever(sessionRepository.save(any())).thenReturn(session)
 
-        playerService.switchRoleOrder(guildId, playerId)
+        playerService.switchRoleOrder(player)
 
         // Verify roles were swapped
         assertEquals("平民", player.roles?.get(0))
@@ -135,32 +130,21 @@ class PlayerServiceImplTest {
     @Test
     fun testSetRolePositionLockSuccess() {
         val guildId = 123L
-        val playerId = "1"
         val session = Session(guildId = guildId)
-        val player = Session.Player(id = 1, roleId = 100L, channelId = 200L)
+        val player = Player(id = 1, roleId = 100L, channelId = 200L)
+        player.session = session
         session.players["1"] = player
 
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.of(session))
         whenever(sessionRepository.save(any())).thenReturn(session)
 
         assertFalse(player.rolePositionLocked)
-        playerService.setRolePositionLock(guildId, playerId, true)
+        playerService.setRolePositionLock(player, true)
         assertTrue(player.rolePositionLocked)
 
-        playerService.setRolePositionLock(guildId, playerId, false)
+        playerService.setRolePositionLock(player, false)
         assertFalse(player.rolePositionLocked)
 
         // Verify save was called (may be multiple times due to addLog calling saveSession)
         verify(sessionRepository, atLeastOnce()).save(any())
-    }
-
-    @Test
-    fun testSetRolePositionLockSessionNotFound() {
-        val guildId = 123L
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.empty())
-
-        assertThrows<RuntimeException> {
-            playerService.setRolePositionLock(guildId, "1", true)
-        }
     }
 }

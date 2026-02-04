@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.model
 
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -59,9 +60,9 @@ class SpeechSessionTest {
 
     @Test
     fun testAddPlayersToSpeechOrder() {
-        val player1 = Session.Player(id = 1, roleId = 1L, channelId = 1L, userId = 100L)
-        val player2 = Session.Player(id = 2, roleId = 2L, channelId = 2L, userId = 200L)
-        val player3 = Session.Player(id = 3, roleId = 3L, channelId = 3L, userId = 300L)
+        val player1 = Player(id = 1, roleId = 1L, channelId = 1L, userId = 100L)
+        val player2 = Player(id = 2, roleId = 2L, channelId = 2L, userId = 200L)
+        val player3 = Player(id = 3, roleId = 3L, channelId = 3L, userId = 300L)
 
         speechSession.order.add(player1)
         speechSession.order.add(player2)
@@ -126,8 +127,8 @@ class SpeechSessionTest {
 
     @Test
     fun testComplexSpeechSessionScenario() {
-        val player1 = Session.Player(id = 1, roleId = 1L, channelId = 1L, userId = 100L)
-        val player2 = Session.Player(id = 2, roleId = 2L, channelId = 2L, userId = 200L)
+        val player1 = Player(id = 1, roleId = 1L, channelId = 1L, userId = 100L)
+        val player2 = Player(id = 2, roleId = 2L, channelId = 2L, userId = 200L)
 
         speechSession.order.add(player1)
         speechSession.order.add(player2)
@@ -145,8 +146,8 @@ class SpeechSessionTest {
 
     @Test
     fun testClearSpeechOrder() {
-        val player1 = Session.Player(id = 1, roleId = 1L, channelId = 1L, userId = 100L)
-        val player2 = Session.Player(id = 2, roleId = 2L, channelId = 2L, userId = 200L)
+        val player1 = Player(id = 1, roleId = 1L, channelId = 1L, userId = 100L)
+        val player2 = Player(id = 2, roleId = 2L, channelId = 2L, userId = 200L)
 
         speechSession.order.add(player1)
         speechSession.order.add(player2)

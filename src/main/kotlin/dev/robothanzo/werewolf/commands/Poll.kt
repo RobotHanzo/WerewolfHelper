@@ -6,6 +6,7 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.audio.Audio
 import dev.robothanzo.werewolf.audio.Audio.play
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.model.Candidate
 import dev.robothanzo.werewolf.utils.CmdUtils
 import dev.robothanzo.werewolf.utils.MsgUtils
@@ -109,9 +110,10 @@ class Poll {
                     // Trigger death for expel
                     winner.player.userId?.let { uid ->
                         WerewolfApplication.gameActionService.markPlayerDead(
-                            channel.guild.idLong,
+                            session,
                             uid,
-                            true
+                            true,
+                            DeathCause.EXPEL
                         )
                     }
 

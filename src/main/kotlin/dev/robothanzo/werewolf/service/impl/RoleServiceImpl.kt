@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.service.impl
 
 import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.LogType
+import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.RoleService
@@ -24,11 +25,8 @@ class RoleServiceImpl(
 ) : RoleService {
     private val log = LoggerFactory.getLogger(RoleServiceImpl::class.java)
 
-    override fun addRole(guildId: Long, roleName: String, amount: Int) {
+    override fun addRole(session: Session, roleName: String, amount: Int) {
         try {
-            val session = sessionRepository.findByGuildId(guildId)
-                .orElseThrow { RuntimeException("Session not found") }
-
             val roles = session.roles.toMutableList()
             repeat(amount) { roles.add(roleName) }
             session.roles = roles
@@ -39,11 +37,8 @@ class RoleServiceImpl(
         }
     }
 
-    override fun removeRole(guildId: Long, roleName: String, amount: Int) {
+    override fun removeRole(session: Session, roleName: String, amount: Int) {
         try {
-            val session = sessionRepository.findByGuildId(guildId)
-                .orElseThrow { RuntimeException("Session not found") }
-
             val roles = session.roles.toMutableList()
             repeat(amount) { roles.remove(roleName) }
             session.roles = roles
@@ -54,17 +49,13 @@ class RoleServiceImpl(
         }
     }
 
-    override fun getRoles(guildId: Long): List<String> {
-        val session = sessionRepository.findByGuildId(guildId)
-            .orElseThrow { RuntimeException("Session not found") }
+    override fun getRoles(session: Session): List<String> {
         return session.roles
     }
 
-    override fun assignRoles(guildId: Long, statusCallback: (String) -> Unit, progressCallback: (Int) -> Unit) {
+    override fun assignRoles(session: Session, statusCallback: (String) -> Unit, progressCallback: (Int) -> Unit) {
         try {
-            val session = sessionRepository.findByGuildId(guildId)
-                .orElseThrow { RuntimeException("Session not found") }
-
+            val guildId = session.guildId
             if (session.hasAssignedRoles) {
                 throw Exception("身分已分配，重新分配前請先重置遊戲。")
             }
@@ -75,7 +66,7 @@ class RoleServiceImpl(
             progressCallback(0)
             statusCallback("正在掃描伺服器玩家...")
 
-            val jda = discordService.jda ?: throw Exception("JDA not initialized")
+            val jda = discordService.jda
             val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
 
             val pending = guild.members.filter { member ->

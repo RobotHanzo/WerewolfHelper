@@ -3,7 +3,6 @@ package dev.robothanzo.werewolf.listeners
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.commands.Player
 import dev.robothanzo.werewolf.commands.Poll
-import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.Candidate
 import dev.robothanzo.werewolf.utils.CmdUtils
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
@@ -11,6 +10,7 @@ import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionE
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import dev.robothanzo.werewolf.database.documents.Player as DatabasePlayer
 
 class ButtonListener : ListenerAdapter() {
     companion object {
@@ -64,7 +64,7 @@ class ButtonListener : ListenerAdapter() {
                 event.deferReply(true).queue()
                 val actionId = if (id.size > 1) id[1] else return
                 val session = CmdUtils.getSession(event) ?: return
-                var player: Session.Player? = null
+                var player: DatabasePlayer? = null
                 for (p in session.fetchAlivePlayers().values) {
                     if (p.userId != null && p.userId == event.user.idLong) {
                         player = p
@@ -102,9 +102,9 @@ class ButtonListener : ListenerAdapter() {
                     val targetMessage = buildString {
                         appendLine("🎯 **選擇目標**")
                         appendLine()
-                        appendLine("請選擇 **${action.roleName}** 的 **${action.actionName}** 目標:")
+                        appendLine("請選擇 **${action.roleName}** 的 **${action.actionName}** 目標：")
                         for (p in alivePlayers) {
-                            appendLine("• Player ${p.id}")
+                            appendLine("- ${p.nickname}")
                         }
                     }
 
@@ -202,7 +202,7 @@ class ButtonListener : ListenerAdapter() {
         event.deferReply(true).queue()
 
         val session = CmdUtils.getSession(event) ?: return
-        var player: Session.Player? = null
+        var player: DatabasePlayer? = null
         var check = false
 
         for (p in session.fetchAlivePlayers().values) {

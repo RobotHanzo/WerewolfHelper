@@ -111,6 +111,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
                 players: players,
                 doubleIdentities: data.doubleIdentities,
                 availableRoles: data.roles || [],
+                hasAssignedRoles: data.hasAssignedRoles,
                 speech: data.speech || undefined,
                 police: data.police,
                 expel: data.expel, // Ensure expel is updated too

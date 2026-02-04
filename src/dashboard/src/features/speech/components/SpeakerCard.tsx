@@ -1,6 +1,5 @@
-import React from 'react';
 import {Clock, Mic, SkipForward, Square} from 'lucide-react';
-import {Player} from '../types';
+import {Player} from '@/types';
 
 interface SpeakerCardProps {
     player: Player;

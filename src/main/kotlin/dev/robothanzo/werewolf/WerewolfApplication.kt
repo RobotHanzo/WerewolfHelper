@@ -64,6 +64,7 @@ class WerewolfApplication {
         lateinit var speechService: SpeechService
         lateinit var actionUIService: ActionUIService
         lateinit var roleActionExecutor: RoleActionExecutor
+        lateinit var roleEventService: RoleEventService
         val playerManager: AudioPlayerManager = DefaultAudioPlayerManager()
 
         @JvmStatic
@@ -119,7 +120,8 @@ class WerewolfApplication {
         private val playerServiceBean: PlayerService,
         private val speechServiceBean: SpeechService,
         private val actionUIServiceBean: ActionUIService,
-        private val roleActionExecutorBean: RoleActionExecutor
+        private val roleActionExecutorBean: RoleActionExecutor,
+        private val roleEventServiceBean: RoleEventService
     ) {
         private val log = LoggerFactory.getLogger(StaticBridge::class.java)
 
@@ -138,7 +140,8 @@ class WerewolfApplication {
             speechService = speechServiceBean
             actionUIService = actionUIServiceBean
             roleActionExecutor = roleActionExecutorBean
-            jda = discordServiceBean.jda!!
+            roleEventService = roleEventServiceBean
+            jda = discordServiceBean.jda
 
             AudioSourceManagers.registerRemoteSources(playerManager)
             AudioSourceManagers.registerLocalSource(playerManager)

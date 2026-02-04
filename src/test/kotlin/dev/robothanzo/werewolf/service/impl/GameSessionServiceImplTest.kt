@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.service.impl
 
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.SessionRepository
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.database.documents.UserRole
 import dev.robothanzo.werewolf.game.GameStep
@@ -167,8 +168,8 @@ class GameSessionServiceImplTest {
     @Test
     fun testPlayersToJSON() {
         val session = Session(guildId = 123L)
-        val player1 = Session.Player(id = 1, roleId = 100L, channelId = 200L)
-        val player2 = Session.Player(id = 2, roleId = 101L, channelId = 201L)
+        val player1 = Player(id = 1, roleId = 100L, channelId = 200L)
+        val player2 = Player(id = 2, roleId = 101L, channelId = 201L)
         session.players["1"] = player1
         session.players["2"] = player2
 
@@ -189,40 +190,42 @@ class GameSessionServiceImplTest {
     }
 
     @Test
-    fun testGetGuildMembersSessionNotFound() {
-        val guildId = 123L
+    fun testGetGuildMembersGuildNotFound() {
+        val session = Session(guildId = 123L)
 
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.empty())
+        val mockJda = mock<JDA>()
+        whenever(mockJda.getGuildById(session.guildId)).thenReturn(null)
+        whenever(discordService.jda).thenReturn(mockJda)
 
         assertThrows<Exception> {
-            gameSessionService.getGuildMembers(guildId)
+            gameSessionService.getGuildMembers(session)
         }
     }
 
     @Test
-    fun testUpdateUserRoleSessionNotFound() {
-        val guildId = 123L
+    fun testUpdateUserRoleGuildNotFound() {
+        val session = Session(guildId = 123L)
 
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.empty())
+        val mockJda = mock<JDA>()
+        whenever(mockJda.getGuildById(session.guildId)).thenReturn(null)
+        whenever(discordService.jda).thenReturn(mockJda)
 
         assertThrows<Exception> {
-            gameSessionService.updateUserRole(guildId, 100L, UserRole.JUDGE)
+            gameSessionService.updateUserRole(session, 100L, UserRole.JUDGE)
         }
     }
 
     @Test
     fun testUpdateSessionSettingsSuccess() {
-        val guildId = 123L
-        val session = Session(guildId = guildId)
+        val session = Session(guildId = 123L)
 
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.of(session))
         whenever(sessionRepository.save(any())).thenReturn(session)
 
         val settings = mapOf(
             "muteAfterSpeech" to true,
             "doubleIdentities" to false
         )
-        gameSessionService.updateSettings(guildId, settings)
+        gameSessionService.updateSettings(session, settings)
 
         assertEquals(true, session.muteAfterSpeech)
         assertEquals(false, session.doubleIdentities)

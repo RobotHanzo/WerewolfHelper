@@ -30,7 +30,7 @@ class SpeechController(
         val channel = guild.getTextChannelById(session.courtTextChannelId)
 
         if (channel != null) {
-            speechService.startAutoSpeechFlow(guildId, channel.idLong)
+            speechService.startAutoSpeechFlow(session, channel.idLong)
         }
         gameSessionService.broadcastUpdate(guildId)
         return ResponseEntity.ok(mapOf("success" to true))
@@ -79,8 +79,11 @@ class SpeechController(
         val direction = body["direction"] ?: return ResponseEntity.badRequest().build<Any>()
         val order = SpeechOrder.valueOf(direction.uppercase())
 
-        speechService.setSpeechOrder(guildId, order)
-        speechService.confirmSpeechOrder(guildId)
+        val session = gameSessionService.getSession(guildId)
+            .orElseThrow { Exception("Session not found") }
+
+        speechService.setSpeechOrder(session, order)
+        speechService.confirmSpeechOrder(session)
 
         gameSessionService.broadcastUpdate(guildId)
         return ResponseEntity.ok(mapOf("success" to true))
@@ -89,7 +92,9 @@ class SpeechController(
     @PostMapping("/confirm")
     @CanManageGuild
     fun confirmSpeech(@PathVariable guildId: Long): ResponseEntity<*> {
-        speechService.confirmSpeechOrder(guildId)
+        val session = gameSessionService.getSession(guildId)
+            .orElseThrow { Exception("Session not found") }
+        speechService.confirmSpeechOrder(session)
         return ResponseEntity.ok(mapOf("success" to true))
     }
 

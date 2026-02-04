@@ -67,16 +67,17 @@ class NightStep(
                     continue
                 }
 
+                val uid = player.userId ?: continue
                 val availableActions = roleActionService.getAvailableActionsForPlayer(
                     session,
-                    player.userId!!
+                    uid
                 )
 
                 if (availableActions.isNotEmpty()) {
                     actionUIService.promptPlayerForAction(
                         session.guildId,
                         session,
-                        player.userId!!,
+                        uid,
                         playerId,
                         availableActions,
                         timeoutSeconds = 60  // 60 second timeout for non-wolves

@@ -1,4 +1,3 @@
-import React from 'react';
 import {Eye, Moon, Shield, Swords, Users, Zap} from 'lucide-react';
 import {Role} from '@/types';
 

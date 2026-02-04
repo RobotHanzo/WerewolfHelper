@@ -29,10 +29,10 @@ object MsgUtils {
 
         val rows = LinkedList(listOf(ActionRow.of(mutableButtons.removeFirst())))
         for (button in mutableButtons) {
-            if (rows.last.components.size >= 5) {
+            if (rows.last().components.size >= 5) {
                 rows.add(ActionRow.of(button))
             } else {
-                val newButtons = LinkedList(rows.last.buttons)
+                val newButtons = LinkedList(rows.last().buttons)
                 newButtons.add(button)
                 rows[rows.size - 1] = ActionRow.of(newButtons)
             }

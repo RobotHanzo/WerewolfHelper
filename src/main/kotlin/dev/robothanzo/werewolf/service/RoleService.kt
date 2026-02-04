@@ -1,47 +1,49 @@
 package dev.robothanzo.werewolf.service
 
+import dev.robothanzo.werewolf.database.documents.Session
+
 /**
  * Service for managing the roles available in a game session
  * and handling the assignment of these roles to players.
  */
 interface RoleService {
     /**
-     * Adds a specific amount of a role to the role pool for a guild.
+     * Adds a specific amount of a role to the role pool.
      *
-     * @param guildId  the ID of the guild
+     * @param session  the session to add roles to
      * @param roleName the name of the role to add
      * @param amount   the amount of the role to add
      */
-    fun addRole(guildId: Long, roleName: String, amount: Int)
+    fun addRole(session: Session, roleName: String, amount: Int)
 
     /**
-     * Removes a specific amount of a role from the role pool for a guild.
+     * Removes a specific amount of a role from the role pool.
      *
-     * @param guildId  the ID of the guild
+     * @param session  the session to remove roles from
      * @param roleName the name of the role to remove
      * @param amount   the amount of the role to remove
      */
-    fun removeRole(guildId: Long, roleName: String, amount: Int)
+    fun removeRole(session: Session, roleName: String, amount: Int)
 
     /**
-     * Retrieves the current role pool for a guild.
+     * Retrieves the current role pool for a session.
      *
-     * @param guildId the ID of the guild
+     * @param session the session
      * @return a list of role names in the pool
      */
-    fun getRoles(guildId: Long): List<String>
+    fun getRoles(session: Session): List<String>
 
     /**
      * Randomly assigns roles from the pool to the players in a game session.
      *
-     * @param guildId          the ID of the guild
+     * @param session          the session
      * @param statusCallback   callback for status messages during assignment
      * @param progressCallback callback for progress percentage (0-100)
      * @throws Exception if an error occurs during assignment
      */
     @Throws(Exception::class)
     fun assignRoles(
-        guildId: Long,
+        session: Session,
         statusCallback: (String) -> Unit,
         progressCallback: (Int) -> Unit
     )

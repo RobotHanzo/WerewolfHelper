@@ -1,6 +1,7 @@
 package dev.robothanzo.werewolf.service.impl
 
 import dev.robothanzo.werewolf.database.SessionRepository
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.GameSessionService
@@ -23,25 +24,19 @@ class PlayerServiceImpl(
 ) : PlayerService {
     private val log = LoggerFactory.getLogger(PlayerServiceImpl::class.java)
 
-    override fun getPlayersJSON(guildId: Long): List<Map<String, Any>> {
-        val sessionOpt = sessionRepository.findByGuildId(guildId)
-        if (sessionOpt.isEmpty) {
-            throw RuntimeException("Session not found")
-        }
-        return gameSessionService.playersToJSON(sessionOpt.get())
+    override fun getPlayersJSON(session: Session): List<Map<String, Any>> {
+        return gameSessionService.playersToJSON(session)
     }
 
     @Throws(Exception::class)
     override fun setPlayerCount(
-        guildId: Long,
+        session: Session,
         count: Int,
         onProgress: (String) -> Unit,
         onPercent: (Int) -> Unit
     ) {
-        val session = sessionRepository.findByGuildId(guildId)
-            .orElseThrow { RuntimeException("Session not found") }
-
-        val jda = discordService.jda ?: throw Exception("JDA not initialized")
+        val guildId = session.guildId
+        val jda = discordService.jda
         val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
 
         onPercent(0)
@@ -90,7 +85,7 @@ class PlayerServiceImpl(
         val newRolesMap: MutableMap<Int, Role> = ConcurrentHashMap()
 
         for (i in players.size + 1..count) {
-            val name = "玩家" + Session.Player.ID_FORMAT.format((i).toLong())
+            val name = "玩家" + Player.ID_FORMAT.format((i).toLong())
             val task = ActionTask(
                 guild.createRole()
                     .setColor(MsgUtils.randomColor)
@@ -108,7 +103,7 @@ class PlayerServiceImpl(
 
         // Phase 3: Create Channels
         for ((playerId, role) in newRolesMap) {
-            val name = "玩家" + Session.Player.ID_FORMAT.format((playerId).toLong())
+            val name = "玩家" + Player.ID_FORMAT.format((playerId).toLong())
 
             val task = ActionTask(
                 guild.createTextChannel(name)
@@ -137,7 +132,7 @@ class PlayerServiceImpl(
                 "創建頻道: $name",
                 { obj: Any? ->
                     val channel = obj as TextChannel
-                    players[playerId.toString()] = Session.Player(
+                    players[playerId.toString()] = Player(
                         id = playerId,
                         roleId = role.idLong,
                         channelId = channel.idLong
@@ -157,12 +152,10 @@ class PlayerServiceImpl(
         onProgress("同步完成！")
     }
 
-    override fun updatePlayerRoles(guildId: Long, playerId: String, roles: List<String>) {
+    override fun updatePlayerRoles(player: Player, roles: List<String>) {
         try {
-            val session = sessionRepository.findByGuildId(guildId)
-                .orElseThrow { RuntimeException("Session not found") }
-            val player = session.players[playerId] ?: throw Exception("Player not found")
-
+            val session = player.session ?: throw Exception("Player session not found")
+            
             val finalRoles = roles.toMutableList()
             val isDuplicated = roles.contains("複製人")
             player.duplicated = isDuplicated
@@ -183,9 +176,9 @@ class PlayerServiceImpl(
 
             val jda = discordService.jda
             if (jda != null && player.channelId != 0L) {
-                val guild = jda.getGuildById(guildId)
+                val guild = jda.getGuildById(session.guildId)
                 if (guild != null) {
-                    session.players[playerId]?.send("法官已將你的身份更改為: ${roles.joinToString(", ")}")
+                    player.send("法官已將你的身份更改為: ${roles.joinToString(", ")}")
                 }
             }
         } catch (e: Exception) {
@@ -194,11 +187,9 @@ class PlayerServiceImpl(
         }
     }
 
-    override fun switchRoleOrder(guildId: Long, playerId: String) {
+    override fun switchRoleOrder(player: Player) {
         try {
-            val session = sessionRepository.findByGuildId(guildId)
-                .orElseThrow { RuntimeException("Session not found") }
-            val player = session.players[playerId] ?: throw Exception("Player not found")
+            val session = player.session ?: throw Exception("Player session not found")
 
             if (player.rolePositionLocked)
                 throw Exception("你的身分順序已被鎖定")
@@ -213,18 +204,16 @@ class PlayerServiceImpl(
                 it[1] = first
             }
             sessionRepository.save(session)
-            session.players[playerId]?.send("你已交換了角色順序，現在主要角色為: ${roles[0]}")
+            player.send("你已交換了角色順序，現在主要角色為: ${roles[0]}")
         } catch (e: Exception) {
             log.error("Switch role order failed: {}", e.message, e)
             throw RuntimeException("Failed to switch role order", e)
         }
     }
 
-    override fun setRolePositionLock(guildId: Long, playerId: String, locked: Boolean) {
+    override fun setRolePositionLock(player: Player, locked: Boolean) {
         try {
-            val session = sessionRepository.findByGuildId(guildId)
-                .orElseThrow { RuntimeException("Session not found") }
-            val player = session.players[playerId] ?: throw Exception("Player not found")
+            val session = player.session ?: throw Exception("Player session not found")
 
             player.rolePositionLocked = locked
             sessionRepository.save(session)

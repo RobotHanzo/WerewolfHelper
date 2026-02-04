@@ -1,54 +1,62 @@
 package dev.robothanzo.werewolf.service
 
+import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.DeathCause
+
 /**
  * Service for performing game-related actions such as resetting the game,
  * marking players as dead, reviving players, and updating game state.
  */
 interface GameActionService {
     /**
-     * Resets the game session for a specific guild.
+     * Resets the game session.
      *
-     * @param guildId          the ID of the guild
+     * @param session          the session to reset
      * @param statusCallback   callback for status messages
      * @param progressCallback callback for progress updates (0-100)
      * @throws Exception if an error occurs during the reset process
      */
     @Throws(Exception::class)
-    fun resetGame(guildId: Long, statusCallback: (String) -> Unit, progressCallback: (Int) -> Unit)
+    fun resetGame(session: Session, statusCallback: (String) -> Unit, progressCallback: (Int) -> Unit)
 
     /**
      * Marks a player as dead in the game session.
      *
-     * @param guildId        the ID of the guild
+     * @param session        the session containing the player
      * @param userId         the ID of the user to mark as dead
      * @param allowLastWords whether the player is allowed to give last words
      */
-    fun markPlayerDead(guildId: Long, userId: Long, allowLastWords: Boolean)
+    fun markPlayerDead(
+        session: Session,
+        userId: Long,
+        allowLastWords: Boolean,
+        cause: DeathCause = DeathCause.UNKNOWN
+    )
 
     /**
      * Revives a player in the game session.
      *
-     * @param guildId the ID of the guild
+     * @param session the session containing the player
      * @param userId  the ID of the user to revive
      */
-    fun revivePlayer(guildId: Long, userId: Long)
+    fun revivePlayer(session: Session, userId: Long)
 
     /**
      * Revives a player and assigns them a specific role.
      *
-     * @param guildId the ID of the guild
+     * @param session the session containing the player
      * @param userId  the ID of the user to revive
      * @param role    the role to assign to the player
      */
-    fun reviveRole(guildId: Long, userId: Long, role: String)
+    fun reviveRole(session: Session, userId: Long, role: String)
 
     /**
      * Assigns the police (sheriff) status to a player.
      *
-     * @param guildId the ID of the guild
+     * @param session the session containing the player
      * @param userId  the ID of the user to make police
      */
-    fun setPolice(guildId: Long, userId: Long)
+    fun setPolice(session: Session, userId: Long)
 
     /**
      * Broadcasts a progress update for a long-running action.

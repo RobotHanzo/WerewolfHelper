@@ -1,10 +1,10 @@
 package dev.robothanzo.werewolf.model
 
-import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.database.documents.Player
 import java.util.*
 
 data class Candidate(
-    val player: Session.Player,
+    val player: Player,
     var expelPK: Boolean = false,
     val electors: MutableList<Long> = LinkedList(),
     var quit: Boolean = false
@@ -13,7 +13,7 @@ data class Candidate(
         return electors.map { "<@!$it>" }
     }
 
-    fun getVotes(police: Session.Player?): Float {
+    fun getVotes(police: Player?): Float {
         var hasPolice = police != null
         if (hasPolice) {
             hasPolice = electors.contains(police!!.userId)
@@ -26,7 +26,7 @@ data class Candidate(
             return Comparator.comparingInt { o: Candidate -> o.player.id }
         }
 
-        fun getWinner(candidates: Collection<Candidate>, police: Session.Player?): List<Candidate> {
+        fun getWinner(candidates: Collection<Candidate>, police: Player?): List<Candidate> {
             val winners = LinkedList<Candidate>()
             var winningVotes = 0f
             for (candidate in candidates) {

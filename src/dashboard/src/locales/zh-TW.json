@@ -99,6 +99,7 @@
     "title": "遊戲總覽",
     "subtitle": "管理當前階段並快速跳轉",
     "startGame": "開始遊戲",
+    "assignRoles": "分配角色",
     "nextStep": "下一階段",
     "currentStep": "目前階段",
     "currentStepId": "階段代碼",

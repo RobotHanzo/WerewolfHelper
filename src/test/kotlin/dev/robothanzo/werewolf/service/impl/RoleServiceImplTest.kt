@@ -7,13 +7,11 @@ import dev.robothanzo.werewolf.service.GameSessionService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.util.*
 
 class RoleServiceImplTest {
     @Mock
@@ -35,14 +33,12 @@ class RoleServiceImplTest {
 
     @Test
     fun testAddRoleSuccess() {
-        val guildId = 123L
-        val session = Session(guildId = guildId)
+        val session = Session(guildId = 123L)
         session.roles = mutableListOf("狼人", "平民")
 
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.of(session))
         whenever(sessionRepository.save(any())).thenReturn(session)
 
-        roleService.addRole(guildId, "狼人", 2)
+        roleService.addRole(session, "狼人", 2)
 
         assertEquals(4, session.roles.size)
         assertEquals(3, session.roles.count { it == "狼人" })
@@ -50,25 +46,13 @@ class RoleServiceImplTest {
     }
 
     @Test
-    fun testAddRoleSessionNotFound() {
-        val guildId = 123L
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.empty())
-
-        assertThrows<RuntimeException> {
-            roleService.addRole(guildId, "狼人", 1)
-        }
-    }
-
-    @Test
     fun testRemoveRoleSuccess() {
-        val guildId = 123L
-        val session = Session(guildId = guildId)
+        val session = Session(guildId = 123L)
         session.roles = mutableListOf("狼人", "狼人", "平民", "平民")
 
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.of(session))
         whenever(sessionRepository.save(any())).thenReturn(session)
 
-        roleService.removeRole(guildId, "狼人", 1)
+        roleService.removeRole(session, "狼人", 1)
 
         assertEquals(3, session.roles.size)
         assertEquals(1, session.roles.count { it == "狼人" })
@@ -76,24 +60,11 @@ class RoleServiceImplTest {
     }
 
     @Test
-    fun testRemoveRoleSessionNotFound() {
-        val guildId = 123L
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.empty())
-
-        assertThrows<RuntimeException> {
-            roleService.removeRole(guildId, "狼人", 1)
-        }
-    }
-
-    @Test
     fun testGetRolesSuccess() {
-        val guildId = 123L
-        val session = Session(guildId = guildId)
+        val session = Session(guildId = 123L)
         session.roles = mutableListOf("狼人", "狼人", "平民")
 
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.of(session))
-
-        val roles = roleService.getRoles(guildId)
+        val roles = roleService.getRoles(session)
 
         assertEquals(3, roles.size)
         assertEquals(2, roles.count { it == "狼人" })
@@ -101,26 +72,14 @@ class RoleServiceImplTest {
     }
 
     @Test
-    fun testGetRolesSessionNotFound() {
-        val guildId = 123L
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.empty())
-
-        assertThrows<RuntimeException> {
-            roleService.getRoles(guildId)
-        }
-    }
-
-    @Test
     fun testAddMultipleRoles() {
-        val guildId = 123L
-        val session = Session(guildId = guildId)
+        val session = Session(guildId = 123L)
         session.roles = mutableListOf()
 
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.of(session))
         whenever(sessionRepository.save(any())).thenReturn(session)
 
-        roleService.addRole(guildId, "狼人", 2)
-        roleService.addRole(guildId, "平民", 3)
+        roleService.addRole(session, "狼人", 2)
+        roleService.addRole(session, "平民", 3)
 
         assertEquals(5, session.roles.size)
         assertEquals(2, session.roles.count { it == "狼人" })
@@ -129,15 +88,13 @@ class RoleServiceImplTest {
 
     @Test
     fun testRemoveNonExistentRole() {
-        val guildId = 123L
-        val session = Session(guildId = guildId)
+        val session = Session(guildId = 123L)
         session.roles = mutableListOf("狼人", "平民")
 
-        whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.of(session))
         whenever(sessionRepository.save(any())).thenReturn(session)
 
         // Removing a role that doesn't exist
-        roleService.removeRole(guildId, "獵人", 1)
+        roleService.removeRole(session, "獵人", 1)
 
         // Original roles should remain unchanged
         assertEquals(2, session.roles.size)

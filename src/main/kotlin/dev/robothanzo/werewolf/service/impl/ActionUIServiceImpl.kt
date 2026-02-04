@@ -107,7 +107,7 @@ class ActionUIServiceImpl(
         durationSeconds: Int
     ): GroupActionState? {
         return try {
-            val jda = discordService.jda ?: return null
+            val jda = discordService.jda
             val guild = jda.getGuildById(guildId) ?: return null
 
             // Get alive players as targets

@@ -48,7 +48,7 @@ class DeathAnnouncementStep(
         // Mark players as dead - this will handle role assignment, police transfer, last words, etc.
         for (userId in allDeaths) {
             // For day 1, allow last words so player can speak during death announcement
-            gameActionService.markPlayerDead(session.guildId, userId, sessionForResolution.day == 1)
+            gameActionService.markPlayerDead(session, userId, session.day == 1)
         }
 
         // Reload session from database to get updated state from markPlayerDead calls

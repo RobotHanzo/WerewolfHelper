@@ -3,8 +3,9 @@ package dev.robothanzo.werewolf.database.documents
 import com.mongodb.client.MongoCollection
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.Database
-import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.codecs.pojo.annotations.BsonIgnore
@@ -12,13 +13,12 @@ import org.bson.types.ObjectId
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.Indexed
 import org.springframework.data.mongodb.core.mapping.Document
-import java.text.DecimalFormat
 import java.util.*
 
 @Document(collection = "sessions")
 data class Session(
     @Id
-    @BsonId
+    @param:BsonId
     var id: ObjectId? = null,
 
     @Indexed(unique = true)
@@ -64,6 +64,14 @@ data class Session(
             }
             return null
         }
+
+    @get:BsonIgnore
+    val guild: Guild?
+        get() = WerewolfApplication.jda.getGuildById(guildId)
+
+    @get:BsonIgnore
+    val spectatorRole: Role?
+        get() = guild?.getRoleById(spectatorRoleId)
 
     fun hasEnded(simulateRoleRemovalArg: String?): Result {
         var simulateRoleRemoval = simulateRoleRemovalArg
@@ -256,107 +264,23 @@ data class Session(
         EQUAL_PLAYERS("狼人陣營人數=好人陣營人數")
     }
 
-    data class Player(
-        var id: Int = 0,
-        var roleId: Long = 0,
-        var channelId: Long = 0,
-        var jinBaoBao: Boolean = false,
-        var duplicated: Boolean = false,
-        var idiot: Boolean = false,
-        var police: Boolean = false,
-        var rolePositionLocked: Boolean = false,
-        var actionSubmitted: Boolean = false, // Track if player has submitted an action this phase
-        var userId: Long? = null,
-        var roles: MutableList<String>? = LinkedList(), // stuff like wolf, villager...etc
-        var deadRoles: MutableList<String>? = LinkedList()
-    ) : Comparable<Player> {
+    fun addPlayer(player: Player) {
+        player.session = this
+        players[player.id.toString()] = player
+    }
 
-        @get:BsonIgnore
-        val isAlive: Boolean
-            get() {
-                if (roles == null || roles!!.isEmpty()) return false
-                if (deadRoles == null) return true
-                return deadRoles!!.size < roles!!.size
-            }
+    fun removePlayer(playerId: String): Player? {
+        val player = players.remove(playerId)
+        player?.let { it.session = null }
+        return player
+    }
 
-        override fun compareTo(other: Player): Int {
-            return Integer.compare(id, other.id)
-        }
+    fun getPlayer(playerId: String): Player? {
+        return players[playerId]
+    }
 
-        @get:BsonIgnore
-        val nickname: String
-            get() {
-                val sb = StringBuilder()
-                if (!isAlive) {
-                    sb.append("[死人] ")
-                }
-                sb.append("玩家").append(ID_FORMAT.format(id.toLong()))
-                if (police) {
-                    sb.append(" [警長]")
-                }
-                return sb.toString()
-            }
-
-        fun updateNickname(member: Member?) {
-            if (member == null) return
-            val newName = nickname
-            if (member.effectiveName != newName) {
-                member.modifyNickname(newName).queue()
-            }
-        }
-
-        fun send(message: String, queue: Boolean = true): MessageCreateAction? {
-            val action = WerewolfApplication.jda.getTextChannelById(channelId)
-                ?.sendMessage(message) ?: return null
-            if (queue) action.queue()
-            return action
-        }
-
-        fun send(embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
-            val action = WerewolfApplication.jda.getTextChannelById(channelId)
-                ?.sendMessageEmbeds(embed) ?: return null
-            if (queue) action.queue()
-            return action
-        }
-
-        fun send(embeds: Collection<MessageEmbed>, queue: Boolean = true): MessageCreateAction? {
-            val action = WerewolfApplication.jda.getTextChannelById(channelId)
-                ?.sendMessageEmbeds(embeds) ?: return null
-            if (queue) action.queue()
-            return action
-        }
-
-        fun send(message: String, embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
-            val action = WerewolfApplication.jda.getTextChannelById(channelId)
-                ?.sendMessage(message)
-                ?.setEmbeds(embed) ?: return null
-            if (queue) action.queue()
-            return action
-        }
-
-        fun send(message: String, embeds: Collection<MessageEmbed>, queue: Boolean = true): MessageCreateAction? {
-            val action = WerewolfApplication.jda.getTextChannelById(channelId)
-                ?.sendMessage(message)
-                ?.setEmbeds(embeds) ?: return null
-            if (queue) action.queue()
-            return action
-        }
-
-        companion object {
-            val ID_FORMAT = DecimalFormat("00")
-
-            fun isGod(role: String): Boolean {
-                return (!isWolf(role)) && (!isVillager(role))
-            }
-
-            fun isWolf(role: String): Boolean {
-                return role.contains("狼") || role == "石像鬼" || role == "血月使者" || role == "惡靈騎士"
-            }
-
-            fun isVillager(role: String): Boolean {
-                return role == "平民"
-            }
-        }
+    fun getPlayer(userId: Long): Player? {
+        return players.values.find { it.userId == userId }
     }
 
     /**

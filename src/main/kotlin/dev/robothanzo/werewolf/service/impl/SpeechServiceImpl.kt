@@ -3,6 +3,7 @@ package dev.robothanzo.werewolf.service.impl
 import dev.robothanzo.werewolf.audio.Audio
 import dev.robothanzo.werewolf.audio.Audio.play
 import dev.robothanzo.werewolf.database.SessionRepository
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.SpeechOrder
 import dev.robothanzo.werewolf.model.SpeechSession
@@ -41,7 +42,7 @@ class SpeechServiceImpl(
     }
 
     override fun startSpeechPoll(
-        guild: Guild, enrollMessage: Message?, players: Collection<Session.Player>,
+        guild: Guild, enrollMessage: Message?, players: Collection<Player>,
         callback: (() -> Unit)?
     ) {
         val speechSession = SpeechSession(
@@ -69,7 +70,7 @@ class SpeechServiceImpl(
     override fun startLastWordsSpeech(
         guild: Guild,
         channelId: Long,
-        player: Session.Player,
+        player: Player,
         callback: (() -> Unit)?
     ) {
         val orderList = mutableListOf(player)
@@ -85,10 +86,9 @@ class SpeechServiceImpl(
         nextSpeaker(guild.idLong)
     }
 
-    override fun setSpeechOrder(guildId: Long, order: SpeechOrder) {
-        val session = sessionRepository.findByGuildId(guildId).orElse(null) ?: return
-
-        var target: Session.Player? = null
+    override fun setSpeechOrder(session: Session, order: SpeechOrder) {
+        val guildId = session.guildId
+        var target: Player? = null
         for (player in session.fetchAlivePlayers().values) {
             if (player.police) {
                 target = player
@@ -104,8 +104,8 @@ class SpeechServiceImpl(
         }
     }
 
-    override fun confirmSpeechOrder(guildId: Long) {
-        nextSpeaker(guildId)
+    override fun confirmSpeechOrder(session: Session) {
+        nextSpeaker(session.guildId)
     }
 
     override fun handleOrderSelection(event: StringSelectInteractionEvent) {
@@ -120,7 +120,7 @@ class SpeechServiceImpl(
             return
         }
 
-        var target: Session.Player? = null
+        var target: Player? = null
         for (player in session.fetchAlivePlayers().values) {
             if (player.userId != null && player.userId == event.user.idLong) {
                 if (player.police) {
@@ -258,11 +258,10 @@ class SpeechServiceImpl(
         }
     }
 
-    override fun startAutoSpeechFlow(guildId: Long, channelId: Long) {
+    override fun startAutoSpeechFlow(session: Session, channelId: Long) {
+        val guildId = session.guildId
         if (speechSessions.containsKey(guildId))
             return
-
-        val session = sessionRepository.findByGuildId(guildId).orElse(null) ?: return
 
         val speechSession = SpeechSession(
             guildId = guildId,
@@ -405,15 +404,15 @@ class SpeechServiceImpl(
     }
 
     private fun changeOrder(
-        guildId: Long, order: SpeechOrder, playersRaw: Collection<Session.Player>,
-        target: Session.Player
+        guildId: Long, order: SpeechOrder, playersRaw: Collection<Player>,
+        target: Player
     ) {
         val speechSession = speechSessions[guildId] ?: return
 
         val sortedPlayers = playersRaw.sortedBy { it.id }
-        var police: Session.Player? = null
-        val prePolice = mutableListOf<Session.Player>()
-        val postPolice = mutableListOf<Session.Player>()
+        var police: Player? = null
+        val prePolice = mutableListOf<Player>()
+        val postPolice = mutableListOf<Player>()
 
         for (player in sortedPlayers) {
             if (player.id == target.id) {
@@ -549,7 +548,7 @@ class SpeechServiceImpl(
         return if (isPolice) 210 else 180
     }
 
-    private fun getTotalQueueDuration(queue: List<Session.Player>): Int {
+    private fun getTotalQueueDuration(queue: List<Player>): Int {
         var duration = 0
         for (p in queue) {
             duration += getSpeakerDuration(p.police)

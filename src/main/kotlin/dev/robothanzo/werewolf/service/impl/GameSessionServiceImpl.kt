@@ -302,10 +302,8 @@ class GameSessionServiceImpl(
     }
 
     @Throws(Exception::class)
-    override fun getGuildMembers(guildId: Long): List<Map<String, Any>> {
-        val session = sessionRepository.findByGuildId(guildId)
-            .orElseThrow { Exception("Session not found") }
-
+    override fun getGuildMembers(session: Session): List<Map<String, Any>> {
+        val guildId = session.guildId
         val jda = discordService.jda
         val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
 
@@ -348,10 +346,8 @@ class GameSessionServiceImpl(
     }
 
     @Throws(Exception::class)
-    override fun updateUserRole(guildId: Long, userId: Long, role: UserRole) {
-        val session = sessionRepository.findByGuildId(guildId)
-            .orElseThrow { Exception("Session not found") }
-
+    override fun updateUserRole(session: Session, userId: Long, role: UserRole) {
+        val guildId = session.guildId
         val jda = discordService.jda
         val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
 
@@ -378,10 +374,7 @@ class GameSessionServiceImpl(
     }
 
     @Throws(Exception::class)
-    override fun updateSettings(guildId: Long, settings: Map<String, Any>) {
-        val session = sessionRepository.findByGuildId(guildId)
-            .orElseThrow { Exception("Session not found") }
-
+    override fun updateSettings(session: Session, settings: Map<String, Any>) {
         if (settings.containsKey("doubleIdentities")) {
             session.doubleIdentities = settings["doubleIdentities"] as Boolean
         }

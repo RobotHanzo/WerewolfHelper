@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.game.roles.actions
 
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.ActionSubmissionSource
 import dev.robothanzo.werewolf.game.model.DeathCause
@@ -17,8 +18,8 @@ import org.junit.jupiter.api.Test
 class RoleActionTests {
 
     private lateinit var session: Session
-    private fun createPlayer(id: Int, userId: Long, roles: List<String> = listOf()): Session.Player {
-        return Session.Player(
+    private fun createPlayer(id: Int, userId: Long, roles: List<String> = listOf()): Player {
+        return Player(
             id = id,
             roleId = userId,
             channelId = userId * 100,

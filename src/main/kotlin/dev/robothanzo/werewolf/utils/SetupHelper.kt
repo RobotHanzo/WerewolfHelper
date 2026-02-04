@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.utils
 
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.commands.Server
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
@@ -41,7 +42,7 @@ object SetupHelper {
             session.judgeRoleId = judgeRole.idLong
 
             // 2. Create Player Roles and Channels
-            createPlayerRolesAndChannels(guild, config.players, guild.publicRole).thenAccept { players ->
+            createPlayerRolesAndChannels(session, config.players).thenAccept { players ->
                 session.players = players
 
                 // 3. Create Spectator/Dead Role
@@ -137,7 +138,7 @@ object SetupHelper {
         return session
     }
 
-    private fun applySpectatorOverrides(guild: Guild, players: Map<String, Session.Player>, deadRole: Role) {
+    private fun applySpectatorOverrides(guild: Guild, players: Map<String, Player>, deadRole: Role) {
         try {
             players.values.forEach { p ->
                 val ch = guild.getTextChannelById(p.channelId)
@@ -246,48 +247,44 @@ object SetupHelper {
         return future
     }
 
-    private fun createPlayerRolesAndChannels(
-        guild: Guild,
-        playerCount: Int,
-        publicRole: Role
-    ): CompletableFuture<MutableMap<String, Session.Player>> {
-        val future = CompletableFuture<MutableMap<String, Session.Player>>()
-        val players: MutableMap<String, Session.Player> = HashMap()
-        createPlayerRecursively(guild, playerCount, 1, publicRole, players, future)
+    private fun createPlayerRolesAndChannels(session: Session, total: Int):
+            CompletableFuture<MutableMap<String, Player>> {
+        val future = CompletableFuture<MutableMap<String, Player>>()
+        createPlayerRecursively(session, total, 1, mutableMapOf(), future)
         return future
     }
 
     private fun createPlayerRecursively(
-        guild: Guild,
+        session: Session,
         total: Int,
         current: Int,
-        publicRole: Role,
-        players: MutableMap<String, Session.Player>,
-        future: CompletableFuture<MutableMap<String, Session.Player>>
+        players: MutableMap<String, Player>,
+        future: CompletableFuture<MutableMap<String, Player>>
     ) {
         if (current > total) {
             future.complete(players)
             return
         }
-        val id = Session.Player.ID_FORMAT.format(current.toLong())
+        val id = Player.ID_FORMAT.format(current.toLong())
+        val guild = session.guild ?: throw Exception("Guild not found")
         guild.createRole("玩家$id", MsgUtils.randomColor, true).queue { playerRole ->
             guild.createTextChannel(
                 "玩家$id",
                 mapOf(
                     playerRole to (listOf(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND) to emptyList()),
-                    publicRole to (emptyList<Permission>() to listOf(
+                    guild.publicRole to (emptyList<Permission>() to listOf(
                         Permission.VIEW_CHANNEL,
                         Permission.MESSAGE_SEND,
                         Permission.USE_APPLICATION_COMMANDS
                     ))
                 )
             ).queue { playerChannel ->
-                players[current.toString()] = Session.Player(
+                players[current.toString()] = Player(
                     id = current,
                     roleId = playerRole.idLong,
                     channelId = playerChannel.idLong
                 )
-                createPlayerRecursively(guild, total, current + 1, publicRole, players, future)
+                createPlayerRecursively(session, total, current + 1, players, future)
             }
         }
     }

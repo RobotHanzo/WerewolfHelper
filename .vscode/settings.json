@@ -1,10 +1,12 @@
 {
     "java.configuration.updateBuildConfiguration": "interactive",
     "chat.tools.terminal.autoApprove": {
-        ".\\gradlew": true,
+      ".\\gradlew": true,
       "gradlew": true,
       "failed": true,
       "passed": true,
-      "Tee-Object": true
+      "Tee-Object": true,
+      "yarn build": true,
+      "Select": true
     }
 }

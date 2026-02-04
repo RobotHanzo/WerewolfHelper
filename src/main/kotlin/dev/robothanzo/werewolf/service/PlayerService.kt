@@ -1,18 +1,20 @@
 package dev.robothanzo.werewolf.service
 
+import dev.robothanzo.werewolf.database.documents.Player
+import dev.robothanzo.werewolf.database.documents.Session
+
 /**
  * Service for managing individual players within a game session,
  * including their roles, statuses, and ordering.
  */
 interface PlayerService {
     /**
-     * Retrieves all players of a guild serialized to a JSON-compatible List of
-     * Maps.
+     * Serializes all players of a session to a JSON-compatible List of Maps.
      *
-     * @param guildId the ID of the guild
+     * @param session the session containing the players
      * @return a list of serialized player maps
      */
-    fun getPlayersJSON(guildId: Long): List<Map<String, Any>>
+    fun getPlayersJSON(session: Session): List<Map<String, Any>>
 
     /**
      * Initializes the player count for a game session.
@@ -25,7 +27,7 @@ interface PlayerService {
      */
     @Throws(Exception::class)
     fun setPlayerCount(
-        guildId: Long,
+        session: Session,
         count: Int,
         onProgress: (String) -> Unit,
         onPercent: (Int) -> Unit
@@ -38,7 +40,7 @@ interface PlayerService {
      * @param playerId the ID of the player (e.g., "1", "2")
      * @param roles    the list of roles to assign
      */
-    fun updatePlayerRoles(guildId: Long, playerId: String, roles: List<String>)
+    fun updatePlayerRoles(player: Player, roles: List<String>)
 
     /**
      * Toggles the order of roles for a player (between first and second role).
@@ -46,7 +48,7 @@ interface PlayerService {
      * @param guildId  the ID of the guild
      * @param playerId the ID of the player
      */
-    fun switchRoleOrder(guildId: Long, playerId: String)
+    fun switchRoleOrder(player: Player)
 
     /**
      * Locks or unlocks the role position for a specific player.
@@ -55,5 +57,5 @@ interface PlayerService {
      * @param playerId the ID of the player
      * @param locked   true to lock the roles, false to unlock
      */
-    fun setRolePositionLock(guildId: Long, playerId: String, locked: Boolean)
+    fun setRolePositionLock(player: Player, locked: Boolean)
 }

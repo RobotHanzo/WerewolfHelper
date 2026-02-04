@@ -38,7 +38,7 @@ class DeathTriggerStep(
         }
 
         // Notify players with available death triggers
-        val guild = discordService.jda?.getGuildById(session.guildId)
+        val guild = discordService.jda.getGuildById(session.guildId)
         for (userId in playersWithTriggers) {
             val player = session.players.values.find { it.userId == userId }
             if (player != null) {
@@ -70,7 +70,7 @@ class DeathTriggerStep(
         if (killedByTriggers.isNotEmpty()) {
             // Mark triggered deaths
             for (userId in killedByTriggers) {
-                gameActionService.markPlayerDead(session.guildId, userId, false)
+                gameActionService.markPlayerDead(session, userId, false)
             }
 
             // Reload session and announce deaths

@@ -38,6 +38,7 @@ export interface GameState {
     timerSeconds: number;
     doubleIdentities?: boolean;
     availableRoles?: string[];
+    hasAssignedRoles?: boolean;
     players: Player[];
     logs: LogEntry[];
     speech?: SpeechState;

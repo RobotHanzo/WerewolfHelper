@@ -85,7 +85,11 @@ export function CustomRoleEditor({guildId, onClose}: { guildId: string; onClose:
 
         setLoading(true);
         try {
-            const result = await api.saveCustomRole(guildId, roleDefinition);
+            const result = await api.saveCustomRole(guildId, roleDefinition) as {
+                success: boolean;
+                warnings?: string[];
+                error?: string;
+            };
 
             if (result.success) {
                 if (result.warnings && result.warnings.length > 0) {

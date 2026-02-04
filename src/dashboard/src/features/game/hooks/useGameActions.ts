@@ -72,7 +72,19 @@ export const useGameActions = (
 
     const handleGlobalAction = (action: string) => {
 
-        if (action === 'start_game') {
+        if (action === 'assign_roles') {
+            const performAssign = async () => {
+                try {
+                    if (guildId) {
+                        await api.assignRoles(guildId);
+                    }
+                } catch (error: any) {
+                    console.error("Assign roles failed", error);
+                }
+            };
+            performAssign();
+
+        } else if (action === 'start_game') {
             setGameState(prev => ({
                 ...prev, phase: 'NIGHT', dayCount: 1, timerSeconds: 30,
                 logs: [...prev.logs]
@@ -107,7 +119,7 @@ export const useGameActions = (
                         ...prev,
                         phase: nextPhase,
                         timerSeconds: nextPhase === 'NIGHT' ? 30 : 60,
-                        dayCount: nextPhase === 'NIGHT' ? prev.dayCount + 1 : prev.dayCount
+                        day: nextPhase === 'NIGHT' ? prev.day + 1 : prev.day
                     };
                 });
             }

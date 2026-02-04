@@ -1,17 +1,17 @@
 package dev.robothanzo.werewolf.model
 
-import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.database.documents.Player
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class CandidateTest {
-    private lateinit var player: Session.Player
+    private lateinit var player: Player
     private lateinit var candidate: Candidate
 
     @BeforeEach
     fun setup() {
-        player = Session.Player(
+        player = Player(
             id = 1,
             roleId = 123L,
             channelId = 456L,
@@ -57,7 +57,7 @@ class CandidateTest {
 
     @Test
     fun testGetVotesWithPoliceVoting() {
-        val police = Session.Player(id = 2, roleId = 124L, channelId = 457L, userId = 790L)
+        val police = Player(id = 2, roleId = 124L, channelId = 457L, userId = 790L)
         candidate.electors.add(100L)
         candidate.electors.add(790L) // Police voted
         val votes = candidate.getVotes(police)
@@ -66,7 +66,7 @@ class CandidateTest {
 
     @Test
     fun testGetVotesWithPoliceNotVoting() {
-        val police = Session.Player(id = 2, roleId = 124L, channelId = 457L, userId = 790L)
+        val police = Player(id = 2, roleId = 124L, channelId = 457L, userId = 790L)
         candidate.electors.add(100L)
         candidate.electors.add(200L)
         val votes = candidate.getVotes(police)
@@ -84,9 +84,9 @@ class CandidateTest {
 
     @Test
     fun testGetComparator() {
-        val candidate1 = Candidate(player = Session.Player(id = 1, roleId = 1L, channelId = 1L))
-        val candidate2 = Candidate(player = Session.Player(id = 2, roleId = 2L, channelId = 2L))
-        val candidate3 = Candidate(player = Session.Player(id = 3, roleId = 3L, channelId = 3L))
+        val candidate1 = Candidate(player = Player(id = 1, roleId = 1L, channelId = 1L))
+        val candidate2 = Candidate(player = Player(id = 2, roleId = 2L, channelId = 2L))
+        val candidate3 = Candidate(player = Player(id = 3, roleId = 3L, channelId = 3L))
 
         val comparator = Candidate.getComparator()
         val sorted = listOf(candidate3, candidate1, candidate2).sortedWith(comparator)
@@ -110,8 +110,8 @@ class CandidateTest {
 
     @Test
     fun testGetWinnerMultipleCandidatesWithClear() {
-        val candidate1 = Candidate(player = Session.Player(id = 1, roleId = 1L, channelId = 1L))
-        val candidate2 = Candidate(player = Session.Player(id = 2, roleId = 2L, channelId = 2L))
+        val candidate1 = Candidate(player = Player(id = 1, roleId = 1L, channelId = 1L))
+        val candidate2 = Candidate(player = Player(id = 2, roleId = 2L, channelId = 2L))
 
         candidate1.electors.add(100L)
         candidate1.electors.add(200L)
@@ -126,8 +126,8 @@ class CandidateTest {
 
     @Test
     fun testGetWinnerTie() {
-        val candidate1 = Candidate(player = Session.Player(id = 1, roleId = 1L, channelId = 1L))
-        val candidate2 = Candidate(player = Session.Player(id = 2, roleId = 2L, channelId = 2L))
+        val candidate1 = Candidate(player = Player(id = 1, roleId = 1L, channelId = 1L))
+        val candidate2 = Candidate(player = Player(id = 2, roleId = 2L, channelId = 2L))
 
         candidate1.electors.add(100L)
         candidate1.electors.add(200L)
@@ -144,8 +144,8 @@ class CandidateTest {
 
     @Test
     fun testGetWinnerWithZeroVotes() {
-        val candidate1 = Candidate(player = Session.Player(id = 1, roleId = 1L, channelId = 1L))
-        val candidate2 = Candidate(player = Session.Player(id = 2, roleId = 2L, channelId = 2L))
+        val candidate1 = Candidate(player = Player(id = 1, roleId = 1L, channelId = 1L))
+        val candidate2 = Candidate(player = Player(id = 2, roleId = 2L, channelId = 2L))
 
         candidate1.quit = true
         candidate2.electors.add(300L)

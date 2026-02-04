@@ -1,0 +1,334 @@
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/C:/Users/Nathan%20Lee/.gradle/wrapper/dists/gradle-9.3.1-bin/23ovyewtku6u96viwx3xl3oks/gradle-9.3.1/lib/native-platform-0.22-milestone-29.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :checkKotlinGradlePluginConfigurationErrors SKIPPED
+
+> Task :compileKotlin FAILED
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/commands/Player.kt:44:25 Unresolved reference 'idLong'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/commands/Player.kt:45:17 Too many arguments for 'fun switchRoleOrder(player: Player): Unit'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:111:45 Argument type mismatch: actual type is 'Long', but 'Player' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:111:54 Argument type mismatch: actual type is 'String', but 'List<String>' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:111:64 Too many arguments for 'fun updatePlayerRoles(player: Player, roles: List<String>): Unit'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:138:43 Argument type mismatch: actual type is 'Long', but 'Player' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:138:52 Too many arguments for 'fun switchRoleOrder(player: Player): Unit'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:152:47 Argument type mismatch: actual type is 'Long', but 'Player' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:152:56 Argument type mismatch: actual type is 'String', but 'Boolean' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:152:66 Too many arguments for 'fun setRolePositionLock(player: Player, locked: Boolean): Unit'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:166:42 Argument type mismatch: actual type is 'Long', but 'Session' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:173:40 Argument type mismatch: actual type is 'Long', but 'Session' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:183:38 Argument type mismatch: actual type is 'Long', but 'Session' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:190:37 Argument type mismatch: actual type is 'Long', but 'Session' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:198:90 Argument type mismatch: actual type is 'Long', but 'Session' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:207:29 Argument type mismatch: actual type is 'Long', but 'Session' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:217:32 Argument type mismatch: actual type is 'Long', but 'Session' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:255:17 Argument type mismatch: actual type is 'Long', but 'Session' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt:289:17 Argument type mismatch: actual type is 'Long', but 'Session' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/listeners/ButtonListener.kt:144:38 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/listeners/ButtonListener.kt:165:38 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/listeners/ButtonListener.kt:166:38 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:17:1 Class 'GameActionServiceImpl' is not abstract and does not implement abstract members:
+fun resetGame(session: Session, statusCallback: (String) -> Unit, progressCallback: (Int) -> Unit): Unit
+fun markPlayerDead(session: Session, userId: Long, allowLastWords: Boolean, cause: DeathCause = ...): Unit
+fun revivePlayer(session: Session, userId: Long): Unit
+fun reviveRole(session: Session, userId: Long, role: String): Unit
+fun setPolice(session: Session, userId: Long): Unit
+fun muteAll(guildId: Long, mute: Boolean): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:26:5 'resetGame' overrides nothing. Potential signatures for overriding:
+fun resetGame(session: Session, statusCallback: (String) -> Unit, progressCallback: (Int) -> Unit): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:27:18 Unresolved reference 'Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:31:31 Unresolved reference 'guildId'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:43:32 Unresolved reference 'players'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:43:40 Method 'iterator()' is ambiguous for this expression. Applicable candidates:
+fun <T> Enumeration<T>.iterator(): Iterator<T>
+fun <T> Iterator<T>.iterator(): Iterator<T>
+fun <K, V> Map<out K, V>.iterator(): Iterator<Map.Entry<K, V>>
+fun <K, V> MutableMap<K, V>.iterator(): MutableIterator<MutableMap.MutableEntry<K, V>>
+fun CharSequence.iterator(): CharIterator
+fun BufferedInputStream.iterator(): ByteIterator
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:47:28 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:48:32 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:56:36 Unresolved reference 'getMemberById'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:58:25 Unresolved reference 'spectatorRole'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:61:39 Unresolved reference 'removeRoleFromMember'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:61:68 Unresolved reference 'spectatorRole'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:62:49 Unresolved reference 'effectiveName'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:67:44 Unresolved reference 'getRoleById'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:71:39 Unresolved reference 'removeRoleFromMember'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:72:70 Unresolved reference 'effectiveName'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:78:32 Unresolved reference 'isOwner'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:79:66 Unresolved reference 'effectiveName'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:80:39 Unresolved reference 'selfMember'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:81:66 Unresolved reference 'effectiveName'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:82:39 Unresolved reference 'nickname'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:85:40 Unresolved reference 'modifyNickname'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:86:49 Unresolved reference 'effectiveName'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:104:17 Unresolved reference 'logs'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:104:24 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:105:17 Unresolved reference 'hasAssignedRoles'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:106:17 Unresolved reference 'currentState'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:107:17 Unresolved reference 'stateData'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:107:29 Cannot infer type for type parameter 'K'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:107:29 Cannot infer type for type parameter 'V'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:108:17 Unresolved reference 'currentStepEndTime'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:109:17 Unresolved reference 'day'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:110:17 Unresolved reference 'addLog'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:112:27 Cannot infer type for type parameter 'S'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:120:5 'markPlayerDead' overrides nothing. Potential signatures for overriding:
+fun markPlayerDead(session: Session, userId: Long, allowLastWords: Boolean, cause: DeathCause = ...): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:133:5 'revivePlayer' overrides nothing. Potential signatures for overriding:
+fun revivePlayer(session: Session, userId: Long): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:133:40 Unresolved reference 'Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:143:50 Unresolved reference 'guildId'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:145:32 Unresolved reference 'getMemberById'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:147:32 Unresolved reference 'retrieveMemberById'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:150:49 Unresolved reference 'getPlayer'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:167:5 'reviveRole' overrides nothing. Potential signatures for overriding:
+fun reviveRole(session: Session, userId: Long, role: String): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:167:38 Unresolved reference 'Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:169:35 Unresolved reference 'guildId'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:170:33 Unresolved reference 'guild'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:178:36 Unresolved reference 'players'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:178:44 Method 'iterator()' is ambiguous for this expression. Applicable candidates:
+fun <T> Enumeration<T>.iterator(): Iterator<T>
+fun <T> Iterator<T>.iterator(): Iterator<T>
+fun <K, V> Map<out K, V>.iterator(): Iterator<Map.Entry<K, V>>
+fun <K, V> MutableMap<K, V>.iterator(): MutableIterator<MutableMap.MutableEntry<K, V>>
+fun CharSequence.iterator(): CharIterator
+fun BufferedInputStream.iterator(): ByteIterator
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:181:46 Unresolved reference 'not' for operator '!'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:181:57 None of the following candidates is applicable:
+
+fun <T : Comparable<T>, R : ClosedRange<T>, Iterable<T>> R.contains(element: T?): Boolean:
+  Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+fun <T : Comparable<T>, R : ClosedRange<T>, Iterable<T>> R.contains(element: T?): Boolean
+
+fun <T : Comparable<T>, R : OpenEndRange<T>, Iterable<T>> R.contains(element: T?): Boolean:
+  Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+fun <T : Comparable<T>, R : OpenEndRange<T>, Iterable<T>> R.contains(element: T?): Boolean
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:187:31 Unresolved reference 'remove'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:189:39 Cannot infer type for type parameter 'S'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:195:29 Unresolved reference 'addLog'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:198:60 Unresolved reference 'spectatorRole'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:202:75 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:203:49 Cannot infer type for value parameter 'deadRole'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:204:40 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:204:40 'fun <T> MutableList<T>.remove(index: Int): T' is deprecated. Use removeAt(index) instead.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:226:31 Cannot infer type for type parameter 'S'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:234:5 'setPolice' overrides nothing. Potential signatures for overriding:
+fun setPolice(session: Session, userId: Long): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:234:37 Unresolved reference 'Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:236:35 Unresolved reference 'guildId'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:240:36 Unresolved reference 'players'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:240:44 Method 'iterator()' is ambiguous for this expression. Applicable candidates:
+fun <T> Enumeration<T>.iterator(): Iterator<T>
+fun <T> Iterator<T>.iterator(): Iterator<T>
+fun <K, V> Map<out K, V>.iterator(): Iterator<Map.Entry<K, V>>
+fun <K, V> MutableMap<K, V>.iterator(): MutableIterator<MutableMap.MutableEntry<K, V>>
+fun CharSequence.iterator(): CharIterator
+fun BufferedInputStream.iterator(): ByteIterator
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:243:36 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:243:36 Cannot infer type for type parameter 'R'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:243:42 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:244:44 Unresolved reference 'getMemberById'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:252:36 Unresolved reference 'players'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:252:44 Method 'iterator()' is ambiguous for this expression. Applicable candidates:
+fun <T> Enumeration<T>.iterator(): Iterator<T>
+fun <T> Iterator<T>.iterator(): Iterator<T>
+fun <K, V> Map<out K, V>.iterator(): Iterator<Map.Entry<K, V>>
+fun <K, V> MutableMap<K, V>.iterator(): MutableIterator<MutableMap.MutableEntry<K, V>>
+fun CharSequence.iterator(): CharIterator
+fun BufferedInputStream.iterator(): ByteIterator
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:264:36 Unresolved reference 'getMemberById'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:266:49 Too many arguments for 'fun updateNickname(): Unit'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:267:46 Unresolved reference 'getTextChannelById'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:267:73 Unresolved reference 'courtTextChannelId'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:268:85 Unresolved reference 'asMention'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:273:31 Cannot infer type for type parameter 'S'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:291:5 'muteAll' overrides nothing. Potential signatures for overriding:
+fun muteAll(guildId: Long, mute: Boolean): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:291:35 Unresolved reference 'Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:292:31 Unresolved reference 'guildId'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:297:21 Unresolved reference 'courtVoiceChannelId'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:298:38 Unresolved reference 'getVoiceChannelById'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:298:66 Unresolved reference 'courtVoiceChannelId'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:308:45 Method 'iterator()' is ambiguous for this expression. Applicable candidates:
+fun <T> Enumeration<T>.iterator(): Iterator<T>
+fun <T> Iterator<T>.iterator(): Iterator<T>
+fun <K, V> Map<out K, V>.iterator(): Iterator<Map.Entry<K, V>>
+fun <K, V> MutableMap<K, V>.iterator(): MutableIterator<MutableMap.MutableEntry<K, V>>
+fun CharSequence.iterator(): CharIterator
+fun BufferedInputStream.iterator(): ByteIterator
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/GameActionServiceImpl.kt:308:45 Unresolved reference 'members'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PlayerServiceImpl.kt:20:1 Class 'PlayerServiceImpl' is not abstract and does not implement abstract members:
+fun setPlayerCount(session: Session, count: Int, onProgress: (String) -> Unit, onPercent: (Int) -> Unit): Unit
+fun updatePlayerRoles(player: Player, roles: List<String>): Unit
+fun switchRoleOrder(player: Player): Unit
+fun setRolePositionLock(player: Player, locked: Boolean): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PlayerServiceImpl.kt:32:5 'setPlayerCount' overrides nothing. Potential signatures for overriding:
+fun setPlayerCount(session: Session, count: Int, onProgress: (String) -> Unit, onPercent: (Int) -> Unit): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PlayerServiceImpl.kt:47:31 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PlayerServiceImpl.kt:86:55 Cannot access 'var spectatorRoleId: Long': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PlayerServiceImpl.kt:137:52 Cannot access 'constructor(id: Int = ..., roleId: Long = ..., channelId: Long = ..., jinBaoBao: Boolean = ..., duplicated: Boolean = ..., idiot: Boolean = ..., police: Boolean = ..., rolePositionLocked: Boolean = ..., actionSubmitted: Boolean = ..., userId: Long? = ..., roles: MutableList<String>? = ..., deadRoles: MutableList<String>? = ..., session: Session? = ...): Player': it is private in 'dev.robothanzo.werewolf.database.documents.Player'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PlayerServiceImpl.kt:151:17 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PlayerServiceImpl.kt:157:5 'updatePlayerRoles' overrides nothing. Potential signatures for overriding:
+fun updatePlayerRoles(player: Player, roles: List<String>): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PlayerServiceImpl.kt:161:34 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PlayerServiceImpl.kt:185:29 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PlayerServiceImpl.kt:194:5 'switchRoleOrder' overrides nothing. Potential signatures for overriding:
+fun switchRoleOrder(player: Player): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PlayerServiceImpl.kt:198:34 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PlayerServiceImpl.kt:213:21 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PlayerServiceImpl.kt:220:5 'setRolePositionLock' overrides nothing. Potential signatures for overriding:
+fun setRolePositionLock(player: Player, locked: Boolean): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PlayerServiceImpl.kt:224:34 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PoliceServiceImpl.kt:396:25 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PoliceServiceImpl.kt:426:32 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'Guild?'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PoliceServiceImpl.kt:430:35 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'Guild?'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PoliceServiceImpl.kt:447:37 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'Guild?'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PoliceServiceImpl.kt:466:50 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'Guild?'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PoliceServiceImpl.kt:486:45 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PoliceServiceImpl.kt:507:56 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PoliceServiceImpl.kt:513:64 Too many arguments for 'fun updateNickname(): Unit'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PoliceServiceImpl.kt:520:52 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/PoliceServiceImpl.kt:524:52 Too many arguments for 'fun updateNickname(): Unit'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:20:1 Class 'RoleServiceImpl' is not abstract and does not implement abstract members:
+fun addRole(session: Session, roleName: String, amount: Int): Unit
+fun removeRole(session: Session, roleName: String, amount: Int): Unit
+fun getRoles(session: Session): List<String>
+fun assignRoles(session: Session, statusCallback: (String) -> Unit, progressCallback: (Int) -> Unit): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:27:5 'addRole' overrides nothing. Potential signatures for overriding:
+fun addRole(session: Session, roleName: String, amount: Int): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:27:35 Unresolved reference 'Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:29:33 Unresolved reference 'roles'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:30:36 Unresolved reference 'add'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:31:21 Unresolved reference 'roles'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:39:5 'removeRole' overrides nothing. Potential signatures for overriding:
+fun removeRole(session: Session, roleName: String, amount: Int): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:39:38 Unresolved reference 'Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:41:33 Unresolved reference 'roles'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:43:21 Unresolved reference 'roles'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:51:5 'getRoles' overrides nothing. Potential signatures for overriding:
+fun getRoles(session: Session): List<String>
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:51:36 Unresolved reference 'Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:52:24 Unresolved reference 'roles'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:55:5 'assignRoles' overrides nothing. Potential signatures for overriding:
+fun assignRoles(session: Session, statusCallback: (String) -> Unit, progressCallback: (Int) -> Unit): Unit
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:55:39 Unresolved reference 'Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:57:35 Unresolved reference 'guildId'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:58:25 Unresolved reference 'hasAssignedRoles'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:62:40 Unresolved reference 'players'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:71:33 Unresolved reference 'members'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:71:50 Cannot infer type for value parameter 'member'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:72:25 Unresolved reference 'user'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:73:33 Unresolved reference 'isOwner'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:74:32 Unresolved reference 'idLong'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:74:50 Unresolved reference 'judgeRoleId'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:75:25 Unresolved reference 'not' for operator '!'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:75:33 Unresolved reference 'roles'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:75:45 Unresolved reference 'it'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:75:66 Unresolved reference 'judgeRoleId'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:75:81 Unresolved reference 'it'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:75:102 Unresolved reference 'spectatorRoleId'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:81:21 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:82:25 Unresolved reference 'size'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:82:41 Unresolved reference 'players'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:84:119 Unresolved reference 'size'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:84:140 Unresolved reference 'players'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:88:46 Unresolved reference 'doubleIdentities'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:89:25 Unresolved reference 'size'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:89:42 Unresolved reference 'roles'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:91:97 Unresolved reference 'size'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:91:120 Unresolved reference 'roles'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:95:33 Unresolved reference 'roles'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:100:49 Unresolved reference 'players'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:101:34 Unresolved reference 'it'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:106:28 Method 'iterator()' is ambiguous for this expression. Applicable candidates:
+fun <T> Enumeration<T>.iterator(): Iterator<T>
+fun <T> Iterator<T>.iterator(): Iterator<T>
+fun <K, V> Map<out K, V>.iterator(): Iterator<Map.Entry<K, V>>
+fun <K, V> MutableMap<K, V>.iterator(): MutableIterator<MutableMap.MutableEntry<K, V>>
+fun CharSequence.iterator(): CharIterator
+fun BufferedInputStream.iterator(): ByteIterator
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:110:40 Unresolved reference 'getRoleById'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:114:35 Unresolved reference 'addRoleToMember'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:115:53 Unresolved reference 'name'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:115:75 Unresolved reference 'effectiveName'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:121:26 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:121:46 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:124:24 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:128:24 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:128:73 Unresolved reference 'doubleIdentities'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:133:36 Unresolved reference 'doubleIdentities'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:138:32 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:141:40 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:144:28 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:146:39 Method 'iterator()' is ambiguous for this expression. Applicable candidates:
+fun <T> Enumeration<T>.iterator(): Iterator<T>
+fun <T> Iterator<T>.iterator(): Iterator<T>
+fun <K, V> Map<out K, V>.iterator(): Iterator<Map.Entry<K, V>>
+fun <K, V> MutableMap<K, V>.iterator(): MutableIterator<MutableMap.MutableEntry<K, V>>
+fun CharSequence.iterator(): CharIterator
+fun BufferedInputStream.iterator(): ByteIterator
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:149:43 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:149:43 'fun <T> MutableList<T>.remove(index: Int): T' is deprecated. Use removeAt(index) instead.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:155:32 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:160:28 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:161:28 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:164:31 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:167:59 Unresolved reference 'doubleIdentities'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:169:36 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:170:40 Unresolved reference 'idLong'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:174:28 Unresolved reference 'effectiveName'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:175:31 Unresolved reference 'selfMember'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:178:40 Unresolved reference 'modifyNickname'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:183:64 Unresolved reference 'effectiveName'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:187:51 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:193:28 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:201:33 Unresolved reference 'doubleIdentities'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:202:32 Unresolved reference 'setComponents'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:213:64 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:224:29 Argument type mismatch: actual type is 'Any', but 'RestAction<*>' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:225:52 Unresolved reference 'effectiveName'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:240:41 Unresolved reference 'players'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:240:67 Unresolved reference 'it'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:242:23 Method 'iterator()' is ambiguous for this expression. Applicable candidates:
+fun <T> Enumeration<T>.iterator(): Iterator<T>
+fun <T> Iterator<T>.iterator(): Iterator<T>
+fun <K, V> Map<out K, V>.iterator(): Iterator<Map.Entry<K, V>>
+fun <K, V> MutableMap<K, V>.iterator(): MutableIterator<MutableMap.MutableEntry<K, V>>
+fun CharSequence.iterator(): CharIterator
+fun BufferedInputStream.iterator(): ByteIterator
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:252:39 Unresolved reference 'sendToJudge'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:256:25 Argument type mismatch: actual type is 'Any', but 'RestAction<*>' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:262:43 Unresolved reference 'sendToSpectator'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:266:25 Argument type mismatch: actual type is 'Any', but 'RestAction<*>' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:286:21 Unresolved reference 'hasAssignedRoles'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:287:21 Unresolved reference 'addLog'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/service/impl/RoleServiceImpl.kt:288:31 Cannot infer type for type parameter 'S'. Specify it explicitly.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/utils/SetupHelper.kt:46:25 Cannot access 'var players: MutableMap<String, Player>': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/utils/SetupHelper.kt:54:29 Cannot access 'var spectatorRoleId: Long': it is private in 'dev.robothanzo.werewolf.database.documents.Session'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/utils/SetupHelper.kt:253:52 Argument type mismatch: actual type is 'CompletableFuture<MutableMap<String, Player>>', but 'MutableMap<String, Player>' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/utils/SetupHelper.kt:253:52 No value passed for parameter 'future'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/utils/SetupHelper.kt:282:47 Cannot access 'constructor(id: Int = ..., roleId: Long = ..., channelId: Long = ..., jinBaoBao: Boolean = ..., duplicated: Boolean = ..., idiot: Boolean = ..., police: Boolean = ..., rolePositionLocked: Boolean = ..., actionSubmitted: Boolean = ..., userId: Long? = ..., roles: MutableList<String>? = ..., deadRoles: MutableList<String>? = ..., session: Session? = ...): Player': it is private in 'dev.robothanzo.werewolf.database.documents.Player'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/utils/SetupHelper.kt:287:41 Argument type mismatch: actual type is 'Guild', but 'Session' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/utils/SetupHelper.kt:287:68 Unresolved reference 'publicRole'.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/utils/SetupHelper.kt:287:80 Argument type mismatch: actual type is 'MutableMap<String, Player>', but 'CompletableFuture<MutableMap<String, Player>>' was expected.
+e: file:///C:/Users/Nathan%20Lee/Coding%20Projects/Java%20Projects/WerewolfHelper/src/main/kotlin/dev/robothanzo/werewolf/utils/SetupHelper.kt:287:89 Too many arguments for 'fun createPlayerRecursively(session: Session, total: Int, current: Int, players: MutableMap<String, Player>, future: CompletableFuture<MutableMap<String, Player>>): Unit'.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 3s
+1 actionable task: 1 executed

@@ -18,7 +18,7 @@ class SpeechStep(
 
     override fun onStart(session: Session, service: GameStateService) {
         // Automatically start speech flow when entering this step
-        speechService.startAutoSpeechFlow(session.guildId, session.courtTextChannelId)
+        speechService.startAutoSpeechFlow(session, session.courtTextChannelId)
     }
 
     override fun onEnd(session: Session, service: GameStateService) {

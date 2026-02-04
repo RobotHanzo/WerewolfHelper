@@ -1,7 +1,9 @@
 package dev.robothanzo.werewolf.service
 
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.PoliceSession
+import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
@@ -67,8 +69,8 @@ interface PoliceService {
      */
     fun transferPolice(
         session: Session,
-        guild: net.dv8tion.jda.api.entities.Guild,
-        player: Session.Player,
+        guild: Guild?,
+        player: Player,
         callback: (() -> Unit)?
     )
 

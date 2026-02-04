@@ -1,5 +1,5 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
-import {Mic, Moon, Play, SkipForward, Skull, StepForward, Sun, Users} from 'lucide-react';
+import {Mic, Moon, Play, Shuffle, SkipForward, Skull, StepForward, Sun, Users} from 'lucide-react';
 import {useTranslation} from '@/lib/i18n';
 import {api} from '@/lib/api';
 import {GameState, User} from '@/types';
@@ -106,6 +106,16 @@ export const MainDashboard = ({guildId, gameState, readonly = false, user}: Main
         }
     };
 
+    const handleAssignRoles = async () => {
+        if (readonly || isWorking) return;
+        setIsWorking(true);
+        try {
+            await api.assignRoles(guildId);
+        } finally {
+            setIsWorking(false);
+        }
+    };
+
     const renderStageContent = () => {
         switch (currentId) {
             case 'SETUP':
@@ -123,10 +133,20 @@ export const MainDashboard = ({guildId, gameState, readonly = false, user}: Main
                                 {t('dashboard.setupDescription', 'Configure game settings and assign roles to players')}
                             </p>
                             <div className="flex gap-2">
+                                {!gameState.hasAssignedRoles && (
+                                    <button
+                                        onClick={handleAssignRoles}
+                                        disabled={readonly || isWorking}
+                                        className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium disabled:opacity-50 transition-colors flex items-center gap-2"
+                                    >
+                                        <Shuffle className="w-4 h-4"/>
+                                        {t('dashboard.assignRoles')}
+                                    </button>
+                                )}
                                 <button
                                     onClick={handleStartGame}
-                                    disabled={readonly || isWorking}
-                                    className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium disabled:opacity-50 transition-colors flex items-center gap-2"
+                                    disabled={readonly || isWorking || !gameState.hasAssignedRoles}
+                                    className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-medium disabled:opacity-50 transition-colors flex items-center gap-2"
                                 >
                                     <Play className="w-4 h-4"/>
                                     {t('dashboard.startGame')}
@@ -152,7 +172,6 @@ export const MainDashboard = ({guildId, gameState, readonly = false, user}: Main
                                     <ActionPanelsContainer
                                         guildId={guildId}
                                         gameState={gameState}
-                                        userId={user.userId}
                                         isJudge={user.role === 'JUDGE'}
                                     />
                                 )}
@@ -311,8 +330,6 @@ export const MainDashboard = ({guildId, gameState, readonly = false, user}: Main
                             <VoteStatus
                                 candidates={gameState.expel.candidates || []}
                                 players={gameState.players || []}
-                                totalVoters={gameState.expel.totalVoters}
-                                endTime={gameState.expel.endTime}
                                 title={t('steps.voting')}
                             />
                         )}
@@ -346,14 +363,26 @@ export const MainDashboard = ({guildId, gameState, readonly = false, user}: Main
                         {t('dashboard.stepNavigator')}
                     </div>
                     {currentId === 'SETUP' ? (
-                        <button
-                            onClick={handleStartGame}
-                            disabled={readonly || isWorking}
-                            className="w-full px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Play className="w-4 h-4"/>
-                            {t('dashboard.startGame')}
-                        </button>
+                        <div className="space-y-2">
+                            {!gameState.hasAssignedRoles && (
+                                <button
+                                    onClick={handleAssignRoles}
+                                    disabled={readonly || isWorking}
+                                    className="w-full px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Shuffle className="w-4 h-4"/>
+                                    {t('dashboard.assignRoles')}
+                                </button>
+                            )}
+                            <button
+                                onClick={handleStartGame}
+                                disabled={readonly || isWorking || !gameState.hasAssignedRoles}
+                                className="w-full px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Play className="w-4 h-4"/>
+                                {t('dashboard.startGame')}
+                            </button>
+                        </div>
                     ) : (
                         <button
                             onClick={handleNextStep}

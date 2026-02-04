@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.model
 
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import java.util.*
 
@@ -8,7 +9,7 @@ data class SpeechSession(
     val channelId: Long,
     val session: Session,
     val interruptVotes: MutableList<Long> = LinkedList(),
-    val order: MutableList<Session.Player> = LinkedList(),
+    val order: MutableList<Player> = LinkedList(),
     var speakingThread: Thread? = null,
     var lastSpeaker: Long? = null,
     var finishedCallback: (() -> Unit)? = null,

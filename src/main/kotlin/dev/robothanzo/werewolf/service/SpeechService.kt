@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.service
 
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.SpeechOrder
 import dev.robothanzo.werewolf.model.SpeechSession
@@ -19,7 +20,7 @@ interface SpeechService {
     fun startSpeechPoll(
         guild: Guild,
         enrollMessage: Message?,
-        players: Collection<Session.Player>,
+        players: Collection<Player>,
         callback: (() -> Unit)?
     )
 
@@ -29,19 +30,19 @@ interface SpeechService {
     fun startLastWordsSpeech(
         guild: Guild,
         channelId: Long,
-        player: Session.Player,
+        player: Player,
         callback: (() -> Unit)?
     )
 
     /**
-     * Sets the speech order for a guild.
+     * Sets the speech order for a session.
      */
-    fun setSpeechOrder(guildId: Long, order: SpeechOrder)
+    fun setSpeechOrder(session: Session, order: SpeechOrder)
 
     /**
-     * Confirms the speech order and starts the speech flow for a guild.
+     * Confirms the speech order and starts the speech flow for a session.
      */
-    fun confirmSpeechOrder(guildId: Long)
+    fun confirmSpeechOrder(session: Session)
 
     /**
      * Handles order selection from a dropdown.
@@ -66,7 +67,7 @@ interface SpeechService {
     /**
      * Starts the automatic speech flow for the daytime.
      */
-    fun startAutoSpeechFlow(guildId: Long, channelId: Long)
+    fun startAutoSpeechFlow(session: Session, channelId: Long)
 
     /**
      * Starts a standalone timer.

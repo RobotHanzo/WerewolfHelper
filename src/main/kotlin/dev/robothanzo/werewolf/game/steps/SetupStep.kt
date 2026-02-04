@@ -45,7 +45,7 @@ class SetupStep(
         return when (action) {
             "assign_roles" -> {
                 roleService.assignRoles(
-                    session.guildId,
+                    session,
                     { msg: String -> gameActionService.broadcastProgress(session.guildId, msg, null) },
                     { pct: Int -> gameActionService.broadcastProgress(session.guildId, "", pct) }
                 )

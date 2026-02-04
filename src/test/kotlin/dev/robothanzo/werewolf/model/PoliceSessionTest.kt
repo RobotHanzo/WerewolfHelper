@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.model
 
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -92,8 +93,8 @@ class PoliceSessionTest {
 
     @Test
     fun testAddCandidates() {
-        val player1 = Session.Player(id = 1, roleId = 1L, channelId = 1L, userId = 100L)
-        val player2 = Session.Player(id = 2, roleId = 2L, channelId = 2L, userId = 200L)
+        val player1 = Player(id = 1, roleId = 1L, channelId = 1L, userId = 100L)
+        val player2 = Player(id = 2, roleId = 2L, channelId = 2L, userId = 200L)
 
         val candidate1 = Candidate(player = player1)
         val candidate2 = Candidate(player = player2)
@@ -108,7 +109,7 @@ class PoliceSessionTest {
 
     @Test
     fun testRemoveCandidates() {
-        val player = Session.Player(id = 1, roleId = 1L, channelId = 1L, userId = 100L)
+        val player = Player(id = 1, roleId = 1L, channelId = 1L, userId = 100L)
         val candidate = Candidate(player = player)
 
         policeSession.candidates[1] = candidate

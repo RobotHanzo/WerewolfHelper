@@ -172,10 +172,12 @@ class RoleActionServiceImpl(
     override fun getAvailableActionsForJudge(session: Session): Map<Long, List<RoleAction>> {
         val result = mutableMapOf<Long, List<RoleAction>>()
         for ((_, player) in session.players) {
-            if (player.isAlive && player.userId != null) {
-                val actions = getAvailableActionsForPlayer(session, player.userId!!)
-                if (actions.isNotEmpty()) {
-                    result[player.userId!!] = actions
+            if (player.isAlive) {
+                player.userId?.let { uid ->
+                    val actions = getAvailableActionsForPlayer(session, uid)
+                    if (actions.isNotEmpty()) {
+                        result[uid] = actions
+                    }
                 }
             }
         }
