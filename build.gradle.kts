@@ -29,6 +29,7 @@ dependencies {
     // Kotlin
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
 
     // Discord
     implementation("net.dv8tion:JDA:6.3.0")

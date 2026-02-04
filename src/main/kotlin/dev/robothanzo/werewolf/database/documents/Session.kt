@@ -4,6 +4,8 @@ import com.mongodb.client.MongoCollection
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.Database
 import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.codecs.pojo.annotations.BsonIgnore
 import org.bson.types.ObjectId
@@ -115,6 +117,136 @@ data class Session(
         return Result.NOT_ENDED
     }
 
+    fun sendToCourt(message: String, queue: Boolean = true): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(courtTextChannelId)
+            ?.sendMessage(message) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
+    fun sendToCourt(embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(courtTextChannelId)
+            ?.sendMessageEmbeds(embed) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
+    fun sendToCourt(embeds: Collection<MessageEmbed>, queue: Boolean = true): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(courtTextChannelId)
+            ?.sendMessageEmbeds(embeds) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
+    fun sendToCourt(message: String, embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(courtTextChannelId)
+            ?.sendMessage(message)
+            ?.setEmbeds(embed) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
+    fun sendToCourt(message: String, embeds: Collection<MessageEmbed>, queue: Boolean = true): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(courtTextChannelId)
+            ?.sendMessage(message)
+            ?.setEmbeds(embeds) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
+    fun sendToSpectator(message: String, queue: Boolean = true): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(spectatorTextChannelId)
+            ?.sendMessage(message) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
+    fun sendToSpectator(embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(spectatorTextChannelId)
+            ?.sendMessageEmbeds(embed) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
+    fun sendToSpectator(embeds: Collection<MessageEmbed>, queue: Boolean = true): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(spectatorTextChannelId)
+            ?.sendMessageEmbeds(embeds) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
+    fun sendToSpectator(message: String, embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(spectatorTextChannelId)
+            ?.sendMessage(message)
+            ?.setEmbeds(embed) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
+    fun sendToSpectator(
+        message: String,
+        embeds: Collection<MessageEmbed>,
+        queue: Boolean = true
+    ): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(spectatorTextChannelId)
+            ?.sendMessage(message)
+            ?.setEmbeds(embeds) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
+    fun sendToJudge(message: String, queue: Boolean = true): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(judgeTextChannelId)
+            ?.sendMessage(message) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
+    fun sendToJudge(embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(judgeTextChannelId)
+            ?.sendMessageEmbeds(embed) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
+    fun sendToJudge(embeds: Collection<MessageEmbed>, queue: Boolean = true): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(judgeTextChannelId)
+            ?.sendMessageEmbeds(embeds) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
+    fun sendToJudge(message: String, embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(judgeTextChannelId)
+            ?.sendMessage(message)
+            ?.setEmbeds(embed) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
+    fun sendToJudge(message: String, embeds: Collection<MessageEmbed>, queue: Boolean = true): MessageCreateAction? {
+        val action = WerewolfApplication.jda.getGuildById(guildId)
+            ?.getTextChannelById(judgeTextChannelId)
+            ?.sendMessage(message)
+            ?.setEmbeds(embeds) ?: return null
+        if (queue) action.queue()
+        return action
+    }
+
     enum class Result(val reason: String) {
         NOT_ENDED("未結束"),
         VILLAGERS_DIED("全部村民死亡"),
@@ -171,6 +303,43 @@ data class Session(
             if (member.effectiveName != newName) {
                 member.modifyNickname(newName).queue()
             }
+        }
+
+        fun send(message: String, queue: Boolean = true): MessageCreateAction? {
+            val action = WerewolfApplication.jda.getTextChannelById(channelId)
+                ?.sendMessage(message) ?: return null
+            if (queue) action.queue()
+            return action
+        }
+
+        fun send(embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
+            val action = WerewolfApplication.jda.getTextChannelById(channelId)
+                ?.sendMessageEmbeds(embed) ?: return null
+            if (queue) action.queue()
+            return action
+        }
+
+        fun send(embeds: Collection<MessageEmbed>, queue: Boolean = true): MessageCreateAction? {
+            val action = WerewolfApplication.jda.getTextChannelById(channelId)
+                ?.sendMessageEmbeds(embeds) ?: return null
+            if (queue) action.queue()
+            return action
+        }
+
+        fun send(message: String, embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
+            val action = WerewolfApplication.jda.getTextChannelById(channelId)
+                ?.sendMessage(message)
+                ?.setEmbeds(embed) ?: return null
+            if (queue) action.queue()
+            return action
+        }
+
+        fun send(message: String, embeds: Collection<MessageEmbed>, queue: Boolean = true): MessageCreateAction? {
+            val action = WerewolfApplication.jda.getTextChannelById(channelId)
+                ?.sendMessage(message)
+                ?.setEmbeds(embeds) ?: return null
+            if (queue) action.queue()
+            return action
         }
 
         companion object {

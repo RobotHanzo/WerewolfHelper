@@ -1,6 +1,7 @@
 package dev.robothanzo.werewolf.game.roles
 
 import dev.robothanzo.werewolf.game.model.*
+import dev.robothanzo.werewolf.game.roles.actions.*
 
 object PredefinedRoles {
 
@@ -20,88 +21,59 @@ object PredefinedRoles {
     const val SEER_CHECK = "SEER_CHECK"
     const val GUARD_PROTECT = "GUARD_PROTECT"
     const val HUNTER_REVENGE = "HUNTER_REVENGE"
+    const val WOLF_KING_REVENGE = "WOLF_KING_REVENGE"
 
-    private val actionRegistry = mapOf(
-        // Werewolf
-        WEREWOLF_KILL to RoleActionDefinition(
-            actionId = WEREWOLF_KILL,
-            roleName = "狼人",
-            priority = WEREWOLF_PRIORITY,
-            timing = ActionTiming.NIGHT,
-            targetCount = 1,
-            usageLimit = -1, // Unlimited
-            requiresAliveTarget = true
-        ),
+    // Special death causes
+    const val DOUBLE_PROTECTION = "DOUBLE_PROTECTION"
 
-        // Witch - Antidote (Save)
-        WITCH_ANTIDOTE to RoleActionDefinition(
-            actionId = WITCH_ANTIDOTE,
-            roleName = "女巫",
-            priority = WITCH_ANTIDOTE_PRIORITY,
-            timing = ActionTiming.NIGHT,
-            targetCount = 1,
-            usageLimit = 1,
-            requiresAliveTarget = false // Can save someone already dead
-        ),
-
-        // Witch - Poison
-        WITCH_POISON to RoleActionDefinition(
-            actionId = WITCH_POISON,
-            roleName = "女巫",
-            priority = WITCH_POISON_PRIORITY,
-            timing = ActionTiming.NIGHT,
-            targetCount = 1,
-            usageLimit = 1,
-            requiresAliveTarget = true
-        ),
-
-        // Seer - Check
-        SEER_CHECK to RoleActionDefinition(
-            actionId = SEER_CHECK,
-            roleName = "預言家",
-            priority = SEER_PRIORITY,
-            timing = ActionTiming.NIGHT,
-            targetCount = 1,
-            usageLimit = -1, // Unlimited
-            requiresAliveTarget = true
-        ),
-
-        // Guard - Protect
-        GUARD_PROTECT to RoleActionDefinition(
-            actionId = GUARD_PROTECT,
-            roleName = "守衛",
-            priority = GUARD_PRIORITY,
-            timing = ActionTiming.NIGHT,
-            targetCount = 1,
-            usageLimit = -1, // Unlimited
-            requiresAliveTarget = true
-        ),
-
-        // Hunter - Revenge (triggered on death, not directly submitted)
-        HUNTER_REVENGE to RoleActionDefinition(
-            actionId = HUNTER_REVENGE,
-            roleName = "獵人",
-            priority = HUNTER_PRIORITY,
-            timing = ActionTiming.DAY,
-            targetCount = 1,
-            usageLimit = 1,
-            requiresAliveTarget = true
-        )
-    )
+    // Action instances
+    private val werewolfKillAction = WerewolfKillAction()
+    private val witchAntidoteAction = WitchAntidoteAction()
+    private val witchPoisonAction = WitchPoisonAction()
+    private val seerCheckAction = SeerCheckAction()
+    private val guardProtectAction = GuardProtectAction()
+    private val hunterRevengeAction = HunterRevengeAction()
+    private val wolfKingRevengeAction = WolfKingRevengeAction()
 
     private val roleDefinitions = mapOf(
-        "狼人" to RoleDefinition("狼人", Camp.WEREWOLF),
-        "狼王" to RoleDefinition("狼王", Camp.WEREWOLF),
+        "狼人" to RoleDefinition(
+            name = "狼人",
+            camp = Camp.WEREWOLF,
+            actions = listOf(werewolfKillAction)
+        ),
+        "狼王" to RoleDefinition(
+            name = "狼王",
+            camp = Camp.WEREWOLF,
+            eventListeners = listOf(RoleEventType.ON_DEATH),
+            actions = listOf(wolfKingRevengeAction)
+        ),
         "狼美人" to RoleDefinition("狼美人", Camp.WEREWOLF),
         "白狼王" to RoleDefinition("白狼王", Camp.WEREWOLF),
         "夢魘" to RoleDefinition("夢魘", Camp.WEREWOLF),
         "石像鬼" to RoleDefinition("石像鬼", Camp.WEREWOLF),
         "機械狼" to RoleDefinition("機械狼", Camp.WEREWOLF),
 
-        "女巫" to RoleDefinition("女巫", Camp.GOD),
-        "獵人" to RoleDefinition("獵人", Camp.GOD, listOf(RoleEventType.ON_DEATH)),
-        "預言家" to RoleDefinition("預言家", Camp.GOD),
-        "守衛" to RoleDefinition("守衛", Camp.GOD),
+        "女巫" to RoleDefinition(
+            name = "女巫",
+            camp = Camp.GOD,
+            actions = listOf(witchAntidoteAction, witchPoisonAction)
+        ),
+        "獵人" to RoleDefinition(
+            name = "獵人",
+            camp = Camp.GOD,
+            eventListeners = listOf(RoleEventType.ON_DEATH),
+            actions = listOf(hunterRevengeAction)
+        ),
+        "預言家" to RoleDefinition(
+            name = "預言家",
+            camp = Camp.GOD,
+            actions = listOf(seerCheckAction)
+        ),
+        "守衛" to RoleDefinition(
+            name = "守衛",
+            camp = Camp.GOD,
+            actions = listOf(guardProtectAction)
+        ),
         "騎士" to RoleDefinition("騎士", Camp.GOD),
         "守墓人" to RoleDefinition("守墓人", Camp.GOD),
         "魔術師" to RoleDefinition("魔術師", Camp.GOD),
@@ -122,18 +94,22 @@ object PredefinedRoles {
         "平民" to RoleDefinition("平民", Camp.VILLAGER)
     )
 
-    fun getActionDefinition(actionId: String): RoleActionDefinition? = actionRegistry[actionId]
+    fun getAction(actionId: String): RoleAction? {
+        return roleDefinitions.values.flatMap { it.actions }.find { it.actionId == actionId }
+    }
 
     fun getRoleDefinition(roleName: String): RoleDefinition? = roleDefinitions[roleName]
 
-    fun getRoleActions(roleName: String): List<RoleActionDefinition> {
-        return actionRegistry.values.filter { it.roleName == roleName }
+    fun getRoleActions(roleName: String): List<RoleAction> {
+        return roleDefinitions[roleName]?.actions ?: emptyList()
     }
 
-    fun getAllPredefinedActions(): List<RoleActionDefinition> = actionRegistry.values.toList()
+    fun getAllPredefinedActions(): List<RoleAction> {
+        return roleDefinitions.values.flatMap { it.actions }
+    }
 
-    fun getPredefinedActionsByTiming(timing: ActionTiming): List<RoleActionDefinition> {
-        return actionRegistry.values.filter { it.timing == timing }
+    fun getPredefinedActionsByTiming(timing: ActionTiming): List<RoleAction> {
+        return getAllPredefinedActions().filter { it.timing == timing }
     }
 
     fun sortActionsByPriority(
@@ -141,8 +117,23 @@ object PredefinedRoles {
         customRolePriorities: Map<String, Int> = emptyMap()
     ): List<RoleActionInstance> {
         return actions.sortedBy { action ->
-            val definition = getActionDefinition(action.actionDefinitionId) ?: return@sortedBy Int.MAX_VALUE
-            customRolePriorities[definition.roleName] ?: definition.priority
+            val roleAction = getAction(action.actionDefinitionId) ?: return@sortedBy Int.MAX_VALUE
+            customRolePriorities[roleAction.roleName] ?: roleAction.priority
         }
+    }
+
+    // Backward compatibility: convert RoleAction to RoleActionDefinition
+    @Deprecated("Use RoleAction directly instead", ReplaceWith("action"))
+    fun getActionDefinition(actionId: String): RoleActionDefinition? {
+        val action = getAction(actionId) ?: return null
+        return RoleActionDefinition(
+            actionId = action.actionId,
+            roleName = action.roleName,
+            priority = action.priority,
+            timing = action.timing,
+            targetCount = action.targetCount,
+            usageLimit = action.usageLimit,
+            requiresAliveTarget = action.requiresAliveTarget
+        )
     }
 }

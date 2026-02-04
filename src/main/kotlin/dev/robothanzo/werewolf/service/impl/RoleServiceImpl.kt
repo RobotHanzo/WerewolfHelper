@@ -197,18 +197,17 @@ class RoleServiceImpl(
                 statusCallback("  - 已分配身分: " + rs.joinToString(", ") + if (player.jinBaoBao) " (金寶寶)" else "")
 
                 // 4. Send Channel Message
-                val playerChannel = guild.getTextChannelById(player.channelId)
-                if (playerChannel != null) {
-                    val embed = EmbedBuilder()
-                        .setTitle("你抽到的身分是 (若為狼人或金寶寶請使用自己的頻道來和隊友討論及確認身分)")
-                        .setDescription(
-                            rs.joinToString("、") + (if (player.jinBaoBao) " (金寶寶)" else "") +
-                                    if (player.duplicated) " (複製人)" else ""
-                        )
-                        .setColor(MsgUtils.randomColor)
+                val embed = EmbedBuilder()
+                    .setTitle("你抽到的身分是 (若為狼人或金寶寶請使用自己的頻道來和隊友討論及確認身分)")
+                    .setDescription(
+                        rs.joinToString("、") + (if (player.jinBaoBao) " (金寶寶)" else "") +
+                                if (player.duplicated) " (複製人)" else ""
+                    )
+                    .setColor(MsgUtils.randomColor)
 
-                    val action = playerChannel.sendMessageEmbeds(embed.build())
+                val action = player.send(embed.build(), queue = false)
 
+                if (action != null) {
                     if (session.doubleIdentities) {
                         action.setComponents(
                             ActionRow.of(
@@ -225,10 +224,9 @@ class RoleServiceImpl(
                                 if (innerPlayer != null) {
                                     innerPlayer.rolePositionLocked = true
                                     sessionRepository.save(innerSession)
+                                    innerPlayer.send("身分順序已鎖定")
                                 }
                             }
-                            val ch = jda.getTextChannelById(player.channelId)
-                            ch?.sendMessage("身分順序已鎖定")?.queue()
                         }, 120000)
                     }
                     notificationTasks.add(
@@ -261,19 +259,24 @@ class RoleServiceImpl(
             val notificationMsg = "遊戲控制台: $dashboardUrl"
 
             // Add notification tasks
-            val notifyChannelIds = longArrayOf(session.judgeTextChannelId, session.spectatorTextChannelId)
-            for (channelId in notifyChannelIds) {
-                if (channelId != 0L) {
-                    val channel = guild.getTextChannelById(channelId)
-                    if (channel != null) {
-                        notificationTasks.add(
-                            ActionTask(
-                                channel.sendMessage(notificationMsg).setEmbeds(summaryEmbed.build()),
-                                "已發送身分列表與控制台連結至頻道: " + channel.name
-                            )
-                        )
-                    }
-                }
+            val judgeAction = session.sendToJudge(notificationMsg, summaryEmbed.build(), queue = false)
+            if (judgeAction != null) {
+                notificationTasks.add(
+                    ActionTask(
+                        judgeAction,
+                        "已發送身分列表與控制台連結至頻道: 法官"
+                    )
+                )
+            }
+
+            val spectatorAction = session.sendToSpectator(notificationMsg, summaryEmbed.build(), queue = false)
+            if (spectatorAction != null) {
+                notificationTasks.add(
+                    ActionTask(
+                        spectatorAction,
+                        "已發送身分列表與控制台連結至頻道: 旁觀"
+                    )
+                )
             }
 
             if (priorityTasks.isNotEmpty()) {

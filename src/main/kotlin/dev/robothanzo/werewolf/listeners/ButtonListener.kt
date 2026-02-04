@@ -10,8 +10,26 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 class ButtonListener : ListenerAdapter() {
+    companion object {
+        // Track pending action selections waiting for targets (guildId:playerId -> actionId)
+        private val pendingActionSelections = ConcurrentHashMap<String, String>()
+
+        fun getPendingAction(guildId: Long, playerId: String): String? {
+            return pendingActionSelections["$guildId:$playerId"]
+        }
+
+        fun setPendingAction(guildId: Long, playerId: String, actionId: String) {
+            pendingActionSelections["$guildId:$playerId"] = actionId
+        }
+
+        fun clearPendingAction(guildId: Long, playerId: String) {
+            pendingActionSelections.remove("$guildId:$playerId")
+        }
+    }
+
     override fun onButtonInteraction(event: ButtonInteractionEvent) {
         val customId = event.button.customId ?: return
         val id = customId.split(":".toRegex()).toTypedArray()
@@ -39,6 +57,142 @@ class ButtonListener : ListenerAdapter() {
                 } else {
                     event.hook.editOriginal(":x:").queue()
                 }
+                return
+            }
+
+            "selectAction" -> {
+                event.deferReply(true).queue()
+                val actionId = if (id.size > 1) id[1] else return
+                val session = CmdUtils.getSession(event) ?: return
+                var player: Session.Player? = null
+                for (p in session.fetchAlivePlayers().values) {
+                    if (p.userId != null && p.userId == event.user.idLong) {
+                        player = p
+                        break
+                    }
+                }
+                if (player == null) {
+                    event.hook.editOriginal(":x: 找不到玩家").queue()
+                    return
+                }
+                if (player.actionSubmitted) {
+                    event.hook.editOriginal(":x: 你已提交行動，無法再次選擇").queue()
+                    return
+                }
+                if (getPendingAction(event.guild!!.idLong, player.id.toString()) != null) {
+                    event.hook.editOriginal(":x: 你已有待選的行動，請先選擇目標").queue()
+                    return
+                }
+
+                // Get the action definition
+                val actionExecutor = WerewolfApplication.roleActionExecutor
+                val action = actionExecutor.getActionById(actionId)
+
+                if (action != null && action.targetCount > 0) {
+                    // Action requires targets - show target selection menu
+                    setPendingAction(event.guild!!.idLong, player.id.toString(), actionId)
+
+                    val alivePlayers = session.fetchAlivePlayers().values.filter { it.id != player.id }
+                    if (alivePlayers.isEmpty()) {
+                        event.hook.editOriginal(":x: 沒有可選的目標").queue()
+                        clearPendingAction(event.guild!!.idLong, player.id.toString())
+                        return
+                    }
+
+                    val targetMessage = buildString {
+                        appendLine("🎯 **選擇目標**")
+                        appendLine()
+                        appendLine("請選擇 **${action.roleName}** 的 **${action.actionName}** 目標:")
+                        for (p in alivePlayers) {
+                            appendLine("• Player ${p.id}")
+                        }
+                    }
+
+                    val targetButtons = alivePlayers.map { p ->
+                        net.dv8tion.jda.api.components.buttons.Button.secondary(
+                            "selectTarget:${player.id}:${p.id}",
+                            "Player ${p.id}"
+                        )
+                    }
+
+                    player.send(targetMessage, queue = false)?.setComponents(
+                        net.dv8tion.jda.api.components.actionrow.ActionRow.of(targetButtons)
+                    )?.queue()
+
+                    event.hook.editOriginal(":white_check_mark: 請選擇目標").queue()
+                } else {
+                    // No targets required - submit immediately
+                    WerewolfApplication.actionUIService.clearPrompt(player.id.toString())
+                    WerewolfApplication.roleActionService.submitAction(
+                        event.guild!!.idLong,
+                        actionId,
+                        event.user.idLong,
+                        emptyList(),
+                        "PLAYER"
+                    )
+                    event.hook.editOriginal(":white_check_mark: 已執行行動").queue()
+                }
+                return
+            }
+
+            "skipAction" -> {
+                event.deferReply(true).queue()
+                val playerId = if (id.size > 1) id[1] else return
+                val session = CmdUtils.getSession(event) ?: return
+                // Mark action as submitted but without actual action
+                val player = session.players[playerId]
+                if (player != null) {
+                    player.actionSubmitted = true
+                    // Clear the action prompt to cancel reminder
+                    WerewolfApplication.actionUIService.clearPrompt(playerId)
+                }
+                event.hook.editOriginal(":white_check_mark: 已跳過").queue()
+                return
+            }
+
+            "selectTarget" -> {
+                event.deferReply(true).queue()
+                if (id.size < 3) {
+                    event.hook.editOriginal(":x: 無效的目標選擇").queue()
+                    return
+                }
+                val playerId = id[1]
+                val targetId = id[2]
+                val session = CmdUtils.getSession(event) ?: return
+                val guildId = event.guild!!.idLong
+
+                val player = session.players[playerId]
+                val target = session.players[targetId]
+
+                if (player == null || target == null || player.userId != event.user.idLong) {
+                    event.hook.editOriginal(":x: 找不到玩家或目標").queue()
+                    return
+                }
+                if (player.actionSubmitted) {
+                    event.hook.editOriginal(":x: 你已提交行動，無法再次選擇").queue()
+                    return
+                }
+
+                val actionId = getPendingAction(guildId, playerId)
+                if (actionId == null) {
+                    event.hook.editOriginal(":x: 沒有待選的行動").queue()
+                    return
+                }
+
+                // Clear pending selection
+                clearPendingAction(guildId, playerId)
+                WerewolfApplication.actionUIService.clearPrompt(playerId)
+
+                // Submit action with target
+                WerewolfApplication.roleActionService.submitAction(
+                    guildId,
+                    actionId,
+                    event.user.idLong,
+                    listOf(target.userId ?: return),
+                    "PLAYER"
+                )
+                player.actionSubmitted = true
+                event.hook.editOriginal(":white_check_mark: 已選擇 **$targetId** 為目標").queue()
                 return
             }
         }

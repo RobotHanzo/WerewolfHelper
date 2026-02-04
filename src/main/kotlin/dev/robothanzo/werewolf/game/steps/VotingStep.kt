@@ -79,8 +79,6 @@ class VotingStep(
         expelService.endExpelPoll(session.guildId)
         if (!hadPoll) return
 
-        val guild = discordService.getGuild(session.guildId) ?: return
-        val channel = guild.getTextChannelById(session.courtTextChannelId) ?: return
-        channel.sendMessage(message).queue()
+        session.sendToCourt(message)
     }
 }

@@ -19,16 +19,20 @@ import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
+import net.dv8tion.jda.api.hooks.EventListener
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.ChunkingFilter
 import net.dv8tion.jda.api.utils.MemberCachePolicy
 import net.dv8tion.jda.api.utils.cache.CacheFlag
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.stereotype.Service
 import java.util.*
 
 @Service
-class DiscordServiceImpl : DiscordService {
+class DiscordServiceImpl(
+    private val eventListeners: ObjectProvider<EventListener>
+) : DiscordService {
     private val log = LoggerFactory.getLogger(DiscordServiceImpl::class.java)
     override var jda: JDA = JDABuilder.createDefault(System.getenv("TOKEN"))
         .enableIntents(GatewayIntent.GUILD_MEMBERS, GatewayIntent.MESSAGE_CONTENT)
@@ -49,6 +53,12 @@ class DiscordServiceImpl : DiscordService {
         try {
             // Ensure Database is init (legacy)
             Database.initDatabase()
+
+            // Register all Spring-managed EventListener beans
+            eventListeners.forEach { listener ->
+                jda.addEventListener(listener)
+                log.debug("Registered event listener: ${listener.javaClass.simpleName}")
+            }
 
             AudioSourceManagers.registerLocalSource(WerewolfApplication.playerManager)
             JDAInteractions("dev.robothanzo.werewolf.commands").registerInteractions(jda).queue()

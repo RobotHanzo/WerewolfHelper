@@ -121,7 +121,7 @@ class GameActionServiceImpl(
             val session = sessionRepository.findByGuildId(guildId)
                 .orElseThrow { RuntimeException("Session not found") }
 
-            val jda = discordService.jda ?: throw Exception("JDA not initialized")
+            val jda = discordService.jda
             val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
             val spectatorRole =
                 guild.getRoleById(session.spectatorRoleId) ?: throw Exception("Spectator role not found")
@@ -190,23 +190,18 @@ class GameActionServiceImpl(
                                 "playerId" to player.id
                             )
                         )
-
-                        val courtChannel = guild.getTextChannelById(session.courtTextChannelId)
-                        courtChannel?.sendMessage("**:skull: " + member.asMention + " 已死亡**")?.queue()
+                        session.sendToCourt("**:skull: " + member.asMention + " 已死亡**")
                     }
 
                     val result = session.hasEnded(killedRole)
                     if (result != Session.Result.NOT_ENDED) {
-                        val channel = guild.getTextChannelById(session.spectatorTextChannelId)
                         val judgePing = "<@&" + session.judgeRoleId + "> "
-                        if (channel != null) {
-                            if (result == Session.Result.WOLVES_DIED) {
-                                channel.sendMessage(judgePing + "遊戲結束，**好**人獲勝，原因：" + result.reason).queue()
-                            } else {
-                                channel.sendMessage(judgePing + "遊戲結束，**狼**人獲勝，原因：" + result.reason).queue()
-                            }
-                            lastWords = false
+                        if (result == Session.Result.WOLVES_DIED) {
+                            session.sendToSpectator(judgePing + "遊戲結束，**好**人獲勝，原因：" + result.reason)
+                        } else {
+                            session.sendToSpectator(judgePing + "遊戲結束，**狼**人獲勝，原因：" + result.reason)
                         }
+                        lastWords = false
                     }
 
                     if (player.isAlive) {
@@ -216,10 +211,7 @@ class GameActionServiceImpl(
                         }
                         
                         val remainingRoleName = if (remainingRoles.isEmpty()) "未知" else remainingRoles.first()
-
-                        guild.getTextChannelById(player.channelId)
-                            ?.sendMessage("因為你死了，所以你的角色變成了 $remainingRoleName")?.queue()
-
+                        player.send("因為你死了，所以你的角色變成了 $remainingRoleName")
                         sessionRepository.save(session)
 
                         if (lastWords) {
@@ -389,10 +381,7 @@ class GameActionServiceImpl(
                             guild.addRoleToMember(member, roleObj).queue()
                         }
                     }
-
-                    val channel = guild.getTextChannelById(player.channelId)
-                    channel?.sendMessage("因為你復活了，所以你的角色變成了 $currentRoleName")?.queue()
-
+                    player.send("因為你復活了，所以你的角色變成了 $currentRoleName")
                     gameSessionService.broadcastSessionUpdate(session)
                     success = true
                     break

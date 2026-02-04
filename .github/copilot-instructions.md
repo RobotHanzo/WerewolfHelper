@@ -97,8 +97,9 @@ yarn dev
 
 - Use data classes for DTOs/documents (`Session`, `Player`, `LogEntry`)
 - Service interfaces in `service/`, implementations in `service/impl/` with `Impl` suffix
-- Prefer `Optional<T>` for nullable returns in Java-interop contexts (e.g., `getSession`)
+- Use Kotlin language features as much as possible (null operators, data classes, extension functions...etc)
 - Companion objects for constants (see `WerewolfApplication.ROLES`, `WerewolfApplication.SERVER_CREATORS`)
+- Do not use fully qualified names unless absolutely necessary - rely on imports
 
 ### Spring Boot Configuration
 
@@ -123,7 +124,6 @@ yarn dev
 
 ## Common Pitfalls
 
-- **Audio not working**: Ensure JVM args `--enable-native-access` are set and correct native libs are on classpath
 - **Test failures**: Check for missing mock setup - all external dependencies (Discord, MongoDB) must be mocked
 - **WebSocket not connecting**: Verify CORS origins in `WebSocketConfig` match dashboard URL
 - **Session not found**: Each guild needs a `Session` document - created via `GameSessionService.createSession(guildId)`

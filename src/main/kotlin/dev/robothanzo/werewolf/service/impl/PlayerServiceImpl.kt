@@ -185,9 +185,7 @@ class PlayerServiceImpl(
             if (jda != null && player.channelId != 0L) {
                 val guild = jda.getGuildById(guildId)
                 if (guild != null) {
-                    val channel = guild.getTextChannelById(player.channelId)
-                    channel?.sendMessage("法官已將你的身份更改為: ${roles.joinToString(", ")}")
-                        ?.queue()
+                    session.players[playerId]?.send("法官已將你的身份更改為: ${roles.joinToString(", ")}")
                 }
             }
         } catch (e: Exception) {
@@ -215,16 +213,7 @@ class PlayerServiceImpl(
                 it[1] = first
             }
             sessionRepository.save(session)
-
-            val jda = discordService.jda
-            if (jda != null && player.channelId != 0L) {
-                val guild = jda.getGuildById(guildId)
-                if (guild != null) {
-                    val channel = guild.getTextChannelById(player.channelId)
-                    channel?.sendMessage("你已交換了角色順序，現在主要角色為: ${roles[0]}")?.queue()
-                }
-            }
-
+            session.players[playerId]?.send("你已交換了角色順序，現在主要角色為: ${roles[0]}")
         } catch (e: Exception) {
             log.error("Switch role order failed: {}", e.message, e)
             throw RuntimeException("Failed to switch role order", e)

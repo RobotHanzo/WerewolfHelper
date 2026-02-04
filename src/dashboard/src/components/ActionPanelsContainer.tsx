@@ -1,5 +1,4 @@
 import {GameState} from '@/types';
-import {PlayerActionPanel} from './PlayerActionPanel';
 import {JudgeActionPanel} from './JudgeActionPanel';
 import {useTranslation} from '@/lib/i18n';
 
@@ -45,15 +44,7 @@ export function ActionPanelsContainer({
                     </div>
                 )}
 
-                {/* Players can submit actions during these phases */}
-                {!isJudge && (
-                    <div>
-                        <div className="text-sm text-slate-600 dark:text-slate-400 mb-3 font-medium">
-                            {t('actions.ui.yourAvailableActions', 'Your Available Actions')}
-                        </div>
-                        <PlayerActionPanel guildId={guildId} userId={userId}/>
-                    </div>
-                )}
+
             </div>
         </div>
     );

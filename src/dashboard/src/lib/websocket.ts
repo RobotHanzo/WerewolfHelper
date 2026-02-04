@@ -83,8 +83,15 @@ export class WebSocketClient {
                 this.ws = null;
                 this.onDisconnectHandlers.forEach(h => h(event));
 
-                // Check if this is a session-related rejection (1000 is normal close, 1008 is policy violation)
-                const isSessionRejection = event.code === 1008 || event.code === 1000 || event.code === 1001;
+                // Check if this is a session-related rejection (1008 is policy violation)
+                if (event.code === 1008) {
+                    console.warn('WebSocket rejected with code 1008 - redirecting to login');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                // Check for other session-related closures
+                const isSessionRejection = event.code === 1000 || event.code === 1001;
                 const isSessionError = event.reason && (
                     event.reason.includes("No user in session") ||
                     event.reason.includes("Rejected WS connection") ||
@@ -178,8 +185,15 @@ export function useWebSocket(onMessage: MessageHandler, guildId?: string, onSess
             (event) => {
                 setIsConnected(false);
 
-                // Check for session expiration or rejection
-                const isSessionRejection = event.code === 1008 || event.code === 1000 || event.code === 1001;
+                // Check for WebSocket rejection (code 1008) - redirect to login
+                if (event.code === 1008) {
+                    console.warn('WebSocket rejected with code 1008 - redirecting to login');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                // Check for other session expiration or rejection
+                const isSessionRejection = event.code === 1000 || event.code === 1001;
                 const isSessionError = event.reason && (
                     event.reason.includes("No user in session") ||
                     event.reason.includes("Rejected WS connection") ||

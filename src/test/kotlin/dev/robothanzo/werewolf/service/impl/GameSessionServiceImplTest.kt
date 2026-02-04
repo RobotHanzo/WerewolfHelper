@@ -7,7 +7,10 @@ import dev.robothanzo.werewolf.database.documents.UserRole
 import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.security.GlobalWebSocketHandler
 import dev.robothanzo.werewolf.service.DiscordService
+import dev.robothanzo.werewolf.service.ExpelService
 import dev.robothanzo.werewolf.service.SpeechService
+import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.entities.Guild
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -34,6 +37,9 @@ class GameSessionServiceImplTest {
     @Mock
     private lateinit var speechService: SpeechService
 
+    @Mock
+    private lateinit var expelService: ExpelService
+
     private lateinit var gameSessionService: GameSessionServiceImpl
     private val emptyStepList: List<GameStep> = emptyList()
 
@@ -45,8 +51,16 @@ class GameSessionServiceImplTest {
             discordService,
             webSocketHandler,
             speechService,
-            emptyStepList
+            emptyStepList,
+            expelService
         )
+
+        // Mock JDA and Guild for proper initialization
+        val mockGuild = mock<Guild>()
+        whenever(mockGuild.memberCount).thenReturn(10)
+        val mockJda = mock<JDA>()
+        whenever(mockJda.getGuildById(any<Long>())).thenReturn(mockGuild)
+        whenever(discordService.jda).thenReturn(mockJda)
     }
 
     @Test

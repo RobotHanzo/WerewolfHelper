@@ -3,7 +3,8 @@ package dev.robothanzo.werewolf.game.model
 enum class ActionTiming {
     NIGHT,
     DAY,
-    ANYTIME
+    ANYTIME,
+    DEATH_TRIGGER  // Actions triggered when a role holder dies (e.g., Hunter, Wolf King)
 }
 
 data class RoleActionDefinition(

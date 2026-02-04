@@ -29,17 +29,17 @@ class DeathAnnouncementStep(
         // Process deaths - mark players as dead based on resolution result
         val allDeaths = mutableSetOf<Long>()
 
-        for ((cause, deaths) in resolutionResult.deaths) {
+        for ((deathCause, deaths) in resolutionResult.deaths) {
             for (userId in deaths) {
                 allDeaths.add(userId)
 
-                // Log the specific death cause (for admin purposes only)
+                // Log the specific death cause (for admin purposes only - NOT sent to Discord channels)
                 sessionForResolution.addLog(
                     LogType.PLAYER_DIED,
-                    "玩家 $userId 死亡",
+                    "玩家 $userId ${deathCause.logMessage}",
                     mapOf(
                         "userId" to userId,
-                        "cause" to cause
+                        "deathCause" to deathCause.name
                     )
                 )
             }
@@ -65,9 +65,7 @@ class DeathAnnouncementStep(
 
                 currentSession.addLog(LogType.SYSTEM, "昨晚，$deathList 死亡")
             } else {
-                discordService.jda.getGuildById(currentSession.guildId)
-                    ?.getTextChannelById(currentSession.courtTextChannelId)
-                    ?.sendMessage("**:angel: 昨晚是平安夜**")?.queue()
+                currentSession.sendToCourt("**:angel: 昨晚是平安夜**")
             }
 
             // Announce good morning on day 2+

@@ -1,5 +1,6 @@
 import {useState} from 'react';
 import {api} from '@/lib/api';
+import {useTranslation} from '@/lib/i18n';
 
 interface CustomActionDef {
     actionId: string;
@@ -21,6 +22,7 @@ const TIMING_OPTIONS = ['NIGHT', 'DAY', 'ANYTIME'];
 const CAMP_OPTIONS = ['WEREWOLF', 'GOD', 'VILLAGER'];
 
 export function CustomRoleEditor({guildId, onClose}: { guildId: string; onClose: () => void }) {
+    const {t} = useTranslation();
     const [roleName, setRoleName] = useState('');
     const [camp, setCamp] = useState('GOD');
     const [actions, setActions] = useState<CustomActionDef[]>([]);
@@ -200,8 +202,8 @@ export function CustomRoleEditor({guildId, onClose}: { guildId: string; onClose:
                                         onChange={(e) => setNewAction({...newAction, timing: e.target.value})}
                                         className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-sm"
                                     >
-                                        {TIMING_OPTIONS.map(t => (
-                                            <option key={t} value={t}>{t}</option>
+                                        {TIMING_OPTIONS.map(timing => (
+                                            <option key={timing} value={timing}>{timing}</option>
                                         ))}
                                     </select>
                                 </div>

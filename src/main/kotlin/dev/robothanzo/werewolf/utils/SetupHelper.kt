@@ -156,15 +156,14 @@ object SetupHelper {
 
         val courtChannel = guild.getTextChannelById(session.courtTextChannelId)
         if (courtChannel != null) {
-            courtChannel.sendMessage("伺服器設定完成！請法官邀請玩家並開始遊戲。").queue {
-                try {
-                    courtChannel.createInvite().setMaxUses(0).setMaxAge(0).queue { invite ->
-                        val origin = WerewolfApplication.jda!!.getTextChannelById(config.originChannelId)
-                        origin?.sendMessage("伺服器已設定完成，點此連結前往伺服器： " + invite.url)?.queue()
-                    }
-                } catch (e: Exception) {
-                    log.warn("Failed to create/send invite: {}", e.message)
+            session.sendToCourt("伺服器設定完成！請法官邀請玩家並開始遊戲。")
+            try {
+                courtChannel.createInvite().setMaxUses(0).setMaxAge(0).queue { invite ->
+                    val origin = WerewolfApplication.jda!!.getTextChannelById(config.originChannelId)
+                    origin?.sendMessage("伺服器已設定完成，點此連結前往伺服器： " + invite.url)?.queue()
                 }
+            } catch (e: Exception) {
+                log.warn("Failed to create/send invite: {}", e.message)
             }
         } else {
             try {

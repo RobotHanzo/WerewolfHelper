@@ -81,8 +81,8 @@ class PoliceServiceImpl(
                 } else if (policeSession.state.canQuit()) { // UNENROLLMENT -> Mark quit
                     candidate.value.quit = true
                     event.hook.editOriginal(":white_check_mark: 已取消參選").queue()
-                    event.guild?.getTextChannelById(session.courtTextChannelId)
-                        ?.sendMessage(event.user.asMention + " 已取消參選")?.queue()
+                    // Use session helper to announce cancel in court
+                    session.sendToCourt(event.user.asMention + " 已取消參選")
 
                     val metadata = mutableMapOf<String, Any>()
                     metadata["playerId"] = candidate.value.player.id
@@ -210,8 +210,8 @@ class PoliceServiceImpl(
                 policeSession.state = PoliceSession.State.UNENROLLMENT
                 policeSession.stageEndTime = System.currentTimeMillis() + 20000
 
-                policeSession.message?.channel?.sendMessage("政見發表結束，參選人有20秒進行退選，20秒後將自動開始投票")
-                    ?.queue()
+                // Use session helper to announce end of speeches
+                policeSession.session.sendToCourt("政見發表結束，參選人有20秒進行退選，20秒後將自動開始投票")
 
                 CmdUtils.schedule({ next(guildId) }, 20000)
             }
@@ -242,7 +242,7 @@ class PoliceServiceImpl(
             cancelPollTasks(policeSession)
             val guild = discordService.getGuild(guildId)
             val channel = guild?.getTextChannelById(policeSession.session.courtTextChannelId)
-            channel?.sendMessage("警長投票已終止")?.queue()
+            policeSession.session.sendToCourt("警長投票已終止")
         }
     }
 
@@ -280,9 +280,11 @@ class PoliceServiceImpl(
                 }
             }
 
-        channel.sendMessageEmbeds(embedBuilder.build())
-            .setComponents(MsgUtils.spreadButtonsAcrossActionRows(buttons))
-            .queue()
+        policeSession.session.sendToCourt(embedBuilder.build(), queue = false)
+            ?.setComponents(
+                *MsgUtils.spreadButtonsAcrossActionRows(buttons).toTypedArray()
+            )
+            ?.queue()
 
         policeSession.poll10sTask = CmdUtils.schedule({
             val vc = channel.guild.getVoiceChannelById(policeSession.session.courtVoiceChannelId)
@@ -442,20 +444,22 @@ class PoliceServiceImpl(
             }
 
             val courtChannel = guild.getTextChannelById(session.courtTextChannelId) ?: return
-            val message = courtChannel.sendMessageEmbeds(
+            val message = session.sendToCourt(
                 EmbedBuilder()
                     .setTitle("移交警徽").setColor(MsgUtils.randomColor)
                     .setDescription("請選擇要移交警徽的對象，若要撕掉警徽，請按下撕毀按鈕\n請在30秒內做出選擇，否則警徽將被自動撕毀")
-                    .build()
+                    .build(),
+                queue = false
             )
-                .setComponents(
+                ?.setComponents(
                     ActionRow.of(selectMenu.build()),
                     ActionRow.of(
                         Button.success("confirmNewPolice", "移交"),
                         Button.danger("destroyPolice", "撕毀")
                     )
                 )
-                .complete()
+                ?.complete()
+            if (message == null) return
 
             CmdUtils.schedule({
                 if (transferSessions.remove(guild.idLong) != null) {

@@ -68,14 +68,6 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
 
         // Check for progress events
         if (type === 'PROGRESS') {
-            console.log('Incoming PROGRESS event:', {
-                serverGuildId: data.guildId,
-                clientGuildId: guildId,
-                match: data.guildId?.toString() === guildId,
-                message: data.message,
-                percent: data.percent
-            });
-
             if (data.guildId?.toString() === guildId) {
                 setOverlayState(prev => {
                     const newState = {...prev, visible: true};
@@ -113,8 +105,6 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
 
         // Check if the update is for the current guild
         if (type === 'UPDATE' && data && data.guildId && data.guildId.toString() === guildId) {
-            console.log('WebSocket update received:', data);
-
             const players = mapSessionToPlayers(data);
             setGameState(prev => ({
                 ...prev,

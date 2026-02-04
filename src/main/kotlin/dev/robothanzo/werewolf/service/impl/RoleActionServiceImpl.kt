@@ -4,6 +4,8 @@ import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.*
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
+import dev.robothanzo.werewolf.game.roles.actions.RoleAction
+import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.NightResolutionResult
 import dev.robothanzo.werewolf.service.RoleActionService
@@ -13,7 +15,8 @@ import org.springframework.stereotype.Service
 @Service
 class RoleActionServiceImpl(
     private val sessionRepository: SessionRepository,
-    private val discordService: DiscordService
+    private val discordService: DiscordService,
+    private val roleActionExecutor: RoleActionExecutor
 ) : RoleActionService {
     private val log = LoggerFactory.getLogger(RoleActionServiceImpl::class.java)
 
@@ -80,11 +83,8 @@ class RoleActionServiceImpl(
             try {
                 val targetName = target?.nickname ?: "玩家 $targetId"
                 val resultText = if (isWolf) "狼人" else "好人"
-                val channelId = actor.channelId
-                if (channelId != 0L) {
-                    val channel = discordService.getTextChannel(session.guildId, channelId)
-                    channel?.sendMessage("🔮 查驗結果：$targetName 是 $resultText")?.queue()
-                }
+                // Send result via player's channel send helper
+                actor.send("🔮 查驗結果：$targetName 是 $resultText")
             } catch (_: Exception) {
                 // Ignore DM failures to avoid blocking action submission
             }
@@ -120,7 +120,7 @@ class RoleActionServiceImpl(
         return mapOf("success" to true, "message" to "Action submitted")
     }
 
-    override fun getAvailableActionsForPlayer(session: Session, userId: Long): List<RoleActionDefinition> {
+    override fun getAvailableActionsForPlayer(session: Session, userId: Long): List<RoleAction> {
         val player = session.players.values.find { it.userId == userId }
             ?: return emptyList()
 
@@ -128,7 +128,7 @@ class RoleActionServiceImpl(
             return emptyList()
         }
 
-        val actions = mutableListOf<RoleActionDefinition>()
+        val actions = mutableListOf<RoleAction>()
 
         // Get predefined actions
         for (role in player.roles ?: emptyList()) {
@@ -158,7 +158,8 @@ class RoleActionServiceImpl(
                         // Convert map to custom action definition
                         val actionDef = mapToActionDefinition(actionMap, role)
                         if (actionDef != null) {
-                            actions.add(actionDef)
+                            // TODO: Create custom RoleAction implementation from actionDef
+                            // For now, skip custom actions as they need to be refactored to RoleAction
                         }
                     }
                 }
@@ -168,8 +169,8 @@ class RoleActionServiceImpl(
         return actions
     }
 
-    override fun getAvailableActionsForJudge(session: Session): Map<Long, List<RoleActionDefinition>> {
-        val result = mutableMapOf<Long, List<RoleActionDefinition>>()
+    override fun getAvailableActionsForJudge(session: Session): Map<Long, List<RoleAction>> {
+        val result = mutableMapOf<Long, List<RoleAction>>()
         for ((_, player) in session.players) {
             if (player.isAlive && player.userId != null) {
                 val actions = getAvailableActionsForPlayer(session, player.userId!!)
@@ -188,100 +189,23 @@ class RoleActionServiceImpl(
                 ?: emptyList()
 
         val pendingActions = pendingActionsData.map { mapToActionInstance(it) }
-        val sortedActions = PredefinedRoles.sortActionsByPriority(pendingActions)
 
-        val deaths = mutableMapOf<String, MutableList<Long>>()
-        val saved = mutableSetOf<Long>()
-        val checked = mutableMapOf<Long, String>()
+        // Execute all actions using the new action executor
+        val executionResult = roleActionExecutor.executeActions(session, pendingActions)
 
-        // Track witch saves and poisons
-        var witchSaveTarget: Long? = null
-        var witchPoisonTarget: Long?
-
-        // Track guard protection
-        val guardProtected = mutableSetOf<Long>()
-
-        // Get witch save setting
+        // Extract seer checks from metadata
         @Suppress("UNCHECKED_CAST")
-        val settings =
-            (session.stateData.getOrDefault("settings", emptyMap<String, Any>()) as? Map<String, Any>) ?: emptyMap()
-        val witchCanSaveSelf = settings.getOrDefault("witchCanSaveSelf", true) as? Boolean ?: true
-
-        // Process actions in priority order
-        for (action in sortedActions) {
-            when (action.actionDefinitionId) {
-                PredefinedRoles.WEREWOLF_KILL -> {
-                    for (targetId in action.targets) {
-                        deaths.getOrPut(PredefinedRoles.WEREWOLF_KILL) { mutableListOf() }.add(targetId)
-                    }
-                }
-
-                PredefinedRoles.WITCH_ANTIDOTE -> {
-                    if (action.targets.isNotEmpty()) {
-                        val target = action.targets[0]
-
-                        // Check if witch is trying to save themselves
-                        if (target == action.actor && !witchCanSaveSelf) {
-                            continue
-                        }
-
-                        witchSaveTarget = target
-                        saved.add(target)
-                    }
-                }
-
-                PredefinedRoles.WITCH_POISON -> {
-                    if (action.targets.isNotEmpty()) {
-                        witchPoisonTarget = action.targets[0]
-                        deaths.getOrPut(PredefinedRoles.WITCH_POISON) { mutableListOf() }.add(witchPoisonTarget)
-                    }
-                }
-
-                PredefinedRoles.SEER_CHECK -> {
-                    if (action.targets.isNotEmpty()) {
-                        val targetId = action.targets[0]
-                        val target = session.players.values.find { it.userId == targetId }
-                        if (target != null && target.roles != null) {
-                            val isWolf = target.roles?.any { role ->
-                                PredefinedRoles.getRoleDefinition(role)?.camp == Camp.WEREWOLF
-                            } ?: false
-                            checked[action.actor] = if (isWolf) "werewolf" else "villager"
-                        }
-                    }
-                }
-
-                PredefinedRoles.GUARD_PROTECT -> {
-                    if (action.targets.isNotEmpty()) {
-                        guardProtected.add(action.targets[0])
-                    }
-                }
-            }
-        }
-
-        // Remove saved players from deaths
-        if (witchSaveTarget != null) {
-            deaths.values.forEach { it.remove(witchSaveTarget) }
-        }
-
-        // Remove protected players (except poison)
-        for (protected in guardProtected) {
-            deaths[PredefinedRoles.WEREWOLF_KILL]?.remove(protected)
-            // Poison can still kill protected players
-        }
-
-        // Clean up empty death lists
-        deaths.entries.removeIf { it.value.isEmpty() }
+        val seerChecks = (executionResult.metadata["seerChecks"] as? Map<Long, String>) ?: emptyMap()
 
         return NightResolutionResult(
-            deaths = deaths,
-            saved = saved.toList(),
-            checked = checked
+            deaths = executionResult.deaths,
+            saved = executionResult.saved,
+            checked = seerChecks
         )
     }
 
     override fun isActionAvailable(session: Session, userId: Long, actionDefinitionId: String): Boolean {
-        val actionDef = PredefinedRoles.getActionDefinition(actionDefinitionId)
-            ?: getCustomActionDefinition(session, actionDefinitionId)
+        val action = PredefinedRoles.getAction(actionDefinitionId)
             ?: return false
 
         // Check if current game state allows this action's timing
@@ -289,19 +213,23 @@ class RoleActionServiceImpl(
         val isNightPhase = currentState.contains("NIGHT", ignoreCase = true)
 
         // Filter out actions that don't match current timing
-        when (actionDef.timing) {
+        when (action.timing) {
             ActionTiming.NIGHT -> if (!isNightPhase) return false
             ActionTiming.DAY -> if (isNightPhase) return false
             ActionTiming.ANYTIME -> {} // Always available
+            ActionTiming.DEATH_TRIGGER -> {
+                // Check if this user has a death trigger available
+                if (!hasDeathTriggerAvailable(session, userId)) return false
+            }
         }
 
         // Check usage limit
-        if (actionDef.usageLimit == -1) {
+        if (action.usageLimit == -1) {
             return true
         }
 
         val usage = getActionUsageCount(session, userId, actionDefinitionId)
-        return usage < actionDef.usageLimit
+        return usage < action.usageLimit
     }
 
     override fun getPendingActions(session: Session): List<RoleActionInstance> {
@@ -397,5 +325,57 @@ class RoleActionServiceImpl(
             usageLimit = (map["usageLimit"] as? Number)?.toInt() ?: -1,
             requiresAliveTarget = map["requiresAliveTarget"] as? Boolean ?: true
         )
+    }
+
+    override fun executeDeathTriggers(session: Session): List<Long> {
+        val killedByTriggers = mutableListOf<Long>()
+
+        // Execute all pending death trigger actions
+        val pendingActions = getPendingActions(session)
+            .filter {
+                val action = PredefinedRoles.getAction(it.actionDefinitionId)
+                action?.timing == ActionTiming.DEATH_TRIGGER
+            }
+
+        if (pendingActions.isEmpty()) {
+            return emptyList()
+        }
+
+        // Execute actions using RoleActionExecutor
+        val executionResult = roleActionExecutor.executeActions(session, pendingActions)
+
+        // Collect all deaths from death triggers
+        for ((cause, deaths) in executionResult.deaths) {
+            killedByTriggers.addAll(deaths)
+        }
+
+        // Clear pending death trigger actions
+        val remainingActions = getPendingActions(session)
+            .filter {
+                val action = PredefinedRoles.getAction(it.actionDefinitionId)
+                action?.timing != ActionTiming.DEATH_TRIGGER
+            }
+
+        session.stateData["pendingActions"] = remainingActions.map { it.toMap() }
+        sessionRepository.save(session)
+
+        return killedByTriggers
+    }
+
+    override fun hasDeathTriggerAvailable(session: Session, userId: Long): Boolean {
+        // Get all death trigger actions from predefined roles
+        val deathTriggerActions = PredefinedRoles.getAllPredefinedActions()
+            .filter { it.timing == ActionTiming.DEATH_TRIGGER }
+
+        // Check if any death trigger action is available for this user
+        for (action in deathTriggerActions) {
+            val stateKey = "${action.actionId}Available"
+            val availableUserId = session.stateData[stateKey] as? Long
+            if (availableUserId == userId) {
+                return true
+            }
+        }
+
+        return false
     }
 }

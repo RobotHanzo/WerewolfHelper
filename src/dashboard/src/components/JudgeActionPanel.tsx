@@ -41,19 +41,15 @@ export function JudgeActionPanel({guildId}: { guildId: string }) {
     const loadAvailableActions = async () => {
         try {
             const response = await api.getAvailableActions(guildId) as any;
-            console.log('[JudgeActionPanel] Response:', response);
 
             if (response?.actions && typeof response.actions === 'object') {
                 const players: PlayerWithActions[] = [];
 
                 for (const [userId, actions] of Object.entries(response.actions as Record<string, AvailableAction[]>)) {
-                    console.log('[JudgeActionPanel] Searching for userId:', userId, 'type:', typeof userId);
                     const player = gameState?.players.find(p => {
                         const match = String(p.userId) === String(userId);
-                        console.log('[JudgeActionPanel] Comparing player', p.name, p.userId, '===', userId, ':', match);
                         return match;
                     });
-                    console.log('[JudgeActionPanel] Found player:', player?.name, 'Actions:', (actions as AvailableAction[]).length);
                     if (player && (actions as AvailableAction[]).length > 0) {
                         players.push({
                             userId,
@@ -63,7 +59,6 @@ export function JudgeActionPanel({guildId}: { guildId: string }) {
                     }
                 }
 
-                console.log('[JudgeActionPanel] Final players with actions:', players);
                 setPlayersWithActions(players);
             }
         } catch (error) {

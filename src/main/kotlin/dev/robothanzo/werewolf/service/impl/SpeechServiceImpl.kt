@@ -287,11 +287,12 @@ class SpeechServiceImpl(
                 }
             }
             if (player.police) {
-                channel?.sendMessageEmbeds(
+                session.sendToCourt(
                     EmbedBuilder()
                         .setTitle("警長請選擇發言順序")
                         .setDescription("警長尚未選擇順序")
-                        .setColor(MsgUtils.randomColor).build()
+                        .setColor(MsgUtils.randomColor).build(),
+                    queue = false
                 )?.setComponents(
                     ActionRow.of(
                         StringSelectMenu.create("selectOrder")
@@ -310,12 +311,12 @@ class SpeechServiceImpl(
         val shuffled = session.fetchAlivePlayers().values.shuffled()
         val randOrder = SpeechOrder.getRandomOrder()
         changeOrder(guildId, randOrder, session.fetchAlivePlayers().values, shuffled.first())
-        channel?.sendMessageEmbeds(
+        session.sendToCourt(
             EmbedBuilder()
                 .setTitle("找不到警長，自動抽籤發言順序")
                 .setDescription("抽到的順序: 玩家${shuffled.first().id}$randOrder")
                 .setColor(MsgUtils.randomColor).build()
-        )?.queue()
+        )
 
         for (c in guild.textChannels) {
             c.sendMessage("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯我是白天分隔線⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯").queue()
@@ -371,8 +372,7 @@ class SpeechServiceImpl(
         if (speechSession != null) {
             val guild = discordService.getGuild(guildId)
             if (guild != null) {
-                val channel = guild.getTextChannelById(speechSession.channelId)
-                channel?.sendMessage("法官已強制終止發言流程")?.queue()
+                speechSession.session.sendToCourt("法官已強制終止發言流程")
             }
 
             speechSession.order.clear()
@@ -386,8 +386,7 @@ class SpeechServiceImpl(
         if (speechSession != null) {
             val guild = discordService.getGuild(guildId)
             if (guild != null) {
-                val channel = guild.getTextChannelById(speechSession.channelId)
-                channel?.sendMessage("法官已強制該玩家下台")?.queue()
+                speechSession.session.sendToCourt("法官已強制該玩家下台")
             }
             nextSpeaker(guildId)
         }
@@ -467,8 +466,7 @@ class SpeechServiceImpl(
         }
 
         if (speechSession.order.isEmpty()) {
-            val channel = guild.getTextChannelById(speechSession.channelId)
-            channel?.sendMessage("發言流程結束")?.queue()
+            session.sendToCourt("發言流程結束")
 
             speechSessions.remove(guildId)
             gameSessionService.broadcastSessionUpdate(session)
@@ -502,16 +500,17 @@ class SpeechServiceImpl(
             } catch (_: Exception) {
             }
 
-            val channel = guild.getTextChannelById(speechSession.channelId) ?: return@thread
-
-            val message = channel.sendMessage("<@!" + player.userId + "> 你有" + time + "秒可以發言\n")
-                .setComponents(
+            val message = session.sendToCourt(
+                "<@!" + player.userId + "> 你有" + time + "秒可以發言\n",
+                queue = false
+            )
+                ?.setComponents(
                     ActionRow.of(
                         Button.danger("skipSpeech", "跳過 (發言者按)").withEmoji(Emoji.fromUnicode("U+23ed")),
                         Button.danger("interruptSpeech", "下台 (玩家或法官按)").withEmoji(Emoji.fromUnicode("U+1f5d1"))
                     )
                 )
-                .complete()
+                ?.complete() ?: return@thread
 
             val voiceChannel = guild.getVoiceChannelById(session.courtVoiceChannelId)
             try {

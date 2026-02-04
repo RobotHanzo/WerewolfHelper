@@ -3,21 +3,24 @@ package dev.robothanzo.werewolf.game.steps
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
-import dev.robothanzo.werewolf.service.DiscordService
-import dev.robothanzo.werewolf.service.GameActionService
-import dev.robothanzo.werewolf.service.GameStateService
-import dev.robothanzo.werewolf.service.RoleActionService
+import dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID
+import dev.robothanzo.werewolf.game.roles.PredefinedRoles
+import dev.robothanzo.werewolf.service.*
 import dev.robothanzo.werewolf.utils.parseLong
+import kotlinx.coroutines.*
 import org.springframework.stereotype.Component
 
 @Component
 class NightStep(
     private val gameActionService: GameActionService,
     private val roleActionService: RoleActionService,
-    private val discordService: DiscordService
+    private val discordService: DiscordService,
+    private val actionUIService: ActionUIService
 ) : GameStep {
     override val id = "NIGHT_PHASE"
     override val name = "天黑請閉眼"
+
+    private val nightScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onStart(session: Session, service: GameStateService) {
         // Mute everyone
@@ -34,46 +37,111 @@ class NightStep(
         // Log night start
         session.addLog(LogType.SYSTEM, "夜晚開始，各職業請準備行動")
 
-        // Send Discord DMs to players with available actions for this night
-        val jda = discordService.jda
-        for ((_, player) in session.players) {
-            if (!player.isAlive || player.userId == null) continue
+        // Send action prompts to players via Discord UI
+        // Start with werewolf group action (they discuss together)
+        val werewolves = session.players.values
+            .filter { it.isAlive && it.roles?.contains("狼人") == true && it.userId != null }
+            .mapNotNull { it.userId }
 
-            try {
-                val user = jda.getUserById(player.userId!!)
-                if (user != null) {
-                    val availableActions = roleActionService.getAvailableActionsForPlayer(
-                        session,
-                        player.userId!!
-                    )
+        nightScope.launch {
+            if (werewolves.isNotEmpty()) {
+                // Wolves get 90 seconds for group discussion
+                actionUIService.promptGroupForAction(
+                    session.guildId,
+                    session,
+                    PredefinedRoles.WEREWOLF_KILL,
+                    werewolves,
+                    durationSeconds = 90
+                )
+                session.addLog(LogType.SYSTEM, "狼人進行討論投票，時限90秒")
 
-                    if (availableActions.isNotEmpty()) {
-                        val messageBuilder = StringBuilder()
-                        messageBuilder.append("🌙 **夜晚行動提醒** 🌙\n\n")
-                        messageBuilder.append("您在夜晚有以下可用的行動：\n")
-
-                        for (action in availableActions) {
-                            messageBuilder.append("• **${action.actionId}** (角色: ${action.roleName})\n")
-                            messageBuilder.append("  - 優先級: ${action.priority}\n")
-                            messageBuilder.append("  - 目標數: ${action.targetCount}\n")
-                        }
-
-                        messageBuilder.append("\n請在儀表板中選擇您的行動。")
-
-                        user.openPrivateChannel().queue { channel ->
-                            channel.sendMessage(messageBuilder.toString()).queue()
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                // Log but don't fail - Discord DM is non-critical
-                println("Failed to send DM to player ${player.userId}: ${e.message}")
+                waitForWerewolfAction(session, werewolves.size, durationSeconds = 90)
             }
+
+            // Send individual action prompts to other players (60 second timeout)
+            for ((playerId, player) in session.players) {
+                if (!player.isAlive || player.userId == null) continue
+
+                // Skip werewolves during group voting (they get different UI)
+                if (werewolves.contains(player.userId)) {
+                    continue
+                }
+
+                val availableActions = roleActionService.getAvailableActionsForPlayer(
+                    session,
+                    player.userId!!
+                )
+
+                if (availableActions.isNotEmpty()) {
+                    actionUIService.promptPlayerForAction(
+                        session.guildId,
+                        session,
+                        player.userId!!,
+                        playerId,
+                        availableActions,
+                        timeoutSeconds = 60  // 60 second timeout for non-wolves
+                    )
+                }
+            }
+
+            // Schedule reminder at 30 seconds remaining
+            scheduleReminder(session)
         }
     }
 
+    private fun scheduleReminder(session: Session) {
+        val thread = Thread {
+            try {
+                // Wait 30 seconds (60 - 30 = 30 for non-wolves)
+                Thread.sleep(30_000)
+                actionUIService.sendReminders(session.guildId, session)
+            } catch (e: InterruptedException) {
+                // Task was cancelled
+            }
+        }
+        thread.isDaemon = true
+        thread.name = "NightReminder-${session.guildId}"
+        thread.start()
+    }
+
+    private suspend fun waitForWerewolfAction(session: Session, totalWolves: Int, durationSeconds: Int) {
+        val start = System.currentTimeMillis()
+        val timeoutMs = durationSeconds * 1000L
+
+        while (System.currentTimeMillis() - start < timeoutMs) {
+            val groupState = actionUIService.getGroupState(PredefinedRoles.WEREWOLF_KILL)
+            if (groupState == null) {
+                return
+            }
+            if (groupState.votes.size >= totalWolves) {
+                break
+            }
+            delay(1000)
+        }
+
+        val groupState = actionUIService.getGroupState(PredefinedRoles.WEREWOLF_KILL) ?: return
+        if (groupState.votes.size < groupState.participants.size) {
+            val missingVoters = groupState.participants.filter { it !in groupState.votes.keys }
+            missingVoters.forEach { voterId ->
+                groupState.votes[voterId] = SKIP_TARGET_ID
+            }
+        }
+        val finalTarget = actionUIService.resolveGroupVote(groupState)
+        if (finalTarget != null) {
+            roleActionService.submitAction(
+                session.guildId,
+                PredefinedRoles.WEREWOLF_KILL,
+                groupState.participants.firstOrNull() ?: 0L,
+                listOf(finalTarget),
+                "GROUP"
+            )
+        }
+        actionUIService.clearGroupState(PredefinedRoles.WEREWOLF_KILL)
+    }
+
     override fun onEnd(session: Session, service: GameStateService) {
-        // Prepare for sheriff election/death announcement
+        // Clean up expired prompts and send timeout notifications
+        actionUIService.cleanupExpiredPrompts(session.guildId, session)
     }
 
     override fun handleInput(session: Session, input: Map<String, Any>): Map<String, Any> {
@@ -106,6 +174,6 @@ class NightStep(
     }
 
     override fun getDurationSeconds(session: Session): Int {
-        return 30
+        return 120 // Allow extra time for wolf discussion and UI interaction
     }
 }
