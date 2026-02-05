@@ -7,6 +7,18 @@ import org.junit.jupiter.api.Test
 class SessionPlayerTest {
     private lateinit var player: Player
 
+    private fun getPrivateLongField(target: Any, fieldName: String): Long {
+        val field = target.javaClass.getDeclaredField(fieldName)
+        field.isAccessible = true
+        return field.getLong(target)
+    }
+
+    private fun getPrivateNullableLongField(target: Any, fieldName: String): Long? {
+        val field = target.javaClass.getDeclaredField(fieldName)
+        field.isAccessible = true
+        return field.get(target) as Long?
+    }
+
     @BeforeEach
     fun setup() {
         player = Player(
@@ -19,8 +31,8 @@ class SessionPlayerTest {
     @Test
     fun testPlayerInitialization() {
         assertEquals(1, player.id)
-        assertEquals(100L, player.roleId)
-        assertEquals(200L, player.channelId)
+        assertEquals(100L, getPrivateLongField(player, "roleId"))
+        assertEquals(200L, getPrivateLongField(player, "channelId"))
         assertFalse(player.police)
         assertFalse(player.idiot)
         assertFalse(player.jinBaoBao)
@@ -30,7 +42,7 @@ class SessionPlayerTest {
 
     @Test
     fun testPlayerNicknameGeneration() {
-        player.userId = 100L
+        player.updateUserId(100L)
         player.roles = mutableListOf("狼人")
         val nickname = player.nickname
         assertEquals(nickname, "玩家01")
@@ -89,9 +101,9 @@ class SessionPlayerTest {
 
     @Test
     fun testPlayerUserId() {
-        assertFalse(player.userId != null)
-        player.userId = 500L
-        assertEquals(500L, player.userId)
+        assertNull(getPrivateNullableLongField(player, "userId"))
+        player.updateUserId(500L)
+        assertEquals(500L, getPrivateNullableLongField(player, "userId"))
     }
 
     @Test
@@ -144,45 +156,45 @@ class SessionPlayerTest {
     fun testPlayerIsAlive() {
         // Test 1: Player with no roles is dead
         player.roles = null
-        assertFalse(player.isAlive, "Player with null roles should be dead")
+        assertFalse(player.alive, "Player with null roles should be dead")
 
         // Test 2: Player with empty roles is dead
         player.roles = mutableListOf()
-        assertFalse(player.isAlive, "Player with empty roles should be dead")
+        assertFalse(player.alive, "Player with empty roles should be dead")
 
         // Test 3: Player with roles but no deadRoles is alive
         player.roles = mutableListOf("狼人")
         player.deadRoles = null
-        assertTrue(player.isAlive, "Player with roles and null deadRoles should be alive")
+        assertTrue(player.alive, "Player with roles and null deadRoles should be alive")
 
         // Test 4: Player with 1 role and no deadRoles is alive
         player.roles = mutableListOf("狼人", "平民")
         player.deadRoles = null
-        assertTrue(player.isAlive, "Player with multiple roles and null deadRoles should be alive")
+        assertTrue(player.alive, "Player with multiple roles and null deadRoles should be alive")
 
         // Test 5: Player with 1 role and 1 deadRole is dead
         player.roles = mutableListOf("狼人")
         player.deadRoles = mutableListOf("狼人")
-        assertFalse(player.isAlive, "Player with equal roles and deadRoles should be dead")
+        assertFalse(player.alive, "Player with equal roles and deadRoles should be dead")
 
         // Test 6: Player with 2 roles and 1 deadRole is alive
         player.roles = mutableListOf("狼人", "平民")
         player.deadRoles = mutableListOf("狼人")
-        assertTrue(player.isAlive, "Player with more roles than deadRoles should be alive")
+        assertTrue(player.alive, "Player with more roles than deadRoles should be alive")
 
         // Test 7: Player with 3 roles and 2 deadRoles is alive
         player.roles = mutableListOf("狼人", "平民", "獵人")
         player.deadRoles = mutableListOf("狼人", "平民")
-        assertTrue(player.isAlive, "Player with 3 roles and 2 deadRoles should be alive")
+        assertTrue(player.alive, "Player with 3 roles and 2 deadRoles should be alive")
 
         // Test 8: Player with 3 roles and 3 deadRoles is dead
         player.roles = mutableListOf("狼人", "平民", "獵人")
         player.deadRoles = mutableListOf("狼人", "平民", "獵人")
-        assertFalse(player.isAlive, "Player with all roles dead should be dead")
+        assertFalse(player.alive, "Player with all roles dead should be dead")
 
         // Test 9: Empty deadRoles list but has roles is alive
         player.roles = mutableListOf("狼人", "平民")
         player.deadRoles = mutableListOf()
-        assertTrue(player.isAlive, "Player with roles and empty deadRoles should be alive")
+        assertTrue(player.alive, "Player with roles and empty deadRoles should be alive")
     }
 }

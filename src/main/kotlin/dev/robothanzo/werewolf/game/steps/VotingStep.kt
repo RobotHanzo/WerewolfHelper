@@ -1,6 +1,5 @@
 package dev.robothanzo.werewolf.game.steps
 
-import dev.robothanzo.werewolf.commands.Poll
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
@@ -55,30 +54,31 @@ class VotingStep(
     }
 
     private fun startExpelPoll(session: Session) {
-        if (Poll.expelCandidates.containsKey(session.guildId)) {
+        if (expelService.hasPoll(session.guildId)) {
             return
         }
 
         val guild = discordService.getGuild(session.guildId) ?: return
-        val channel = guild.getTextChannelById(session.courtTextChannelId) ?: return
+        val channel = session.courtTextChannel ?: return
 
         val candidates = session.fetchAlivePlayers().values
             .associateByTo(ConcurrentHashMap()) { it.id }
             .mapValues { Candidate(player = it.value, expelPK = true) }
 
-        Poll.expelCandidates[session.guildId] = candidates.toMutableMap()
+        expelService.setPollCandidates(session.guildId, candidates.toMutableMap())
         expelService.startExpelPoll(session, getDurationSeconds(session))
         session.addLog(LogType.EXPEL_POLL_STARTED, "放逐投票開始", null)
 
-        Poll.startExpelPoll(session, channel, true)
+        // Delegate UI creation & scheduling to ExpelService
+        expelService.startExpelPollUI(session, channel, true, (getDurationSeconds(session) * 1000L))
     }
 
     private fun endExpelPoll(session: Session, message: String) {
-        val hadPoll = Poll.expelCandidates.containsKey(session.guildId)
-        Poll.expelCandidates.remove(session.guildId)
+        val hadPoll = expelService.hasPoll(session.guildId)
+        expelService.removePoll(session.guildId)
         expelService.endExpelPoll(session.guildId)
         if (!hadPoll) return
 
-        session.sendToCourt(message)
+        session.courtTextChannel?.sendMessage(message)?.queue()
     }
 }

@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.service
 
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.ActionPrompt
 import dev.robothanzo.werewolf.game.model.GroupActionState
@@ -57,33 +58,31 @@ interface ActionUIService {
     /**
      * Get an active prompt by id
      */
-    fun getPrompt(promptId: String): ActionPrompt?
+    fun getPrompt(session: Session, promptId: String): ActionPrompt?
 
     /**
      * Record a vote in a group action
      */
     fun submitGroupVote(
-        guildId: Long,
+        player: Player,
         groupStateId: String,
-        userId: Long,
-        targetUserId: Long,
-        session: Session
+        targetUserId: Long
     ): Boolean
 
     /**
      * Get the final target for a group action (majority vote or last vote)
      */
-    fun resolveGroupVote(groupState: GroupActionState): Long?
+    fun resolveGroupVote(session: Session, groupState: GroupActionState): Long?
 
     /**
      * Get a group action state by action ID
      */
-    fun getGroupState(actionId: String): GroupActionState?
+    fun getGroupState(session: Session, actionId: String): GroupActionState?
 
     /**
      * Clear a group action state after resolution
      */
-    fun clearGroupState(actionId: String)
+    fun clearGroupState(session: Session, actionId: String)
 
     /**
      * Clean up expired action prompts and group states
@@ -100,5 +99,5 @@ interface ActionUIService {
      * Clear a prompt (when player submits action or skips)
      * This prevents reminder from being sent
      */
-    fun clearPrompt(playerId: String)
+    fun clearPrompt(session: Session, playerId: String)
 }

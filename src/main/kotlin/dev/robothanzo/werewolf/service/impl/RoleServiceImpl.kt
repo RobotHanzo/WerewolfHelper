@@ -3,13 +3,9 @@ package dev.robothanzo.werewolf.service.impl
 import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.RoleService
-import dev.robothanzo.werewolf.utils.ActionTask
-import dev.robothanzo.werewolf.utils.CmdUtils
-import dev.robothanzo.werewolf.utils.MsgUtils
-import dev.robothanzo.werewolf.utils.runActions
+import dev.robothanzo.werewolf.utils.*
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
@@ -20,7 +16,6 @@ import java.util.*
 @Service
 class RoleServiceImpl(
     private val sessionRepository: SessionRepository,
-    private val discordService: DiscordService,
     private val gameSessionService: GameSessionService
 ) : RoleService {
     private val log = LoggerFactory.getLogger(RoleServiceImpl::class.java)
@@ -30,7 +25,7 @@ class RoleServiceImpl(
             val roles = session.roles.toMutableList()
             repeat(amount) { roles.add(roleName) }
             session.roles = roles
-            sessionRepository.save(session)
+            gameSessionService.saveSession(session)
         } catch (e: Exception) {
             log.error("Failed to add role: {}", e.message, e)
             throw RuntimeException("Failed to add role", e)
@@ -42,7 +37,7 @@ class RoleServiceImpl(
             val roles = session.roles.toMutableList()
             repeat(amount) { roles.remove(roleName) }
             session.roles = roles
-            sessionRepository.save(session)
+            gameSessionService.saveSession(session)
         } catch (e: Exception) {
             log.error("Failed to remove role: {}", e.message, e)
             throw RuntimeException("Failed to remove role", e)
@@ -60,20 +55,22 @@ class RoleServiceImpl(
                 throw Exception("身分已分配，重新分配前請先重置遊戲。")
             }
 
+            // Ensure player.session references are populated
+            session.populatePlayerSessions()
+
             val totalPlayers = session.players.size
             log.info("Starting role assignment for guild {} with {} players", guildId, totalPlayers)
 
             progressCallback(0)
             statusCallback("正在掃描伺服器玩家...")
 
-            val jda = discordService.jda
-            val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
+            val guild = session.guild ?: throw Exception("Guild not found")
 
             val pending = guild.members.filter { member ->
                 !member.user.isBot &&
                         !member.isOwner &&
-                        member.idLong != session.judgeRoleId && // Assuming judgeRoleId is used for role check
-                        !member.roles.any { it.idLong == session.judgeRoleId || it.idLong == session.spectatorRoleId }
+                        !member.isAdmin() &&
+                        !member.isSpectator()
             }.toMutableList()
 
             progressCallback(10)
@@ -106,9 +103,10 @@ class RoleServiceImpl(
 
             for (player in playersList) {
                 val member = pending[player.id - 1]
+                player.updateUserId(member.idLong)
 
                 // 1. Prepare Discord Role Task
-                val playerRole = guild.getRoleById(player.roleId)
+                val playerRole = guild.getRoleById(player.role?.idLong ?: 0)
                 if (playerRole != null) {
                     priorityTasks.add(
                         ActionTask(
@@ -168,7 +166,9 @@ class RoleServiceImpl(
                 player.jinBaoBao = isJinBaoBao && session.doubleIdentities
                 player.roles = rs
                 player.deadRoles = mutableListOf()
-                player.userId = member.idLong
+                // Setter is private in Player, use reflection or create public setter if needed
+                // userId is now private, will be set during player creation
+                // player.userId is now set at initialization
 
                 // 3. Prepare Nickname Task
                 val newNickname = player.nickname
@@ -196,7 +196,7 @@ class RoleServiceImpl(
                     )
                     .setColor(MsgUtils.randomColor)
 
-                val action = player.send(embed.build(), queue = false)
+                val action = player.channel?.sendMessageEmbeds(embed.build())
 
                 if (action != null) {
                     if (session.doubleIdentities) {
@@ -214,8 +214,8 @@ class RoleServiceImpl(
                                 val innerPlayer = innerSession.players[player.id.toString()]
                                 if (innerPlayer != null) {
                                     innerPlayer.rolePositionLocked = true
-                                    sessionRepository.save(innerSession)
-                                    innerPlayer.send("身分順序已鎖定")
+                                    gameSessionService.saveSession(innerSession)
+                                    innerPlayer.channel?.sendMessage("身分順序已鎖定")?.queue()
                                 }
                             }
                         }, 120000)
@@ -250,7 +250,7 @@ class RoleServiceImpl(
             val notificationMsg = "遊戲控制台: $dashboardUrl"
 
             // Add notification tasks
-            val judgeAction = session.sendToJudge(notificationMsg, summaryEmbed.build(), queue = false)
+            val judgeAction = session.judgeTextChannel?.sendMessage(notificationMsg)?.setEmbeds(summaryEmbed.build())
             if (judgeAction != null) {
                 notificationTasks.add(
                     ActionTask(
@@ -260,7 +260,8 @@ class RoleServiceImpl(
                 )
             }
 
-            val spectatorAction = session.sendToSpectator(notificationMsg, summaryEmbed.build(), queue = false)
+            val spectatorAction =
+                session.spectatorTextChannel?.sendMessage(notificationMsg)?.setEmbeds(summaryEmbed.build())
             if (spectatorAction != null) {
                 notificationTasks.add(
                     ActionTask(
@@ -286,7 +287,7 @@ class RoleServiceImpl(
             // Final Update session flags and logs
             session.hasAssignedRoles = true
             session.addLog(LogType.ROLE_ASSIGNED, "身分分配完成", null)
-            sessionRepository.save(session)
+            gameSessionService.saveSession(session)
 
             progressCallback(100)
             statusCallback("身分分配完成！")

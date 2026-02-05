@@ -1,6 +1,5 @@
 package dev.robothanzo.werewolf.game.steps
 
-import dev.robothanzo.werewolf.commands.Poll
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
@@ -17,7 +16,8 @@ class SetupStep(
     private val roleService: RoleService,
     private val gameActionService: GameActionService,
     @param:Lazy
-    private val gameStateService: GameStateService
+    private val gameStateService: GameStateService,
+    private val expelService: ExpelService
 ) : GameStep {
     override val id = "SETUP"
     override val name = "遊戲設置"
@@ -25,7 +25,7 @@ class SetupStep(
     override fun onStart(session: Session, service: GameStateService) {
         speechService.interruptSession(session.guildId)
         policeService.interrupt(session.guildId)
-        Poll.expelCandidates.remove(session.guildId)
+        expelService.removePoll(session.guildId)
         gameActionService.muteAll(session.guildId, false)
         session.addLog(LogType.SYSTEM, "進入遊戲設置")
     }

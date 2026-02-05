@@ -4,6 +4,7 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers
 import dev.robothanzo.werewolf.database.Database
+import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import dev.robothanzo.werewolf.service.*
 import jakarta.annotation.PostConstruct
@@ -60,11 +61,13 @@ class WerewolfApplication {
         lateinit var roleActionService: RoleActionService
         lateinit var gameActionService: GameActionService
         lateinit var policeService: PoliceService
+        lateinit var expelService: ExpelService
         lateinit var playerService: PlayerService
         lateinit var speechService: SpeechService
         lateinit var actionUIService: ActionUIService
         lateinit var roleActionExecutor: RoleActionExecutor
         lateinit var roleEventService: RoleEventService
+        lateinit var sessionRepository: SessionRepository
         val playerManager: AudioPlayerManager = DefaultAudioPlayerManager()
 
         @JvmStatic
@@ -117,11 +120,13 @@ class WerewolfApplication {
         private val roleActionServiceBean: RoleActionService,
         private val gameActionServiceBean: GameActionService,
         private val policeServiceBean: PoliceService,
+        private val expelServiceBean: ExpelService,
         private val playerServiceBean: PlayerService,
         private val speechServiceBean: SpeechService,
         private val actionUIServiceBean: ActionUIService,
         private val roleActionExecutorBean: RoleActionExecutor,
-        private val roleEventServiceBean: RoleEventService
+        private val roleEventServiceBean: RoleEventService,
+        private val sessionRepositoryBean: SessionRepository
     ) {
         private val log = LoggerFactory.getLogger(StaticBridge::class.java)
 
@@ -136,11 +141,13 @@ class WerewolfApplication {
             roleActionService = roleActionServiceBean
             gameActionService = gameActionServiceBean
             policeService = policeServiceBean
+            expelService = expelServiceBean
             playerService = playerServiceBean
             speechService = speechServiceBean
             actionUIService = actionUIServiceBean
             roleActionExecutor = roleActionExecutorBean
             roleEventService = roleEventServiceBean
+            sessionRepository = sessionRepositoryBean
             jda = discordServiceBean.jda
 
             AudioSourceManagers.registerRemoteSources(playerManager)

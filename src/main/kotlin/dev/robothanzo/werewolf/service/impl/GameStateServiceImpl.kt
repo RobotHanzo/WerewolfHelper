@@ -3,6 +3,7 @@ package dev.robothanzo.werewolf.service.impl
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
+import dev.robothanzo.werewolf.game.model.GameStateData
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.GameStateService
 import org.springframework.stereotype.Service
@@ -53,14 +54,14 @@ class GameStateServiceImpl(
 
         val nextStep = steps[stepId] ?: throw IllegalArgumentException("Unknown step: $stepId")
 
-        val pendingActionsSnapshot = session.stateData["pendingActions"]
+        val pendingActionsSnapshot = session.stateData.pendingActions.toMutableList()
 
         session.currentState = stepId
-        // Reset state data for new step (unless we want to pass data, but clear is safer for now)
-        session.stateData = HashMap()
+        // Reset state data for new step
+        session.stateData = GameStateData()
 
-        if (pendingActionsSnapshot != null) {
-            session.stateData["pendingActions"] = pendingActionsSnapshot
+        if (pendingActionsSnapshot.isNotEmpty()) {
+            session.stateData.pendingActions.addAll(pendingActionsSnapshot)
         }
 
         // Timer Logic

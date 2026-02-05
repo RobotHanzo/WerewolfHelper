@@ -1,9 +1,15 @@
 package dev.robothanzo.werewolf.model
 
+import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Player
+import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.entities.User
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 class CandidateTest {
     private lateinit var player: Player
@@ -11,6 +17,15 @@ class CandidateTest {
 
     @BeforeEach
     fun setup() {
+        val mockJda = mock<JDA>()
+        whenever(mockJda.getUserById(any<Long>())).thenAnswer { invocation ->
+            val userId = invocation.arguments[0] as Long
+            val user = mock<User>()
+            whenever(user.idLong).thenReturn(userId)
+            user
+        }
+        WerewolfApplication.jda = mockJda
+
         player = Player(
             id = 1,
             roleId = 123L,

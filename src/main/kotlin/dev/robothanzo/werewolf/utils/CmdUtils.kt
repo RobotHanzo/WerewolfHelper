@@ -1,10 +1,11 @@
 package dev.robothanzo.werewolf.utils
 
-import com.mongodb.client.model.Filters.eq
 import dev.robothanzo.werewolf.WerewolfApplication
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import java.util.*
@@ -46,7 +47,9 @@ object CmdUtils {
 
     fun getSession(guild: Guild?): Session? {
         if (guild == null) return null
-        return Session.fetchCollection().find(eq("guildId", guild.idLong)).first()
+        val session = WerewolfApplication.sessionRepository.findByGuildId(guild.idLong).orElse(null)
+        session?.populatePlayerSessions()
+        return session
     }
 
     fun getSession(event: ButtonInteractionEvent): Session? {
@@ -74,4 +77,18 @@ object CmdUtils {
         timer.schedule(task, delay)
         return task
     }
+}
+
+fun Member.isAdmin(): Boolean {
+    return this.hasPermission(Permission.ADMINISTRATOR)
+}
+
+fun Member.isSpectator(): Boolean {
+    val session = CmdUtils.getSession(this.guild) ?: return true
+    return this.roles.isEmpty() || this.roles.contains(session.spectatorRole)
+}
+
+fun Member.player(aliveOnly: Boolean = true): Player? {
+    val p = CmdUtils.getSession(this.guild)?.getPlayer(this.idLong)
+    return if (!aliveOnly || p?.alive == true) p else null
 }

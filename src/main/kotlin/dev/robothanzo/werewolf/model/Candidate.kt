@@ -16,7 +16,7 @@ data class Candidate(
     fun getVotes(police: Player?): Float {
         var hasPolice = police != null
         if (hasPolice) {
-            hasPolice = electors.contains(police!!.userId)
+            hasPolice = electors.contains(police!!.user?.idLong)
         }
         return ((electors.size + (if (hasPolice) 0.5 else 0.0)) * (if (quit) 0 else 1)).toFloat()
     }

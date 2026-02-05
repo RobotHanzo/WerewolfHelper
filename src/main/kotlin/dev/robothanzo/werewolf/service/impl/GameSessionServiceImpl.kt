@@ -2,13 +2,14 @@ package dev.robothanzo.werewolf.service.impl
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.robothanzo.werewolf.WerewolfApplication
-import dev.robothanzo.werewolf.commands.Poll
 import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.database.documents.UserRole
 import dev.robothanzo.werewolf.game.GameStep
+import dev.robothanzo.werewolf.game.model.GameSettings
 import dev.robothanzo.werewolf.security.GlobalWebSocketHandler
 import dev.robothanzo.werewolf.service.DiscordService
+import dev.robothanzo.werewolf.service.ExpelService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.SpeechService
 import jakarta.annotation.PostConstruct
@@ -20,6 +21,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 @Service
 class GameSessionServiceImpl(
@@ -27,12 +29,17 @@ class GameSessionServiceImpl(
     private val discordService: DiscordService,
     private val webSocketHandler: GlobalWebSocketHandler,
     private val speechService: SpeechService,
+    private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry,
     @Lazy stepList: List<GameStep>,
     @param:Lazy
-    private val expelService: dev.robothanzo.werewolf.service.ExpelService
+    private val expelService: ExpelService
 ) : GameSessionService {
     private val log = LoggerFactory.getLogger(GameSessionServiceImpl::class.java)
     private val steps = stepList.associateBy { it.id }
+    private val sessionLocks = ConcurrentHashMap<Long, Any>()
+    private val sessionCache = ConcurrentHashMap<Long, Session>()
+
+    private fun getLock(guildId: Long): Any = sessionLocks.computeIfAbsent(guildId) { Any() }
 
     @PostConstruct
     fun init() {
@@ -40,31 +47,59 @@ class GameSessionServiceImpl(
     }
 
     override fun getAllSessions(): List<Session> {
-        return sessionRepository.findAll()
+        val sessions = sessionRepository.findAll()
+        sessions.forEach {
+            it.populatePlayerSessions()
+            it.hydrateRoles(roleRegistry)
+        }
+        return sessions
     }
 
     override fun getSession(guildId: Long): Optional<Session> {
-        return sessionRepository.findByGuildId(guildId)
+        // First check cache
+        sessionCache[guildId]?.let {
+            return Optional.of(it)
+        }
+
+        val sessionOpt = sessionRepository.findByGuildId(guildId)
+        sessionOpt.ifPresent { session ->
+            session.populatePlayerSessions()
+            session.hydrateRoles(roleRegistry)
+            // Cache the session for future access
+            sessionCache[guildId] = session
+        }
+        return sessionOpt
     }
 
     override fun createSession(guildId: Long): Session {
         val session = Session(guildId = guildId)
-
         // Initialize default settings based on guild member count
         // 10 players: witchCanSaveSelf=true
         // 12+ players: witchCanSaveSelf=false
-        val jda = discordService.jda
-        val guild = jda.getGuildById(guildId)
-        val memberCount = guild?.memberCount ?: 10
-
-        session.settings["witchCanSaveSelf"] = memberCount < 12
-        session.settings["customRoles"] = mutableMapOf<String, Any>()
-        
+        val memberCount = session.guild?.memberCount ?: 10
+        session.settings = GameSettings(
+            witchCanSaveSelf = memberCount < 12
+        )
         return sessionRepository.save(session)
     }
 
     override fun saveSession(session: Session): Session {
-        return sessionRepository.save(session)
+        synchronized(getLock(session.guildId)) {
+            val saved = sessionRepository.save(session)
+            // Sync version back to the original object to prevent stale version errors
+            // if this object is saved again later in the same thread.
+            session.version = saved.version
+            return saved
+        }
+    }
+
+    override fun <T> withLockedSession(guildId: Long, block: (Session) -> T): T {
+        synchronized(getLock(guildId)) {
+            val session = sessionCache[guildId] ?: getSession(guildId).orElseThrow { Exception("Session not found") }
+            val result = block(session)
+            saveSession(session)
+            return result
+        }
     }
 
     override fun deleteSession(guildId: Long) {
@@ -73,7 +108,6 @@ class GameSessionServiceImpl(
 
     override fun sessionToJSON(session: Session): Map<String, Any> {
         val json = mutableMapOf<String, Any>()
-        val jda = discordService.jda
 
         json["guildId"] = session.guildId.toString()
         json["doubleIdentities"] = session.doubleIdentities
@@ -109,7 +143,7 @@ class GameSessionServiceImpl(
             if (speechSession.lastSpeaker != null) {
                 var speakerId: String? = null
                 for (p in session.players.values) {
-                    if (p.userId != null && p.userId == speechSession.lastSpeaker) {
+                    if (p.user != null && p.user?.idLong == speechSession.lastSpeaker) {
                         speakerId = p.id.toString()
                         break
                     }
@@ -159,11 +193,9 @@ class GameSessionServiceImpl(
 
         // Add Expel info
         val expelJson = mutableMapOf<String, Any>()
-        // Assuming dev.robothanzo.werewolf.commands.Poll.expelCandidates is accessible
-        // Using fully qualified name for static access to Java
-        if (Poll.expelCandidates.containsKey(gid)) {
+        if (expelService.hasPoll(gid)) {
             val expelCandidatesList = mutableListOf<Map<String, Any>>()
-            for (c in Poll.expelCandidates[gid]!!.values) {
+            expelService.getPollCandidates(gid)?.values?.forEach { c ->
                 val candidateJson = mutableMapOf<String, Any>()
                 candidateJson["id"] = c.player.id.toString()
                 candidateJson["voters"] = c.electors.map { it.toString() }
@@ -182,7 +214,7 @@ class GameSessionServiceImpl(
         }
         json["expel"] = expelJson
 
-        val guild = jda.getGuildById(session.guildId)
+        val guild = session.guild
         if (guild != null) {
             json["guildName"] = guild.name
             json["guildIcon"] = guild.iconUrl ?: ""
@@ -213,50 +245,22 @@ class GameSessionServiceImpl(
 
     override fun playersToJSON(session: Session): List<Map<String, Any>> {
         val players = mutableListOf<Map<String, Any>>()
-        val jda = discordService.jda
-
         for ((_, player) in session.players) {
             val playerJson = mutableMapOf<String, Any>()
 
             playerJson["id"] = player.id.toString()
-            playerJson["roleId"] = player.roleId.toString()
-            playerJson["channelId"] = player.channelId.toString()
+            playerJson["roleId"] = player.role?.idLong?.toString() ?: ""
+            playerJson["channelId"] = player.channel?.idLong?.toString() ?: ""
             playerJson["userId"] =
-                if (player.userId != null) player.userId.toString() else ""
+                if (player.user != null) player.user?.idLong.toString() else ""
             playerJson["roles"] = player.roles ?: emptyList<String>()
             playerJson["deadRoles"] = player.deadRoles ?: emptyList<String>()
-            playerJson["isAlive"] = player.isAlive
+            playerJson["isAlive"] = player.alive
             playerJson["jinBaoBao"] = player.jinBaoBao
             playerJson["police"] = player.police
             playerJson["idiot"] = player.idiot
             playerJson["duplicated"] = player.duplicated
             playerJson["rolePositionLocked"] = player.rolePositionLocked
-
-            var foundMember = false
-            if (player.userId != null) {
-                val guild = jda.getGuildById(session.guildId)
-                if (guild != null) {
-                    val member = guild.getMemberById(player.userId!!)
-                    if (member != null) {
-                        playerJson["name"] = player.nickname
-                        playerJson["username"] = member.user.name
-                        playerJson["avatar"] = member.effectiveAvatarUrl
-
-                        val isJudge = member.roles.stream()
-                            .anyMatch { r -> r.idLong == session.judgeRoleId }
-                        playerJson["isJudge"] = isJudge
-
-                        foundMember = true
-                    }
-                }
-            }
-            if (!foundMember) {
-                playerJson["name"] = player.nickname
-                playerJson["username"] = "Unknown"
-                playerJson["avatar"] = ""
-                playerJson["isJudge"] = false
-            }
-
             players.add(playerJson)
         }
 
@@ -303,9 +307,7 @@ class GameSessionServiceImpl(
 
     @Throws(Exception::class)
     override fun getGuildMembers(session: Session): List<Map<String, Any>> {
-        val guildId = session.guildId
-        val jda = discordService.jda
-        val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
+        val guild = session.guild ?: throw Exception("Guild not found")
 
         val membersJson = mutableListOf<Map<String, Any>>()
 
@@ -315,48 +317,40 @@ class GameSessionServiceImpl(
 
             val memberMap = mutableMapOf<String, Any>()
             memberMap["userId"] = member.id
-            memberMap["username"] = member.user.name
-            memberMap["name"] = member.effectiveName
-            memberMap["avatar"] = member.effectiveAvatarUrl
-
             val isJudge = member.roles.stream()
-                .anyMatch { r -> r.idLong == session.judgeRoleId }
+                .anyMatch { r -> r == session.judgeRole }
             memberMap["isJudge"] = isJudge
 
             val isPlayer = session.players.values.stream()
                 .anyMatch { p ->
-                    (p.userId != null && p.userId == member.idLong
-                            && p.isAlive)
+                    (p.user != null && p.user?.idLong == member.idLong
+                            && p.alive)
                 }
             memberMap["isPlayer"] = isPlayer
 
             membersJson.add(memberMap)
         }
-
         membersJson.sortWith { a, b ->
             val judgeA = a["isJudge"] as Boolean
             val judgeB = b["isJudge"] as Boolean
             if (judgeA != judgeB)
                 if (judgeB) 1 else -1
             else
-                (a["name"] as String).compareTo((b["name"] as String))
+                0
         }
-
         return membersJson
     }
 
     @Throws(Exception::class)
     override fun updateUserRole(session: Session, userId: Long, role: UserRole) {
-        val guildId = session.guildId
-        val jda = discordService.jda
-        val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
+        val guild = session.guild ?: throw Exception("Guild not found")
 
         var member = guild.getMemberById(userId)
         if (member == null) {
             member = guild.retrieveMemberById(userId).complete()
         }
 
-        val judgeRole = guild.getRoleById(session.judgeRoleId)
+        val judgeRole = session.judgeRole
             ?: throw Exception("Judge role not configured or found in guild")
 
         if (role == UserRole.JUDGE) {
@@ -364,25 +358,13 @@ class GameSessionServiceImpl(
         } else if (role == UserRole.SPECTATOR) {
             guild.removeRoleFromMember(member!!, judgeRole).complete()
 
-            val spectatorRole = guild.getRoleById(session.spectatorRoleId)
+            val spectatorRole = session.spectatorRole
             if (spectatorRole != null) {
                 guild.addRoleToMember(member, spectatorRole).complete()
             }
         } else {
             throw Exception("Unsupported role update: $role")
         }
-    }
-
-    @Throws(Exception::class)
-    override fun updateSettings(session: Session, settings: Map<String, Any>) {
-        if (settings.containsKey("doubleIdentities")) {
-            session.doubleIdentities = settings["doubleIdentities"] as Boolean
-        }
-        if (settings.containsKey("muteAfterSpeech")) {
-            session.muteAfterSpeech = settings["muteAfterSpeech"] as Boolean
-        }
-
-        saveSession(session)
     }
 
     override fun broadcastUpdate(guildId: Long) {
@@ -394,7 +376,7 @@ class GameSessionServiceImpl(
         try {
             val updateData = sessionToJSON(session)
             broadcastEvent("UPDATE", updateData)
-        } catch (e: InterruptedException) {
+        } catch (_: InterruptedException) {
             // Clear the interrupted flag so it doesn't affect other operations
             Thread.interrupted()
             log.warn("Broadcast was interrupted, but continuing")
@@ -417,7 +399,7 @@ class GameSessionServiceImpl(
             val jsonMessage = mapper.writeValueAsString(envelope)
 
             webSocketHandler.broadcastToGuild(guildId, jsonMessage)
-        } catch (e: InterruptedException) {
+        } catch (_: InterruptedException) {
             // Thread was interrupted - clear the flag and continue
             Thread.interrupted()
             log.warn("Broadcast thread was interrupted")
@@ -425,4 +407,5 @@ class GameSessionServiceImpl(
             log.error("Failed to broadcast event", e)
         }
     }
+
 }

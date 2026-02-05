@@ -1,15 +1,21 @@
 package dev.robothanzo.werewolf.game.roles.actions
 
+import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.ActionSubmissionSource
 import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.game.model.RoleActionInstance
+import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.entities.User
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 /**
  * Comprehensive tests for role actions
@@ -31,6 +37,15 @@ class RoleActionTests {
 
     @BeforeEach
     fun setup() {
+        val mockJda = mock<JDA>()
+        whenever(mockJda.getUserById(any<Long>())).thenAnswer { invocation ->
+            val userId = invocation.arguments[0] as Long
+            val user = mock<User>()
+            whenever(user.idLong).thenReturn(userId)
+            user
+        }
+        WerewolfApplication.jda = mockJda
+
         session = Session(guildId = 123L)
         session.players = mutableMapOf(
             "1" to createPlayer(1, 1L),
@@ -681,7 +696,6 @@ class RoleActionTests {
             // FINAL: Player should die from DOUBLE_PROTECTION
             assertTrue(result.deaths.containsKey(DeathCause.DOUBLE_PROTECTION))
             assertTrue(result.deaths[DeathCause.DOUBLE_PROTECTION]?.contains(targetId) == true)
-            println("✓ Player $targetId correctly died from DOUBLE_PROTECTION (saved + protected)")
         }
 
         @Test

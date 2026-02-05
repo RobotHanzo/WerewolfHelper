@@ -4,6 +4,7 @@ import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.SpeechSession
 import dev.robothanzo.werewolf.service.DiscordService
+import dev.robothanzo.werewolf.service.GameActionService
 import dev.robothanzo.werewolf.service.GameSessionService
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -21,6 +22,9 @@ class SpeechServiceImplTest {
     private lateinit var discordService: DiscordService
 
     @Mock
+    private lateinit var gameActionService: GameActionService
+
+    @Mock
     private lateinit var gameSessionService: GameSessionService
 
     private lateinit var speechService: SpeechServiceImpl
@@ -31,6 +35,7 @@ class SpeechServiceImplTest {
         speechService = SpeechServiceImpl(
             sessionRepository,
             discordService,
+            gameActionService,
             gameSessionService
         )
     }

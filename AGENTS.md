@@ -51,8 +51,10 @@ TypeScript/React frontend + JDA (Discord API) + MongoDB + WebSocket sync.
 - JUnit 5 + Mockito Kotlin for unit tests in `src/test/kotlin/`
 - Mock pattern: `@Mock` dependencies, inject into service implementation in `@BeforeEach`
 -
+
 Example: [GameSessionServiceImplTest.kt](src/test/kotlin/dev/robothanzo/werewolf/service/impl/GameSessionServiceImplTest.kt) -
 mocks `SessionRepository`, `DiscordService`, `WebSocketHandler`
+
 - Run tests: `./gradlew test` (generates HTML report in `build/reports/tests/test/`)
 
 ### Discord Audio Integration

@@ -1,11 +1,12 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
-import {Mic, Moon, Play, Shuffle, SkipForward, Skull, StepForward, Sun, Users} from 'lucide-react';
+import {Mic, Play, Shuffle, SkipForward, Skull, StepForward, Sun, Users} from 'lucide-react';
 import {useTranslation} from '@/lib/i18n';
 import {api} from '@/lib/api';
 import {GameState, User} from '@/types';
-import {ActionPanelsContainer} from '@/components/ActionPanelsContainer';
 import {SpeechManager} from '@/features/speech/components/SpeechManager';
 import {VoteStatus} from './VoteStatus';
+import {NightStatus} from './NightStatus';
+import {usePlayerContext} from '@/features/players/contexts/PlayerContext';
 
 interface MainDashboardProps {
     guildId: string;
@@ -14,8 +15,9 @@ interface MainDashboardProps {
     user?: User | null;
 }
 
-export const MainDashboard = ({guildId, gameState, readonly = false, user}: MainDashboardProps) => {
+export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashboardProps) => {
     const {t} = useTranslation();
+    const {userInfoCache, fetchUserInfo} = usePlayerContext();
     const [isWorking, setIsWorking] = useState(false);
     const [transitionClass, setTransitionClass] = useState('stage-enter-forward');
     const [isStageAnimating, setIsStageAnimating] = useState(false);
@@ -158,25 +160,8 @@ export const MainDashboard = ({guildId, gameState, readonly = false, user}: Main
 
             case 'NIGHT_PHASE':
                 return (
-                    <div className="animate-in fade-in duration-300">
-                        <div
-                            className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                            <div className="flex items-center gap-3 mb-4">
-                                <Moon className="w-6 h-6 text-indigo-600 dark:text-indigo-400"/>
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                                    {t('steps.night')}
-                                </h3>
-                            </div>
-                            <div className="space-y-4">
-                                {user && (
-                                    <ActionPanelsContainer
-                                        guildId={guildId}
-                                        gameState={gameState}
-                                        isJudge={user.role === 'JUDGE'}
-                                    />
-                                )}
-                            </div>
-                        </div>
+                    <div className="animate-in fade-in duration-300 h-full overflow-hidden">
+                        <NightStatus guildId={guildId}/>
                     </div>
                 );
 
@@ -225,7 +210,7 @@ export const MainDashboard = ({guildId, gameState, readonly = false, user}: Main
                 return (
                     <div className="animate-in fade-in duration-300">
                         <div
-                            className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 shadow-sm">
+                            className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 shadow-sm">
                             <div className="flex items-center gap-3 mb-6">
                                 <Skull className="w-6 h-6 text-red-600 dark:text-red-400"/>
                                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
@@ -275,48 +260,57 @@ export const MainDashboard = ({guildId, gameState, readonly = false, user}: Main
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {deadPlayers.map(player => (
-                                        <div
-                                            key={player.id}
-                                            className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
-                                        >
+                                    {deadPlayers.map(player => {
+                                        const cachedUser = player.userId ? userInfoCache[player.userId] : null;
+                                        if (player.userId && !cachedUser && guildId) {
+                                            fetchUserInfo(player.userId, guildId);
+                                        }
+                                        const displayName = cachedUser ? cachedUser.name : player.name;
+                                        const displayAvatar = cachedUser ? cachedUser.avatar : player.avatar;
+
+                                        return (
                                             <div
-                                                className="absolute inset-0 bg-gradient-to-br from-slate-100/60 to-slate-200/60 dark:from-slate-800/60 dark:to-slate-900/60"/>
-                                            <div className="relative p-4 flex items-center gap-3">
-                                                <div className="relative">
-                                                    <div
-                                                        className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden ring-2 ring-red-300/60 dark:ring-red-600/40">
-                                                        {player.avatar ? (
-                                                            <img
-                                                                src={player.avatar}
-                                                                alt={player.name}
-                                                                className="w-full h-full object-cover"
-                                                            />
-                                                        ) : (
-                                                            <div
-                                                                className="w-full h-full flex items-center justify-center text-slate-500 dark:text-slate-300 text-sm">
-                                                                {player.name?.slice(0, 1) || 'P'}
-                                                            </div>
-                                                        )}
+                                                key={player.id}
+                                                className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
+                                            >
+                                                <div
+                                                    className="absolute inset-0 from-slate-100/60 to-slate-200/60 dark:from-slate-800/60 dark:to-slate-900/60"/>
+                                                <div className="relative p-4 flex items-center gap-3">
+                                                    <div className="relative">
+                                                        <div
+                                                            className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden ring-2 ring-red-300/60 dark:ring-red-600/40">
+                                                            {displayAvatar ? (
+                                                                <img
+                                                                    src={displayAvatar}
+                                                                    alt={displayName}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                <div
+                                                                    className="w-full h-full flex items-center justify-center text-slate-500 dark:text-slate-300 text-sm">
+                                                                    {displayName?.slice(0, 1) || 'P'}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div
+                                                            className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow">
+                                                            <Skull className="w-3 h-3"/>
+                                                        </div>
                                                     </div>
-                                                    <div
-                                                        className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow">
-                                                        <Skull className="w-3 h-3"/>
+                                                    <div className="min-w-0">
+                                                        <div
+                                                            className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                                                            {displayName}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                            {t('dashboard.eliminated', 'Eliminated')}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <div
-                                                        className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                                                        {player.name}
-                                                    </div>
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                                                        {t('dashboard.eliminated', 'Eliminated')}
-                                                    </div>
-                                                </div>
+                                                <div className="relative px-4 pb-4"/>
                                             </div>
-                                            <div className="relative px-4 pb-4"/>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -329,6 +323,7 @@ export const MainDashboard = ({guildId, gameState, readonly = false, user}: Main
                         {gameState.expel && (
                             <VoteStatus
                                 candidates={gameState.expel.candidates || []}
+                                endTime={gameState.expel.endTime}
                                 players={gameState.players || []}
                                 title={t('steps.voting')}
                             />

@@ -3,6 +3,8 @@ import {useTranslation} from '@/lib/i18n';
 import {ThemeToggle} from '@/components/ui/ThemeToggle';
 import {useAuth} from '@/features/auth/contexts/AuthContext';
 import {useLocation} from 'react-router-dom';
+import {useEffect, useState} from 'react';
+import {api} from '@/lib/api';
 
 interface SidebarProps {
     onLogout: () => void;
@@ -32,12 +34,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const {t} = useTranslation();
     const {user} = useAuth();
     const location = useLocation();
+    const [userInfo, setUserInfo] = useState<{ name: string, avatar: string } | null>(null);
 
     const isDashboardActive = location.pathname.endsWith(user?.guildId ? `/server/${user.guildId}` : '/') && !location.pathname.includes('/settings') && !location.pathname.includes('/spectator') && !location.pathname.includes('/speech') && !location.pathname.includes('/players');
     const isPlayersActive = location.pathname.includes('/players');
     const isSettingsActive = location.pathname.includes('/settings');
     const isSpectatorActive = location.pathname.includes('/spectator');
     const isSpeechActive = location.pathname.includes('/speech');
+
+    useEffect(() => {
+        const fetchUserInfo = async () => {
+            if (user?.guildId && user?.userId) {
+                try {
+                    const data: any = await api.getUserInfo(user.guildId, user.userId);
+                    setUserInfo({name: data.name, avatar: data.avatar});
+                } catch (e) {
+                    console.error('Failed to fetch user info for sidebar', e);
+                }
+            }
+        };
+        fetchUserInfo();
+    }, [user?.guildId, user?.userId]);
 
     return (
         <aside
@@ -119,13 +136,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {user && (
                     <div className="flex items-center gap-3 px-2 py-2 bg-slate-200/50 dark:bg-slate-800/50 rounded-lg">
                         <img
-                            src={user.avatar ? `https://cdn.discordapp.com/avatars/${user.userId}/${user.avatar}.png?size=64` : `https://cdn.discordapp.com/embed/avatars/${parseInt(user.userId) % 5}.png`}
-                            alt={user.username}
+                            src={userInfo?.avatar || (user.avatar ? `https://cdn.discordapp.com/avatars/${user.userId}/${user.avatar}.png?size=64` : `https://cdn.discordapp.com/embed/avatars/${parseInt(user.userId) % 5}.png`)}
+                            alt={userInfo?.name || user.username}
                             className="w-10 h-10 rounded-full ring-2 ring-indigo-200 dark:ring-indigo-900"
                         />
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                                {user.username}
+                                {userInfo?.name || user.username}
                             </p>
                             {user.role === 'JUDGE' ? (
                                 <button

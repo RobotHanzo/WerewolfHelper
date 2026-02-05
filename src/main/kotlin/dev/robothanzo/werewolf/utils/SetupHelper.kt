@@ -39,7 +39,7 @@ object SetupHelper {
             hoisted = true,
             permissions = listOf(Permission.ADMINISTRATOR)
         ).queue { judgeRole ->
-            session.judgeRoleId = judgeRole.idLong
+            session.setJudgeRoleId(judgeRole.idLong)
 
             // 2. Create Player Roles and Channels
             createPlayerRolesAndChannels(session, config.players).thenAccept { players ->
@@ -51,7 +51,7 @@ object SetupHelper {
                     color = Color(0x654321),
                     permissions = listOf(Permission.VIEW_CHANNEL)
                 ).queue { deadRole ->
-                    session.spectatorRoleId = deadRole.idLong
+                    session.setSpectatorRoleId(deadRole.idLong)
                     applySpectatorOverrides(guild, players, deadRole)
 
                     // 4. Create remaining core channels
@@ -141,7 +141,7 @@ object SetupHelper {
     private fun applySpectatorOverrides(guild: Guild, players: Map<String, Player>, deadRole: Role) {
         try {
             players.values.forEach { p ->
-                val ch = guild.getTextChannelById(p.channelId)
+                val ch = guild.getTextChannelById(p.channel?.idLong ?: 0)
                 ch?.upsertPermissionOverride(deadRole)
                     ?.setPermissions(listOf(Permission.VIEW_CHANNEL), listOf(Permission.MESSAGE_SEND))
                     ?.queue(null) { }
@@ -155,12 +155,12 @@ object SetupHelper {
         Session.fetchCollection().insertOne(session)
         log.info("Successfully registered guild as a session: {}", guild.id)
 
-        val courtChannel = guild.getTextChannelById(session.courtTextChannelId)
+        val courtChannel = session.courtTextChannel
         if (courtChannel != null) {
-            session.sendToCourt("伺服器設定完成！請法官邀請玩家並開始遊戲。")
+            session.courtTextChannel?.sendMessage("伺服器設定完成！請法官邀請玩家並開始遊戲。")?.queue()
             try {
                 courtChannel.createInvite().setMaxUses(0).setMaxAge(0).queue { invite ->
-                    val origin = WerewolfApplication.jda!!.getTextChannelById(config.originChannelId)
+                    val origin = WerewolfApplication.jda.getTextChannelById(config.originChannelId)
                     origin?.sendMessage("伺服器已設定完成，點此連結前往伺服器： " + invite.url)?.queue()
                 }
             } catch (e: Exception) {
@@ -193,7 +193,7 @@ object SetupHelper {
                 ))
             )
         ).queue { courtText ->
-            session.courtTextChannelId = courtText.idLong
+            session.setCourtTextChannelId(courtText.idLong)
 
             // Court Voice
             guild.createVoiceChannel(
@@ -203,7 +203,7 @@ object SetupHelper {
                     deadRole to (listOf(Permission.VIEW_CHANNEL) to listOf(Permission.VOICE_SPEAK))
                 )
             ).queue { courtVoice ->
-                session.courtVoiceChannelId = courtVoice.idLong
+                session.setCourtVoiceChannelId(courtVoice.idLong)
 
                 // Spectator Text
                 guild.createTextChannel(
@@ -216,7 +216,7 @@ object SetupHelper {
                         ))
                     )
                 ).queue { specText ->
-                    session.spectatorTextChannelId = specText.idLong
+                    session.setSpectatorTextChannelId(specText.idLong)
 
                     // Spectator Voice
                     guild.createVoiceChannel(
@@ -237,7 +237,7 @@ object SetupHelper {
                                 ))
                             )
                         ).queue { judgeText ->
-                            session.judgeTextChannelId = judgeText.idLong
+                            session.setJudgeTextChannelId(judgeText.idLong)
                             future.complete(null)
                         }
                     }

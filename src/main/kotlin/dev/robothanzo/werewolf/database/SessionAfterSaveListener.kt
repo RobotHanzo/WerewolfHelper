@@ -4,6 +4,7 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Session
 import org.slf4j.LoggerFactory
 import org.springframework.data.mongodb.core.mapping.event.AbstractMongoEventListener
+import org.springframework.data.mongodb.core.mapping.event.AfterConvertEvent
 import org.springframework.data.mongodb.core.mapping.event.AfterSaveEvent
 import org.springframework.stereotype.Component
 
@@ -19,5 +20,10 @@ class SessionAfterSaveListener : AbstractMongoEventListener<Session>() {
         } catch (e: Exception) {
             log.error("Failed to broadcast session update after save", e)
         }
+    }
+
+    override fun onAfterConvert(event: AfterConvertEvent<Session>) {
+        super.onAfterConvert(event)
+        event.source.populatePlayerSessions()
     }
 }

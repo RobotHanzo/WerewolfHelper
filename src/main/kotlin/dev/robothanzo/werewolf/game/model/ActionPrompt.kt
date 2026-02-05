@@ -1,6 +1,14 @@
 package dev.robothanzo.werewolf.game.model
 
-import dev.robothanzo.werewolf.game.roles.actions.RoleAction
+/**
+ * Static information about a role action for UI and persistence
+ */
+data class ActionInfo(
+    val actionId: String,
+    val actionName: String,
+    val roleName: String,
+    val timing: ActionTiming
+)
 
 /**
  * Represents an active action prompt sent to a player
@@ -9,15 +17,20 @@ import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 data class ActionPrompt(
     val playerId: String,
     val userId: Long,
-    val actions: List<RoleAction>,
-    val selectedAction: RoleAction? = null,
+    val actions: List<ActionInfo>,
+    val selectedAction: ActionInfo? = null,
     val selectedTargets: List<Long> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
     val expiresAt: Long = System.currentTimeMillis() + 90000, // 90 second default timer
-    val messageId: Long? = null, // Discord message ID
+    var targetPromptId: Long? = null, // Discord message ID
     val isGroupAction: Boolean = false, // For wolf voting
-    val groupVotes: Map<Long, Long> = emptyMap(), // userId -> targetId for wolves
+    val groupVotes: List<GroupVote> = emptyList(), // userId -> targetId for wolves
     val finalTarget: Long? = null // Final selected target after voting
+)
+
+data class GroupVote(
+    val userId: Long,
+    val targetId: Long
 )
 
 /**
@@ -26,7 +39,7 @@ data class ActionPrompt(
 data class GroupActionState(
     val actionId: String,
     val participants: List<Long>, // User IDs of players voting
-    val votes: MutableMap<Long, Long> = mutableMapOf(), // userId -> targetId
+    val votes: MutableList<GroupVote> = mutableListOf(),
     val createdAt: Long = System.currentTimeMillis(),
     val expiresAt: Long = System.currentTimeMillis() + 90000, // 90 second timer
     val messageId: Long? = null, // Discord message ID for the group channel

@@ -3,32 +3,41 @@ package dev.robothanzo.werewolf.database.documents
 import com.mongodb.client.MongoCollection
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.Database
+import dev.robothanzo.werewolf.game.model.GameSettings
+import dev.robothanzo.werewolf.game.model.GameStateData
 import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.Role
-import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.codecs.pojo.annotations.BsonIgnore
 import org.bson.types.ObjectId
 import org.springframework.data.annotation.Id
+import org.springframework.data.annotation.Transient
+import org.springframework.data.annotation.Version
+import org.springframework.data.domain.Persistable
 import org.springframework.data.mongodb.core.index.Indexed
 import org.springframework.data.mongodb.core.mapping.Document
+import java.io.Serializable
 import java.util.*
+import dev.robothanzo.werewolf.game.model.Role as GameRole
 
 @Document(collection = "sessions")
 data class Session(
     @Id
     @param:BsonId
-    var id: ObjectId? = null,
+    private var _id: ObjectId? = null,
 
+    @Version
+    var version: Long? = null,
     @Indexed(unique = true)
     var guildId: Long = 0,
-    var courtTextChannelId: Long = 0,
-    var courtVoiceChannelId: Long = 0,
-    var spectatorTextChannelId: Long = 0,
-    var judgeTextChannelId: Long = 0,
-    var judgeRoleId: Long = 0,
-    var spectatorRoleId: Long = 0,
+    private var courtTextChannelId: Long = 0,
+    private var courtVoiceChannelId: Long = 0,
+    private var spectatorTextChannelId: Long = 0,
+    private var judgeTextChannelId: Long = 0,
+    private var judgeRoleId: Long = 0,
+    private var spectatorRoleId: Long = 0,
     var owner: Long = 0,
     var doubleIdentities: Boolean = false,
     var hasAssignedRoles: Boolean = false,
@@ -39,21 +48,50 @@ data class Session(
 
     // Game State Machine Fields
     var currentState: String = "SETUP", // Default to setup
-    var stateData: MutableMap<String, Any> = HashMap(),
+    var stateData: GameStateData = GameStateData(),
     var currentStepEndTime: Long = 0,
     var day: Int = 0,
 
     // Game Settings
-    var settings: MutableMap<String, Any> = HashMap()
-) {
-    fun fetchAlivePlayers(): Map<String, Player> {
-        val alivePlayers = HashMap<String, Player>()
-        for ((key, value) in players) {
-            if (value.isAlive) {
-                alivePlayers[key] = value
+    var settings: GameSettings = GameSettings()
+) : Persistable<ObjectId>, Serializable {
+    @get:BsonIgnore
+    @set:BsonIgnore
+    @Transient
+    var hydratedRoles: MutableMap<String, GameRole> = HashMap()
+
+
+    override fun getId(): ObjectId? = _id
+
+    @BsonIgnore
+    override fun isNew(): Boolean = _id == null
+
+    /**
+     * Populate player.session references after loading from database
+     */
+    fun populatePlayerSessions() {
+        for (player in players.values) {
+            player.session = this
+        }
+    }
+
+    /**
+     * Hydrate role strings into Role objects
+     */
+    fun hydrateRoles(roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry) {
+        hydratedRoles.clear()
+        for (player in players.values) {
+            player.roles?.forEach { roleName ->
+                if (!hydratedRoles.containsKey(roleName)) {
+                    roleRegistry.getRole(roleName)?.let {
+                        hydratedRoles[roleName] = it
+                    }
+                }
             }
         }
-        return alivePlayers
+    }
+    fun fetchAlivePlayers(): Map<String, Player> {
+        return players.filter { it.value.alive }
     }
 
     @get:BsonIgnore
@@ -72,6 +110,50 @@ data class Session(
     @get:BsonIgnore
     val spectatorRole: Role?
         get() = guild?.getRoleById(spectatorRoleId)
+
+    @get:BsonIgnore
+    val judgeRole: Role?
+        get() = guild?.getRoleById(judgeRoleId)
+
+    @get:BsonIgnore
+    val courtTextChannel: TextChannel?
+        get() = guild?.getTextChannelById(courtTextChannelId)
+
+    @get:BsonIgnore
+    val courtVoiceChannel: VoiceChannel?
+        get() = guild?.getVoiceChannelById(courtVoiceChannelId)
+
+    @get:BsonIgnore
+    val spectatorTextChannel: TextChannel?
+        get() = guild?.getTextChannelById(spectatorTextChannelId)
+
+    @get:BsonIgnore
+    val judgeTextChannel: TextChannel?
+        get() = guild?.getTextChannelById(judgeTextChannelId)
+
+    fun setCourtTextChannelId(id: Long) {
+        courtTextChannelId = id
+    }
+
+    fun setCourtVoiceChannelId(id: Long) {
+        courtVoiceChannelId = id
+    }
+
+    fun setSpectatorTextChannelId(id: Long) {
+        spectatorTextChannelId = id
+    }
+
+    fun setJudgeTextChannelId(id: Long) {
+        judgeTextChannelId = id
+    }
+
+    fun setJudgeRoleId(id: Long) {
+        judgeRoleId = id
+    }
+
+    fun setSpectatorRoleId(id: Long) {
+        spectatorRoleId = id
+    }
 
     fun hasEnded(simulateRoleRemovalArg: String?): Result {
         var simulateRoleRemoval = simulateRoleRemovalArg
@@ -125,136 +207,6 @@ data class Session(
         return Result.NOT_ENDED
     }
 
-    fun sendToCourt(message: String, queue: Boolean = true): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(courtTextChannelId)
-            ?.sendMessage(message) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
-    fun sendToCourt(embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(courtTextChannelId)
-            ?.sendMessageEmbeds(embed) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
-    fun sendToCourt(embeds: Collection<MessageEmbed>, queue: Boolean = true): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(courtTextChannelId)
-            ?.sendMessageEmbeds(embeds) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
-    fun sendToCourt(message: String, embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(courtTextChannelId)
-            ?.sendMessage(message)
-            ?.setEmbeds(embed) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
-    fun sendToCourt(message: String, embeds: Collection<MessageEmbed>, queue: Boolean = true): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(courtTextChannelId)
-            ?.sendMessage(message)
-            ?.setEmbeds(embeds) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
-    fun sendToSpectator(message: String, queue: Boolean = true): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(spectatorTextChannelId)
-            ?.sendMessage(message) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
-    fun sendToSpectator(embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(spectatorTextChannelId)
-            ?.sendMessageEmbeds(embed) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
-    fun sendToSpectator(embeds: Collection<MessageEmbed>, queue: Boolean = true): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(spectatorTextChannelId)
-            ?.sendMessageEmbeds(embeds) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
-    fun sendToSpectator(message: String, embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(spectatorTextChannelId)
-            ?.sendMessage(message)
-            ?.setEmbeds(embed) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
-    fun sendToSpectator(
-        message: String,
-        embeds: Collection<MessageEmbed>,
-        queue: Boolean = true
-    ): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(spectatorTextChannelId)
-            ?.sendMessage(message)
-            ?.setEmbeds(embeds) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
-    fun sendToJudge(message: String, queue: Boolean = true): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(judgeTextChannelId)
-            ?.sendMessage(message) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
-    fun sendToJudge(embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(judgeTextChannelId)
-            ?.sendMessageEmbeds(embed) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
-    fun sendToJudge(embeds: Collection<MessageEmbed>, queue: Boolean = true): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(judgeTextChannelId)
-            ?.sendMessageEmbeds(embeds) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
-    fun sendToJudge(message: String, embed: MessageEmbed, queue: Boolean = true): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(judgeTextChannelId)
-            ?.sendMessage(message)
-            ?.setEmbeds(embed) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
-    fun sendToJudge(message: String, embeds: Collection<MessageEmbed>, queue: Boolean = true): MessageCreateAction? {
-        val action = WerewolfApplication.jda.getGuildById(guildId)
-            ?.getTextChannelById(judgeTextChannelId)
-            ?.sendMessage(message)
-            ?.setEmbeds(embeds) ?: return null
-        if (queue) action.queue()
-        return action
-    }
-
     enum class Result(val reason: String) {
         NOT_ENDED("未結束"),
         VILLAGERS_DIED("全部村民死亡"),
@@ -280,7 +232,11 @@ data class Session(
     }
 
     fun getPlayer(userId: Long): Player? {
-        return players.values.find { it.userId == userId }
+        return players.values.find { it.user?.idLong == userId }
+    }
+
+    fun getPlayerByChannel(channelId: Long): Player? {
+        return players.values.find { it.channel?.idLong == channelId }
     }
 
     /**
@@ -305,15 +261,17 @@ data class Session(
      * Add a log entry with metadata to the session
      */
     fun addLog(type: LogType, message: String, metadata: Map<String, Any>?) {
-        val entry = LogEntry(
-            id = UUID.randomUUID().toString(),
-            timestamp = System.currentTimeMillis(),
-            type = type,
-            message = message,
-            metadata = metadata
-        )
-        logs.add(entry)
-        WerewolfApplication.gameSessionService.saveSession(this)
+        WerewolfApplication.gameSessionService.withLockedSession(this.guildId) {
+            it.logs.add(
+                LogEntry(
+                    id = UUID.randomUUID().toString(),
+                    timestamp = System.currentTimeMillis(),
+                    type = type,
+                    message = message,
+                    metadata = metadata
+                )
+            )
+        }
     }
 
     companion object {

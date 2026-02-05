@@ -131,7 +131,13 @@ export class ApiClient {
     }
 
     // Settings
-    async updateSettings(guildId: string, settings: { doubleIdentities?: boolean; muteAfterSpeech?: boolean }) {
+    async updateSettings(guildId: string, settings: {
+        muteAfterSpeech: boolean;
+        doubleIdentities: boolean;
+        witchCanSaveSelf: boolean;
+        allowWolfSelfKill: boolean;
+        hiddenRoleOnDeath: boolean
+    }) {
         return this.request(`/api/sessions/${guildId}/settings`, {
             method: 'PUT',
             body: JSON.stringify(settings)
@@ -232,30 +238,6 @@ export class ApiClient {
         return this.request(`/api/sessions/${guildId}/members`);
     }
 
-    // Role Action APIs
-    async submitRoleAction(
-        guildId: string,
-        actionDefinitionId: string,
-        actorUserId: string,
-        targetUserIds: string[],
-        submittedBy: string = 'PLAYER'
-    ) {
-        return this.request(`/api/sessions/${guildId}/actions/submit`, {
-            method: 'POST',
-            body: JSON.stringify({
-                actionDefinitionId,
-                actorUserId,
-                targetUserIds,
-                submittedBy
-            })
-        });
-    }
-
-    async getAvailableActions(guildId: string, userId?: string) {
-        const params = userId ? `?userId=${userId}` : '';
-        return this.request(`/api/sessions/${guildId}/actions/available${params}`);
-    }
-
     async updateSessionSettings(guildId: string, settings: Record<string, any>) {
         return this.request(`/api/sessions/${guildId}/settings/update`, {
             method: 'POST',
@@ -263,11 +245,10 @@ export class ApiClient {
         });
     }
 
-    async saveCustomRole(guildId: string, roleDefinition: any) {
-        return this.request(`/api/sessions/${guildId}/custom-roles/save`, {
-            method: 'POST',
-            body: JSON.stringify(roleDefinition)
-        });
+
+    // User Info
+    async getUserInfo(guildId: string, userId: string) {
+        return this.request(`/api/users/${guildId}/${userId}`);
     }
 
     // Test connection

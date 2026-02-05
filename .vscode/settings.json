@@ -7,6 +7,7 @@
       "passed": true,
       "Tee-Object": true,
       "yarn build": true,
-      "Select": true
+      "Select": true,
+      "type": true
     }
 }

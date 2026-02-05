@@ -5,8 +5,6 @@ import dev.robothanzo.werewolf.database.documents.UserRole
 import dev.robothanzo.werewolf.security.annotations.CanManageGuild
 import dev.robothanzo.werewolf.security.annotations.CanViewGuild
 import dev.robothanzo.werewolf.service.*
-import dev.robothanzo.werewolf.utils.parseLong
-import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Lazy
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -20,10 +18,8 @@ class GameController(
     private val gameActionService: GameActionService,
     private val gameSessionService: GameSessionService,
     private val gameStateService: GameStateService,
-    private val roleActionService: RoleActionService
+    private val nightManager: NightManager
 ) {
-    private val log = LoggerFactory.getLogger(GameController::class.java)
-
     // --- Game State ---
     @GetMapping("/state")
     @CanViewGuild
@@ -44,9 +40,9 @@ class GameController(
     @PostMapping("/state/next")
     @CanManageGuild
     fun nextState(@PathVariable guildId: Long): ResponseEntity<*> {
-        val session = gameSessionService.getSession(guildId)
-            .orElseThrow { Exception("Session not found") }
-        gameStateService.nextStep(session)
+        gameSessionService.withLockedSession(guildId) { session ->
+            gameStateService.nextStep(session)
+        }
         return ResponseEntity.ok(mapOf("success" to true))
     }
 
@@ -56,10 +52,10 @@ class GameController(
         @PathVariable guildId: Long,
         @RequestBody body: Map<String, String>
     ): ResponseEntity<*> {
-        val session = gameSessionService.getSession(guildId)
-            .orElseThrow { Exception("Session not found") }
         val stepId = body["stepId"] ?: throw IllegalArgumentException("stepId is missing")
-        gameStateService.startStep(session, stepId)
+        gameSessionService.withLockedSession(guildId) { session ->
+            gameStateService.startStep(session, stepId)
+        }
         return ResponseEntity.ok(mapOf("success" to true))
     }
 
@@ -260,13 +256,24 @@ class GameController(
     @CanManageGuild
     fun updateSettings(
         @PathVariable guildId: Long,
-        @RequestBody body: Map<String, Any>
+        @RequestBody settings: Map<String, Any>
     ): ResponseEntity<*> {
         return try {
-            val session = gameSessionService.getSession(guildId)
-                .orElseThrow { Exception("Session not found") }
-            gameSessionService.updateSettings(session, body)
+            gameSessionService.withLockedSession(guildId) { session ->
+                for ((key, value) in settings) {
+                    when (key) {
+                        "doubleIdentities" -> session.doubleIdentities = value as Boolean
+                        "muteAfterSpeech" -> session.muteAfterSpeech = value as Boolean
+                        "witchCanSaveSelf" -> session.settings.witchCanSaveSelf = value as Boolean
+                        "allowWolfSelfKill" -> session.settings.allowWolfSelfKill = value as Boolean
+                        "hiddenRoleOnDeath" -> session.settings.hiddenRoleOnDeath = value as Boolean
+                        else -> throw IllegalArgumentException("Unknown setting: $key")
+                    }
+                }
+            }
             ResponseEntity.ok(mapOf("success" to true))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("success" to false, "error" to e.message))
         } catch (e: Exception) {
             ResponseEntity.internalServerError().body(mapOf("success" to false, "error" to e.message))
         }
@@ -304,7 +311,7 @@ class GameController(
 
             // Start the first step (Night Phase)
             gameStateService.startStep(session, "NIGHT_PHASE")
-            
+
             gameSessionService.broadcastSessionUpdate(session)
             ResponseEntity.ok(mapOf("success" to true))
         } catch (e: Exception) {
@@ -329,130 +336,36 @@ class GameController(
         }
     }
 
-    // --- Role Actions ---
-    @PostMapping("/actions/submit")
-    @CanManageGuild
-    fun submitRoleAction(
-        @PathVariable guildId: Long,
-        @RequestBody request: Map<String, Any>
-    ): ResponseEntity<*> {
-        return try {
-            val actionDefinitionId = request["actionDefinitionId"] as? String
-                ?: return ResponseEntity.badRequest()
-                    .body(mapOf("success" to false, "error" to "Missing actionDefinitionId"))
-            val actorUserId = parseLong(request["actorUserId"])
-                ?: return ResponseEntity.badRequest().body(mapOf("success" to false, "error" to "Missing actorUserId"))
-
-            @Suppress("UNCHECKED_CAST")
-            val targetUserIds = (request["targetUserIds"] as? List<*>)?.mapNotNull { parseLong(it) } ?: emptyList()
-            val submittedBy = request["submittedBy"] as? String ?: "PLAYER"
-
-            log.info(
-                "[ActionSubmit] guildId={}, actorUserId={}, actionDefinitionId={}, targets={}, submittedBy={}",
-                guildId,
-                actorUserId,
-                actionDefinitionId,
-                targetUserIds,
-                submittedBy
-            )
-            val result =
-                roleActionService.submitAction(guildId, actionDefinitionId, actorUserId, targetUserIds, submittedBy)
-            log.info("[ActionSubmit] result={}", result)
-            ResponseEntity.ok(result)
-        } catch (e: Exception) {
-            log.error("[ActionSubmit] Error submitting action: {}", e.message, e)
-            ResponseEntity.internalServerError().body(mapOf("success" to false, "error" to e.message))
-        }
-    }
-
-    @GetMapping("/actions/available")
+    @GetMapping("/night-status")
     @CanViewGuild
-    fun getAvailableActions(
-        @PathVariable guildId: Long,
-        @RequestParam(required = false) userId: Long?
-    ): ResponseEntity<*> {
+    fun getNightStatus(@PathVariable guildId: Long): ResponseEntity<*> {
         return try {
             val session = gameSessionService.getSession(guildId)
                 .orElseThrow { Exception("Session not found") }
 
-            val result = if (userId != null) {
-                // Get actions for specific player
-                mapOf("actions" to roleActionService.getAvailableActionsForPlayer(session, userId))
-            } else {
-                // Get all available actions for judge
-                mapOf("actions" to roleActionService.getAvailableActionsForJudge(session))
+            if (session.currentState != "NIGHT_PHASE") {
+                return ResponseEntity.ok(
+                    mapOf(
+                        "success" to false,
+                        "message" to "Not in night phase"
+                    )
+                )
             }
 
-            ResponseEntity.ok(result)
-        } catch (e: Exception) {
-            ResponseEntity.internalServerError().body(mapOf("success" to false, "error" to e.message))
-        }
-    }
-
-    @PostMapping("/settings/update")
-    @CanManageGuild
-    fun updateGameSettings(
-        @PathVariable guildId: Long,
-        @RequestBody settings: Map<String, Any>
-    ): ResponseEntity<*> {
-        return try {
-            val session = gameSessionService.getSession(guildId)
-                .orElseThrow { Exception("Session not found") }
-
-            // Update specific settings
-            for ((key, value) in settings) {
-                session.settings[key] = value
-            }
-
-            gameSessionService.saveSession(session)
-            ResponseEntity.ok(mapOf("success" to true))
-        } catch (e: Exception) {
-            ResponseEntity.internalServerError().body(mapOf("success" to false, "error" to e.message))
-        }
-    }
-
-    @PostMapping("/custom-roles/save")
-    @CanManageGuild
-    fun saveCustomRole(
-        @PathVariable guildId: Long,
-        @RequestBody roleDefinition: dev.robothanzo.werewolf.model.CustomRoleDefinition
-    ): ResponseEntity<*> {
-        return try {
-            val session = gameSessionService.getSession(guildId)
-                .orElseThrow { Exception("Session not found") }
-
-            @Suppress("UNCHECKED_CAST")
-            val customRoles =
-                (session.settings.getOrPut("customRoles") { mutableMapOf<String, Any>() } as MutableMap<String, Any>)
-
-            // Validate custom role
-            val warnings = mutableListOf<String>()
-            if (roleDefinition.camp !in listOf("WEREWOLF", "GOD", "VILLAGER")) {
-                warnings.add("Invalid camp: ${roleDefinition.camp}")
-            }
-            if (roleDefinition.actions.isEmpty()) {
-                warnings.add("Custom role has no actions")
-            }
-
-            // Convert to map and store
-            val roleMap = mapOf(
-                "name" to roleDefinition.name,
-                "camp" to roleDefinition.camp,
-                "actions" to roleDefinition.actions,
-                "eventListeners" to roleDefinition.eventListeners
-            )
-
-            customRoles[roleDefinition.name] = roleMap
-            gameSessionService.saveSession(session)
-
+            val nightStatus = nightManager.buildNightStatus(session)
             ResponseEntity.ok(
                 mapOf(
                     "success" to true,
-                    "warnings" to warnings
+                    "data" to nightStatus
                 )
             )
         } catch (e: Exception) {
-            ResponseEntity.internalServerError().body(mapOf("success" to false, "error" to e.message))
+            ResponseEntity.internalServerError().body(
+                mapOf(
+                    "success" to false,
+                    "error" to e.message
+                )
+            )
         }
     }
 }

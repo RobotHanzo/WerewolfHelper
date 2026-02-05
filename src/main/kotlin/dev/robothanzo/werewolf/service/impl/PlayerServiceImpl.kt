@@ -1,9 +1,7 @@
 package dev.robothanzo.werewolf.service.impl
 
-import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.PlayerService
 import dev.robothanzo.werewolf.utils.ActionTask
@@ -18,8 +16,6 @@ import java.util.concurrent.ConcurrentHashMap
 
 @Service
 class PlayerServiceImpl(
-    private val sessionRepository: SessionRepository,
-    private val discordService: DiscordService,
     private val gameSessionService: GameSessionService
 ) : PlayerService {
     private val log = LoggerFactory.getLogger(PlayerServiceImpl::class.java)
@@ -36,8 +32,7 @@ class PlayerServiceImpl(
         onPercent: (Int) -> Unit
     ) {
         val guildId = session.guildId
-        val jda = discordService.jda
-        val guild = jda.getGuildById(guildId) ?: throw Exception("Guild not found")
+        val guild = session.guild ?: throw Exception("Guild not found")
 
         onPercent(0)
         onProgress("開始同步 Discord 狀態...")
@@ -54,7 +49,7 @@ class PlayerServiceImpl(
             if (pid > count) {
                 val player = players.remove(idStr)
                 if (player != null) {
-                    val role = guild.getRoleById(player.roleId)
+                    val role = guild.getRoleById(player.role?.idLong ?: 0)
                     if (role != null) {
                         deleteTasks.add(
                             ActionTask(
@@ -63,7 +58,7 @@ class PlayerServiceImpl(
                             )
                         )
                     }
-                    val channel = guild.getTextChannelById(player.channelId)
+                    val channel = guild.getTextChannelById(player.channel?.idLong ?: 0)
                     if (channel != null) {
                         deleteTasks.add(
                             ActionTask(
@@ -81,7 +76,7 @@ class PlayerServiceImpl(
         }
 
         // Phase 2: Create Roles
-        val spectatorRole = guild.getRoleById(session.spectatorRoleId)
+        val spectatorRole = session.spectatorRole
         val newRolesMap: MutableMap<Int, Role> = ConcurrentHashMap()
 
         for (i in players.size + 1..count) {
@@ -147,7 +142,7 @@ class PlayerServiceImpl(
         }
 
         session.players = players
-        sessionRepository.save(session)
+        gameSessionService.saveSession(session)
         onPercent(100)
         onProgress("同步完成！")
     }
@@ -172,13 +167,12 @@ class PlayerServiceImpl(
             player.jinBaoBao = isJinBaoBao
             player.roles = finalRoles
 
-            sessionRepository.save(session)
+            gameSessionService.saveSession(session)
 
-            val jda = discordService.jda
-            if (jda != null && player.channelId != 0L) {
-                val guild = jda.getGuildById(session.guildId)
+            if (player.channel?.idLong != null && player.channel?.idLong != 0L) {
+                val guild = session.guild
                 if (guild != null) {
-                    player.send("法官已將你的身份更改為: ${roles.joinToString(", ")}")
+                    player.channel?.sendMessage("法官已將你的身份更改為: ${roles.joinToString(", ")}")?.queue()
                 }
             }
         } catch (e: Exception) {
@@ -203,8 +197,8 @@ class PlayerServiceImpl(
                 it[0] = it[1]
                 it[1] = first
             }
-            sessionRepository.save(session)
-            player.send("你已交換了角色順序，現在主要角色為: ${roles[0]}")
+            gameSessionService.saveSession(session)
+            player.channel?.sendMessage("你已交換了角色順序，現在主要角色為: ${roles[0]}")?.queue()
         } catch (e: Exception) {
             log.error("Switch role order failed: {}", e.message, e)
             throw RuntimeException("Failed to switch role order", e)
@@ -216,7 +210,7 @@ class PlayerServiceImpl(
             val session = player.session ?: throw Exception("Player session not found")
 
             player.rolePositionLocked = locked
-            sessionRepository.save(session)
+            gameSessionService.saveSession(session)
         } catch (e: Exception) {
             log.error("Failed to set role position lock: {}", e.message, e)
             throw RuntimeException("Failed to set role position lock", e)

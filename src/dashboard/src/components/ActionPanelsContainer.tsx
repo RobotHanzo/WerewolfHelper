@@ -1,17 +1,12 @@
 import {GameState} from '@/types';
-import {JudgeActionPanel} from './JudgeActionPanel';
 import {useTranslation} from '@/lib/i18n';
 
 interface ActionPanelsContainerProps {
-    guildId: string;
     gameState: GameState;
-    isJudge: boolean;
 }
 
 export function ActionPanelsContainer({
-                                          guildId,
                                           gameState,
-                                          isJudge,
                                       }: ActionPanelsContainerProps) {
     const {t} = useTranslation();
 
@@ -31,18 +26,6 @@ export function ActionPanelsContainer({
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
                     {isNightPhase ? t('actions.nightPhase') || 'Night Actions' : t('actions.daytimeActions') || 'Daytime Actions'}
                 </h3>
-
-                {/* Judge can always submit actions during these phases */}
-                {isJudge && (
-                    <div className="mb-6">
-                        <div className="text-sm text-slate-600 dark:text-slate-400 mb-3 font-medium">
-                            {t('speechManager.judgeManualOverride') || 'Judge Manual Override'}
-                        </div>
-                        <JudgeActionPanel guildId={guildId}/>
-                    </div>
-                )}
-
-
             </div>
         </div>
     );

@@ -1,32 +1,42 @@
 package dev.robothanzo.werewolf.listeners
 
 import dev.robothanzo.jda.interactions.annotations.Button
+import dev.robothanzo.jda.interactions.annotations.select.StringSelectMenu
 import dev.robothanzo.werewolf.WerewolfApplication
-import dev.robothanzo.werewolf.commands.Poll
+import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID
 import dev.robothanzo.werewolf.model.Candidate
 import dev.robothanzo.werewolf.utils.CmdUtils
+import dev.robothanzo.werewolf.utils.isAdmin
+import dev.robothanzo.werewolf.utils.player
+import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
+import org.springframework.stereotype.Component
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import dev.robothanzo.werewolf.database.documents.Player as DatabasePlayer
 
+@Component
 class ButtonListener : ListenerAdapter() {
     companion object {
-        // Track pending action selections waiting for targets (guildId:playerId -> actionId)
-        private val pendingActionSelections = ConcurrentHashMap<String, String>()
-
-        fun getPendingAction(guildId: Long, playerId: String): String? {
-            return pendingActionSelections["$guildId:$playerId"]
-        }
-
-        fun setPendingAction(guildId: Long, playerId: String, actionId: String) {
-            pendingActionSelections["$guildId:$playerId"] = actionId
-        }
-
-        fun clearPendingAction(guildId: Long, playerId: String) {
-            pendingActionSelections.remove("$guildId:$playerId")
+        fun getVerifiedPlayerAndIsJudge(
+            event: ButtonInteractionEvent,
+            session: Session
+        ): Pair<DatabasePlayer?, Boolean> {
+            val isJudge = event.member?.isAdmin() == true
+            val player = session.getPlayerByChannel(event.channel.idLong)
+            if (player == null) {
+                event.hook.editOriginal(":x: 找不到玩家").queue()
+                return null to isJudge
+            }
+            val interactingPlayer = event.member?.player()
+            if (player.id != interactingPlayer?.id && !isJudge) {
+                event.hook.editOriginal(":x: 這不是你的按鈕").queue()
+                return null to false
+            }
+            return player to isJudge
         }
     }
 
@@ -45,154 +55,197 @@ class ButtonListener : ListenerAdapter() {
                 return
             }
 
-            "terminateTimer" -> {
-                event.deferReply(true).queue()
-                if (CmdUtils.isAdmin(event)) {
-                    try {
-                        WerewolfApplication.speechService.stopTimer(event.channel.idLong)
-                        event.hook.editOriginal(":white_check_mark:").queue()
-                    } catch (e: Exception) {
-                        event.hook.editOriginal(":x:").queue()
-                    }
-                } else {
-                    event.hook.editOriginal(":x:").queue()
-                }
-                return
-            }
-
             "selectAction" -> {
-                event.deferReply(true).queue()
+                event.deferReply().queue()
                 val actionId = if (id.size > 1) id[1] else return
-                val session = CmdUtils.getSession(event) ?: return
-                var player: DatabasePlayer? = null
-                for (p in session.fetchAlivePlayers().values) {
-                    if (p.userId != null && p.userId == event.user.idLong) {
-                        player = p
-                        break
+
+                // Use withLockedSession to ensure we are working with the latest session state
+                WerewolfApplication.gameSessionService.withLockedSession(event.guild!!.idLong) { session ->
+                    val (player, isJudge) = getVerifiedPlayerAndIsJudge(event, session)
+                    if (player == null) return@withLockedSession
+                    if (player.actionSubmitted) {
+                        event.hook.sendMessage(":x: 你已提交行動，無法再次選擇").queue()
+                        return@withLockedSession
                     }
-                }
-                if (player == null) {
-                    event.hook.editOriginal(":x: 找不到玩家").queue()
-                    return
-                }
-                if (player.actionSubmitted) {
-                    event.hook.editOriginal(":x: 你已提交行動，無法再次選擇").queue()
-                    return
-                }
-                if (getPendingAction(event.guild!!.idLong, player.id.toString()) != null) {
-                    event.hook.editOriginal(":x: 你已有待選的行動，請先選擇目標").queue()
-                    return
-                }
-
-                // Get the action definition
-                val actionExecutor = WerewolfApplication.roleActionExecutor
-                val action = actionExecutor.getActionById(actionId)
-
-                if (action != null && action.targetCount > 0) {
-                    // Action requires targets - show target selection menu
-                    setPendingAction(event.guild!!.idLong, player.id.toString(), actionId)
-
-                    val alivePlayers = session.fetchAlivePlayers().values.filter { it.id != player.id }
-                    if (alivePlayers.isEmpty()) {
-                        event.hook.editOriginal(":x: 沒有可選的目標").queue()
-                        clearPendingAction(event.guild!!.idLong, player.id.toString())
-                        return
+                    // Get the prompt to check if there's already a pending selection, if so, delete
+                    val prompt = WerewolfApplication.actionUIService.getPrompt(session, player.id.toString())
+                    if (prompt?.selectedAction != null && prompt.selectedTargets.isEmpty()) {
+                        prompt.targetPromptId?.let { event.messageChannel.deleteMessageById(it) }
                     }
 
-                    val targetMessage = buildString {
-                        appendLine("🎯 **選擇目標**")
-                        appendLine()
-                        appendLine("請選擇 **${action.roleName}** 的 **${action.actionName}** 目標：")
-                        for (p in alivePlayers) {
-                            appendLine("- ${p.nickname}")
-                        }
-                    }
+                    // Get the action definition
+                    val actionExecutor = WerewolfApplication.roleActionExecutor
+                    val action = actionExecutor.getActionById(actionId)
 
-                    val targetButtons = alivePlayers.map { p ->
-                        net.dv8tion.jda.api.components.buttons.Button.secondary(
-                            "selectTarget:${player.id}:${p.id}",
-                            "Player ${p.id}"
+                    if (action != null && action.targetCount > 0) {
+                        // Update selection in a persistent state
+                        WerewolfApplication.actionUIService.updateActionSelection(
+                            event.guild!!.idLong,
+                            player.id.toString(),
+                            actionId,
+                            session
                         )
+
+                        // Filter eligible targets using the action's logic
+                        val allAlivePlayerIds = session.fetchAlivePlayers().values.mapNotNull { it.user?.idLong }
+                        val actorUserId = player.user?.idLong ?: event.user.idLong
+                        val eligibleTargetIds = action.eligibleTargets(session, actorUserId, allAlivePlayerIds)
+
+                        val eligiblePlayers = session.players.values.filter {
+                            it.user?.idLong != null && it.user?.idLong in eligibleTargetIds
+                        }
+
+                        if (eligiblePlayers.isEmpty()) {
+                            event.hook.sendMessage(":x: 沒有可選的目標").queue()
+                            WerewolfApplication.actionUIService.clearPrompt(session, player.id.toString())
+                            return@withLockedSession
+                        }
+
+                        val targetMessage = buildString {
+                            appendLine("🎯 **選擇目標**")
+                            appendLine()
+                            appendLine("請選擇 **${action.roleName}** 的 **${action.actionName}** 目標：")
+                        }
+
+                        val targetButtons = eligiblePlayers.map { p ->
+                            net.dv8tion.jda.api.components.buttons.Button.secondary(
+                                "selectTarget:${p.id}",
+                                p.nickname
+                            )
+                        }.toMutableList()
+
+                        // Add Skip button
+                        targetButtons.add(
+                            net.dv8tion.jda.api.components.buttons.Button.danger(
+                                "selectTarget:$SKIP_TARGET_ID",
+                                "跳過"
+                            )
+                        )
+
+                        event.hook.sendMessage(targetMessage).setComponents(ActionRow.of(targetButtons))
+                            .onSuccess { prompt?.targetPromptId = it.idLong }.queue()
+
+                        // RoleActionService.updateActionStatus already uses Persistent Session calls internally from previous refactor (if any) or needs it.
+                        WerewolfApplication.roleActionService.updateActionStatus(
+                            event.guild!!.idLong,
+                            player.user?.idLong ?: event.user.idLong,
+                            "ACTING",
+                            actionId,
+                            session = session
+                        )
+                    } else {
+                        // No targets required - submit immediately
+                        WerewolfApplication.actionUIService.clearPrompt(session, player.id.toString())
+                        WerewolfApplication.roleActionService.submitAction(
+                            event.guild!!.idLong,
+                            actionId,
+                            player.user?.idLong ?: event.user.idLong,
+                            emptyList(),
+                            if (isJudge) "JUDGE" else "PLAYER"
+                        )
+                        event.hook.editOriginal(":white_check_mark: 已執行行動").queue()
                     }
-
-                    player.send(targetMessage, queue = false)?.setComponents(
-                        net.dv8tion.jda.api.components.actionrow.ActionRow.of(targetButtons)
-                    )?.queue()
-
-                    event.hook.editOriginal(":white_check_mark: 請選擇目標").queue()
-                } else {
-                    // No targets required - submit immediately
-                    WerewolfApplication.actionUIService.clearPrompt(player.id.toString())
-                    WerewolfApplication.roleActionService.submitAction(
-                        event.guild!!.idLong,
-                        actionId,
-                        event.user.idLong,
-                        emptyList(),
-                        "PLAYER"
-                    )
-                    event.hook.editOriginal(":white_check_mark: 已執行行動").queue()
                 }
                 return
             }
 
             "skipAction" -> {
                 event.deferReply(true).queue()
-                val playerId = if (id.size > 1) id[1] else return
-                val session = CmdUtils.getSession(event) ?: return
-                // Mark action as submitted but without actual action
-                val player = session.players[playerId]
-                if (player != null) {
+                WerewolfApplication.gameSessionService.withLockedSession(event.guild!!.idLong) { session ->
+                    val (player, _) = getVerifiedPlayerAndIsJudge(event, session)
+                    if (player == null) return@withLockedSession
+                    // Mark action as submitted but without actual action
                     player.actionSubmitted = true
+                    // Update UI status to SKIPPED so the night can resolve early
+                    WerewolfApplication.roleActionService.updateActionStatus(
+                        event.guild!!.idLong,
+                        player.user?.idLong ?: event.user.idLong,
+                        "SKIPPED",
+                        targetUserIds = listOf(SKIP_TARGET_ID),
+                        session = session
+                    )
                     // Clear the action prompt to cancel reminder
-                    WerewolfApplication.actionUIService.clearPrompt(playerId)
+                    WerewolfApplication.actionUIService.clearPrompt(session, player.id.toString())
+                    event.hook.editOriginal(":white_check_mark: 已跳過").queue()
                 }
-                event.hook.editOriginal(":white_check_mark: 已跳過").queue()
                 return
             }
 
             "selectTarget" -> {
                 event.deferReply(true).queue()
-                if (id.size < 3) {
+                if (id.size < 2) {
                     event.hook.editOriginal(":x: 無效的目標選擇").queue()
                     return
                 }
-                val playerId = id[1]
-                val targetId = id[2]
-                val session = CmdUtils.getSession(event) ?: return
+                val targetId = id[1]
                 val guildId = event.guild!!.idLong
 
-                val player = session.players[playerId]
-                val target = session.players[targetId]
+                WerewolfApplication.gameSessionService.withLockedSession(guildId) { session ->
+                    val (player, isJudge) = getVerifiedPlayerAndIsJudge(event, session)
+                    if (player == null) return@withLockedSession
 
-                if (player == null || target == null || player.userId != event.user.idLong) {
-                    event.hook.editOriginal(":x: 找不到玩家或目標").queue()
-                    return
+                    val prompt = WerewolfApplication.actionUIService.getPrompt(session, player.id.toString())
+                    val actionId = prompt?.selectedAction?.actionId
+                    if (actionId == null) {
+                        event.hook.editOriginal(":x: 沒有待選的行動").queue()
+                        return@withLockedSession
+                    }
+
+                    if (targetId == SKIP_TARGET_ID.toString()) {
+                        // Handle Skip
+                        WerewolfApplication.roleActionService.submitAction(
+                            guildId,
+                            actionId,
+                            player.user?.idLong ?: event.user.idLong,
+                            listOf(SKIP_TARGET_ID),
+                            if (isJudge) "JUDGE" else "PLAYER"
+                        )
+
+                        WerewolfApplication.actionUIService.clearPrompt(session, player.id.toString())
+                        player.actionSubmitted = true
+                        event.hook.editOriginal(":white_check_mark: 已選擇 **跳過** 本回合行動").queue()
+                        return@withLockedSession
+                    }
+
+                    val target = session.players[targetId]
+
+                    if (target == null) {
+                        event.hook.editOriginal(":x: 找不到目標").queue()
+                        return@withLockedSession
+                    }
+                    if (player.actionSubmitted) {
+                        event.hook.editOriginal(":x: 你已提交行動，無法再次選擇").queue()
+                        return@withLockedSession
+                    }
+
+
+                    // Submit action with target
+                    val targetUserId = target.user?.idLong ?: return@withLockedSession
+                    WerewolfApplication.actionUIService.submitTargetSelection(
+                        guildId,
+                        player.id.toString(),
+                        player.user?.idLong ?: event.user.idLong,
+                        targetUserId,
+                        session
+                    )
+
+                    val result = WerewolfApplication.roleActionService.submitAction(
+                        guildId,
+                        actionId,
+                        player.user?.idLong ?: event.user.idLong,
+                        listOf(targetUserId),
+                        if (isJudge) "JUDGE" else "PLAYER"
+                    )
+
+                    if (result["success"] == true) {
+                        // Clear the prompt after submission
+                        WerewolfApplication.actionUIService.clearPrompt(session, player.id.toString())
+                        player.actionSubmitted = true
+                        event.hook.editOriginal(":white_check_mark: 已選擇 **${target.nickname}** 為目標").queue()
+                    } else {
+                        event.hook.editOriginal(":x: ${result["error"]}").queue()
+                    }
                 }
-                if (player.actionSubmitted) {
-                    event.hook.editOriginal(":x: 你已提交行動，無法再次選擇").queue()
-                    return
-                }
-
-                val actionId = getPendingAction(guildId, playerId)
-                if (actionId == null) {
-                    event.hook.editOriginal(":x: 沒有待選的行動").queue()
-                    return
-                }
-
-                // Clear pending selection
-                clearPendingAction(guildId, playerId)
-                WerewolfApplication.actionUIService.clearPrompt(playerId)
-
-                // Submit action with target
-                WerewolfApplication.roleActionService.submitAction(
-                    guildId,
-                    actionId,
-                    event.user.idLong,
-                    listOf(target.userId ?: return),
-                    "PLAYER"
-                )
-                player.actionSubmitted = true
-                event.hook.editOriginal(":white_check_mark: 已選擇 **$targetId** 為目標").queue()
                 return
             }
         }
@@ -201,74 +254,85 @@ class ButtonListener : ListenerAdapter() {
 
         event.deferReply(true).queue()
 
-        val session = CmdUtils.getSession(event) ?: return
-        var player: DatabasePlayer? = null
-        var check = false
+        val guildId = event.guild!!.idLong
+        WerewolfApplication.gameSessionService.withLockedSession(guildId) { session ->
+            var player: DatabasePlayer? = null
+            var check = false
 
-        for (p in session.fetchAlivePlayers().values) {
-            if (p.userId != null && p.userId == event.user.idLong) {
-                check = true
-                player = p
-                break
-            }
-        }
-
-        if (!check || player == null) {
-            event.hook.editOriginal(":x: 只有玩家能投票").queue()
-            return
-        }
-        if (player.idiot && (player.roles == null || player.roles!!.isEmpty())) {
-            event.hook.editOriginal(":x: 死掉的白癡不得投票").queue()
-            return
-        }
-
-        if (customId.startsWith("votePolice")) {
-            val guildId = event.guild!!.idLong
-            if (WerewolfApplication.policeService.sessions.containsKey(guildId)) {
-                val policeSession = WerewolfApplication.policeService.sessions[guildId]!!
-                val candidates = policeSession.candidates
-
-                if (candidates.containsKey(player.id)) {
-                    event.hook.editOriginal(":x: 你曾經參選過或正在參選，不得投票").queue()
-                    return
+            for (p in session.fetchAlivePlayers().values) {
+                if (p.user?.idLong != null && p.user?.idLong == event.user.idLong) {
+                    check = true
+                    player = p
+                    break
                 }
+            }
 
-                val candidateId = customId.replace("votePolice", "").toIntOrNull()
-                val electedCandidate = if (candidateId != null) candidates[candidateId] else null
+            if (!check || player == null) {
+                event.hook.editOriginal(":x: 只有玩家能投票").queue()
+                return@withLockedSession
+            }
+            if (player.idiot && (player.roles == null || player.roles!!.isEmpty())) {
+                event.hook.editOriginal(":x: 死掉的白癡不得投票").queue()
+                return@withLockedSession
+            }
 
-                if (electedCandidate != null) {
-                    handleVote(event, candidates, electedCandidate)
-                    // Broadcast update immediately
-                    WerewolfApplication.gameSessionService.broadcastSessionUpdate(session)
+            if (customId.startsWith("votePolice")) {
+                if (WerewolfApplication.policeService.sessions.containsKey(guildId)) {
+                    val policeSession = WerewolfApplication.policeService.sessions[guildId]!!
+                    val candidates = policeSession.candidates
+
+                    if (!policeSession.isEligibleVoter(player)) {
+                        event.hook.editOriginal(":x: 你曾經參選過或正在參選，不得投票").queue()
+                        return@withLockedSession
+                    }
+
+                    val candidateId = customId.replace("votePolice", "").toIntOrNull()
+                    val electedCandidate = if (candidateId != null) candidates[candidateId] else null
+
+                    if (electedCandidate != null) {
+                        handleVote(event, candidates, electedCandidate)
+                        // Broadcast update immediately
+                        WerewolfApplication.gameSessionService.broadcastSessionUpdate(session)
+                    } else {
+                        event.hook.editOriginal(":x: 找不到候選人").queue()
+                    }
                 } else {
-                    event.hook.editOriginal(":x: 找不到候選人").queue()
+                    event.hook.editOriginal(":x: 投票已過期").queue()
                 }
-            } else {
-                event.hook.editOriginal(":x: 投票已過期").queue()
             }
-        }
 
-        if (customId.startsWith("voteExpel")) {
-            val guildId = event.guild!!.idLong
-            if (Poll.expelCandidates.containsKey(guildId)) {
-                val candidates = Poll.expelCandidates[guildId]!!
-                val votingCandidate = candidates[player.id]
+            if (customId.startsWith("voteExpel")) {
+                val poll = WerewolfApplication.expelService.getPoll(guildId)
+                if (poll != null) {
+                    // Check voter eligibility
+                    if (!poll.isEligibleVoter(player)) {
+                        event.hook.editOriginal(":x: 你不得投票").queue()
+                        return@withLockedSession
+                    }
 
-                if (votingCandidate != null && votingCandidate.expelPK) {
-                    event.hook.editOriginal(":x: 你正在和別人進行放逐辯論，不得投票").queue()
-                    return
+                    val candidates = WerewolfApplication.expelService.getPollCandidates(guildId)!!
+                    val votingCandidate = candidates[player.id]
+
+                    if (votingCandidate != null && votingCandidate.expelPK) {
+                        event.hook.editOriginal(":x: 你正在和別人進行放逐辯論，不得投票").queue()
+                        return@withLockedSession
+                    }
+
+                    val candidateId = customId.replace("voteExpel", "").toIntOrNull()
+                    val electedCandidate = if (candidateId != null) candidates[candidateId] else null
+
+                    if (electedCandidate != null) {
+                        handleVote(
+                            event,
+                            candidates,
+                            electedCandidate
+                        ) // Fixed: was passing candidates, electedCandidate
+                        // Broadcast update immediately
+                        WerewolfApplication.gameSessionService.broadcastSessionUpdate(session)
+                    }
+                } else {
+                    event.hook.editOriginal(":x: 投票已過期").queue()
                 }
-
-                val candidateId = customId.replace("voteExpel", "").toIntOrNull()
-                val electedCandidate = if (candidateId != null) candidates[candidateId] else null
-
-                if (electedCandidate != null) {
-                    handleVote(event, candidates, electedCandidate) // Fixed: was passing candidates, electedCandidate
-                    // Broadcast update immediately
-                    WerewolfApplication.gameSessionService.broadcastSessionUpdate(session)
-                }
-            } else {
-                event.hook.editOriginal(":x: 投票已過期").queue()
             }
         }
     }
@@ -287,7 +351,7 @@ class ButtonListener : ListenerAdapter() {
         var handled = false
         for (candidate in LinkedList(candidates.values)) {
             if (candidate.electors.contains(event.user.idLong)) {
-                if (candidate.player.userId == electedCandidate.player.userId) {
+                if (candidate.player.user?.idLong == electedCandidate.player.user?.idLong) {
                     electedCandidate.electors.remove(event.user.idLong)
                     event.hook.editOriginal(":white_check_mark: 已改為棄票").queue()
                 } else {
@@ -327,6 +391,41 @@ class ButtonListener : ListenerAdapter() {
             event.hook.editOriginal(":white_check_mark: 交換成功").queue()
         } catch (e: Exception) {
             event.hook.editOriginal(":x: " + e.message).queue()
+        }
+    }
+
+    @StringSelectMenu
+    fun selectOrder(event: StringSelectInteractionEvent) {
+        WerewolfApplication.speechService.handleOrderSelection(event)
+    }
+
+    @Button
+    fun confirmOrder(event: ButtonInteractionEvent) {
+        WerewolfApplication.speechService.confirmOrder(event)
+    }
+
+    @Button
+    fun skipSpeech(event: ButtonInteractionEvent) {
+        WerewolfApplication.speechService.skipSpeech(event)
+    }
+
+    @Button
+    fun interruptSpeech(event: ButtonInteractionEvent) {
+        WerewolfApplication.speechService.interruptSpeech(event)
+    }
+
+    @Button
+    fun terminateTimer(event: ButtonInteractionEvent) {
+        event.deferReply(true).queue()
+        if (CmdUtils.isAdmin(event)) {
+            try {
+                WerewolfApplication.speechService.stopTimer(event.channel.idLong)
+                event.hook.editOriginal(":white_check_mark:").queue()
+            } catch (_: Exception) {
+                event.hook.editOriginal(":x:").queue()
+            }
+        } else {
+            event.hook.editOriginal(":x:").queue()
         }
     }
 }

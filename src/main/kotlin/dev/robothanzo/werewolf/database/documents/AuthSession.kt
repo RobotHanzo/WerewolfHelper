@@ -12,9 +12,6 @@ import java.util.concurrent.TimeUnit
 data class AuthSession(
     var sessionId: String? = null,
     var userId: String? = null,
-    var username: String? = null,
-    var discriminator: String? = null,
-    var avatar: String? = null,
     var guildId: String? = null,
     var role: UserRole? = null,
     var createdAt: Date? = null

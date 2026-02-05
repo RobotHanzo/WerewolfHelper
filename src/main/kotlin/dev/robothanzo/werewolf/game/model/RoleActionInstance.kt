@@ -10,5 +10,6 @@ data class RoleActionInstance(
     val actionDefinitionId: String,
     val targets: List<Long>,
     val submittedBy: ActionSubmissionSource,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    var processed: Boolean = false
 )

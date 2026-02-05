@@ -1,21 +1,17 @@
 package dev.robothanzo.werewolf.model
 
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import net.dv8tion.jda.api.entities.Message
-import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 
-data class PoliceSession(
-    val guildId: Long,
-    val channelId: Long,
-    val session: Session,
+class PoliceSession(
+    guildId: Long,
+    channelId: Long,
+    session: Session,
     var state: State = State.NONE,
     var stageEndTime: Long = 0,
-    val candidates: MutableMap<Int, Candidate> = ConcurrentHashMap(),
-    var message: Message? = null,
-    var poll10sTask: TimerTask? = null,
-    var pollFinishTask: TimerTask? = null
-) {
+    message: Message? = null
+) : AbstractPoll(guildId, channelId, session, message) {
     enum class State {
         NONE, ENROLLMENT, SPEECH, UNENROLLMENT, VOTING, FINISHED;
 
@@ -26,5 +22,10 @@ data class PoliceSession(
         fun canQuit(): Boolean {
             return this == ENROLLMENT || this == UNENROLLMENT
         }
+    }
+
+    override fun isEligibleVoter(player: Player): Boolean {
+        // Only players who never enrolled (i.e., not present in candidates map) are eligible
+        return player.alive && !candidates.containsKey(player.id)
     }
 }

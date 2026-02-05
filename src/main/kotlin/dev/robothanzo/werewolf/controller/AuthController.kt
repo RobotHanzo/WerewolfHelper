@@ -1,15 +1,16 @@
 package dev.robothanzo.werewolf.controller
 
+import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.AuthSession
 import dev.robothanzo.werewolf.database.documents.UserRole
 import dev.robothanzo.werewolf.service.DiscordService
+import dev.robothanzo.werewolf.utils.isAdmin
 import io.mokulu.discord.oauth.DiscordAPI
 import io.mokulu.discord.oauth.DiscordOAuth
 import io.mokulu.discord.oauth.model.User
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.servlet.http.HttpSession
-import net.dv8tion.jda.api.Permission
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -67,10 +68,7 @@ class AuthController(
 
             // Store user in Session
             val authSession = AuthSession(
-                userId = user.id,
-                username = user.username,
-                discriminator = user.discriminator,
-                avatar = user.avatar
+                userId = user.id
             )
 
             session.setAttribute("user", authSession)
@@ -83,8 +81,7 @@ class AuthController(
 
                     // Attempt to pre-calculate role
                     val member = discordService.getMember(gid, user.id.toString())
-                    if (member != null && (member.hasPermission(Permission.ADMINISTRATOR)
-                                || member.hasPermission(Permission.MANAGE_SERVER))
+                    if (member != null && (member.isAdmin())
                     ) {
                         authSession.role = UserRole.JUDGE
                     } else {
@@ -133,13 +130,7 @@ class AuthController(
                     .body(mapOf("success" to false, "error" to "Not a member"))
 
             // Determine role
-            var role = UserRole.SPECTATOR // Default
-            if (member.hasPermission(Permission.ADMINISTRATOR)
-                || member.hasPermission(Permission.MANAGE_SERVER)
-            ) {
-                role = UserRole.JUDGE
-            }
-
+            val role = if (member.isAdmin()) UserRole.JUDGE else UserRole.SPECTATOR
             user.guildId = guildId
             user.role = role
             session.setAttribute("user", user)
@@ -158,7 +149,15 @@ class AuthController(
         val user = session.getAttribute("user") as? AuthSession
             ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(mapOf("success" to false, "error" to "Not authenticated"))
-        return ResponseEntity.ok(mapOf("success" to true, "user" to user))
+
+        val response = mutableMapOf<String, Any?>()
+        response["success"] = true
+        response["user"] = user
+        val discordUser = user.userId?.let { WerewolfApplication.jda.getUserById(it) }
+        response["username"] = discordUser?.name
+        response["avatar"] = discordUser?.effectiveAvatarUrl
+
+        return ResponseEntity.ok(response)
     }
 
     @PostMapping("/logout")

@@ -4,6 +4,7 @@ import {useWebSocket} from '@/lib/websocket';
 import {api} from '@/lib/api';
 import {GameState, Player, User} from '@/types';
 import {INITIAL_PLAYERS} from '@/utils/mockData';
+import {usePlayerContext} from '@/features/players/contexts/PlayerContext';
 
 export interface OverlayState {
     visible: boolean;
@@ -16,6 +17,7 @@ export interface OverlayState {
 
 export const useGameState = (guildId: string | undefined, user: User | null) => {
     const {t} = useTranslation();
+    const {userInfoCache, fetchUserInfo} = usePlayerContext();
     const [gameState, setGameState] = useState<GameState>({
         phase: 'LOBBY',
         day: 0,
@@ -38,28 +40,37 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
 
     // Helper to map session data to GameState players
     const mapSessionToPlayers = (sessionData: any): Player[] => {
-        return sessionData.players.map((player: any) => ({
-            id: player.id,
-            name: player.userId ? player.name : `${t('messages.player')} ${player.id} `,
-            userId: player.userId,
-            username: player.username,
-            avatar: player.userId ? player.avatar : null,
-            roles: player.roles || [],
-            deadRoles: player.deadRoles || [],
-            isAlive: player.isAlive,
-            isSheriff: player.police,
-            isJinBaoBao: player.jinBaoBao,
-            isProtected: false,
-            isPoisoned: false,
-            isSilenced: false,
-            isDuplicated: player.duplicated,
-            isJudge: player.isJudge || false,
-            rolePositionLocked: player.rolePositionLocked,
-            statuses: [
-                ...(player.police ? ['sheriff'] : []),
-                ...(player.jinBaoBao ? ['jinBaoBao'] : []),
-            ] as any, // using any to bypass strictly typed array check for now, can be improved
-        }));
+        return sessionData.players.map((player: any) => {
+            const cachedUser = player.userId ? userInfoCache[player.userId] : null;
+
+            // Trigger fetch if missing and we have a userId
+            if (player.userId && !cachedUser && guildId) {
+                fetchUserInfo(player.userId, guildId);
+            }
+
+            return {
+                id: player.id,
+                name: cachedUser ? cachedUser.name : (player.name || `${t('messages.player')} ${player.id}`),
+                userId: player.userId,
+                username: cachedUser ? cachedUser.name : player.username, // Fallback or use name as username
+                avatar: cachedUser ? cachedUser.avatar : (player.avatar || null),
+                roles: player.roles || [],
+                deadRoles: player.deadRoles || [],
+                isAlive: player.isAlive,
+                isSheriff: player.police,
+                isJinBaoBao: player.jinBaoBao,
+                isProtected: false,
+                isPoisoned: false,
+                isSilenced: false,
+                isDuplicated: player.duplicated,
+                isJudge: player.isJudge || false,
+                rolePositionLocked: player.rolePositionLocked,
+                statuses: [
+                    ...(player.police ? ['sheriff'] : []),
+                    ...(player.jinBaoBao ? ['jinBaoBao'] : []),
+                ] as any,
+            };
+        });
     };
 
     // WebSocket connection
@@ -192,7 +203,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
         };
 
         loadGameState();
-    }, [guildId, user]);
+    }, [guildId, user, userInfoCache]); // Add userInfoCache to dependency to re-render when cache updates
 
     return {
         gameState,

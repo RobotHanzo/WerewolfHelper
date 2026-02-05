@@ -64,11 +64,49 @@ export interface PoliceState {
 
 export interface ExpelState {
     voting: boolean;
+    endTime?: number;
     candidates: {
         id: string;
         quit?: boolean;
         voters: string[];
     }[];
+}
+
+export interface WerewolfMessage {
+    senderId: string;
+    senderName: string;
+    avatarUrl?: string | null;
+    content: string;
+    timestamp: number;
+}
+
+export interface WerewolfVote {
+    voterId: string;
+    voterName: string;
+    targetId: string | null;
+    targetName: string | null;
+}
+
+export interface ActionSubmissionStatus {
+    playerId: string;
+    playerName: string;
+    role: string;
+    status: 'PENDING' | 'SUBMITTED' | 'SKIPPED';
+    actionType: string | null;
+    targetId: string | null;
+    targetName: string | null;
+    submittedAt: number | null;
+}
+
+export interface NightStatus {
+    day: number;
+    phaseType: 'WEREWOLF_VOTING' | 'ROLE_ACTIONS';
+    startTime: number;
+    endTime: number;
+    remainingSeconds: number;
+    werewolfMessages: WerewolfMessage[];
+    werewolfVotes: WerewolfVote[];
+    actionStatuses: ActionSubmissionStatus[];
 }
 
 export interface SpeechState {

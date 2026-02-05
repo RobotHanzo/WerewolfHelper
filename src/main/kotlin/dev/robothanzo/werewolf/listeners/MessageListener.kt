@@ -4,14 +4,25 @@ import club.minnced.discord.webhook.WebhookClient
 import club.minnced.discord.webhook.send.WebhookMessageBuilder
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.service.GameSessionService
+import dev.robothanzo.werewolf.service.NightManager
 import dev.robothanzo.werewolf.utils.CmdUtils
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
-import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Lazy
+import org.springframework.stereotype.Component
 
+@Component
 class MessageListener : ListenerAdapter() {
-    private val log = LoggerFactory.getLogger(MessageListener::class.java)
+    @Autowired(required = false)
+    @Lazy
+    private lateinit var gameSessionService: GameSessionService
+
+    @Autowired(required = false)
+    @Lazy
+    private lateinit var nightManager: NightManager
 
     companion object {
         val webhookCache: MutableMap<Long, WebhookClient> = HashMap()
@@ -45,7 +56,7 @@ class MessageListener : ListenerAdapter() {
         val roles = player.roles
         if (roles.isNullOrEmpty()) return false
 
-        val firstRole = roles.first()
+        val firstRole = roles.filterNot { player.deadRoles?.contains(it) == true }.first()
         return firstRole.contains("狼人") ||
                 roles.contains("狼兄") ||
                 firstRole.contains("狼王") ||
@@ -62,36 +73,66 @@ class MessageListener : ListenerAdapter() {
 
         for (player in session.fetchAlivePlayers().values) {
             if (!player.roles.isNullOrEmpty()) {
-                if ((shouldSend(player, session) && player.channelId == event.channel.idLong)
-                    || event.channel.idLong == session.judgeTextChannelId
+                val isJudgeChannel = event.channel == session.judgeTextChannel
+                if ((player.channel == event.channel && shouldSend(player, session)) ||
+                    isJudgeChannel
                 ) {
+                    // Track werewolf messages during night phase for NightStatus
+                    if (session.currentState == "NIGHT_PHASE" && ::gameSessionService.isInitialized) {
+                        gameSessionService.withLockedSession(session.guildId) { lockedSession ->
+                            // Record if it's from the judge channel or the werewolf's own channel
+                            val messagesList = lockedSession.stateData.werewolfMessages
+
+                            val senderName = if (isJudgeChannel) {
+                                "法官頻道 (${event.member?.effectiveName ?: event.author.name})"
+                            } else {
+                                lockedSession.players[event.author.id]?.nickname ?: player.nickname
+                            }
+
+                            messagesList.add(
+                                dev.robothanzo.werewolf.game.model.WerewolfMessage(
+                                    senderId = event.author.id,
+                                    senderName = senderName,
+                                    avatarUrl = event.author.effectiveAvatarUrl,
+                                    content = event.message.contentRaw,
+                                    timestamp = System.currentTimeMillis()
+                                )
+                            )
+
+                            if (messagesList.size > 20) {
+                                messagesList.removeAt(0)
+                            }
+
+                            // Notify NightManager and broadcast updated status inside lock to ensure data consistency
+                            nightManager.notifyPhaseUpdate(lockedSession.guildId)
+                            nightManager.broadcastNightStatus(lockedSession)
+                        }
+                    }
+
                     val message = WebhookMessageBuilder()
                         .setContent(event.message.contentRaw)
                         .setUsername(
-                            (if (event.channel.idLong == session.judgeTextChannelId) "法官頻道" else player.nickname) +
+                            (if (event.channel.idLong == session.judgeTextChannel?.idLong) "法官頻道" else player.nickname) +
                                     " (" + event.author.name + ")"
                         )
                         .setAvatarUrl(event.author.avatarUrl)
                         .build()
 
                     for (p in session.fetchAlivePlayers().values) {
-                        if (shouldSend(p, session) && event.channel.idLong != p.channelId) {
-                            val targetChannel = event.guild.getTextChannelById(p.channelId)
+                        if (shouldSend(p, session) && event.channel.idLong != p.channel?.idLong) {
+                            val targetChannel = event.guild.getTextChannelById(p.channel?.idLong ?: 0)
                             if (targetChannel != null) {
                                 getWebhookClientOrCreate(targetChannel).send(message)
                             }
                         }
                     }
-                    if (event.channel.idLong != session.judgeTextChannelId) {
-                        val judgeChannel = event.guild.getTextChannelById(session.judgeTextChannelId)
-                        if (judgeChannel != null) {
-                            getWebhookClientOrCreate(judgeChannel).send(message)
-                        }
+                    if (event.channel != session.judgeTextChannel) {
+                        session.judgeTextChannel?.let { getWebhookClientOrCreate(it) }?.send(message)
                     }
                     break
                 }
 
-                if (player.jinBaoBao && player.channelId == event.channel.idLong) {
+                if (player.jinBaoBao && player.channel?.idLong == event.channel.idLong) {
                     val message = WebhookMessageBuilder()
                         .setContent(event.message.contentRaw)
                         .setUsername("${player.nickname} (${event.author.name})")
@@ -99,8 +140,8 @@ class MessageListener : ListenerAdapter() {
                         .build()
 
                     for (p in session.fetchAlivePlayers().values) {
-                        if (p.jinBaoBao && event.channel.idLong != p.channelId) {
-                            val targetChannel = event.guild.getTextChannelById(p.channelId)
+                        if (p.jinBaoBao && event.channel.idLong != p.channel?.idLong) {
+                            val targetChannel = event.guild.getTextChannelById(p.channel?.idLong ?: 0)
                             if (targetChannel != null) {
                                 getWebhookClientOrCreate(targetChannel).send(message)
                             }

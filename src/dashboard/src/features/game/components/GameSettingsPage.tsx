@@ -3,7 +3,8 @@ import {AlertCircle, Check, Dices, Loader2, Minus, Plus, Users} from 'lucide-rea
 import {useParams} from 'react-router-dom';
 import {useTranslation} from '@/lib/i18n';
 import {api} from '@/lib/api';
-import {CustomRoleEditor} from '../../../features/settings/CustomRoleEditor';
+import {Toggle} from '@/components/ui/Toggle';
+import {Counter} from '@/components/ui/Counter';
 
 export const GameSettingsPage: React.FC = () => {
     const {guildId} = useParams<{ guildId: string }>();
@@ -16,8 +17,9 @@ export const GameSettingsPage: React.FC = () => {
     const [doubleIdentities, setDoubleIdentities] = useState(false);
     const [roles, setRoles] = useState<string[]>([]);
     const [roleCounts, setRoleCounts] = useState<Record<string, number>>({});
-    const [showCustomRoleEditor, setShowCustomRoleEditor] = useState(false);
     const [witchCanSaveSelf, setWitchCanSaveSelf] = useState(true);
+    const [allowWolfSelfKill, setAllowWolfSelfKill] = useState(true);
+    const [hiddenRoleOnDeath, setHiddenRoleOnDeath] = useState(false);
 
     // State for initial values (to track changes)
     const [initialPlayerCount, setInitialPlayerCount] = useState<number>(12);
@@ -51,7 +53,10 @@ export const GameSettingsPage: React.FC = () => {
             try {
                 await api.updateSettings(guildId, {
                     muteAfterSpeech,
-                    doubleIdentities
+                    doubleIdentities,
+                    witchCanSaveSelf,
+                    allowWolfSelfKill,
+                    hiddenRoleOnDeath
                 });
                 setJustSaved(true);
                 setTimeout(() => setJustSaved(false), 2000);
@@ -62,10 +67,8 @@ export const GameSettingsPage: React.FC = () => {
                 setSaving(false);
             }
         };
-
-        const timeoutId = setTimeout(saveSettings, 500);
-        return () => clearTimeout(timeoutId);
-    }, [muteAfterSpeech, doubleIdentities, guildId]);
+        saveSettings();
+    }, [muteAfterSpeech, doubleIdentities, witchCanSaveSelf, allowWolfSelfKill, hiddenRoleOnDeath, guildId]);
 
     const loadSettings = async () => {
         if (!guildId) return;
@@ -79,6 +82,13 @@ export const GameSettingsPage: React.FC = () => {
 
             setMuteAfterSpeech(sessionData.muteAfterSpeech);
             setDoubleIdentities(sessionData.doubleIdentities);
+
+            // Load special settings from sessionData.settings if available, or defaults
+            if (sessionData.settings) {
+                setWitchCanSaveSelf(sessionData.settings.witchCanSaveSelf ?? true);
+                setAllowWolfSelfKill(sessionData.settings.allowWolfSelfKill ?? true);
+                setHiddenRoleOnDeath(sessionData.settings.hiddenRoleOnDeath ?? false);
+            }
 
             // Set player count from current players length
             if (Array.isArray(sessionData.players)) {
@@ -180,6 +190,24 @@ export const GameSettingsPage: React.FC = () => {
         setPendingFields(prev => ({...prev, double: true}));
     };
 
+    const toggleWitchCanSaveSelf = (checked: boolean) => {
+        if (saving || pendingFields['witchSave']) return;
+        setWitchCanSaveSelf(checked);
+        setPendingFields(prev => ({...prev, witchSave: true}));
+    };
+
+    const toggleAllowWolfSelfKill = (checked: boolean) => {
+        if (saving || pendingFields['wolfSelfKill']) return;
+        setAllowWolfSelfKill(checked);
+        setPendingFields(prev => ({...prev, wolfSelfKill: true}));
+    };
+
+    const toggleHiddenRoleOnDeath = (checked: boolean) => {
+        if (saving || pendingFields['hiddenRole']) return;
+        setHiddenRoleOnDeath(checked);
+        setPendingFields(prev => ({...prev, hiddenRole: true}));
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -222,21 +250,12 @@ export const GameSettingsPage: React.FC = () => {
                                 {t('settings.muteAfterSpeechDesc')}
                             </span>
                         </div>
-                        <div className="flex items-center gap-3">
-                            {pendingFields['mute'] && <Loader2 className="w-4 h-4 animate-spin text-indigo-500"/>}
-                            <label
-                                className={`relative inline-flex items-center ${pendingFields['mute'] ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
-                                <input
-                                    type="checkbox"
-                                    checked={muteAfterSpeech}
-                                    onChange={(e) => toggleMute(e.target.checked)}
-                                    disabled={saving || pendingFields['mute']}
-                                    className="sr-only peer"
-                                />
-                                <div
-                                    className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                            </label>
-                        </div>
+                        <Toggle
+                            checked={muteAfterSpeech}
+                            onChange={toggleMute}
+                            loading={pendingFields['mute']}
+                            disabled={saving}
+                        />
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -247,21 +266,12 @@ export const GameSettingsPage: React.FC = () => {
                                 {t('settings.doubleIdentitiesDesc')}
                             </span>
                         </div>
-                        <div className="flex items-center gap-3">
-                            {pendingFields['double'] && <Loader2 className="w-4 h-4 animate-spin text-indigo-500"/>}
-                            <label
-                                className={`relative inline-flex items-center ${pendingFields['double'] ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
-                                <input
-                                    type="checkbox"
-                                    checked={doubleIdentities}
-                                    onChange={(e) => toggleDoubleIdentities(e.target.checked)}
-                                    disabled={saving || pendingFields['double']}
-                                    className="sr-only peer"
-                                />
-                                <div
-                                    className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                            </label>
-                        </div>
+                        <Toggle
+                            checked={doubleIdentities}
+                            onChange={toggleDoubleIdentities}
+                            loading={pendingFields['double']}
+                            disabled={saving}
+                        />
                     </div>
                 </div>
 
@@ -296,34 +306,16 @@ export const GameSettingsPage: React.FC = () => {
                             </button>
                         )}
 
-                        <div
-                            className="flex items-center gap-4 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                            <button
-                                onClick={() => playerCount > 1 && setPlayerCount(prev => prev - 1)}
-                                disabled={updatingPlayerCount || playerCount <= 1}
-                                className="w-10 h-10 flex items-center justify-center text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                            >
-                                <Minus className="w-6 h-6"/>
-                            </button>
-
-                            <div className="flex flex-col items-center min-w-[3rem]">
-                                {updatingPlayerCount ? (
-                                    <Loader2 className="w-6 h-6 animate-spin text-indigo-500"/>
-                                ) : (
-                                    <span className="text-2xl font-black text-slate-900 dark:text-white tabular-nums">
-                                        {playerCount}
-                                    </span>
-                                )}
-                            </div>
-
-                            <button
-                                onClick={() => playerCount < 50 && setPlayerCount(prev => prev + 1)}
-                                disabled={updatingPlayerCount || playerCount >= 50}
-                                className="w-10 h-10 flex items-center justify-center text-slate-500 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                            >
-                                <Plus className="w-6 h-6"/>
-                            </button>
-                        </div>
+                        <Counter
+                            value={playerCount}
+                            onIncrement={() => playerCount < 50 && setPlayerCount(prev => prev + 1)}
+                            onDecrement={() => playerCount > 1 && setPlayerCount(prev => prev - 1)}
+                            min={1}
+                            max={50}
+                            loading={updatingPlayerCount}
+                            disabled={updatingPlayerCount}
+                            variant="card"
+                        />
                     </div>
                 </div>
 
@@ -440,55 +432,65 @@ export const GameSettingsPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Custom Roles Section */}
-            <div className="space-y-4">
-                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2 flex justify-between items-center">
-                    <span>{t('gameSettings.customRoles') || 'Custom Roles'}</span>
-                    <button
-                        onClick={() => setShowCustomRoleEditor(true)}
-                        className="text-xs flex items-center gap-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-3 py-1.5 rounded-full hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
-                    >
-                        <Plus className="w-4 h-4"/>
-                        {t('gameSettings.createCustomRole') || 'Create Custom Role'}
-                    </button>
-                </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {t('gameSettings.customRolesDescription') || 'Create and manage custom roles for your game. Each custom role can have multiple actions with different priorities.'}
-                </p>
-            </div>
 
-            {/* Witch Settings Section */}
+            {/* Special Settings Section */}
             <div className="space-y-4">
                 <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">
-                    {t('gameSettings.specialSettings') || 'Special Settings'}
+                    {t('gameSettings.gameSettings') || 'Special Settings'}
                 </h3>
+
+                {/* Witch Can Save Self */}
                 <div className="flex items-center justify-between">
                     <div>
                         <span
-                            className="text-slate-900 dark:text-slate-200 font-medium block">{t('gameSettings.witchCanSaveSelf') || '女巫 Can Save Herself'}</span>
+                            className="text-slate-900 dark:text-slate-200 font-medium block">{t('gameSettings.witchCanSaveSelf')}</span>
                         <span className="text-xs text-slate-500 dark:text-slate-400">
-                            {t('gameSettings.witchCanSaveSelfDesc') || 'Whether the witch (女巫) is allowed to use 女巫解藥 to save themselves'}
+                            {t('gameSettings.witchCanSaveSelfDesc')}
                         </span>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={witchCanSaveSelf}
-                            onChange={(e) => setWitchCanSaveSelf(e.target.checked)}
-                            className="sr-only peer"
-                        />
-                        <div
-                            className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                    </label>
+                    <Toggle
+                        checked={witchCanSaveSelf}
+                        onChange={toggleWitchCanSaveSelf}
+                        loading={pendingFields['witchSave']}
+                        disabled={saving}
+                    />
+                </div>
+
+                {/* Allow Wolf Self Kill */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <span
+                            className="text-slate-900 dark:text-slate-200 font-medium block">{t('gameSettings.allowWolfSelfKill')}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                            {t('gameSettings.allowWolfSelfKillDesc')}
+                        </span>
+                    </div>
+                    <Toggle
+                        checked={allowWolfSelfKill}
+                        onChange={toggleAllowWolfSelfKill}
+                        loading={pendingFields['wolfSelfKill']}
+                        disabled={saving}
+                    />
+                </div>
+
+                {/* Hidden Role On Death */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <span
+                            className="text-slate-900 dark:text-slate-200 font-medium block">{t('gameSettings.hiddenRoleOnDeath')}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                            {t('gameSettings.hiddenRoleOnDeathDesc')}
+                        </span>
+                    </div>
+                    <Toggle
+                        checked={hiddenRoleOnDeath}
+                        onChange={toggleHiddenRoleOnDeath}
+                        loading={pendingFields['hiddenRole']}
+                        disabled={saving}
+                    />
                 </div>
             </div>
 
-            {showCustomRoleEditor && guildId && (
-                <CustomRoleEditor
-                    guildId={guildId}
-                    onClose={() => setShowCustomRoleEditor(false)}
-                />
-            )}
         </>
     );
 };

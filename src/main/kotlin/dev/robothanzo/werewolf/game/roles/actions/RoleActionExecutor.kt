@@ -3,24 +3,14 @@ package dev.robothanzo.werewolf.game.roles.actions
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.ActionSubmissionSource
 import dev.robothanzo.werewolf.game.model.RoleActionInstance
+import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import org.springframework.stereotype.Component
 
 /**
  * Executes role actions in priority order and accumulates their results
  */
 @Component
-class RoleActionExecutor {
-
-    private val actionRegistry = mapOf(
-        "WEREWOLF_KILL" to WerewolfKillAction(),
-        "WITCH_ANTIDOTE" to WitchAntidoteAction(),
-        "WITCH_POISON" to WitchPoisonAction(),
-        "SEER_CHECK" to SeerCheckAction(),
-        "GUARD_PROTECT" to GuardProtectAction(),
-        "DEATH_RESOLUTION" to DeathResolutionAction(),
-        "HUNTER_REVENGE" to HunterRevengeAction(),
-        "WOLF_KING_REVENGE" to WolfKingRevengeAction()
-    )
+class RoleActionExecutor(private val roleRegistry: RoleRegistry) {
 
     /**
      * Execute all pending actions in priority order
@@ -35,21 +25,18 @@ class RoleActionExecutor {
     ): ActionExecutionResult {
         // Sort actions by priority (lower number = higher priority = executes first)
         val sortedActions = pendingActions.sortedBy { action ->
-            actionRegistry[action.actionDefinitionId]?.priority ?: Int.MAX_VALUE
+            roleRegistry.getAction(action.actionDefinitionId)?.priority ?: Int.MAX_VALUE
         }
 
         // Execute actions one by one, accumulating state
         var result = ActionExecutionResult()
 
         for (action in sortedActions) {
-            val executor = actionRegistry[action.actionDefinitionId]
-            if (executor != null) {
-                result = executor.execute(session, action, result)
-            }
+            result = executeActionInstance(session, action, result)
         }
 
         // Execute death resolution as final step
-        val deathResolution = DeathResolutionAction()
+        val deathResolution = roleRegistry.getAction("DEATH_RESOLUTION") ?: return result
         val dummyAction = RoleActionInstance(
             actor = 0L,
             actionDefinitionId = "DEATH_RESOLUTION",
@@ -62,19 +49,28 @@ class RoleActionExecutor {
     }
 
     /**
-     * Register a custom action executor
+     * Execute a single action instance
      */
-    fun registerAction(actionId: String, executor: RoleAction) {
-        (actionRegistry as MutableMap)[actionId] = executor
+    fun executeActionInstance(
+        session: Session,
+        action: RoleActionInstance,
+        accumulatedState: ActionExecutionResult = ActionExecutionResult()
+    ): ActionExecutionResult {
+        val executor = roleRegistry.getAction(action.actionDefinitionId)
+        return if (executor != null) {
+            executor.execute(session, action, accumulatedState)
+        } else {
+            accumulatedState
+        }
     }
 
     /**
      * Get a registered action executor
      */
-    fun getAction(actionId: String): RoleAction? = actionRegistry[actionId]
+    fun getAction(actionId: String): RoleAction? = roleRegistry.getAction(actionId)
 
     /**
      * Get an action by ID (alias for getAction)
      */
-    fun getActionById(actionId: String): RoleAction? = actionRegistry[actionId]
+    fun getActionById(actionId: String): RoleAction? = roleRegistry.getAction(actionId)
 }

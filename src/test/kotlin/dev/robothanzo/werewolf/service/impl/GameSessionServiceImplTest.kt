@@ -62,6 +62,7 @@ class GameSessionServiceImplTest {
         val mockJda = mock<JDA>()
         whenever(mockJda.getGuildById(any<Long>())).thenReturn(mockGuild)
         whenever(discordService.jda).thenReturn(mockJda)
+        WerewolfApplication.jda = mockJda
     }
 
     @Test
@@ -196,6 +197,7 @@ class GameSessionServiceImplTest {
         val mockJda = mock<JDA>()
         whenever(mockJda.getGuildById(session.guildId)).thenReturn(null)
         whenever(discordService.jda).thenReturn(mockJda)
+        WerewolfApplication.jda = mockJda
 
         assertThrows<Exception> {
             gameSessionService.getGuildMembers(session)
@@ -209,6 +211,7 @@ class GameSessionServiceImplTest {
         val mockJda = mock<JDA>()
         whenever(mockJda.getGuildById(session.guildId)).thenReturn(null)
         whenever(discordService.jda).thenReturn(mockJda)
+        WerewolfApplication.jda = mockJda
 
         assertThrows<Exception> {
             gameSessionService.updateUserRole(session, 100L, UserRole.JUDGE)

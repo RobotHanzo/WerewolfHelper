@@ -6,7 +6,9 @@ import dev.robothanzo.werewolf.database.documents.Session
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
 
+@Component
 class MemberJoinListener : ListenerAdapter() {
     private val log = LoggerFactory.getLogger(MemberJoinListener::class.java)
 
@@ -14,17 +16,14 @@ class MemberJoinListener : ListenerAdapter() {
         val session = Session.fetchCollection().find(eq("guildId", event.guild.idLong)).first()
         if (WerewolfApplication.SERVER_CREATORS.contains(event.member.idLong)) {
             if (session != null && session.owner == event.user.idLong) {
-                val judgeRole = event.guild.getRoleById(session.judgeRoleId)
+                val judgeRole = session.judgeRole
                 if (judgeRole != null) {
                     event.guild.addRoleToMember(event.member, judgeRole).queue()
                 }
             }
         }
         if (session != null && session.hasAssignedRoles) {
-            val spectatorRole = event.guild.getRoleById(session.spectatorRoleId)
-            if (spectatorRole != null) {
-                event.guild.addRoleToMember(event.member, spectatorRole).queue()
-            }
+            session.spectatorRole?.let { event.guild.addRoleToMember(event.member, it) }?.queue()
         }
     }
 }

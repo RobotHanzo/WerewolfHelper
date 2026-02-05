@@ -8,7 +8,6 @@ import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 data class NightResolutionResult(
     val deaths: Map<DeathCause, List<Long>>, // cause -> list of user IDs
     val saved: List<Long>,
-    val checked: Map<Long, String> // seer userId -> result (werewolf/villager)
 )
 
 interface RoleActionService {
@@ -64,4 +63,17 @@ interface RoleActionService {
      * Check if a player has pending death trigger actions available
      */
     fun hasDeathTriggerAvailable(session: Session, userId: Long): Boolean
+
+    /**
+     * Update the UI status for a role action (e.g., set to ACTING or SUBMITTED).
+     * Provide session to avoid duplicate fetches and potential race conditions.
+     */
+    fun updateActionStatus(
+        guildId: Long,
+        actorUserId: Long,
+        status: String,
+        actionId: String? = null,
+        targetUserIds: List<Long> = emptyList(),
+        session: Session? = null
+    )
 }

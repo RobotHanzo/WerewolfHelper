@@ -5,10 +5,6 @@ import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers
 import dev.robothanzo.jda.interactions.JDAInteractions
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.Database
-import dev.robothanzo.werewolf.listeners.ButtonListener
-import dev.robothanzo.werewolf.listeners.GuildJoinListener
-import dev.robothanzo.werewolf.listeners.MemberJoinListener
-import dev.robothanzo.werewolf.listeners.MessageListener
 import dev.robothanzo.werewolf.service.DiscordService
 import jakarta.annotation.PostConstruct
 import net.dv8tion.jda.api.JDA
@@ -40,10 +36,6 @@ class DiscordServiceImpl(
         .setMemberCachePolicy(MemberCachePolicy.ALL)
         .enableCache(EnumSet.allOf(CacheFlag::class.java))
         .disableCache(CacheFlag.ACTIVITY, CacheFlag.CLIENT_STATUS, CacheFlag.ONLINE_STATUS)
-        .addEventListeners(
-            GuildJoinListener(), MemberJoinListener(), MessageListener(),
-            ButtonListener()
-        )
         .setAudioModuleConfig(AudioModuleConfig().withDaveSessionFactory(JDaveSessionFactory()))
         .build()
 
@@ -74,7 +66,7 @@ class DiscordServiceImpl(
     }
 
     override fun getGuild(guildId: Long): Guild? {
-        return jda?.getGuildById(guildId)
+        return jda.getGuildById(guildId)
     }
 
     override fun getMember(guildId: Long, userId: String?): Member? {

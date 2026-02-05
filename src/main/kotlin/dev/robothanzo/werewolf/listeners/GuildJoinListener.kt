@@ -5,7 +5,7 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.commands.Server
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.utils.SetupHelper
-import net.dv8tion.jda.api.Permission
+import dev.robothanzo.werewolf.utils.isAdmin
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent
@@ -13,7 +13,9 @@ import net.dv8tion.jda.api.events.guild.GuildLeaveEvent
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRoleAddEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
 
+@Component
 class GuildJoinListener : ListenerAdapter() {
     private val log = LoggerFactory.getLogger(GuildJoinListener::class.java)
 
@@ -37,7 +39,7 @@ class GuildJoinListener : ListenerAdapter() {
         val ownerId = guild.ownerIdLong
 
         if (Server.pendingSetups.containsKey(ownerId)) {
-            if (guild.selfMember.hasPermission(Permission.ADMINISTRATOR)) {
+            if (guild.selfMember.isAdmin()) {
                 val setupConfig = Server.pendingSetups.remove(ownerId)
                 log.info("Found pending setup for guild owned by {}. Starting setup.", ownerId)
                 if (setupConfig != null) {

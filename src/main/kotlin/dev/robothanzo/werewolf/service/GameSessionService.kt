@@ -41,6 +41,12 @@ interface GameSessionService {
     fun saveSession(session: Session): Session
 
     /**
+     * Executes a block of code with a locked session, ensuring thread-safe updates.
+     * Fetches the latest session, executes the block, and saves it.
+     */
+    fun <T> withLockedSession(guildId: Long, block: (Session) -> T): T
+
+    /**
      * Deletes a game session for a guild.
      *
      * @param guildId the ID of the guild
@@ -93,16 +99,6 @@ interface GameSessionService {
     fun updateUserRole(session: Session, userId: Long, role: UserRole)
 
     /**
-     * Updates the settings for a game session.
-     *
-     * @param session  the session
-     * @param settings a map of setting keys and values to update
-     * @throws Exception if an error occurs during the update
-     */
-    @Throws(Exception::class)
-    fun updateSettings(session: Session, settings: Map<String, Any>)
-
-    /**
      * Broadcasts a session update to all connected WebSocket clients for a guild.
      *
      * @param guildId the ID of the guild
@@ -123,4 +119,5 @@ interface GameSessionService {
      * @param data the data associated with the event
      */
     fun broadcastEvent(type: String, data: Map<String, Any>)
+
 }

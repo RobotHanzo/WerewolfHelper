@@ -24,72 +24,66 @@ class DeathTriggerStep(
     override val name = "死亡技能觸發"
 
     override fun onStart(session: Session, service: GameStateService) {
-        // Check if any players have death triggers available
-        val playersWithTriggers = session.players.values
-            .mapNotNull { it.userId }
-            .filter { userId -> roleActionService.hasDeathTriggerAvailable(session, userId) }
+        val guildId = session.guildId
 
-        if (playersWithTriggers.isEmpty()) {
-            // No death triggers available, skip to next phase
-            session.addLog(LogType.SYSTEM, "沒有玩家可以觸發死亡技能")
-            gameSessionService.saveSession(session)
-            // Auto-advance will be handled by timer
-            return
-        }
+        gameSessionService.withLockedSession(guildId) { lockedSession ->
+            // Check if any players have death triggers available
+            val playersWithTriggers = lockedSession.players.values
+                .mapNotNull { it.user?.idLong }
+                .filter { userId -> roleActionService.hasDeathTriggerAvailable(lockedSession, userId) }
 
-        // Notify players with available death triggers
-        val guild = discordService.jda.getGuildById(session.guildId)
-        for (userId in playersWithTriggers) {
-            val player = session.players.values.find { it.userId == userId }
-            if (player != null) {
-                val roles = player.roles?.filter { it == "獵人" || it == "狼王" } ?: emptyList()
-                val roleName = roles.firstOrNull() ?: "未知角色"
+            if (playersWithTriggers.isEmpty()) {
+                // No death triggers available
+                lockedSession.addLog(LogType.SYSTEM, "沒有玩家可以觸發死亡技能")
+                return@withLockedSession
+            }
 
-                session.addLog(
-                    LogType.SYSTEM,
-                    "${player.nickname} 的 $roleName 技能已觸發，可以選擇一名玩家帶走",
-                    mapOf("userId" to userId, "role" to roleName)
-                )
-
-                // Send notification to player channel
-                val player = session.players[userId.toString()]
+            // Notify players with available death triggers
+            for (userId in playersWithTriggers) {
+                val player = lockedSession.getPlayer(userId)
                 if (player != null) {
-                    player.send("你的 $roleName 已死亡！你可以選擇一名玩家帶走。請在遊戲頻道使用指令選擇目標。")
+                    val roles = player.roles?.filter { it == "獵人" || it == "狼王" } ?: emptyList()
+                    val roleName = roles.firstOrNull() ?: "未知角色"
+
+                    lockedSession.addLog(
+                        LogType.SYSTEM,
+                        "${player.nickname} 的 $roleName 技能已觸發，可以選擇一名玩家帶走",
+                        mapOf("userId" to userId, "role" to roleName)
+                    )
+
+                    // Send notification to player channel
+                    player.channel?.sendMessage("你的 $roleName 已死亡！你可以選擇一名玩家帶走。請在遊戲頻道使用指令選擇目標。")
+                        ?.queue()
                 }
             }
-        }
 
-        gameSessionService.saveSession(session)
-        gameSessionService.broadcastSessionUpdate(session)
+            gameSessionService.broadcastSessionUpdate(lockedSession)
+        }
     }
 
     override fun onEnd(session: Session, service: GameStateService) {
-        // Execute all pending death trigger actions
-        val killedByTriggers = roleActionService.executeDeathTriggers(session)
+        val guildId = session.guildId
 
-        if (killedByTriggers.isNotEmpty()) {
-            // Mark triggered deaths
-            for (userId in killedByTriggers) {
-                gameActionService.markPlayerDead(session, userId, false)
-            }
+        gameSessionService.withLockedSession(guildId) { lockedSession ->
+            // Execute all pending death trigger actions
+            val killedByTriggers = roleActionService.executeDeathTriggers(lockedSession)
 
-            // Reload session and announce deaths
-            val updatedSession = gameSessionService.getSession(session.guildId)
-            if (updatedSession.isPresent) {
-                val currentSession = updatedSession.get()
+            if (killedByTriggers.isNotEmpty()) {
+                // Mark triggered deaths
+                for (userId in killedByTriggers) {
+                    gameActionService.markPlayerDead(lockedSession, userId, false)
+                }
 
                 val deathList = killedByTriggers.joinToString("、") { userId ->
-                    val player = currentSession.players.values.find { it.userId == userId }
+                    val player = lockedSession.getPlayer(userId)
                     player?.nickname ?: "玩家 $userId"
                 }
 
-                currentSession.addLog(LogType.SYSTEM, "死亡技能觸發：$deathList 被帶走")
-                gameSessionService.saveSession(currentSession)
-                gameSessionService.broadcastSessionUpdate(currentSession)
+                lockedSession.addLog(LogType.SYSTEM, "死亡技能觸發：$deathList 被帶走")
+                gameSessionService.broadcastSessionUpdate(lockedSession)
+            } else {
+                lockedSession.addLog(LogType.SYSTEM, "無人被死亡技能帶走")
             }
-        } else {
-            session.addLog(LogType.SYSTEM, "無人被死亡技能帶走")
-            gameSessionService.saveSession(session)
         }
     }
 

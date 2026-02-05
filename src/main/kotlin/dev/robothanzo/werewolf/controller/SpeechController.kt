@@ -27,7 +27,7 @@ class SpeechController(
         val session = sessionOpt.get()
 
         val guild = discordService.getGuild(guildId) ?: return ResponseEntity.notFound().build<Any>()
-        val channel = guild.getTextChannelById(session.courtTextChannelId)
+        val channel = session.courtTextChannel
 
         if (channel != null) {
             speechService.startAutoSpeechFlow(session, channel.idLong)
@@ -61,7 +61,7 @@ class SpeechController(
         val session = sessionOpt.get()
 
         val guild = discordService.getGuild(guildId) ?: return ResponseEntity.notFound().build<Any>()
-        val channel = guild.getTextChannelById(session.courtTextChannelId)
+        val channel = session.courtTextChannel
 
         if (channel != null) {
             policeService.startEnrollment(session, channel, null) // Injected access
@@ -112,8 +112,8 @@ class SpeechController(
         val session = sessionOpt.get()
 
         val guild = discordService.getGuild(guildId) ?: return ResponseEntity.notFound().build<Any>()
-        val channel = guild.getTextChannelById(session.courtTextChannelId)
-        val voiceChannel = guild.getVoiceChannelById(session.courtVoiceChannelId)
+        val channel = session.courtTextChannel
+        val voiceChannel = session.courtVoiceChannel
 
         if (channel != null) {
             speechService.startTimer(

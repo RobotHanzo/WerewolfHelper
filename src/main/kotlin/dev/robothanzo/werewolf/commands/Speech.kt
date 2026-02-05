@@ -1,15 +1,11 @@
 package dev.robothanzo.werewolf.commands
 
-import dev.robothanzo.jda.interactions.annotations.Button
-import dev.robothanzo.jda.interactions.annotations.select.StringSelectMenu
 import dev.robothanzo.jda.interactions.annotations.slash.Command
 import dev.robothanzo.jda.interactions.annotations.slash.Subcommand
 import dev.robothanzo.jda.interactions.annotations.slash.options.Option
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.utils.CmdUtils
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
-import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
-import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import org.slf4j.LoggerFactory
 import java.time.Duration
 
@@ -74,41 +70,5 @@ class Speech {
         if (!CmdUtils.isAdmin(event)) return
         WerewolfApplication.speechService.setAllMute(event.guild!!.idLong, true)
         event.reply(":white_check_mark:").queue()
-    }
-
-    // Interactions
-    @StringSelectMenu
-    fun selectOrder(event: StringSelectInteractionEvent) {
-        WerewolfApplication.speechService.handleOrderSelection(event)
-    }
-
-    @Button
-    fun confirmOrder(event: ButtonInteractionEvent) {
-        WerewolfApplication.speechService.confirmOrder(event)
-    }
-
-    @Button
-    fun skipSpeech(event: ButtonInteractionEvent) {
-        WerewolfApplication.speechService.skipSpeech(event)
-    }
-
-    @Button
-    fun interruptSpeech(event: ButtonInteractionEvent) {
-        WerewolfApplication.speechService.interruptSpeech(event)
-    }
-
-    @Button
-    fun terminateTimer(event: ButtonInteractionEvent) {
-        event.deferReply(true).queue()
-        if (CmdUtils.isAdmin(event)) {
-            try {
-                WerewolfApplication.speechService.stopTimer(event.channel.idLong)
-                event.hook.editOriginal(":white_check_mark:").queue()
-            } catch (e: Exception) {
-                event.hook.editOriginal(":x:").queue()
-            }
-        } else {
-            event.hook.editOriginal(":x:").queue()
-        }
     }
 }

@@ -1,16 +1,19 @@
 package dev.robothanzo.werewolf.service.impl
 
+import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
-import dev.robothanzo.werewolf.service.DiscordService
+import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.entities.User
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.util.*
 
@@ -19,10 +22,10 @@ class RoleActionServiceImplTest {
     private lateinit var sessionRepository: SessionRepository
 
     @Mock
-    private lateinit var discordService: DiscordService
+    private lateinit var roleActionExecutor: RoleActionExecutor
 
     @Mock
-    private lateinit var roleActionExecutor: RoleActionExecutor
+    private lateinit var nightManager: dev.robothanzo.werewolf.service.NightManager
 
     private lateinit var roleActionService: RoleActionServiceImpl
 
@@ -31,9 +34,18 @@ class RoleActionServiceImplTest {
         MockitoAnnotations.openMocks(this)
         roleActionService = RoleActionServiceImpl(
             sessionRepository,
-            discordService,
-            roleActionExecutor
+            roleActionExecutor,
+            nightManager
         )
+
+        val mockJda = mock<JDA>()
+        whenever(mockJda.getUserById(any<Long>())).thenAnswer { invocation ->
+            val userId = invocation.arguments[0] as Long
+            val user = mock<User>()
+            whenever(user.idLong).thenReturn(userId)
+            user
+        }
+        WerewolfApplication.jda = mockJda
     }
 
     @Test
@@ -140,6 +152,7 @@ class RoleActionServiceImplTest {
         val actorUserId = 456L
         val targetUserId = 789L
         val session = Session(guildId = guildId)
+        session.currentState = "NIGHT"
 
         val actor = Player(id = 1, roleId = 100L, channelId = 200L, userId = actorUserId)
         actor.roles = mutableListOf("狼人")
@@ -161,7 +174,7 @@ class RoleActionServiceImplTest {
         )
 
         assertFalse(result["success"] as Boolean)
-        assertEquals("You have already submitted an action this phase", result["error"])
+        assertEquals("你已經提交過行動，無法再次選擇", result["error"])
     }
 
     @Test

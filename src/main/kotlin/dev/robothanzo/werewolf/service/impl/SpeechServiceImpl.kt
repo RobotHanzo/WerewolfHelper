@@ -8,11 +8,14 @@ import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.SpeechOrder
 import dev.robothanzo.werewolf.model.SpeechSession
 import dev.robothanzo.werewolf.service.DiscordService
+import dev.robothanzo.werewolf.service.GameActionService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.SpeechService
 import dev.robothanzo.werewolf.utils.MsgUtils
+import dev.robothanzo.werewolf.utils.isAdmin
+import dev.robothanzo.werewolf.utils.isSpectator
+import dev.robothanzo.werewolf.utils.player
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.components.selections.StringSelectMenu
@@ -27,11 +30,13 @@ import org.springframework.stereotype.Service
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 class SpeechServiceImpl(
     private val sessionRepository: SessionRepository,
     private val discordService: DiscordService,
+    @param:Lazy private val gameActionService: GameActionService,
     @param:Lazy private val gameSessionService: GameSessionService
 ) : SpeechService {
     private val speechSessions: MutableMap<Long, SpeechSession> = ConcurrentHashMap()
@@ -45,26 +50,29 @@ class SpeechServiceImpl(
         guild: Guild, enrollMessage: Message?, players: Collection<Player>,
         callback: (() -> Unit)?
     ) {
-        val speechSession = SpeechSession(
-            guildId = guild.idLong,
-            channelId = enrollMessage?.channel?.idLong ?: 0L,
-            session = sessionRepository.findByGuildId(guild.idLong).orElse(null),
-            finishedCallback = callback
-        )
-        speechSessions[guild.idLong] = speechSession
+        val guildId = guild.idLong
+        gameSessionService.withLockedSession(guildId) { session ->
+            val speechSession = SpeechSession(
+                guildId = guildId,
+                channelId = enrollMessage?.channel?.idLong ?: 0L,
+                session = session,
+                finishedCallback = callback
+            )
+            speechSessions[guildId] = speechSession
 
-        val order = SpeechOrder.getRandomOrder()
-        val target = players.shuffled().first()
+            val order = SpeechOrder.getRandomOrder()
+            val target = players.shuffled().first()
 
-        enrollMessage?.replyEmbeds(
-            EmbedBuilder()
-                .setTitle("隨機抽取投票辯論順序")
-                .setDescription("抽到的順序: 玩家" + target.id + order.toString())
-                .setColor(MsgUtils.randomColor).build()
-        )?.queue()
+            enrollMessage?.replyEmbeds(
+                EmbedBuilder()
+                    .setTitle("隨機抽取投票辯論順序")
+                    .setDescription("抽到的順序: 玩家" + target.id + order.toString())
+                    .setColor(MsgUtils.randomColor).build()
+            )?.queue()
 
-        changeOrder(guild.idLong, order, players, target)
-        nextSpeaker(guild.idLong)
+            changeOrder(guildId, order, players, target)
+            nextSpeaker(guildId)
+        }
     }
 
     override fun startLastWordsSpeech(
@@ -120,20 +128,8 @@ class SpeechServiceImpl(
             return
         }
 
-        var target: Player? = null
-        for (player in session.fetchAlivePlayers().values) {
-            if (player.userId != null && player.userId == event.user.idLong) {
-                if (player.police) {
-                    target = player
-                    break
-                } else {
-                    event.hook.editOriginal(":x: 你不是警長").queue()
-                    return
-                }
-            }
-        }
-
-        if (target == null) {
+        val target = event.member?.player()
+        if (target?.police != true) {
             event.hook.editOriginal(":x: 你不是警長").queue()
             return
         }
@@ -160,15 +156,8 @@ class SpeechServiceImpl(
             return
         }
 
-        var isPolice = false
-        for (player in session.fetchAlivePlayers().values) {
-            if (player.userId != null && player.userId == event.user.idLong) {
-                if (player.police) {
-                    isPolice = true
-                    break
-                }
-            }
-        }
+        val player = event.member?.player()
+        val isPolice = player?.police == true
 
         if (!isPolice) {
             event.hook.editOriginal(":x: 你不是警長").queue()
@@ -210,13 +199,12 @@ class SpeechServiceImpl(
 
         if (speechSession != null) {
             val member = event.member ?: return
-            if (speechSession.lastSpeaker != null && !member.hasPermission(Permission.ADMINISTRATOR)) {
+            if (speechSession.lastSpeaker != null && !member.isAdmin()) {
                 if (event.user.idLong == speechSession.lastSpeaker) {
                     event.hook.editOriginal(":x: 若要跳過發言請按左邊的跳過按鈕").queue()
                 } else {
                     val session = speechSession.session
-                    val spectatorRole = guild.getRoleById(session.spectatorRoleId)
-                    if (spectatorRole != null && member.roles.contains(spectatorRole)) {
+                    if (member.isSpectator()) {
                         event.hook.editOriginal(":x: 旁觀者不得投票").queue()
                     } else {
                         if (speechSession.interruptVotes.contains(event.user.idLong)) {
@@ -270,28 +258,17 @@ class SpeechServiceImpl(
         )
         speechSessions[guildId] = speechSession
 
-        val guild = discordService.getGuild(guildId) ?: return
-        val channel = guild.getTextChannelById(channelId)
+        val guild = session.guild ?: return
 
+        if (session.muteAfterSpeech)
+            gameActionService.muteAll(guildId, true)
         for (player in session.fetchAlivePlayers().values) {
-            if (player.userId != null) {
-                try {
-                    if (session.muteAfterSpeech) {
-                        player.userId?.let { uid ->
-                            val member = guild.getMemberById(uid)
-                            member?.let { guild.mute(it, true).queue() }
-                        }
-                    }
-                } catch (_: Exception) {
-                }
-            }
             if (player.police) {
-                session.sendToCourt(
+                session.courtTextChannel?.sendMessageEmbeds(
                     EmbedBuilder()
                         .setTitle("警長請選擇發言順序")
                         .setDescription("警長尚未選擇順序")
-                        .setColor(MsgUtils.randomColor).build(),
-                    queue = false
+                        .setColor(MsgUtils.randomColor).build()
                 )?.setComponents(
                     ActionRow.of(
                         StringSelectMenu.create("selectOrder")
@@ -310,12 +287,12 @@ class SpeechServiceImpl(
         val shuffled = session.fetchAlivePlayers().values.shuffled()
         val randOrder = SpeechOrder.getRandomOrder()
         changeOrder(guildId, randOrder, session.fetchAlivePlayers().values, shuffled.first())
-        session.sendToCourt(
+        session.courtTextChannel?.sendMessageEmbeds(
             EmbedBuilder()
                 .setTitle("找不到警長，自動抽籤發言順序")
                 .setDescription("抽到的順序: 玩家${shuffled.first().id}$randOrder")
                 .setColor(MsgUtils.randomColor).build()
-        )
+        )?.queue()
 
         for (c in guild.textChannels) {
             c.sendMessage("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯我是白天分隔線⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯").queue()
@@ -371,7 +348,8 @@ class SpeechServiceImpl(
         if (speechSession != null) {
             val guild = discordService.getGuild(guildId)
             if (guild != null) {
-                speechSession.session.sendToCourt("法官已強制終止發言流程")
+                val session = sessionRepository.findByGuildId(guildId).getOrNull()
+                session?.courtTextChannel?.sendMessage("法官已強制終止發言流程")?.queue()
             }
 
             speechSession.order.clear()
@@ -385,7 +363,7 @@ class SpeechServiceImpl(
         if (speechSession != null) {
             val guild = discordService.getGuild(guildId)
             if (guild != null) {
-                speechSession.session.sendToCourt("法官已強制該玩家下台")
+                speechSession.session.courtTextChannel?.sendMessage("法官已強制該玩家下台")?.queue()
             }
             nextSpeaker(guildId)
         }
@@ -394,7 +372,7 @@ class SpeechServiceImpl(
     override fun setAllMute(guildId: Long, mute: Boolean) {
         val guild = discordService.getGuild(guildId) ?: return
         for (member in guild.members) {
-            if (member.hasPermission(Permission.ADMINISTRATOR))
+            if (member.isAdmin())
                 continue
             try {
                 guild.mute(member, mute).queue()
@@ -450,58 +428,49 @@ class SpeechServiceImpl(
         // Reset the stop flag for the new speaker's timer
         speechSession.shouldStopCurrentSpeaker = false
 
-        val guild = discordService.getGuild(guildId) ?: return
-        val session = speechSession.session
+        gameSessionService.withLockedSession(guildId) { session ->
+            val guild = discordService.getGuild(guildId) ?: return@withLockedSession
 
-        speechSession.lastSpeaker?.let { lastSpeakerId ->
-            val member = guild.getMemberById(lastSpeakerId)
-            if (member != null) {
-                try {
-                    if (session.muteAfterSpeech)
-                        guild.mute(member, true).queue()
-                } catch (_: Exception) {
+            speechSession.lastSpeaker?.let { lastSpeakerId ->
+                val member = guild.getMemberById(lastSpeakerId)
+                if (member != null) {
+                    try {
+                        if (session.muteAfterSpeech)
+                            guild.mute(member, true).queue()
+                    } catch (_: Exception) {
+                    }
                 }
             }
-        }
 
-        if (speechSession.order.isEmpty()) {
-            session.sendToCourt("發言流程結束")
+            if (speechSession.order.isEmpty()) {
+                session.courtTextChannel?.sendMessage("發言流程結束")?.queue()
 
-            speechSessions.remove(guildId)
-            gameSessionService.broadcastSessionUpdate(session)
-            speechSession.finishedCallback?.invoke()
-            return
-        }
+                speechSessions.remove(guildId)
+                gameSessionService.broadcastSessionUpdate(session)
+                speechSession.finishedCallback?.invoke()
+                return@withLockedSession
+            }
 
-        val player = speechSession.order.removeFirst()
-        speechSession.lastSpeaker = player.userId
-        val time = getSpeakerDuration(player.police)
-        speechSession.totalSpeechTime = time
-        speechSession.currentSpeechEndTime = System.currentTimeMillis() + (time * 1000L)
+            val player = speechSession.order.removeFirst()
+            speechSession.lastSpeaker = player.user?.idLong
+            val time = getSpeakerDuration(player.police)
+            speechSession.totalSpeechTime = time
+            speechSession.currentSpeechEndTime = System.currentTimeMillis() + (time * 1000L)
 
-        // Update session timer to match TOTAL remaining time
-        val totalDuration = time + getTotalQueueDuration(speechSession.order)
-        session.currentStepEndTime = System.currentTimeMillis() + (totalDuration * 1000L)
-
-        try {
-            sessionRepository.save(session)
-        } catch (e: Exception) {
-            println("Warning: Failed to save session during nextSpeaker: ${e.message}")
-            // Continue anyway - clients already have the updated timer
-        }
-
+            // Update session timer to match TOTAL remaining time
+            val totalDuration = time + getTotalQueueDuration(speechSession.order)
+            session.currentStepEndTime = System.currentTimeMillis() + (totalDuration * 1000L)
         val t = thread(start = true) {
             try {
-                player.userId?.let { userId ->
+                player.user?.idLong?.let { userId ->
                     val member = guild.getMemberById(userId)
                     member?.let { guild.mute(it, false).queue() }
                 }
             } catch (_: Exception) {
             }
 
-            val message = session.sendToCourt(
-                "<@!" + player.userId + "> 你有" + time + "秒可以發言\n",
-                queue = false
+            val message = session.courtTextChannel?.sendMessage(
+                "<@!" + player.user?.idLong + "> 你有" + time + "秒可以發言\n"
             )
                 ?.setComponents(
                     ActionRow.of(
@@ -511,7 +480,7 @@ class SpeechServiceImpl(
                 )
                 ?.complete() ?: return@thread
 
-            val voiceChannel = guild.getVoiceChannelById(session.courtVoiceChannelId)
+            val voiceChannel = session.courtVoiceChannel
             try {
                 Thread.sleep((time - 30) * 1000L)
                 if (!speechSession.shouldStopCurrentSpeaker) {
@@ -537,6 +506,7 @@ class SpeechServiceImpl(
             }
         }
         speechSession.speakingThread = t
+        }
     }
 
     private fun stopCurrentSpeaker(session: SpeechSession) {

@@ -15,6 +15,7 @@ interface GameHeaderProps {
     currentState?: string;
     guildId?: string;
     isManualStep?: boolean;
+    hasAssignedRoles?: boolean;
 }
 
 export const GameHeader: React.FC<GameHeaderProps> = ({
@@ -28,7 +29,8 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                                                           currentStep,
                                                           currentState,
                                                           guildId,
-                                                          isManualStep = false
+                                                          isManualStep = false,
+                                                          hasAssignedRoles = false
                                                       }) => {
     const {t} = useTranslation();
     const navigate = useNavigate();
@@ -102,7 +104,8 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                     phase === 'LOBBY' ? (
                         <button
                             onClick={() => onGlobalAction('start_game')}
-                            className={`${btnStyle} ${btnPrimary}`}
+                            disabled={!hasAssignedRoles}
+                            className={`${btnStyle} ${btnPrimary} disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                             <Play className="w-4 h-4"/> {t('gameHeader.startGame')}
                         </button>

@@ -120,6 +120,7 @@ export const PlayerManager = () => {
                     currentState={gameState.currentState}
                     guildId={guildId}
                     isManualStep={gameState.isManualStep}
+                    hasAssignedRoles={gameState.hasAssignedRoles}
                 />
                 <div
                     className="flex-1 overflow-hidden relative flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-900/30">
@@ -163,12 +164,14 @@ export const PlayerManager = () => {
 
                         {showLogs && (
                             <div
-                                className="fixed bottom-24 right-6 z-50 w-[350px] md:w-[400px] h-[500px] max-h-[70vh] shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 pointer-events-auto">
+                                className="fixed bottom-24 right-6 z-50 w-[350px] md:w-[400px] h-[500px] max-h-[70vh] shadow-2xl animate-in fade-in slide-in-from-bottom-4 animate-out fade-out slide-out-from-top-4 duration-300 pointer-events-auto">
                                 <GameLog
                                     logs={gameState.logs}
                                     onGlobalAction={handleGlobalAction}
                                     readonly={user?.role !== 'JUDGE' || isSpectatorSimulation}
                                     className="h-full shadow-2xl border-2 border-indigo-500/20"
+                                    hasAssignedRoles={gameState.hasAssignedRoles}
+                                    phase={gameState.phase}
                                 />
                             </div>
                         )}

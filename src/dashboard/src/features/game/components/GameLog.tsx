@@ -8,9 +8,18 @@ interface GameLogProps {
     onGlobalAction: (action: string) => void;
     readonly?: boolean;
     className?: string;
+    hasAssignedRoles?: boolean;
+    phase?: string;
 }
 
-export const GameLog: React.FC<GameLogProps> = ({logs, onGlobalAction, readonly = false, className = ""}) => {
+export const GameLog: React.FC<GameLogProps> = ({
+                                                    logs,
+                                                    onGlobalAction,
+                                                    readonly = false,
+                                                    className = "",
+                                                    hasAssignedRoles = false,
+                                                    phase = 'LOBBY'
+                                                }) => {
     const {t} = useTranslation();
     const [resetConfirming, setResetConfirming] = useState(false);
 
@@ -60,12 +69,21 @@ export const GameLog: React.FC<GameLogProps> = ({logs, onGlobalAction, readonly 
                         <div className="space-y-2">
                             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('globalCommands.gameFlow')}</h3>
                             <div className="grid grid-cols-3 gap-2">
-                                <button onClick={() => onGlobalAction('random_assign')}
-                                        className="text-xs bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-2 rounded border border-slate-400 dark:border-slate-700 truncate"
-                                        title={t('globalCommands.randomAssign')}>{t('globalCommands.randomAssign')}</button>
-                                <button onClick={() => onGlobalAction('start_game')}
-                                        className="text-xs bg-blue-100 dark:bg-blue-900/20 hover:bg-blue-200 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-2 rounded border border-blue-300 dark:border-blue-900/30 truncate"
-                                        title={t('globalCommands.startGame')}>{t('globalCommands.startGame')}</button>
+                                {!hasAssignedRoles && (
+                                    <button onClick={() => onGlobalAction('random_assign')}
+                                            className="text-xs bg-green-100 dark:bg-green-900/20 hover:bg-green-200 dark:hover:bg-green-900/40 text-green-700 dark:text-green-300 px-2 py-2 rounded border border-green-300 dark:border-green-900/30 truncate disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title={t('globalCommands.randomAssign')}>{t('globalCommands.randomAssign')}</button>
+                                )}
+                                {hasAssignedRoles && phase === 'LOBBY' && (
+                                    <button onClick={() => onGlobalAction('start_game')}
+                                            className="text-xs bg-blue-100 dark:bg-blue-900/20 hover:bg-blue-200 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-2 rounded border border-blue-300 dark:border-blue-900/30 truncate"
+                                            title={t('globalCommands.startGame')}>{t('globalCommands.startGame')}</button>
+                                )}
+                                {phase !== 'LOBBY' && (
+                                    <button onClick={() => onGlobalAction('next_phase')}
+                                            className="text-xs bg-indigo-100 dark:bg-indigo-900/20 hover:bg-indigo-200 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-2 rounded border border-indigo-300 dark:border-indigo-900/30 truncate"
+                                            title={t('globalCommands.skipStage')}>{t('globalCommands.skipStage')}</button>
+                                )}
                                 <button
                                     onClick={() => {
                                         if (resetConfirming) {

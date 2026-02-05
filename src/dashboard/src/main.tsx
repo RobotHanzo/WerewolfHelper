@@ -2,6 +2,7 @@ import {createRoot} from 'react-dom/client';
 import {BrowserRouter} from 'react-router-dom';
 import {ThemeProvider} from '@/lib/ThemeProvider';
 import {AuthProvider} from '@/features/auth/contexts/AuthContext';
+import {PlayerProvider} from '@/features/players/contexts/PlayerContext';
 import App from './App';
 import './index.css';
 
@@ -10,7 +11,9 @@ root.render(
     <ThemeProvider>
         <BrowserRouter>
             <AuthProvider>
-                <App/>
+                <PlayerProvider>
+                    <App/>
+                </PlayerProvider>
             </AuthProvider>
         </BrowserRouter>
     </ThemeProvider>
