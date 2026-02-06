@@ -128,12 +128,8 @@ class ActionUIServiceImpl(
 
             // Initialize empty votes for all participants so dashboard shows them as "Not Voted"
             participants.forEach { pid ->
-                session.stateData.werewolfVotes.getOrPut(pid.toString()) {
-                    WolfVote(voterId = pid, targetId = null)
-                }
-                // Also add to groupState.votes
-                if (groupState.votes.none { it.playerId == pid }) {
-                    groupState.votes.add(GroupVote(pid, null))
+                if (groupState.votes.none { it.voterId == pid }) {
+                    groupState.votes.add(GroupVote(voterId = pid, targetId = null))
                 }
             }
 
@@ -212,17 +208,13 @@ class ActionUIServiceImpl(
             val playerId = player.id
             if (playerId !in groupState.participants) return@withLockedSession false
 
-            groupState.votes.removeIf { it.playerId == playerId }
-            groupState.votes.add(GroupVote(playerId, targetPlayerId))
+            groupState.votes.removeIf { it.voterId == playerId }
+            groupState.votes.add(GroupVote(voterId = playerId, targetId = targetPlayerId))
 
-            // Sync to werewolfVotes immediately for dashboard
-            val votesMap = lockedSession.stateData.werewolfVotes
-            val wolfVote = votesMap.getOrPut(playerId.toString()) {
-                dev.robothanzo.werewolf.game.model.WolfVote(voterId = playerId)
-            }
-            wolfVote.targetId = targetPlayerId
+            // Explicitly re-put into the map to ensure persistence detection
+            lockedSession.stateData.groupStates[groupStateId] = groupState
 
-            log.info("Player $playerId voted for target $targetPlayerId in group action $groupStateId")
+            log.info("Vote recorded: Player $playerId -> Target $targetPlayerId in group action $groupStateId")
 
             nightManager.notifyPhaseUpdate(guildId)
             nightManager.broadcastNightStatus(lockedSession)
@@ -234,8 +226,8 @@ class ActionUIServiceImpl(
         if (groupState.votes.isEmpty()) return null
 
         val voteCounts = groupState.votes
-            .filter { it.targetPlayerId != null && it.targetPlayerId != SKIP_TARGET_ID }
-            .groupingBy { it.targetPlayerId }
+            .filter { it.targetId != null && it.targetId != SKIP_TARGET_ID }
+            .groupingBy { it.targetId!! }
             .eachCount()
 
         if (voteCounts.isEmpty()) return null

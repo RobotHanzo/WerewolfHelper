@@ -60,24 +60,24 @@ class ActionSelectionListener(
         }
         log.info("Wolf $userId voted for target: $targetPlayerId in group action: $actionId")
 
-        // Fetch fresh session to get updated votes for the tally
-        val freshSession = dev.robothanzo.werewolf.utils.CmdUtils.getSession(event.guild) ?: return
-        val groupState = actionUIService.getGroupState(freshSession, actionId) ?: return
+        // Fetch fresh session AFTER submission to get updated votes for the tally
+        val finalSession = gameSessionService.getSession(guildId).orElse(session)
+        val finalGroupState = actionUIService.getGroupState(finalSession, actionId) ?: return
 
         // Get the player name for feedback
         val targetName = if (targetPlayerId == SKIP_TARGET_ID) {
             "跳過"
         } else {
-            val targetPlayer = session.getPlayer(targetPlayerId)
+            val targetPlayer = finalSession.getPlayer(targetPlayerId)
             targetPlayer?.nickname ?: "玩家 $targetPlayerId"
         }
 
         event.reply("✅ 你投票支持擊殺: **$targetName**").setEphemeral(true).queue()
 
         // Broadcast real-time tally to wolves
-        val tallyMessage = buildWolfTallyMessage(session, groupState.votes, groupState.participants.size)
-        session.players.values
-            .filter { it.id in groupState.participants }
+        val tallyMessage = buildWolfTallyMessage(finalSession, finalGroupState.votes, finalGroupState.participants.size)
+        finalSession.players.values
+            .filter { it.id in finalGroupState.participants }
             .forEach { p ->
                 p.channel?.sendMessage(tallyMessage)?.queue()
             }
@@ -91,7 +91,7 @@ class ActionSelectionListener(
         votes: List<GroupVote>,
         totalVoters: Int
     ): String {
-        val voteCounts = votes.groupingBy { it.targetPlayerId }.eachCount()
+        val voteCounts = votes.groupingBy { it.targetId }.eachCount()
         val lines = mutableListOf<String>()
         lines.add("📊 **狼人投票即時統計 (下方顯示投票擊殺之目標)**")
         lines.add("已投票: ${votes.size}/$totalVoters")

@@ -13,21 +13,14 @@ data class GameStateData(
     // Unified action data (Keyed by playerId.toString() for consistency)
     var actionData: MutableMap<String, ActionData> = mutableMapOf(),
     var groupStates: MutableMap<String, GroupActionState> = mutableMapOf(), // actionId -> GroupActionState
-    var werewolfVotes: MutableMap<String, WolfVote> = mutableMapOf(), // voterId -> WolfVote
     var werewolfMessages: MutableList<WerewolfMessage> = mutableListOf(),
 
     // Explicit Role State (Strongly typed flags)
     var lastGuardProtectedId: Int? = null,
     var nightWolfKillTargetId: Int? = null,
     var deathTriggerAvailableMap: MutableMap<String, Int> = mutableMapOf(), // actionId -> playerId
-    var roleFlags: MutableMap<String, Any> = mutableMapOf(), // Generic flags for flexibility
+    var darkMerchantTradeRecipientId: Int? = null,
+    var darkMerchantGiftedSkill: String? = null,
+    var wolfBrotherDiedDay: Int? = null,
     var deadPlayers: List<Int> = emptyList() // List of player IDs who died in the current phase
-)
-
-/**
- * Represents a single vote in the werewolf voting phase.
- */
-data class WolfVote(
-    val voterId: Int,
-    var targetId: Int? = null
 )

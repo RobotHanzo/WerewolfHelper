@@ -125,8 +125,8 @@ class RoleActionServiceImpl(
         }
 
         // Gifted actions for DarkMerchantTradeRecipient
-        if (session.stateData.roleFlags["DarkMerchantTradeRecipient"] == playerId) {
-            val skillType = session.stateData.roleFlags["DarkMerchantGiftedSkill"] as? String
+        if (session.stateData.darkMerchantTradeRecipientId == playerId) {
+            val skillType = session.stateData.darkMerchantGiftedSkill
             val giftedActionId = when (skillType) {
                 "SEER" -> PredefinedRoles.MERCHANT_SEER_CHECK
                 "POISON" -> PredefinedRoles.MERCHANT_POISON

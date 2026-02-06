@@ -3,7 +3,6 @@ package dev.robothanzo.werewolf.service.impl
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.ActionSubmissionStatus
 import dev.robothanzo.werewolf.game.model.NightStatus
-import dev.robothanzo.werewolf.game.model.WerewolfVote
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.NightManager
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -25,13 +24,9 @@ class NightManagerImpl(
         // werewolfMessages
         val werewolfMessages = session.stateData.werewolfMessages
 
-        // werewolfVotes
-        val werewolfVotes = session.stateData.werewolfVotes.values.map { vote ->
-            WerewolfVote(
-                voterId = vote.voterId,
-                targetId = vote.targetId
-            )
-        }
+        // werewolfVotes (from GroupActionState)
+        val groupState = session.stateData.groupStates[dev.robothanzo.werewolf.game.roles.PredefinedRoles.WEREWOLF_KILL]
+        val werewolfVotes = groupState?.votes ?: emptyList()
 
         // actionStatuses
         val actionStatuses = session.stateData.actionData.values.map { data ->

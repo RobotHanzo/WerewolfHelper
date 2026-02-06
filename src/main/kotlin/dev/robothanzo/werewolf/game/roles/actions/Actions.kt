@@ -60,7 +60,7 @@ class WolfYoungerBrotherExtraKillAction : BaseRoleAction(
         if (!super.isAvailable(session, actor)) return false
 
         // Check if Wolf Brother died in the previous day
-        val wolfBrotherDiedDay = session.stateData.roleFlags["WolfBrotherDiedDay"] as? Int ?: return false
+        val wolfBrotherDiedDay = session.stateData.wolfBrotherDiedDay ?: return false
 
         // So if Wolf Brother died on Day X, we are now at Night X+1 (session.day == X).
         // Since session.day is only incremented at the start of DEATH_ANNOUNCEMENT,
@@ -335,8 +335,8 @@ abstract class DarkMerchantTradeAction(
             return accumulatedState.copy(deaths = deaths)
         } else {
             // Trade success, recipient gets a skill next night
-            session.stateData.roleFlags["DarkMerchantTradeRecipient"] = targetId
-            session.stateData.roleFlags["DarkMerchantGiftedSkill"] = skillType
+            session.stateData.darkMerchantTradeRecipientId = targetId
+            session.stateData.darkMerchantGiftedSkill = skillType
             session.addLog(
                 dev.robothanzo.werewolf.database.documents.LogType.SYSTEM,
                 "黑市商人交易成功，將技能 $skillType 贈予了玩家 $targetId"

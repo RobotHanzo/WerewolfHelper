@@ -12,14 +12,6 @@ data class WerewolfMessage(
 )
 
 /**
- * Represents the voting state of a werewolf during the kill vote.
- */
-data class WerewolfVote(
-    val voterId: Int,
-    val targetId: Int?
-)
-
-/**
  * Represents the action submission state for a player with an eligible role.
  */
 data class ActionSubmissionStatus(
@@ -42,7 +34,7 @@ data class NightStatus(
 
     // Werewolf voting data (shown in first screen)
     val werewolfMessages: List<WerewolfMessage> = emptyList(),
-    val werewolfVotes: List<WerewolfVote> = emptyList(),
+    val werewolfVotes: List<GroupVote> = emptyList(),
 
     // Role action statuses (shown in second screen)
     val actionStatuses: List<ActionSubmissionStatus> = emptyList()

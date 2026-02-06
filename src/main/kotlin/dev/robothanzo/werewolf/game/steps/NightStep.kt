@@ -6,7 +6,6 @@ import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.game.model.ActionData
 import dev.robothanzo.werewolf.game.model.ActionStatus
 import dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID
-import dev.robothanzo.werewolf.game.model.WolfVote
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import dev.robothanzo.werewolf.service.*
 import kotlinx.coroutines.*
@@ -63,8 +62,6 @@ class NightStep(
             session.stateData.phaseEndTime = now + 90_000 // Wolf phase lasts 90s
             session.stateData.werewolfMessages.clear()
 
-            val werewolfVotes = mutableMapOf<String, WolfVote>()
-
             for (p in session.alivePlayers().values) {
                 if (p.wolf) {
                     // Wolf Younger Brother (狼弟) only joins discussion if Brother is dead
@@ -72,9 +69,6 @@ class NightStep(
                     if (p.roles?.contains("狼弟") == true && isBrotherAlive) {
                         continue
                     }
-                    werewolfVotes[p.id.toString()] = WolfVote(
-                        voterId = p.id
-                    )
                 } else {
                     val actions = roleActionService.getAvailableActionsForPlayer(session, p.id)
                     if (actions.isNotEmpty()) {
@@ -92,9 +86,6 @@ class NightStep(
                     }
                 }
             }
-
-            session.stateData.werewolfVotes.clear()
-            session.stateData.werewolfVotes.putAll(werewolfVotes)
         }
 
         // Orchestrate the night phases
@@ -207,9 +198,8 @@ class NightStep(
             nightManager.getUpdateFlow()
                 .filter { it == guildId }
                 .firstOrNull {
-                    // Sync votes to session state for dashboard inside lock
+                    // Update dashboard status for group inside lock
                     gameSessionService.withLockedSession(guildId) { lockedSession ->
-                        syncWolfVotes(lockedSession)
                         nightManager.broadcastNightStatus(lockedSession)
                     }
                     allWolvesVoted(guildId)
@@ -237,25 +227,13 @@ class NightStep(
     private fun allWolvesVoted(guildId: Long): Boolean {
         val session = gameSessionService.getSession(guildId).orElse(null) ?: return true
         val groupState = actionUIService.getGroupState(session, PredefinedRoles.WEREWOLF_KILL) ?: return true
-        return groupState.votes.filter { it.targetPlayerId != null }.size >= groupState.participants.size
+        return groupState.votes.filter { it.targetId != null }.size >= groupState.participants.size
     }
 
     private fun allActorsSubmitted(guildId: Long): Boolean {
         val session = gameSessionService.getSession(guildId).orElse(null) ?: return true
         val actionDataMap = session.stateData.actionData
         return actionDataMap.values.all { it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.SKIPPED || it.status == ActionStatus.PENDING && it.availableActions.isEmpty() }
-    }
-
-    private fun syncWolfVotes(session: Session) {
-        val groupState = actionUIService.getGroupState(session, PredefinedRoles.WEREWOLF_KILL) ?: return
-
-        val votesMap = session.stateData.werewolfVotes
-        groupState.votes.forEach { (voterId, targetId) ->
-            val vote = votesMap.getOrPut(voterId.toString()) {
-                WolfVote(voterId = voterId)
-            }
-            vote.targetId = targetId
-        }
     }
 
     private fun finalizeWerewolfPhase(guildId: Long) {
@@ -265,8 +243,13 @@ class NightStep(
 
             // Timeout handling: default missing votes to skip
             groupState.participants.forEach { pid ->
-                if (groupState.votes.none { it.playerId == pid }) {
-                    groupState.votes.add(dev.robothanzo.werewolf.game.model.GroupVote(pid, SKIP_TARGET_ID))
+                if (groupState.votes.none { it.voterId == pid }) {
+                    groupState.votes.add(
+                        dev.robothanzo.werewolf.game.model.GroupVote(
+                            voterId = pid,
+                            targetId = SKIP_TARGET_ID
+                        )
+                    )
                 }
             }
 
@@ -302,7 +285,6 @@ class NightStep(
                 )
             }
 
-            syncWolfVotes(session)
             actionUIService.clearGroupState(session, PredefinedRoles.WEREWOLF_KILL)
         }
     }
@@ -340,7 +322,6 @@ class NightStep(
 
         // Clear night-specific data to save storage
         session.stateData.werewolfMessages.clear()
-        session.stateData.werewolfVotes.clear()
         session.stateData.phaseType = null
         session.stateData.phaseStartTime = 0
         session.stateData.phaseEndTime = 0

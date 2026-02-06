@@ -62,8 +62,10 @@ class GameStateServiceImpl(
             pendingActions = oldState.pendingActions,
             actionData = oldState.actionData,
             lastGuardProtectedId = oldState.lastGuardProtectedId,
-            roleFlags = oldState.roleFlags,
-            deathTriggerAvailableMap = oldState.deathTriggerAvailableMap
+            deathTriggerAvailableMap = oldState.deathTriggerAvailableMap,
+            darkMerchantTradeRecipientId = oldState.darkMerchantTradeRecipientId,
+            darkMerchantGiftedSkill = oldState.darkMerchantGiftedSkill,
+            wolfBrotherDiedDay = oldState.wolfBrotherDiedDay
         )
 
         // Timer Logic

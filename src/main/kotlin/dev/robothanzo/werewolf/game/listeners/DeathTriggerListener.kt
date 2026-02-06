@@ -39,8 +39,7 @@ class DeathTriggerListener(
                 if (deathTriggerActions.isNotEmpty()) {
                     // Mark death trigger actions as available for this role
                     for (action in deathTriggerActions) {
-                        val stateKey = "${action.actionId}Available"
-                        session.stateData.roleFlags[stateKey] = userId
+                        session.stateData.deathTriggerAvailableMap[action.actionId] = player.id
                     }
                     hasDeathTrigger = true
                 }
