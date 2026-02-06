@@ -9,7 +9,7 @@ import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 data class RoleEventContext(
     val session: Session,
     val eventType: RoleEventType,
-    val actorUserId: Long,
+    val actorPlayerId: Int,
     val metadata: Map<String, Any> = emptyMap()
 )
 
@@ -40,7 +40,7 @@ interface Role {
     /**
      * Hook called at the start of each night phase
      */
-    fun onNightStart(session: Session, actorUserId: Long) {}
+    fun onNightStart(session: Session, actorPlayerId: Int) {}
 
     /**
      * Hook called when a player is expelled (voted out)

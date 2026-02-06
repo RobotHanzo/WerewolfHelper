@@ -97,18 +97,18 @@ class SpeechServiceImpl(
     override fun setSpeechOrder(session: Session, order: SpeechOrder) {
         val guildId = session.guildId
         var target: Player? = null
-        for (player in session.fetchAlivePlayers().values) {
+        for (player in session.alivePlayers().values) {
             if (player.police) {
                 target = player
                 break
             }
         }
-        if (target == null && !session.fetchAlivePlayers().isEmpty()) {
-            target = session.fetchAlivePlayers().values.iterator().next()
+        if (target == null && !session.alivePlayers().isEmpty()) {
+            target = session.alivePlayers().values.iterator().next()
         }
 
         if (target != null) {
-            changeOrder(guildId, order, session.fetchAlivePlayers().values, target)
+            changeOrder(guildId, order, session.alivePlayers().values, target)
         }
     }
 
@@ -134,7 +134,7 @@ class SpeechServiceImpl(
             return
         }
 
-        changeOrder(guildId, order, session.fetchAlivePlayers().values, target)
+        changeOrder(guildId, order, session.alivePlayers().values, target)
         event.hook.editOriginal(":white_check_mark: 請按下確認以開始發言流程").queue()
         event.message.editMessageEmbeds(
             EmbedBuilder(event.message.embeds.first())
@@ -178,8 +178,9 @@ class SpeechServiceImpl(
         val speechSession = speechSessions[guildId]
 
         if (speechSession != null) {
+            val currentPlayer = sessionRepository.findByGuildId(guildId).getOrNull()?.getPlayer(event.user.idLong)
             if (speechSession.lastSpeaker != null
-                && event.user.idLong != speechSession.lastSpeaker
+                && currentPlayer?.id != speechSession.lastSpeaker
             ) {
                 event.hook.setEphemeral(true).editOriginal(":x: 你不是發言者").queue()
             } else {
@@ -199,34 +200,39 @@ class SpeechServiceImpl(
 
         if (speechSession != null) {
             val member = event.member ?: return
+            val session = speechSession.session
+            val player = session.getPlayer(event.user.idLong)
+            
             if (speechSession.lastSpeaker != null && !member.isAdmin()) {
-                if (event.user.idLong == speechSession.lastSpeaker) {
+                if (player?.id == speechSession.lastSpeaker) {
                     event.hook.editOriginal(":x: 若要跳過發言請按左邊的跳過按鈕").queue()
                 } else {
-                    val session = speechSession.session
                     if (member.isSpectator()) {
                         event.hook.editOriginal(":x: 旁觀者不得投票").queue()
-                    } else {
-                        if (speechSession.interruptVotes.contains(event.user.idLong)) {
-                            speechSession.interruptVotes.remove(event.user.idLong)
+                    } else if (player != null) {
+                        if (speechSession.interruptVotes.contains(player.id)) {
+                            speechSession.interruptVotes.remove(player.id)
                             event.hook.editOriginal(
                                 ":white_check_mark: 成功取消下台投票，距離該玩家下台還缺" +
-                                        (session.fetchAlivePlayers().size / 2 + 1
+                                        (session.alivePlayers().size / 2 + 1
                                                 - speechSession.interruptVotes.size)
                                         + "票"
                             ).queue()
                         } else {
-                            speechSession.interruptVotes.add(event.user.idLong)
+                            speechSession.interruptVotes.add(player.id)
                             event.hook.editOriginal(
                                 ":white_check_mark: 下台投票成功，距離該玩家下台還缺" +
-                                        (session.fetchAlivePlayers().size / 2 + 1
+                                        (session.alivePlayers().size / 2 + 1
                                                 - speechSession.interruptVotes.size)
                                         + "票"
                             ).queue()
 
                             gameSessionService.broadcastSessionUpdate(session)
-                            if (speechSession.interruptVotes.size > (session.fetchAlivePlayers().size / 2)) {
-                                val voterMentions = speechSession.interruptVotes.map { "<@!$it>" }
+                            if (speechSession.interruptVotes.size > (session.alivePlayers().size / 2)) {
+                                val voterMentions = speechSession.interruptVotes.map { pid ->
+                                    val voter = session.getPlayer(pid)
+                                    voter?.user?.asMention ?: voter?.nickname ?: "玩家 $pid"
+                                }
                                 event.message.reply(
                                     "人民的法槌已強制該玩家下台，有投票的有: ${voterMentions.joinToString("、")}"
                                 )
@@ -234,6 +240,8 @@ class SpeechServiceImpl(
                                 nextSpeaker(guildId)
                             }
                         }
+                    } else {
+                        event.hook.editOriginal(":x: 你不是玩家").queue()
                     }
                 }
             } else {
@@ -262,7 +270,7 @@ class SpeechServiceImpl(
 
         if (session.muteAfterSpeech)
             gameActionService.muteAll(guildId, true)
-        for (player in session.fetchAlivePlayers().values) {
+        for (player in session.alivePlayers().values) {
             if (player.police) {
                 session.courtTextChannel?.sendMessageEmbeds(
                     EmbedBuilder()
@@ -284,9 +292,9 @@ class SpeechServiceImpl(
         }
 
         // No police found, auto random
-        val shuffled = session.fetchAlivePlayers().values.shuffled()
+        val shuffled = session.alivePlayers().values.shuffled()
         val randOrder = SpeechOrder.getRandomOrder()
-        changeOrder(guildId, randOrder, session.fetchAlivePlayers().values, shuffled.first())
+        changeOrder(guildId, randOrder, session.alivePlayers().values, shuffled.first())
         session.courtTextChannel?.sendMessageEmbeds(
             EmbedBuilder()
                 .setTitle("找不到警長，自動抽籤發言順序")
@@ -431,8 +439,9 @@ class SpeechServiceImpl(
         gameSessionService.withLockedSession(guildId) { session ->
             val guild = discordService.getGuild(guildId) ?: return@withLockedSession
 
-            speechSession.lastSpeaker?.let { lastSpeakerId ->
-                val member = guild.getMemberById(lastSpeakerId)
+            speechSession.lastSpeaker?.let { lastSpeakerPid ->
+                val lastPlayer = session.getPlayer(lastSpeakerPid)
+                val member = lastPlayer?.user?.idLong?.let { guild.getMemberById(it) }
                 if (member != null) {
                     try {
                         if (session.muteAfterSpeech)
@@ -452,7 +461,7 @@ class SpeechServiceImpl(
             }
 
             val player = speechSession.order.removeFirst()
-            speechSession.lastSpeaker = player.user?.idLong
+            speechSession.lastSpeaker = player.id
             val time = getSpeakerDuration(player.police)
             speechSession.totalSpeechTime = time
             speechSession.currentSpeechEndTime = System.currentTimeMillis() + (time * 1000L)
@@ -470,7 +479,7 @@ class SpeechServiceImpl(
             }
 
             val message = session.courtTextChannel?.sendMessage(
-                "<@!" + player.user?.idLong + "> 你有" + time + "秒可以發言\n"
+                "${player.user?.asMention ?: player.nickname} 你有 $time 秒可以發言\n"
             )
                 ?.setComponents(
                     ActionRow.of(
@@ -482,10 +491,14 @@ class SpeechServiceImpl(
 
             val voiceChannel = session.courtVoiceChannel
             try {
-                Thread.sleep((time - 30) * 1000L)
-                if (!speechSession.shouldStopCurrentSpeaker) {
-                    voiceChannel?.play(Audio.Resource.TIMER_30S_REMAINING)
-                    Thread.sleep(32000) // Extra 2 seconds to account for delays
+                if (time > 30) {
+                    Thread.sleep((time - 30) * 1000L)
+                    if (!speechSession.shouldStopCurrentSpeaker) {
+                        voiceChannel?.play(Audio.Resource.TIMER_30S_REMAINING)
+                        Thread.sleep(30000)
+                    }
+                } else {
+                    Thread.sleep(time * 1000L)
                 }
                 if (!speechSession.shouldStopCurrentSpeaker) {
                     voiceChannel?.play(Audio.Resource.TIMER_ENDED)

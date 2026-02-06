@@ -47,7 +47,7 @@ class ActionSelectionListener(
         componentId: String
     ) {
         val actionId = componentId.removePrefix("group_target_")
-        val targetUserId = event.selectedOptions.firstOrNull()?.value?.toLongOrNull() ?: return
+        val targetPlayerId = event.selectedOptions.firstOrNull()?.value?.toIntOrNull() ?: return
         val session = sessionRepository.findByGuildId(guildId).getOrNull() ?: return
         val player = session.getPlayerByChannel(event.channelIdLong) ?: return
         if (player.user?.idLong != userId && event.member?.isAdmin() != true) {
@@ -55,22 +55,22 @@ class ActionSelectionListener(
             return
         }
 
-        if (!actionUIService.submitGroupVote(player, actionId, targetUserId)) {
+        if (!actionUIService.submitGroupVote(player, actionId, targetPlayerId)) {
             event.reply("❌ 無法紀錄投票").setEphemeral(true).queue()
             return
         }
-        log.info("Wolf $userId voted for target: $targetUserId in group action: $actionId")
+        log.info("Wolf $userId voted for target: $targetPlayerId in group action: $actionId")
 
         // Fetch fresh session to get updated votes for the tally
         val freshSession = dev.robothanzo.werewolf.utils.CmdUtils.getSession(event.guild) ?: return
         val groupState = actionUIService.getGroupState(freshSession, actionId) ?: return
 
         // Get the player name for feedback
-        val targetName = if (targetUserId == SKIP_TARGET_ID) {
+        val targetName = if (targetPlayerId == SKIP_TARGET_ID) {
             "跳過"
         } else {
-            val targetPlayer = session.players.values.firstOrNull { it.user?.idLong == targetUserId }
-            targetPlayer?.nickname ?: "玩家 $targetUserId"
+            val targetPlayer = session.getPlayer(targetPlayerId)
+            targetPlayer?.nickname ?: "玩家 $targetPlayerId"
         }
 
         event.reply("✅ 你投票支持擊殺: **$targetName**").setEphemeral(true).queue()
@@ -78,9 +78,9 @@ class ActionSelectionListener(
         // Broadcast real-time tally to wolves
         val tallyMessage = buildWolfTallyMessage(session, groupState.votes, groupState.participants.size)
         session.players.values
-            .filter { it.user != null && it.user?.idLong in groupState.participants }
-            .forEach { player ->
-                player.channel?.sendMessage(tallyMessage)?.queue()
+            .filter { it.id in groupState.participants }
+            .forEach { p ->
+                p.channel?.sendMessage(tallyMessage)?.queue()
             }
 
         // Broadcasting real-time tally is enough. 
@@ -92,7 +92,7 @@ class ActionSelectionListener(
         votes: List<GroupVote>,
         totalVoters: Int
     ): String {
-        val voteCounts = votes.groupingBy { it.targetId }.eachCount()
+        val voteCounts = votes.groupingBy { it.targetPlayerId }.eachCount()
         val lines = mutableListOf<String>()
         lines.add("📊 **狼人投票即時統計**")
         lines.add("已投票: ${votes.size}/$totalVoters")
@@ -101,12 +101,12 @@ class ActionSelectionListener(
         if (sortedTargets.isEmpty()) {
             lines.add("尚未有人投票")
         } else {
-            for ((targetUserId, count) in sortedTargets) {
-                val label = if (targetUserId == SKIP_TARGET_ID) {
+            for ((targetPlayerId, count) in sortedTargets) {
+                val label = if (targetPlayerId == SKIP_TARGET_ID) {
                     "跳過"
                 } else {
-                    val targetPlayer = session.players.values.firstOrNull { it.user?.idLong == targetUserId }
-                    targetPlayer?.nickname ?: "玩家 $targetUserId"
+                    val targetPlayer = session.getPlayer(targetPlayerId)
+                    targetPlayer?.nickname ?: "玩家 $targetPlayerId"
                 }
                 lines.add("• $label: $count")
             }

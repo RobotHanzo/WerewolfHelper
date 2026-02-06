@@ -3,12 +3,11 @@ package dev.robothanzo.werewolf.game.steps
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
-import dev.robothanzo.werewolf.game.model.ActionStatus
+import dev.robothanzo.werewolf.game.model.ActionData
 import dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID
 import dev.robothanzo.werewolf.game.model.WolfVote
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import dev.robothanzo.werewolf.service.*
-import dev.robothanzo.werewolf.utils.parseLong
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.firstOrNull
@@ -58,32 +57,34 @@ class NightStep(
             lockedSession.stateData.werewolfMessages.clear()
 
             val werewolfVotes = mutableMapOf<String, WolfVote>()
-            val actionStatuses = mutableMapOf<String, ActionStatus>()
 
             for ((_, p) in lockedSession.players) {
-                if (!p.alive || p.user == null) continue
-                val uid = p.user!!.idLong
+                if (!p.alive) continue
 
                 if (p.wolf) {
-                    werewolfVotes[uid.toString()] = WolfVote(
-                        voterId = uid.toString()
+                    werewolfVotes[p.id.toString()] = WolfVote(
+                        voterId = p.id
                     )
                 } else {
-                    val actions = roleActionService.getAvailableActionsForPlayer(lockedSession, uid)
+                    val actions = roleActionService.getAvailableActionsForPlayer(lockedSession, p.id)
                     if (actions.isNotEmpty()) {
-                        actionStatuses[uid.toString()] = ActionStatus(
-                            playerId = uid.toString(),
-                            role = (p.roles?.firstOrNull() ?: "未知"),
-                            status = "PENDING"
-                        )
+                        val actionData = lockedSession.stateData.actionData.getOrPut(p.id.toString()) {
+                            ActionData(playerId = p.id)
+                        }
+                        actionData.status = ActionStatus.PENDING
+                        actionData.role = (p.roles?.firstOrNull() ?: "未知")
+                        actionData.submittedAt = null
+                        actionData.availableActions = emptyList()
+                        actionData.selectedAction = null
+                        actionData.selectedTargets = emptyList()
+                        actionData.expiresAt = null
+                        actionData.targetPromptId = null
                     }
                 }
             }
 
             lockedSession.stateData.werewolfVotes.clear()
             lockedSession.stateData.werewolfVotes.putAll(werewolfVotes)
-            lockedSession.stateData.actionStatuses.clear()
-            lockedSession.stateData.actionStatuses.putAll(actionStatuses)
         }
 
         // Orchestrate the night phases
@@ -99,7 +100,7 @@ class NightStep(
     private suspend fun processNightPhases(guildId: Long) {
         // 1. Werewolf Voting Phase
         val session = gameSessionService.getSession(guildId).orElseThrow()
-        val werewolves = session.players.values.filter { it.alive && it.wolf }.mapNotNull { it.user?.idLong }
+        val werewolves = session.players.values.filter { it.alive && it.wolf }.map { it.id }
 
         if (werewolves.isNotEmpty()) {
             gameSessionService.withLockedSession(guildId) { lockedSession ->
@@ -120,8 +121,8 @@ class NightStep(
                     delay(60_000)
                     gameSessionService.withLockedSession(guildId) { currentSession ->
                         if (!allWolvesVoted(guildId)) {
-                            werewolves.forEach { uid ->
-                                currentSession.getPlayer(uid)?.channel?.sendMessage("⏱️ **還剩30秒！** 請投票，否則視為跳過")
+                            werewolves.forEach { pid ->
+                                currentSession.getPlayer(pid)?.channel?.sendMessage("⏱️ **還剩30秒！** 請投票，否則視為跳過")
                                     ?.queue()
                             }
                         }
@@ -140,18 +141,18 @@ class NightStep(
             lockedSession.stateData.phaseEndTime = roleStartTime + 60_000 // Role phase lasts 60s
             nightManager.broadcastNightStatus(lockedSession)
 
-            val actors = mutableListOf<Long>()
-            for ((playerId, player) in lockedSession.players) {
-                if (!player.alive || player.user?.idLong == null || player.wolf) continue
-                val uid = player.user!!.idLong
-                val actions = roleActionService.getAvailableActionsForPlayer(lockedSession, uid)
+            val actors = mutableListOf<Int>()
+            for (player in lockedSession.players.values) {
+                if (!player.alive || player.wolf) continue
+                val pid = player.id
+                val actions = roleActionService.getAvailableActionsForPlayer(lockedSession, pid)
 
                 if (actions.isNotEmpty()) {
-                    actors.add(uid)
-                    actionUIService.promptPlayerForAction(guildId, lockedSession, uid, playerId, actions, 60)
+                    actors.add(pid)
+                    actionUIService.promptPlayerForAction(guildId, lockedSession, pid, actions, 60)
 
                     // Set status to ACTING
-                    updateStatusToActing(lockedSession, uid)
+                    updateStatusToActing(lockedSession, pid)
                 }
             }
 
@@ -166,6 +167,7 @@ class NightStep(
         }
 
         waitForRoleActionsPhase(guildId, 60)
+        finalizeRoleActionsPhase(guildId)
         gameSessionService.getSession(guildId).getOrNull()?.addLog(LogType.SYSTEM, "夜晚結束，天亮了")
         // Transition is usually triggered by the engine, but we notify dashboard
         nightManager.notifyPhaseUpdate(guildId)
@@ -216,8 +218,8 @@ class NightStep(
 
     private fun allActorsSubmitted(guildId: Long): Boolean {
         val session = gameSessionService.getSession(guildId).orElse(null) ?: return true
-        val statuses = session.stateData.actionStatuses
-        return statuses.values.all { it.status == "SUBMITTED" || it.status == "SKIPPED" }
+        val actionDataMap = session.stateData.actionData
+        return actionDataMap.values.all { it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.SKIPPED || it.status == ActionStatus.PENDING && it.availableActions.isEmpty() }
     }
 
     private fun syncWolfVotes(session: Session) {
@@ -226,9 +228,9 @@ class NightStep(
         val votesMap = session.stateData.werewolfVotes
         groupState.votes.forEach { (voterId, targetId) ->
             val vote = votesMap.getOrPut(voterId.toString()) {
-                WolfVote(voterId = voterId.toString())
+                WolfVote(voterId = voterId)
             }
-            vote.targetId = targetId.toString()
+            vote.targetId = targetId
         }
     }
 
@@ -238,9 +240,9 @@ class NightStep(
                 actionUIService.getGroupState(session, PredefinedRoles.WEREWOLF_KILL) ?: return@withLockedSession
 
             // Timeout handling: default missing votes to skip
-            groupState.participants.forEach { uid ->
-                if (groupState.votes.none { it.userId == uid }) {
-                    groupState.votes.add(dev.robothanzo.werewolf.game.model.GroupVote(uid, SKIP_TARGET_ID))
+            groupState.participants.forEach { pid ->
+                if (groupState.votes.none { it.playerId == pid }) {
+                    groupState.votes.add(dev.robothanzo.werewolf.game.model.GroupVote(pid, SKIP_TARGET_ID))
                 }
             }
 
@@ -270,7 +272,7 @@ class NightStep(
                 roleActionService.submitAction(
                     guildId,
                     PredefinedRoles.WEREWOLF_KILL,
-                    groupState.participants.firstOrNull() ?: 0L,
+                    groupState.participants.firstOrNull() ?: 0,
                     listOf(chosenTarget),
                     "GROUP"
                 )
@@ -281,11 +283,17 @@ class NightStep(
         }
     }
 
-    private fun updateStatusToActing(session: Session, uid: Long) {
-        val statusesMap = session.stateData.actionStatuses
-        val currentStatus = statusesMap[uid.toString()] ?: return
-        if (currentStatus.status == "PENDING") {
-            currentStatus.status = "ACTING"
+    private fun finalizeRoleActionsPhase(guildId: Long) {
+        gameSessionService.withLockedSession(guildId) { session ->
+            actionUIService.cleanupExpiredPrompts(guildId, session)
+            session.addLog(LogType.SYSTEM, "角色行動階段結束，清理未完成的行動")
+        }
+    }
+
+    private fun updateStatusToActing(session: Session, pid: Int) {
+        val actionData = session.stateData.actionData[pid.toString()] ?: return
+        if (actionData.status == ActionStatus.PENDING) {
+            actionData.status = ActionStatus.ACTING
             gameSessionService.saveSession(session)
             nightManager.broadcastNightStatus(session)
         }
@@ -296,13 +304,19 @@ class NightStep(
         actionUIService.cleanupExpiredPrompts(session.guildId, session)
 
         // Clear prompts from session state (Persistent state cleanup)
-        session.stateData.actionPrompts.clear()
+        session.stateData.actionData.values.forEach {
+            it.availableActions = emptyList()
+            it.selectedAction = null
+            it.selectedTargets = emptyList()
+            it.expiresAt = null
+            it.targetPromptId = null
+            it.status = ActionStatus.PENDING
+        }
         session.stateData.groupStates.clear()
 
         // Clear night-specific data to save storage
         session.stateData.werewolfMessages.clear()
         session.stateData.werewolfVotes.clear()
-        session.stateData.actionStatuses.clear()
         session.stateData.phaseType = null
         session.stateData.phaseStartTime = 0
         session.stateData.phaseEndTime = 0
@@ -316,21 +330,22 @@ class NightStep(
         return when (action) {
             "submit_action" -> {
                 val actionDefinitionId = input["actionDefinitionId"] as? String
-                val actorUserId = parseLong(input["actorUserId"])
+                val actorPlayerId = (input["actorPlayerId"] as? Number)?.toInt()
 
                 @Suppress("UNCHECKED_CAST")
-                val targetUserIds = (input["targetUserIds"] as? List<*>)?.mapNotNull { parseLong(it) } ?: emptyList()
+                val targetPlayerIds =
+                    (input["targetPlayerIds"] as? List<*>)?.mapNotNull { (it as? Number)?.toInt() } ?: emptyList()
                 val submittedBy = input["submittedBy"] as? String ?: "PLAYER"
 
-                if (actionDefinitionId == null || actorUserId == null) {
+                if (actionDefinitionId == null || actorPlayerId == null) {
                     return mapOf("success" to false, "error" to "Missing required parameters")
                 }
 
                 roleActionService.submitAction(
                     session.guildId,
                     actionDefinitionId,
-                    actorUserId,
-                    targetUserIds,
+                    actorPlayerId,
+                    targetPlayerIds,
                     submittedBy
                 )
 

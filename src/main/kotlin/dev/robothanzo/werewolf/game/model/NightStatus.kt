@@ -4,7 +4,7 @@ package dev.robothanzo.werewolf.game.model
  * Represents a message sent in the werewolf chat during the night phase.
  */
 data class WerewolfMessage(
-    val senderId: String,
+    val senderId: Int,
     val senderName: String,
     val avatarUrl: String? = null,
     val content: String,
@@ -15,17 +15,17 @@ data class WerewolfMessage(
  * Represents the voting state of a werewolf during the kill vote.
  */
 data class WerewolfVote(
-    val voterId: String,
-    val targetId: String?
+    val voterId: Int,
+    val targetId: Int?
 )
 
 /**
  * Represents the action submission state for a player with an eligible role.
  */
 data class ActionSubmissionStatus(
-    val playerId: String,
+    val playerId: Int,
     val role: String,
-    val status: String, // PENDING, SUBMITTED, SKIPPED
+    val status: ActionStatus, // PENDING, ACTING, SUBMITTED, SKIPPED
     val actionType: String? = null, // The action chosen (e.g., "KILL", "HEAL", "CHECK")
     val targetId: String? = null,
     val submittedAt: Long? = null

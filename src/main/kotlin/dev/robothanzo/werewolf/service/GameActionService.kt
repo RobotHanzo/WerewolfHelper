@@ -23,12 +23,12 @@ interface GameActionService {
      * Marks a player as dead in the game session.
      *
      * @param session        the session containing the player
-     * @param userId         the ID of the user to mark as dead
+     * @param playerId       the ID of the player to mark as dead
      * @param allowLastWords whether the player is allowed to give last words
      */
     fun markPlayerDead(
         session: Session,
-        userId: Long,
+        playerId: Int,
         allowLastWords: Boolean,
         cause: DeathCause = DeathCause.UNKNOWN
     )
@@ -37,26 +37,26 @@ interface GameActionService {
      * Revives a player in the game session.
      *
      * @param session the session containing the player
-     * @param userId  the ID of the user to revive
+     * @param playerId the ID of the player to revive
      */
-    fun revivePlayer(session: Session, userId: Long)
+    fun revivePlayer(session: Session, playerId: Int)
 
     /**
      * Revives a player and assigns them a specific role.
      *
      * @param session the session containing the player
-     * @param userId  the ID of the user to revive
+     * @param playerId the ID of the player to revive
      * @param role    the role to assign to the player
      */
-    fun reviveRole(session: Session, userId: Long, role: String)
+    fun reviveRole(session: Session, playerId: Int, role: String)
 
     /**
      * Assigns the police (sheriff) status to a player.
      *
      * @param session the session containing the player
-     * @param userId  the ID of the user to make police
+     * @param playerId the ID of the player to make police
      */
-    fun setPolice(session: Session, userId: Long)
+    fun setPolice(session: Session, playerId: Int)
 
     /**
      * Broadcasts a progress update for a long-running action.

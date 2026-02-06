@@ -9,9 +9,9 @@ import dev.robothanzo.werewolf.game.model.RoleActionInstance
  * Represents the result of executing a role action
  */
 data class ActionExecutionResult(
-    val deaths: Map<DeathCause, List<Long>> = emptyMap(), // cause -> list of user IDs
-    val saved: List<Long> = emptyList(),
-    val protectedPlayers: Set<Long> = emptySet(),
+    val deaths: Map<DeathCause, List<Int>> = emptyMap(), // cause -> list of player IDs (Int)
+    val saved: List<Int> = emptyList(), // player IDs (Int)
+    val protectedPlayers: Set<Int> = emptySet(), // player IDs (Int)
     val metadata: Map<String, Any> = emptyMap() // For storing additional action-specific data like seer checks
 )
 
@@ -78,18 +78,14 @@ interface RoleAction {
     val allowMultiplePerPhase: Boolean
         get() = false
 
-    /**
-     * Number of times this action has been used by the actor in the current session.
-     */
-    fun getUsageCount(session: Session, actor: Long): Int {
-        val userUsage = session.stateData.actionUsage[actor.toString()] ?: return 0
-        return userUsage.getOrDefault(actionId, 0)
+    fun getUsageCount(session: Session, actor: Int): Int {
+        return session.stateData.actionData[actor.toString()]?.usage?.get(actionId) ?: 0
     }
 
     /**
      * Whether this action is available for the actor in the current session state.
      */
-    fun isAvailable(session: Session, actor: Long): Boolean {
+    fun isAvailable(session: Session, actor: Int): Boolean {
         // Check usage limit
         if (usageLimit != -1 && getUsageCount(session, actor) >= usageLimit) {
             return false
@@ -102,9 +98,9 @@ interface RoleAction {
      * 
      * @return null if valid, or an error message if invalid.
      */
-    fun validate(session: Session, actor: Long, targets: List<Long>): String? {
+    fun validate(session: Session, actor: Int, targets: List<Int>): String? {
         // Basic actor check
-        val actorPlayer = session.getPlayer(actor) ?: return "Actor not found"
+        val actorPlayer = session.getPlayer(actor.toString()) ?: return "Actor not found"
         if (!actorPlayer.alive) return "Actor not alive"
         if (actorPlayer.roles?.contains(roleName) != true) return "Actor does not have role $roleName"
 
@@ -116,7 +112,7 @@ interface RoleAction {
 
         // Target validity check
         for (targetId in targets) {
-            val targetPlayer = session.getPlayer(targetId) ?: return "目標玩家不存在"
+            val targetPlayer = session.getPlayer(targetId.toString()) ?: return "目標玩家不存在"
             if (requiresAliveTarget && !targetPlayer.alive) return "目標必須是生存狀態"
         }
 
@@ -126,11 +122,14 @@ interface RoleAction {
     /**
      * Hook called when an action is successfully submitted.
      */
-    fun onSubmitted(session: Session, actor: Long, targets: List<Long>) {
+    fun onSubmitted(session: Session, actor: Int, targets: List<Int>) {
         // Default: update usage count
-        val userUsage = session.stateData.actionUsage.getOrPut(actor.toString()) { mutableMapOf() }
-        val currentCount = userUsage.getOrDefault(actionId, 0)
-        userUsage[actionId] = currentCount + 1
+        val data = session.stateData.actionData.getOrPut(actor.toString()) {
+            val player = session.getPlayer(actor.toString())
+            ActionData(playerId = actor, role = player?.roles?.firstOrNull() ?: "未知")
+        }
+        val currentCount = data.usage.getOrDefault(actionId, 0)
+        data.usage[actionId] = currentCount + 1
     }
 
     /**
@@ -158,10 +157,10 @@ interface RoleAction {
      */
     fun eligibleTargets(
         session: Session,
-        actor: Long,
-        alivePlayers: List<Long>,
+        actor: Int,
+        alivePlayers: List<Int>,
         accumulatedState: ActionExecutionResult = ActionExecutionResult()
-    ): List<Long> {
+    ): List<Int> {
         // Default implementation: all alive players are eligible
         return alivePlayers
     }

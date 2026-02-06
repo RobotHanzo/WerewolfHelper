@@ -90,7 +90,8 @@ data class Session(
             }
         }
     }
-    fun fetchAlivePlayers(): Map<String, Player> {
+
+    fun alivePlayers(): Map<String, Player> {
         return players.filter { it.value.alive }
     }
 
@@ -227,17 +228,13 @@ data class Session(
         return player
     }
 
-    fun getPlayer(playerId: String): Player? {
-        return players[playerId]
-    }
+    fun getPlayer(playerId: String): Player? = players[playerId]
 
-    fun getPlayer(userId: Long): Player? {
-        return players.values.find { it.user?.idLong == userId }
-    }
+    fun getPlayer(playerId: Int): Player? = players[playerId.toString()]
 
-    fun getPlayerByChannel(channelId: Long): Player? {
-        return players.values.find { it.channel?.idLong == channelId }
-    }
+    fun getPlayer(userId: Long): Player? = players.values.find { it.user?.idLong == userId }
+
+    fun getPlayerByChannel(channelId: Long): Player? = players.values.find { it.channel?.idLong == channelId }
 
     /**
      * Audit log entry for tracking game events
@@ -251,16 +248,9 @@ data class Session(
     )
 
     /**
-     * Add a log entry to the session
-     */
-    fun addLog(type: LogType, message: String) {
-        addLog(type, message, null)
-    }
-
-    /**
      * Add a log entry with metadata to the session
      */
-    fun addLog(type: LogType, message: String, metadata: Map<String, Any>?) {
+    fun addLog(type: LogType, message: String, metadata: Map<String, Any>? = null) {
         WerewolfApplication.gameSessionService.withLockedSession(this.guildId) {
             it.logs.add(
                 LogEntry(

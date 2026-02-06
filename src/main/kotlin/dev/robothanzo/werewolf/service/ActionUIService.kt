@@ -2,7 +2,7 @@ package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.ActionPrompt
+import dev.robothanzo.werewolf.game.model.ActionData
 import dev.robothanzo.werewolf.game.model.GroupActionState
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 
@@ -15,11 +15,10 @@ interface ActionUIService {
     fun promptPlayerForAction(
         guildId: Long,
         session: Session,
-        userId: Long,
-        playerId: String,
+        playerId: Int,
         availableActions: List<RoleAction>,
         timeoutSeconds: Int = 60
-    ): ActionPrompt?
+    ): ActionData?
 
     /**
      * Send group action UI for wolves to discuss and vote on target
@@ -30,7 +29,7 @@ interface ActionUIService {
         guildId: Long,
         session: Session,
         actionId: String,
-        participants: List<Long>,
+        participants: List<Int>, // These are playerIds
         durationSeconds: Int = 90
     ): GroupActionState?
 
@@ -39,26 +38,27 @@ interface ActionUIService {
      */
     fun updateActionSelection(
         guildId: Long,
-        promptId: String,
+        playerId: Int,
         actionId: String,
         session: Session
-    ): ActionPrompt?
+    ): ActionData?
 
     /**
      * Record a target selection for an action prompt
      */
     fun submitTargetSelection(
         guildId: Long,
-        promptId: String,
-        userId: Long,
-        targetUserId: Long,
+        playerId: Int,
+        targetPlayerId: Int,
         session: Session
     ): Boolean
 
+    fun getActionData(session: Session, playerId: Int): ActionData?
+
     /**
-     * Get an active prompt by id
+     * Update the Discord message ID for an active prompt
      */
-    fun getPrompt(session: Session, promptId: String): ActionPrompt?
+    fun updateTargetPromptId(guildId: Long, playerId: Int, messageId: Long)
 
     /**
      * Record a vote in a group action
@@ -66,13 +66,13 @@ interface ActionUIService {
     fun submitGroupVote(
         player: Player,
         groupStateId: String,
-        targetUserId: Long
+        targetPlayerId: Int
     ): Boolean
 
     /**
      * Get the final target for a group action (majority vote or last vote)
      */
-    fun resolveGroupVote(session: Session, groupState: GroupActionState): Long?
+    fun resolveGroupVote(session: Session, groupState: GroupActionState): Int?
 
     /**
      * Get a group action state by action ID
@@ -95,9 +95,5 @@ interface ActionUIService {
      */
     fun sendReminders(guildId: Long, session: Session)
 
-    /**
-     * Clear a prompt (when player submits action or skips)
-     * This prevents reminder from being sent
-     */
-    fun clearPrompt(session: Session, playerId: String)
+    fun clearPrompt(session: Session, playerId: Int)
 }

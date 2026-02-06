@@ -38,7 +38,7 @@ class RoleActionExecutor(private val roleRegistry: RoleRegistry) {
         // Execute death resolution as final step
         val deathResolution = roleRegistry.getAction("DEATH_RESOLUTION") ?: return result
         val dummyAction = RoleActionInstance(
-            actor = 0L,
+            actor = 0,
             actionDefinitionId = "DEATH_RESOLUTION",
             targets = emptyList(),
             submittedBy = ActionSubmissionSource.JUDGE

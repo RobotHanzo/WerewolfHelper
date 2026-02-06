@@ -98,8 +98,8 @@ interface PoliceService {
 
 data class TransferPoliceSession(
     val guildId: Long,
-    val senderId: Long,
-    val possibleRecipientIds: MutableList<Long> = ArrayList(),
+    val senderId: Int,
+    val possibleRecipientIds: MutableList<Int> = ArrayList(),
     var recipientId: Int? = null,
     val callback: (() -> Unit)? = null
 )

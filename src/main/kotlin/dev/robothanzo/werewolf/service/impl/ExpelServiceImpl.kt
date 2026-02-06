@@ -83,7 +83,7 @@ class ExpelServiceImpl : ExpelService {
 
         // Populate candidates
         val map = mutableMapOf<Int, Candidate>()
-        for (player in session.fetchAlivePlayers().values.sortedWith(compareBy { it.id })) {
+        for (player in session.alivePlayers().values.sortedWith(compareBy { it.id })) {
             map[player.id] = Candidate(player = player)
         }
         poll.candidates.clear()

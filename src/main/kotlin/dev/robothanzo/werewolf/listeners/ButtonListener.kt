@@ -4,6 +4,7 @@ import dev.robothanzo.jda.interactions.annotations.Button
 import dev.robothanzo.jda.interactions.annotations.select.StringSelectMenu
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.ActionStatus
 import dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID
 import dev.robothanzo.werewolf.model.Candidate
 import dev.robothanzo.werewolf.utils.CmdUtils
@@ -67,10 +68,10 @@ class ButtonListener : ListenerAdapter() {
                         event.hook.sendMessage(":x: 你已提交行動，無法再次選擇").queue()
                         return@withLockedSession
                     }
-                    // Get the prompt to check if there's already a pending selection, if so, delete
-                    val prompt = WerewolfApplication.actionUIService.getPrompt(session, player.id.toString())
-                    if (prompt?.selectedAction != null && prompt.selectedTargets.isEmpty()) {
-                        prompt.targetPromptId?.let { event.messageChannel.deleteMessageById(it) }
+                    // Get the action data to check if there's already a pending selection, if so, delete
+                    val actionData = WerewolfApplication.actionUIService.getActionData(session, player.id)
+                    if (actionData?.selectedAction != null && actionData.selectedTargets.isEmpty()) {
+                        actionData.targetPromptId?.let { event.messageChannel.deleteMessageById(it).queue() }
                     }
 
                     // Get the action definition
@@ -81,23 +82,23 @@ class ButtonListener : ListenerAdapter() {
                         // Update selection in a persistent state
                         WerewolfApplication.actionUIService.updateActionSelection(
                             event.guild!!.idLong,
-                            player.id.toString(),
+                            player.id,
                             actionId,
                             session
                         )
 
                         // Filter eligible targets using the action's logic
-                        val allAlivePlayerIds = session.fetchAlivePlayers().values.mapNotNull { it.user?.idLong }
-                        val actorUserId = player.user?.idLong ?: event.user.idLong
-                        val eligibleTargetIds = action.eligibleTargets(session, actorUserId, allAlivePlayerIds)
+                        val allAlivePlayerIds = session.alivePlayers().values.map { it.id }
+                        val pid = player.id
+                        val eligibleTargetIds = action.eligibleTargets(session, pid, allAlivePlayerIds)
 
                         val eligiblePlayers = session.players.values.filter {
-                            it.user?.idLong != null && it.user?.idLong in eligibleTargetIds
+                            it.id in eligibleTargetIds
                         }
 
                         if (eligiblePlayers.isEmpty()) {
                             event.hook.sendMessage(":x: 沒有可選的目標").queue()
-                            WerewolfApplication.actionUIService.clearPrompt(session, player.id.toString())
+                            WerewolfApplication.actionUIService.clearPrompt(session, player.id)
                             return@withLockedSession
                         }
 
@@ -121,25 +122,25 @@ class ButtonListener : ListenerAdapter() {
                                 "跳過"
                             )
                         )
+                        val message =
+                            event.hook.sendMessage(targetMessage).setComponents(ActionRow.of(targetButtons)).complete()
+                        actionData?.targetPromptId = message.idLong
 
-                        event.hook.sendMessage(targetMessage).setComponents(ActionRow.of(targetButtons))
-                            .onSuccess { prompt?.targetPromptId = it.idLong }.queue()
-
-                        // RoleActionService.updateActionStatus already uses Persistent Session calls internally from previous refactor (if any) or needs it.
+                        // RoleActionService.updateActionStatus already uses Persistent Session calls internally
                         WerewolfApplication.roleActionService.updateActionStatus(
                             event.guild!!.idLong,
-                            player.user?.idLong ?: event.user.idLong,
-                            "ACTING",
+                            player.id,
+                            ActionStatus.ACTING,
                             actionId,
                             session = session
                         )
                     } else {
                         // No targets required - submit immediately
-                        WerewolfApplication.actionUIService.clearPrompt(session, player.id.toString())
+                        WerewolfApplication.actionUIService.clearPrompt(session, player.id)
                         WerewolfApplication.roleActionService.submitAction(
                             event.guild!!.idLong,
                             actionId,
-                            player.user?.idLong ?: event.user.idLong,
+                            player.id,
                             emptyList(),
                             if (isJudge) "JUDGE" else "PLAYER"
                         )
@@ -160,12 +161,12 @@ class ButtonListener : ListenerAdapter() {
                     WerewolfApplication.roleActionService.updateActionStatus(
                         event.guild!!.idLong,
                         player.user?.idLong ?: event.user.idLong,
-                        "SKIPPED",
+                        ActionStatus.SKIPPED,
                         targetUserIds = listOf(SKIP_TARGET_ID),
                         session = session
                     )
                     // Clear the action prompt to cancel reminder
-                    WerewolfApplication.actionUIService.clearPrompt(session, player.id.toString())
+                    WerewolfApplication.actionUIService.clearPrompt(session, player.user?.idLong ?: event.user.idLong)
                     event.hook.editOriginal(":white_check_mark: 已跳過").queue()
                 }
                 return
@@ -184,8 +185,11 @@ class ButtonListener : ListenerAdapter() {
                     val (player, isJudge) = getVerifiedPlayerAndIsJudge(event, session)
                     if (player == null) return@withLockedSession
 
-                    val prompt = WerewolfApplication.actionUIService.getPrompt(session, player.id.toString())
-                    val actionId = prompt?.selectedAction?.actionId
+                    val actionData = WerewolfApplication.actionUIService.getActionData(
+                        session,
+                        player.user?.idLong ?: event.user.idLong
+                    )
+                    val actionId = actionData?.selectedAction?.actionId
                     if (actionId == null) {
                         event.hook.editOriginal(":x: 沒有待選的行動").queue()
                         return@withLockedSession
@@ -223,7 +227,6 @@ class ButtonListener : ListenerAdapter() {
                     val targetUserId = target.user?.idLong ?: return@withLockedSession
                     WerewolfApplication.actionUIService.submitTargetSelection(
                         guildId,
-                        player.id.toString(),
                         player.user?.idLong ?: event.user.idLong,
                         targetUserId,
                         session
@@ -239,7 +242,10 @@ class ButtonListener : ListenerAdapter() {
 
                     if (result["success"] == true) {
                         // Clear the prompt after submission
-                        WerewolfApplication.actionUIService.clearPrompt(session, player.id.toString())
+                        WerewolfApplication.actionUIService.clearPrompt(
+                            session,
+                            player.user?.idLong ?: event.user.idLong
+                        )
                         player.actionSubmitted = true
                         event.hook.editOriginal(":white_check_mark: 已選擇 **${target.nickname}** 為目標").queue()
                     } else {
@@ -259,7 +265,7 @@ class ButtonListener : ListenerAdapter() {
             var player: DatabasePlayer? = null
             var check = false
 
-            for (p in session.fetchAlivePlayers().values) {
+            for (p in session.alivePlayers().values) {
                 if (p.user?.idLong != null && p.user?.idLong == event.user.idLong) {
                     check = true
                     player = p

@@ -1,13 +1,14 @@
 package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.ActionStatus
 import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.game.model.RoleActionInstance
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 
 data class NightResolutionResult(
-    val deaths: Map<DeathCause, List<Long>>, // cause -> list of user IDs
-    val saved: List<Long>,
+    val deaths: Map<DeathCause, List<Int>>, // cause -> list of player IDs (Int)
+    val saved: List<Int>, // player IDs (Int)
 )
 
 interface RoleActionService {
@@ -18,20 +19,20 @@ interface RoleActionService {
     fun submitAction(
         guildId: Long,
         actionDefinitionId: String,
-        actorUserId: Long,
-        targetUserIds: List<Long>,
+        actorPlayerId: Int,
+        targetPlayerIds: List<Int>,
         submittedBy: String // "PLAYER" or "JUDGE"
     ): Map<String, Any>
 
     /**
      * Get available actions for a specific player based on their roles
      */
-    fun getAvailableActionsForPlayer(session: Session, userId: Long): List<RoleAction>
+    fun getAvailableActionsForPlayer(session: Session, playerId: Int): List<RoleAction>
 
     /**
      * Get all available actions that can be manually cast by judge
      */
-    fun getAvailableActionsForJudge(session: Session): Map<Long, List<RoleAction>>
+    fun getAvailableActionsForJudge(session: Session): Map<Int, List<RoleAction>>
 
     /**
      * Resolve all pending night actions and return death results
@@ -41,7 +42,7 @@ interface RoleActionService {
     /**
      * Check if an action is available for a player (has usage remaining)
      */
-    fun isActionAvailable(session: Session, userId: Long, actionDefinitionId: String): Boolean
+    fun isActionAvailable(session: Session, playerId: Int, actionDefinitionId: String): Boolean
 
     /**
      * Get all pending actions for a session
@@ -51,18 +52,18 @@ interface RoleActionService {
     /**
      * Get usage count for a specific action
      */
-    fun getActionUsageCount(session: Session, userId: Long, actionDefinitionId: String): Int
+    fun getActionUsageCount(session: Session, playerId: Int, actionDefinitionId: String): Int
 
     /**
      * Execute death trigger actions (e.g., Hunter revenge, Wolf King revenge)
-     * Returns the list of user IDs killed by death triggers
+     * Returns the list of player IDs killed by death triggers
      */
-    fun executeDeathTriggers(session: Session): List<Long>
+    fun executeDeathTriggers(session: Session): List<Int>
 
     /**
      * Check if a player has pending death trigger actions available
      */
-    fun hasDeathTriggerAvailable(session: Session, userId: Long): Boolean
+    fun hasDeathTriggerAvailable(session: Session, playerId: Int): Boolean
 
     /**
      * Update the UI status for a role action (e.g., set to ACTING or SUBMITTED).
@@ -70,10 +71,10 @@ interface RoleActionService {
      */
     fun updateActionStatus(
         guildId: Long,
-        actorUserId: Long,
-        status: String,
+        actorPlayerId: Int,
+        status: ActionStatus,
         actionId: String? = null,
-        targetUserIds: List<Long> = emptyList(),
+        targetPlayerIds: List<Int> = emptyList(),
         session: Session? = null
     )
 }

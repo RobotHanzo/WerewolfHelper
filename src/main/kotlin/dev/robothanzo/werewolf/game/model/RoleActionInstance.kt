@@ -6,9 +6,9 @@ enum class ActionSubmissionSource {
 }
 
 data class RoleActionInstance(
-    val actor: Long,
+    val actor: Int,
     val actionDefinitionId: String,
-    val targets: List<Long>,
+    val targets: List<Int>,
     val submittedBy: ActionSubmissionSource,
     val timestamp: Long = System.currentTimeMillis(),
     var processed: Boolean = false

@@ -34,14 +34,14 @@ class NightManagerImpl(
         }
 
         // actionStatuses
-        val actionStatuses = session.stateData.actionStatuses.values.map { status ->
+        val actionStatuses = session.stateData.actionData.values.map { data ->
             ActionSubmissionStatus(
-                playerId = status.playerId,
-                role = status.role,
-                status = status.status,
-                actionType = status.actionType,
-                targetId = status.targetId,
-                submittedAt = status.submittedAt
+                playerId = data.playerId,
+                role = data.role,
+                status = data.status,
+                actionType = data.selectedAction?.actionName,
+                targetId = data.selectedTargets.firstOrNull()?.toString(),
+                submittedAt = data.submittedAt
             )
         }
 

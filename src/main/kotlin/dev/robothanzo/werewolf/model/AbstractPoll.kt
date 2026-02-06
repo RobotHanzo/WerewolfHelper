@@ -138,7 +138,7 @@ abstract class AbstractPoll(
         }
 
         val discarded = mutableListOf<String>()
-        for (player in session.fetchAlivePlayers().values) {
+        for (player in session.alivePlayers().values) {
             if (player.user?.idLong != null && !voted.contains(player.user?.idLong)) {
                 discarded.add("<@!" + player.user?.idLong + ">")
             }

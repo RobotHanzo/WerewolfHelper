@@ -10,37 +10,23 @@ data class GameStateData(
     var phaseEndTime: Long = 0,
     var pendingActions: MutableList<RoleActionInstance> = mutableListOf(),
 
-    // Keyed collections for efficient lookup
-    var actionUsage: MutableMap<String, MutableMap<String, Int>> = mutableMapOf(), // userId -> (actionId -> count)
-    var actionStatuses: MutableMap<String, ActionStatus> = mutableMapOf(), // userId -> ActionStatus
-    var actionPrompts: MutableMap<String, ActionPrompt> = mutableMapOf(), // playerId -> ActionPrompt
+    // Unified action data (Keyed by playerId.toString() for consistency)
+    var actionData: MutableMap<String, ActionData> = mutableMapOf(),
     var groupStates: MutableMap<String, GroupActionState> = mutableMapOf(), // actionId -> GroupActionState
     var werewolfVotes: MutableMap<String, WolfVote> = mutableMapOf(), // voterId -> WolfVote
     var werewolfMessages: MutableList<WerewolfMessage> = mutableListOf(),
 
     // Explicit Role State (Strongly typed flags)
-    var lastGuardProtectedId: Long? = null,
-    var nightWolfKillTargetId: Long? = null,
-    var deathTriggerAvailableMap: MutableMap<String, Long> = mutableMapOf(), // actionId -> userId
+    var lastGuardProtectedId: Int? = null,
+    var nightWolfKillTargetId: Int? = null,
+    var deathTriggerAvailableMap: MutableMap<String, Int> = mutableMapOf(), // actionId -> playerId
     var roleFlags: MutableMap<String, Any> = mutableMapOf() // Generic flags for flexibility
-)
-
-/**
- * Represents the status of a player's action for UI display.
- */
-data class ActionStatus(
-    val playerId: String,
-    val role: String,
-    var status: String,
-    var actionType: String = "",
-    var targetId: String = "",
-    var submittedAt: Long = 0L
 )
 
 /**
  * Represents a single vote in the werewolf voting phase.
  */
 data class WolfVote(
-    val voterId: String,
-    var targetId: String = ""
+    val voterId: Int,
+    var targetId: Int = -1
 )

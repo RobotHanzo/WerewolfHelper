@@ -100,13 +100,13 @@ class GameController(
     @PostMapping("/players/{playerId}/roles")
     @CanManageGuild
     fun updatePlayerRoles(
-        @PathVariable guildId: Long, @PathVariable playerId: String,
+        @PathVariable guildId: Long, @PathVariable playerId: Int,
         @RequestBody roles: List<String>
     ): ResponseEntity<*> {
         return try {
             val session = gameSessionService.getSession(guildId)
                 .orElseThrow { Exception("Session not found") }
-            val player = session.players[playerId] ?: throw Exception("Player not found")
+            val player = session.getPlayer(playerId) ?: throw Exception("Player not found")
             playerService.updatePlayerRoles(player, roles)
             ResponseEntity.ok(mapOf("success" to true))
         } catch (e: Exception) {
@@ -134,11 +134,11 @@ class GameController(
 
     @PostMapping("/players/{playerId}/switch-role-order")
     @CanManageGuild
-    fun switchRoleOrder(@PathVariable guildId: Long, @PathVariable playerId: String): ResponseEntity<*> {
+    fun switchRoleOrder(@PathVariable guildId: Long, @PathVariable playerId: Int): ResponseEntity<*> {
         return try {
             val session = gameSessionService.getSession(guildId)
                 .orElseThrow { Exception("Session not found") }
-            val player = session.players[playerId] ?: throw Exception("Player not found")
+            val player = session.getPlayer(playerId) ?: throw Exception("Player not found")
             playerService.switchRoleOrder(player)
             ResponseEntity.ok(mapOf("success" to true))
         } catch (e: Exception) {
@@ -149,13 +149,13 @@ class GameController(
     @PostMapping("/players/{playerId}/role-lock")
     @CanManageGuild
     fun setRoleLock(
-        @PathVariable guildId: Long, @PathVariable playerId: String,
+        @PathVariable guildId: Long, @PathVariable playerId: Int,
         @RequestParam locked: Boolean
     ): ResponseEntity<*> {
         return try {
             val session = gameSessionService.getSession(guildId)
                 .orElseThrow { Exception("Session not found") }
-            val player = session.players[playerId] ?: throw Exception("Player not found")
+            val player = session.getPlayer(playerId) ?: throw Exception("Player not found")
             playerService.setRolePositionLock(player, locked)
             ResponseEntity.ok(mapOf("success" to true))
         } catch (e: Exception) {
@@ -164,45 +164,45 @@ class GameController(
     }
 
     // --- Actions ---
-    @PostMapping("/players/{userId}/died")
+    @PostMapping("/players/{playerId}/died")
     @CanManageGuild
     fun markDead(
-        @PathVariable guildId: Long, @PathVariable userId: Long,
+        @PathVariable guildId: Long, @PathVariable playerId: Int,
         @RequestParam(defaultValue = "false") lastWords: Boolean
     ): ResponseEntity<*> {
         val session = gameSessionService.getSession(guildId)
             .orElseThrow { Exception("Session not found") }
-        gameActionService.markPlayerDead(session, userId, lastWords)
+        gameActionService.markPlayerDead(session, playerId, lastWords)
         return ResponseEntity.ok(mapOf("success" to true))
     }
 
-    @PostMapping("/players/{userId}/revive")
+    @PostMapping("/players/{playerId}/revive")
     @CanManageGuild
-    fun revive(@PathVariable guildId: Long, @PathVariable userId: Long): ResponseEntity<*> {
+    fun revive(@PathVariable guildId: Long, @PathVariable playerId: Int): ResponseEntity<*> {
         val session = gameSessionService.getSession(guildId)
             .orElseThrow { Exception("Session not found") }
-        gameActionService.revivePlayer(session, userId)
+        gameActionService.revivePlayer(session, playerId)
         return ResponseEntity.ok(mapOf("success" to true))
     }
 
-    @PostMapping("/players/{userId}/revive-role")
+    @PostMapping("/players/{playerId}/revive-role")
     @CanManageGuild
     fun reviveRole(
-        @PathVariable guildId: Long, @PathVariable userId: Long,
+        @PathVariable guildId: Long, @PathVariable playerId: Int,
         @RequestParam role: String
     ): ResponseEntity<*> {
         val session = gameSessionService.getSession(guildId)
             .orElseThrow { Exception("Session not found") }
-        gameActionService.reviveRole(session, userId, role)
+        gameActionService.reviveRole(session, playerId, role)
         return ResponseEntity.ok(mapOf("success" to true))
     }
 
-    @PostMapping("/players/{userId}/police")
+    @PostMapping("/players/{playerId}/police")
     @CanManageGuild
-    fun setPolice(@PathVariable guildId: Long, @PathVariable userId: Long): ResponseEntity<*> {
+    fun setPolice(@PathVariable guildId: Long, @PathVariable playerId: Int): ResponseEntity<*> {
         val session = gameSessionService.getSession(guildId)
             .orElseThrow { Exception("Session not found") }
-        gameActionService.setPolice(session, userId)
+        gameActionService.setPolice(session, playerId)
         return ResponseEntity.ok(mapOf("success" to true))
     }
 

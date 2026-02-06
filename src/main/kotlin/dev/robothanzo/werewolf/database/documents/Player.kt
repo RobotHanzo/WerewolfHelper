@@ -143,7 +143,7 @@ data class Player(
                     RoleEventContext(
                         session = session,
                         eventType = RoleEventType.ON_DEATH,
-                        actorUserId = user!!.idLong,
+                        actorPlayerId = id,
                         metadata = mapOf(
                             "killedRole" to killedRole,
                             "playerId" to id,
@@ -157,7 +157,7 @@ data class Player(
                     session,
                     RoleEventType.ON_DEATH,
                     mapOf(
-                        "userId" to user!!.idLong,
+                        "userId" to (user?.idLong ?: 0L),
                         "killedRole" to killedRole,
                         "playerId" to id
                     )

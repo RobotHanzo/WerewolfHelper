@@ -12,6 +12,7 @@ import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.ExpelService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.SpeechService
+import dev.robothanzo.werewolf.utils.player
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Lazy
@@ -140,17 +141,7 @@ class GameSessionServiceImpl(
             }
             speechJson["order"] = orderIds
 
-            if (speechSession.lastSpeaker != null) {
-                var speakerId: String? = null
-                for (p in session.players.values) {
-                    if (p.user != null && p.user?.idLong == speechSession.lastSpeaker) {
-                        speakerId = p.id.toString()
-                        break
-                    }
-                }
-                speechJson["currentSpeakerId"] = speakerId ?: ""
-            }
-
+            speechJson["currentSpeakerId"] = speechSession.lastSpeaker?.let { session.getPlayer(it) }?.id ?: ""
             speechJson["endTime"] = speechSession.currentSpeechEndTime
             speechJson["totalTime"] = speechSession.totalSpeechTime
 
@@ -320,13 +311,7 @@ class GameSessionServiceImpl(
             val isJudge = member.roles.stream()
                 .anyMatch { r -> r == session.judgeRole }
             memberMap["isJudge"] = isJudge
-
-            val isPlayer = session.players.values.stream()
-                .anyMatch { p ->
-                    (p.user != null && p.user?.idLong == member.idLong
-                            && p.alive)
-                }
-            memberMap["isPlayer"] = isPlayer
+            memberMap["isPlayer"] = member.player() != null
 
             membersJson.add(memberMap)
         }

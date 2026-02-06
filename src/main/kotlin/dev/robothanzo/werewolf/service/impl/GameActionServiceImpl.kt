@@ -107,16 +107,16 @@ class GameActionServiceImpl(
 
     override fun markPlayerDead(
         session: Session,
-        userId: Long,
+        playerId: Int,
         allowLastWords: Boolean,
         cause: DeathCause
     ) {
-        val player = session.getPlayer(userId) ?: throw RuntimeException("Player not found")
+        val player = session.getPlayer(playerId) ?: throw RuntimeException("Player not found")
         player.died(cause, allowLastWords)
     }
 
-    override fun revivePlayer(session: Session, userId: Long) {
-        val targetPlayer: Player? = session.getPlayer(userId)
+    override fun revivePlayer(session: Session, playerId: Int) {
+        val targetPlayer: Player? = session.getPlayer(playerId)
 
         if (targetPlayer == null || targetPlayer.deadRoles.isNullOrEmpty()) {
             throw Exception("Player has no dead roles to revive")
@@ -124,13 +124,13 @@ class GameActionServiceImpl(
 
         val rolesToRevive = targetPlayer.deadRoles?.toMutableList() ?: mutableListOf()
         for (role in rolesToRevive) {
-            reviveRole(session, userId, role)
+            reviveRole(session, playerId, role)
         }
     }
 
-    override fun reviveRole(session: Session, userId: Long, role: String) {
+    override fun reviveRole(session: Session, playerId: Int, role: String) {
         val guild = session.guild ?: throw Exception("Guild not found")
-        val player = session.getPlayer(userId) ?: throw Exception("Player not found")
+        val player = session.getPlayer(playerId) ?: throw Exception("Player not found")
         val member = player.member ?: throw Exception("Player member not found")
         val deadRoles = player.deadRoles
         if (deadRoles == null || !deadRoles.contains(role)) throw Exception("Role not dead")
@@ -165,14 +165,14 @@ class GameActionServiceImpl(
         gameSessionService.saveSession(session)
     }
 
-    override fun setPolice(session: Session, userId: Long) {
+    override fun setPolice(session: Session, playerId: Int) {
         session.guild ?: throw Exception("Guild not found")
         session.police?.let {
             it.police = false
             it.updateNickname()
         }
 
-        val player = session.getPlayer(userId) ?: throw Exception("Player not found")
+        val player = session.getPlayer(playerId) ?: throw Exception("Player not found")
         player.police = true
         player.updateNickname()
         session.courtTextChannel?.sendMessage(":white_check_mark: 警徽已移交給 " + player.user?.asMention)?.queue()

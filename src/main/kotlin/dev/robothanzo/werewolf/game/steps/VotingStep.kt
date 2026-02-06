@@ -61,7 +61,7 @@ class VotingStep(
         val guild = discordService.getGuild(session.guildId) ?: return
         val channel = session.courtTextChannel ?: return
 
-        val candidates = session.fetchAlivePlayers().values
+        val candidates = session.alivePlayers().values
             .associateByTo(ConcurrentHashMap()) { it.id }
             .mapValues { Candidate(player = it.value, expelPK = true) }
 

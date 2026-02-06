@@ -40,7 +40,7 @@ class MessageListener : ListenerAdapter() {
     }
 
     private fun isCharacterAlive(session: Session, character: String): Boolean {
-        for (player in session.fetchAlivePlayers().values) {
+        for (player in session.alivePlayers().values) {
             if (player.roles?.contains(character) == true) {
                 // Check if this specific role is NOT dead
                 if (player.deadRoles == null || !player.deadRoles!!.contains(character)) {
@@ -71,7 +71,7 @@ class MessageListener : ListenerAdapter() {
         if (event.author.isBot) return
         val session = CmdUtils.getSession(event.guild) ?: return
 
-        for (player in session.fetchAlivePlayers().values) {
+        for (player in session.alivePlayers().values) {
             if (!player.roles.isNullOrEmpty()) {
                 val isJudgeChannel = event.channel == session.judgeTextChannel
                 if ((player.channel == event.channel && shouldSend(player, session)) ||
@@ -83,15 +83,21 @@ class MessageListener : ListenerAdapter() {
                             // Record if it's from the judge channel or the werewolf's own channel
                             val messagesList = lockedSession.stateData.werewolfMessages
 
+                            val senderId = if (isJudgeChannel) {
+                                0
+                            } else {
+                                lockedSession.getPlayer(event.author.idLong)?.id ?: 0
+                            }
+
                             val senderName = if (isJudgeChannel) {
                                 "法官頻道 (${event.member?.effectiveName ?: event.author.name})"
                             } else {
-                                lockedSession.players[event.author.id]?.nickname ?: player.nickname
+                                lockedSession.getPlayer(senderId)?.nickname ?: "未知玩家"
                             }
 
                             messagesList.add(
                                 dev.robothanzo.werewolf.game.model.WerewolfMessage(
-                                    senderId = event.author.id,
+                                    senderId = senderId,
                                     senderName = senderName,
                                     avatarUrl = event.author.effectiveAvatarUrl,
                                     content = event.message.contentRaw,
@@ -118,7 +124,7 @@ class MessageListener : ListenerAdapter() {
                         .setAvatarUrl(event.author.avatarUrl)
                         .build()
 
-                    for (p in session.fetchAlivePlayers().values) {
+                    for (p in session.alivePlayers().values) {
                         if (shouldSend(p, session) && event.channel.idLong != p.channel?.idLong) {
                             val targetChannel = event.guild.getTextChannelById(p.channel?.idLong ?: 0)
                             if (targetChannel != null) {
@@ -139,7 +145,7 @@ class MessageListener : ListenerAdapter() {
                         .setAvatarUrl(event.author.avatarUrl)
                         .build()
 
-                    for (p in session.fetchAlivePlayers().values) {
+                    for (p in session.alivePlayers().values) {
                         if (p.jinBaoBao && event.channel.idLong != p.channel?.idLong) {
                             val targetChannel = event.guild.getTextChannelById(p.channel?.idLong ?: 0)
                             if (targetChannel != null) {

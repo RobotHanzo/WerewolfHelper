@@ -94,10 +94,10 @@ class WitchAntidoteAction : BaseRoleAction(
 
     override fun eligibleTargets(
         session: Session,
-        actor: Long,
-        alivePlayers: List<Long>,
+        actor: Int,
+        alivePlayers: List<Int>,
         accumulatedState: ActionExecutionResult
-    ): List<Long> {
+    ): List<Int> {
         val targetId = session.stateData.nightWolfKillTargetId ?: return emptyList()
         if (targetId == actor && !session.settings.witchCanSaveSelf) return emptyList()
         return listOf(targetId)
@@ -151,10 +151,10 @@ class GuardProtectAction : BaseRoleAction(
 
     override fun eligibleTargets(
         session: Session,
-        actor: Long,
-        alivePlayers: List<Long>,
+        actor: Int,
+        alivePlayers: List<Int>,
         accumulatedState: ActionExecutionResult
-    ): List<Long> {
+    ): List<Int> {
         val lastProtected = session.stateData.lastGuardProtectedId
         return if (lastProtected != null && session.day > 1) {
             alivePlayers.filter { it != lastProtected }
@@ -187,10 +187,10 @@ class HunterRevengeAction : BaseRoleAction(
 
     override fun eligibleTargets(
         session: Session,
-        actor: Long,
-        alivePlayers: List<Long>,
+        actor: Int,
+        alivePlayers: List<Int>,
         accumulatedState: ActionExecutionResult
-    ): List<Long> {
+    ): List<Int> {
         return if (session.stateData.deathTriggerAvailableMap[actionId] == actor) alivePlayers else emptyList()
     }
 }
@@ -218,10 +218,10 @@ class WolfKingRevengeAction : BaseRoleAction(
 
     override fun eligibleTargets(
         session: Session,
-        actor: Long,
-        alivePlayers: List<Long>,
+        actor: Int,
+        alivePlayers: List<Int>,
         accumulatedState: ActionExecutionResult
-    ): List<Long> {
+    ): List<Int> {
         return if (session.stateData.deathTriggerAvailableMap[actionId] == actor) alivePlayers else emptyList()
     }
 }

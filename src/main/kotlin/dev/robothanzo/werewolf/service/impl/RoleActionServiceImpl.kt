@@ -23,8 +23,8 @@ class RoleActionServiceImpl(
     override fun submitAction(
         guildId: Long,
         actionDefinitionId: String,
-        actorUserId: Long,
-        targetUserIds: List<Long>,
+        actorPlayerId: Int,
+        targetPlayerIds: List<Int>,
         submittedBy: String
     ): Map<String, Any> {
         return WerewolfApplication.gameSessionService.withLockedSession(guildId) { session ->
@@ -41,13 +41,15 @@ class RoleActionServiceImpl(
             }
 
             // Prevent multiple actions per phase (for player submissions only)
-            val actor = session.getPlayer(actorUserId)!!
+            val actor = session.getPlayer(actorPlayerId)
+                ?: return@withLockedSession mapOf("success" to false, "error" to "Actor not found")
+
             if (submittedBy == "PLAYER" && actor.actionSubmitted && !actionDef.allowMultiplePerPhase) {
                 return@withLockedSession mapOf("success" to false, "error" to "你已經提交過行動，無法再次選擇")
             }
 
             // Perform centralized validation
-            val validationError = actionDef.validate(session, actorUserId, targetUserIds)
+            val validationError = actionDef.validate(session, actorPlayerId, targetPlayerIds)
             if (validationError != null) {
                 return@withLockedSession mapOf("success" to false, "error" to validationError)
             }
@@ -55,9 +57,9 @@ class RoleActionServiceImpl(
             // Create action instance
             val source = if (submittedBy == "JUDGE") ActionSubmissionSource.JUDGE else ActionSubmissionSource.PLAYER
             val action = RoleActionInstance(
-                actor = actorUserId,
+                actor = actorPlayerId,
                 actionDefinitionId = actionDefinitionId,
-                targets = targetUserIds,
+                targets = targetPlayerIds,
                 submittedBy = source
             )
 
@@ -81,15 +83,15 @@ class RoleActionServiceImpl(
             }
 
             // Call submission hook
-            actionDef.onSubmitted(session, actorUserId, targetUserIds)
+            actionDef.onSubmitted(session, actorPlayerId, targetPlayerIds)
 
             // Update UI status (Passing session ensures it uses the locked one)
             updateActionStatus(
                 guildId,
-                actorUserId,
-                if (targetUserIds.contains(SKIP_TARGET_ID)) "SKIPPED" else "SUBMITTED",
+                actorPlayerId,
+                if (targetPlayerIds.contains(SKIP_TARGET_ID)) ActionStatus.SKIPPED else ActionStatus.SUBMITTED,
                 actionDefinitionId,
-                targetUserIds,
+                targetPlayerIds,
                 session
             )
 
@@ -97,8 +99,8 @@ class RoleActionServiceImpl(
         }
     }
 
-    override fun getAvailableActionsForPlayer(session: Session, userId: Long): List<RoleAction> {
-        val player = session.players.values.find { it.user?.idLong == userId }
+    override fun getAvailableActionsForPlayer(session: Session, playerId: Int): List<RoleAction> {
+        val player = session.getPlayer(playerId)
             ?: return emptyList()
 
         if (!player.alive) {
@@ -112,7 +114,7 @@ class RoleActionServiceImpl(
             val roleObj: GameRole? = session.hydratedRoles[roleName] ?: roleRegistry.getRole(roleName)
             if (roleObj != null) {
                 for (action in roleObj.getActions()) {
-                    if (isActionAvailable(session, userId, action.actionId)) {
+                    if (isActionAvailable(session, playerId, action.actionId)) {
                         actions.add(action)
                     }
                 }
@@ -122,15 +124,14 @@ class RoleActionServiceImpl(
         return actions
     }
 
-    override fun getAvailableActionsForJudge(session: Session): Map<Long, List<RoleAction>> {
-        val result = mutableMapOf<Long, List<RoleAction>>()
+    override fun getAvailableActionsForJudge(session: Session): Map<Int, List<RoleAction>> {
+        val result = mutableMapOf<Int, List<RoleAction>>()
         for ((_, player) in session.players) {
             if (player.alive) {
-                player.user?.idLong?.let { uid ->
-                    val actions = getAvailableActionsForPlayer(session, uid)
-                    if (actions.isNotEmpty()) {
-                        result[uid] = actions
-                    }
+                val playerId = player.id
+                val actions = getAvailableActionsForPlayer(session, playerId)
+                if (actions.isNotEmpty()) {
+                    result[playerId] = actions
                 }
             }
         }
@@ -149,7 +150,7 @@ class RoleActionServiceImpl(
         )
     }
 
-    override fun isActionAvailable(session: Session, userId: Long, actionDefinitionId: String): Boolean {
+    override fun isActionAvailable(session: Session, playerId: Int, actionDefinitionId: String): Boolean {
         val action = roleRegistry.getAction(actionDefinitionId)
             ?: return false
 
@@ -163,8 +164,8 @@ class RoleActionServiceImpl(
             ActionTiming.DAY -> if (isNightPhase) return false
             ActionTiming.ANYTIME -> {} // Always available
             ActionTiming.DEATH_TRIGGER -> {
-                // Check if this user has a death trigger available
-                if (!hasDeathTriggerAvailable(session, userId)) return false
+                // Check if this player has a death trigger available
+                if (!hasDeathTriggerAvailable(session, playerId)) return false
             }
         }
 
@@ -173,7 +174,7 @@ class RoleActionServiceImpl(
             return true
         }
 
-        val usage = getActionUsageCount(session, userId, actionDefinitionId)
+        val usage = getActionUsageCount(session, playerId, actionDefinitionId)
         return usage < action.usageLimit
     }
 
@@ -181,13 +182,12 @@ class RoleActionServiceImpl(
         return session.stateData.pendingActions
     }
 
-    override fun getActionUsageCount(session: Session, userId: Long, actionDefinitionId: String): Int {
-        val userUsage = session.stateData.actionUsage[userId.toString()] ?: return 0
-        return userUsage.getOrDefault(actionDefinitionId, 0)
+    override fun getActionUsageCount(session: Session, playerId: Int, actionDefinitionId: String): Int {
+        return session.stateData.actionData[playerId.toString()]?.usage?.get(actionDefinitionId) ?: 0
     }
 
-    override fun executeDeathTriggers(session: Session): List<Long> {
-        val killedByTriggers = mutableListOf<Long>()
+    override fun executeDeathTriggers(session: Session): List<Int> {
+        val killedByTriggers = mutableListOf<Int>()
 
         // Execute all pending death trigger actions
         val pendingActions = getPendingActions(session)
@@ -215,21 +215,22 @@ class RoleActionServiceImpl(
                 action?.timing != ActionTiming.DEATH_TRIGGER
             }
 
+        session.stateData.pendingActions.clear()
         session.stateData.pendingActions.addAll(remainingActions)
         WerewolfApplication.gameSessionService.saveSession(session)
 
         return killedByTriggers
     }
 
-    override fun hasDeathTriggerAvailable(session: Session, userId: Long): Boolean {
+    override fun hasDeathTriggerAvailable(session: Session, playerId: Int): Boolean {
         // Get all death trigger actions from registry
         val deathTriggerActions = roleRegistry.getAllActions()
             .filter { it.timing == ActionTiming.DEATH_TRIGGER }
 
-        // Check if any death trigger action is available for this user
+        // Check if any death trigger action is available for this player
         for (action in deathTriggerActions) {
-            val availableUserId = session.stateData.deathTriggerAvailableMap[action.actionId]
-            if (availableUserId == userId) {
+            val availablePlayerId = session.stateData.deathTriggerAvailableMap[action.actionId]
+            if (availablePlayerId == playerId) {
                 return true
             }
         }
@@ -239,51 +240,56 @@ class RoleActionServiceImpl(
 
     override fun updateActionStatus(
         guildId: Long,
-        actorUserId: Long,
-        status: String,
+        actorPlayerId: Int,
+        status: ActionStatus,
         actionId: String?,
-        targetUserIds: List<Long>,
+        targetPlayerIds: List<Int>,
         session: Session?
     ) {
         if (session != null) {
-            performUpdateActionStatus(guildId, actorUserId, status, actionId, targetUserIds, session)
+            performUpdateActionStatus(guildId, actorPlayerId, status, actionId, targetPlayerIds, session)
         } else {
             WerewolfApplication.gameSessionService.withLockedSession(guildId) { lockedSession ->
-                performUpdateActionStatus(guildId, actorUserId, status, actionId, targetUserIds, lockedSession)
+                performUpdateActionStatus(guildId, actorPlayerId, status, actionId, targetPlayerIds, lockedSession)
             }
         }
     }
 
     private fun performUpdateActionStatus(
         guildId: Long,
-        actorUserId: Long,
-        status: String,
+        actorPlayerId: Int,
+        status: ActionStatus,
         actionId: String?,
-        targetUserIds: List<Long>,
+        targetPlayerIds: List<Int>,
         activeSession: Session
     ) {
-        val actorPlayer = activeSession.getPlayer(actorUserId) ?: return
+        val actorPlayer = activeSession.getPlayer(actorPlayerId) ?: return
 
-        val statuses = activeSession.stateData.actionStatuses
-
-        val currentStatus = statuses.getOrPut(actorUserId.toString()) {
-            ActionStatus(
-                playerId = actorUserId.toString(),
-                role = (actorPlayer.roles?.firstOrNull() ?: "未知"),
-                status = "PENDING"
+        val actionData = activeSession.stateData.actionData.getOrPut(actorPlayerId.toString()) {
+            ActionData(
+                playerId = actorPlayerId,
+                role = (actorPlayer.roles?.firstOrNull() ?: "未知")
             )
         }
 
-        currentStatus.status = status
+        actionData.status = status
         if (actionId != null) {
-            currentStatus.actionType = roleRegistry.getAction(actionId)?.actionName ?: actionId
+            val actionDef = roleRegistry.getAction(actionId)
+            if (actionDef != null) {
+                actionData.selectedAction = ActionInfo(
+                    actionDef.actionId,
+                    actionDef.actionName,
+                    actionDef.roleName,
+                    actionDef.timing
+                )
+            }
         }
 
-        if (targetUserIds.isNotEmpty()) {
-            currentStatus.targetId = targetUserIds.firstOrNull()?.toString() ?: ""
+        if (targetPlayerIds.isNotEmpty()) {
+            actionData.selectedTargets = targetPlayerIds
         }
 
-        currentStatus.submittedAt = System.currentTimeMillis()
+        actionData.submittedAt = System.currentTimeMillis()
 
         // session save handled by gameSessionService
         WerewolfApplication.gameSessionService.saveSession(activeSession)
