@@ -59,7 +59,7 @@ export interface PoliceState {
     candidates: {
         id: number;   // Player ID (internal)
         quit?: boolean;
-        voters: number[]; // List of Player IDs
+        voters: string[]; // List of User IDs (strings)
     }[];
 }
 
@@ -69,7 +69,7 @@ export interface ExpelState {
     candidates: {
         id: number;
         quit?: boolean;
-        voters: number[];
+        voters: string[]; // List of User IDs (strings)
     }[];
 }
 

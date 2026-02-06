@@ -14,8 +14,9 @@ class ExpelPoll(
     guildId: Long,
     channelId: Long,
     session: Session,
-    message: Message?
-) : AbstractPoll(guildId, channelId, session, message) {
+    message: Message?,
+    finishedCallback: (() -> Unit)? = null
+) : AbstractPoll(guildId, channelId, session, message, finishedCallback) {
 
     override fun start(channel: GuildMessageChannel, allowPK: Boolean) {
         // Call super to schedule finish/10s warning

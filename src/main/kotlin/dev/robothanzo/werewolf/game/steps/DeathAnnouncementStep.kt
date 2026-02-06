@@ -7,6 +7,7 @@ import dev.robothanzo.werewolf.service.GameActionService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.GameStateService
 import dev.robothanzo.werewolf.service.RoleActionService
+import kotlinx.coroutines.launch
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 
@@ -19,6 +20,9 @@ class DeathAnnouncementStep(
 ) : GameStep {
     override val id = "DEATH_ANNOUNCEMENT"
     override val name = "宣布死訊"
+
+    private val scope =
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
 
     override fun onStart(session: Session, service: GameStateService) {
         val guildId = session.guildId
@@ -52,6 +56,9 @@ class DeathAnnouncementStep(
                 gameActionService.markPlayerDead(lockedSession, userId, lockedSession.day == 1)
             }
 
+            // Store tonight's deaths in stateData for frontend display
+            lockedSession.stateData.deadPlayers = allDeaths.toList()
+
             // Create public death announcement (without revealing causes)
             if (allDeaths.isNotEmpty()) {
                 val deathList = allDeaths.joinToString("、") { userId ->
@@ -70,6 +77,17 @@ class DeathAnnouncementStep(
             }
 
             gameSessionService.broadcastSessionUpdate(lockedSession)
+        }
+
+        // Auto advance after duration
+        scope.launch {
+            val initialState = id // "DEATH_ANNOUNCEMENT"
+            kotlinx.coroutines.delay(getDurationSeconds(session) * 1000L)
+            gameSessionService.withLockedSession(guildId) { currentSession ->
+                if (currentSession.currentState == initialState) {
+                    service.nextStep(currentSession)
+                }
+            }
         }
     }
 

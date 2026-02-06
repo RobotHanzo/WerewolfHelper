@@ -36,6 +36,7 @@ class DeathTriggerStep(
             if (playersWithTriggers.isEmpty()) {
                 // No death triggers available
                 lockedSession.addLog(LogType.SYSTEM, "沒有玩家可以觸發死亡技能")
+                service.nextStep(lockedSession)
                 return@withLockedSession
             }
 

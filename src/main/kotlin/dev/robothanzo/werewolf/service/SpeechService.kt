@@ -67,7 +67,7 @@ interface SpeechService {
     /**
      * Starts the automatic speech flow for the daytime.
      */
-    fun startAutoSpeechFlow(session: Session, channelId: Long)
+    fun startAutoSpeechFlow(session: Session, channelId: Long, callback: (() -> Unit)? = null)
 
     /**
      * Starts a standalone timer.

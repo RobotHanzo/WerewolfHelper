@@ -38,14 +38,20 @@ class PoliceServiceImpl(
 
     override val sessions: MutableMap<Long, PoliceSession> = ConcurrentHashMap()
 
-    override fun startEnrollment(session: Session, channel: GuildMessageChannel, message: Message?) {
+    override fun startEnrollment(
+        session: Session,
+        channel: GuildMessageChannel,
+        message: Message?,
+        callback: (() -> Unit)?
+    ) {
         if (sessions.containsKey(session.guildId))
             return
 
         val policeSession = PoliceSession(
             guildId = session.guildId,
             channelId = channel.idLong,
-            session = session
+            session = session,
+            finishedCallback = callback
         )
         sessions[session.guildId] = policeSession
         next(session.guildId)
@@ -170,7 +176,7 @@ class PoliceServiceImpl(
                 PoliceSession.State.ENROLLMENT -> {
                     if (policeSession.candidates.isEmpty()) {
                         policeSession.message?.reply("無人參選，警徽撕毀")?.queue()
-                        interrupt(guildId)
+                        interrupt(guildId, true)
                         return@withLockedSession
                     }
 
@@ -183,7 +189,7 @@ class PoliceServiceImpl(
                         val winner = policeSession.candidates.values.iterator().next()
                         policeSession.message?.reply("只有" + candidateMentions.first() + "參選，直接當選")?.queue()
                         setPolice(guildId, winner.player.id)
-                        interrupt(guildId)
+                        interrupt(guildId, true)
                         return@withLockedSession
                     }
 
@@ -226,7 +232,7 @@ class PoliceServiceImpl(
 
                     if (policeSession.candidates.values.stream().allMatch { it.quit }) {
                         policeSession.message?.reply("所有人退選，警徽撕毀")?.queue()
-                        interrupt(guildId)
+                        interrupt(guildId, true)
                         return@withLockedSession
                     }
 
@@ -241,11 +247,14 @@ class PoliceServiceImpl(
         }
     }
 
-    override fun interrupt(guildId: Long) {
+    override fun interrupt(guildId: Long, triggerCallback: Boolean) {
         val policeSession = sessions.remove(guildId)
         if (policeSession != null) {
             cancelPollTasks(policeSession)
             policeSession.session.courtTextChannel?.sendMessage("警長投票已終止")?.queue()
+            if (triggerCallback) {
+                policeSession.finishedCallback?.invoke()
+            }
         }
     }
 
@@ -325,7 +334,7 @@ class PoliceServiceImpl(
                 policeSession.sendVoteResult(channel, message, resultEmbed, session)
 
                 setPolice(guildId, winner.player.id)
-                interrupt(guildId)
+                interrupt(guildId, true)
             } else {
                 if (allowPK) {
                     val resultEmbed = policeSession.buildResultEmbed("警長投票").apply {
@@ -340,7 +349,7 @@ class PoliceServiceImpl(
                         .setDescription("平票第二次，警徽撕毀")
                     message.reply("平票第二次，警徽撕毀").queue()
                     policeSession.sendVoteResult(channel, message, resultEmbed, session)
-                    interrupt(guildId)
+                    interrupt(guildId, true)
                 }
             }
         }

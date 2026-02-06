@@ -170,7 +170,7 @@ class GameSessionServiceImpl(
                 val candidateJson = mutableMapOf<String, Any>()
                 candidateJson["id"] = c.player.id
                 candidateJson["quit"] = c.quit
-                candidateJson["voters"] = c.electors
+                candidateJson["voters"] = c.electors.map { it.toString() }
                 candidatesList.add(candidateJson)
             }
             policeJson["candidates"] = candidatesList
@@ -189,7 +189,7 @@ class GameSessionServiceImpl(
             expelService.getPollCandidates(gid)?.values?.forEach { c ->
                 val candidateJson = mutableMapOf<String, Any>()
                 candidateJson["id"] = c.player.id
-                candidateJson["voters"] = c.electors
+                candidateJson["voters"] = c.electors.map { it.toString() }
                 expelCandidatesList.add(candidateJson)
             }
             expelJson["candidates"] = expelCandidatesList

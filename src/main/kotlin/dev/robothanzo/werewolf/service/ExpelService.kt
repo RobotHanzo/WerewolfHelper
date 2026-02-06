@@ -26,6 +26,7 @@ interface ExpelService {
         session: Session,
         channel: GuildMessageChannel,
         allowPK: Boolean,
-        durationMillis: Long = 30000L
+        durationMillis: Long = 30000L,
+        callback: (() -> Unit)? = null
     )
 }

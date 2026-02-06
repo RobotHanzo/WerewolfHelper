@@ -51,7 +51,7 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
         await api.setSpeechOrder(guildId, direction);
     };
 
-    const isPoliceSelecting = speech && !speech.currentSpeakerId && (!speech.order || speech.order.length === 0);
+    const isPoliceSelecting = speech && speech.currentSpeakerId == -1 && (!speech.order || speech.order.length === 0);
     const isSpeechActive = speech && (speech.currentSpeakerId || (speech.order && speech.order.length > 0) || isPoliceSelecting);
 
     // Check if police enrollment is ACTIVELY happening (not just if candidates exist)
@@ -149,6 +149,7 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
                         endTime={stageEndTime}
                         players={players}
                         title={t('vote.policeElection')}
+                        guildId={guildId}
                     />
                 </div>
             </div>
@@ -385,5 +386,3 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
         </div>
     );
 };
-
-

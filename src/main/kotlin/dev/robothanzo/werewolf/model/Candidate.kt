@@ -1,11 +1,14 @@
 package dev.robothanzo.werewolf.model
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
 import dev.robothanzo.werewolf.database.documents.Player
 import java.util.*
 
 data class Candidate(
     val player: Player,
     var expelPK: Boolean = false,
+    @param:JsonSerialize(contentUsing = ToStringSerializer::class)
     val electors: MutableList<Long> = LinkedList(),
     var quit: Boolean = false
 ) {

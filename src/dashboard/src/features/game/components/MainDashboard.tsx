@@ -200,7 +200,10 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
                 );
 
             case 'DEATH_ANNOUNCEMENT':
-                const deadPlayers = (gameState.players || []).filter(p => !p.isAlive);
+                const deadPlayers = (gameState.stateData?.deadPlayers || []).map((id: number) =>
+                    gameState.players.find(p => p.id === id)
+                ).filter((p: any) => p !== undefined);
+                
                 const lastWordsSpeaker = gameState.speech?.currentSpeakerId
                     ? gameState.players.find(p => p.id === gameState.speech?.currentSpeakerId)
                     : undefined;
@@ -260,7 +263,7 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {deadPlayers.map(player => {
+                                    {deadPlayers.map((player: any) => {
                                         const cachedUser = player.userId ? userInfoCache[player.userId] : null;
                                         if (player.userId && !cachedUser && guildId) {
                                             fetchUserInfo(player.userId, guildId);
@@ -326,6 +329,7 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
                                 endTime={gameState.expel.endTime}
                                 players={gameState.players || []}
                                 title={t('steps.voting')}
+                                guildId={guildId}
                             />
                         )}
                     </div>

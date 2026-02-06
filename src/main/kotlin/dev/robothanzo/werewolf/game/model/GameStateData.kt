@@ -20,7 +20,8 @@ data class GameStateData(
     var lastGuardProtectedId: Int? = null,
     var nightWolfKillTargetId: Int? = null,
     var deathTriggerAvailableMap: MutableMap<String, Int> = mutableMapOf(), // actionId -> playerId
-    var roleFlags: MutableMap<String, Any> = mutableMapOf() // Generic flags for flexibility
+    var roleFlags: MutableMap<String, Any> = mutableMapOf(), // Generic flags for flexibility
+    var deadPlayers: List<Int> = emptyList() // List of player IDs who died in the current phase
 )
 
 /**

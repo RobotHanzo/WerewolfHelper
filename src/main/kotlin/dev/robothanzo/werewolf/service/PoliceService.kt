@@ -27,7 +27,12 @@ interface PoliceService {
      * @param channel the Discord channel where the election is taking place
      * @param message an optional message to reply to or edit
      */
-    fun startEnrollment(session: Session, channel: GuildMessageChannel, message: Message?)
+    fun startEnrollment(
+        session: Session,
+        channel: GuildMessageChannel,
+        message: Message?,
+        callback: (() -> Unit)? = null
+    )
 
     /**
      * Handles a user's interaction when they click the "Enroll in Police" button.
@@ -49,7 +54,7 @@ interface PoliceService {
      *
      * @param guildId the ID of the guild
      */
-    fun interrupt(guildId: Long)
+    fun interrupt(guildId: Long, triggerCallback: Boolean = false)
 
     /**
      * Forcefully transitions the election stage to the voting phase.

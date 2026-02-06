@@ -179,6 +179,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
                     players: players,
                     doubleIdentities: sessionData.doubleIdentities,
                     availableRoles: sessionData.roles || [],
+                    hasAssignedRoles: sessionData.hasAssignedRoles,
                     speech: sessionData.speech || undefined,
                     police: sessionData.police,
                     expel: sessionData.expel,

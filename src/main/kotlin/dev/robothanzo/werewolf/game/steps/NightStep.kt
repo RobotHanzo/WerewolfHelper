@@ -89,14 +89,14 @@ class NightStep(
         // Orchestrate the night phases
         nightScope.launch {
             try {
-                processNightPhases(guildId)
+                processNightPhases(guildId, service)
             } catch (e: Exception) {
                 log.error("Error during night orchestration for guild $guildId", e)
             }
         }
     }
 
-    private suspend fun processNightPhases(guildId: Long) {
+    private suspend fun processNightPhases(guildId: Long, service: GameStateService) {
         // 1. Werewolf Voting Phase
         val session = gameSessionService.getSession(guildId).orElseThrow()
         val werewolves = session.players.values.filter { it.alive && it.wolf }.map { it.id }
@@ -168,8 +168,10 @@ class NightStep(
         waitForRoleActionsPhase(guildId, 60)
         finalizeRoleActionsPhase(guildId)
         gameSessionService.getSession(guildId).getOrNull()?.addLog(LogType.SYSTEM, "夜晚結束，天亮了")
-        // Transition is usually triggered by the engine, but we notify dashboard
-        nightManager.notifyPhaseUpdate(guildId)
+        // Transition to next step automatically
+        gameSessionService.withLockedSession(guildId) { lockedSession ->
+            service.nextStep(lockedSession)
+        }
     }
 
     private suspend fun waitForWerewolfPhase(guildId: Long, timeoutSeconds: Int) {

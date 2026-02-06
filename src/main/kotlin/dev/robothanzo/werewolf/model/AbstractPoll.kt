@@ -19,7 +19,8 @@ abstract class AbstractPoll(
     val guildId: Long,
     val channelId: Long,
     val session: Session,
-    var message: Message?
+    var message: Message?,
+    var finishedCallback: (() -> Unit)? = null
 ) {
     val candidates: MutableMap<Int, Candidate> = ConcurrentHashMap()
     var poll10sTask: TimerTask? = null
@@ -80,6 +81,7 @@ abstract class AbstractPoll(
 
             if (winners.size == 1) {
                 onSingleWinner(winners.first(), channel, message, lockedSession)
+                finishedCallback?.invoke()
             } else {
                 if (allowPK) {
                     onPKTie(winners, channel, message, lockedSession)
@@ -87,6 +89,7 @@ abstract class AbstractPoll(
                     message?.reply("再次平票，無人出局")?.queue()
                     val tieEmbed = buildResultEmbed(title).apply { setDescription("再次發生平票，本次${title}無人出局") }
                     sendVoteResult(channel, message, tieEmbed, lockedSession)
+                    finishedCallback?.invoke()
                 }
             }
         }

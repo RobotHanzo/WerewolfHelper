@@ -57,6 +57,7 @@ class WerewolfApplication {
         // Static bridges
         lateinit var jda: JDA
         lateinit var gameSessionService: GameSessionService
+        lateinit var gameStateService: GameStateService
         lateinit var roleService: RoleService
         lateinit var roleActionService: RoleActionService
         lateinit var gameActionService: GameActionService
@@ -126,7 +127,8 @@ class WerewolfApplication {
         private val actionUIServiceBean: ActionUIService,
         private val roleActionExecutorBean: RoleActionExecutor,
         private val roleEventServiceBean: RoleEventService,
-        private val sessionRepositoryBean: SessionRepository
+        private val sessionRepositoryBean: SessionRepository,
+        private val gameStateServiceBean: GameStateService
     ) {
         private val log = LoggerFactory.getLogger(StaticBridge::class.java)
 
@@ -148,6 +150,7 @@ class WerewolfApplication {
             roleActionExecutor = roleActionExecutorBean
             roleEventService = roleEventServiceBean
             sessionRepository = sessionRepositoryBean
+            gameStateService = gameStateServiceBean
             jda = discordServiceBean.jda
 
             AudioSourceManagers.registerRemoteSources(playerManager)

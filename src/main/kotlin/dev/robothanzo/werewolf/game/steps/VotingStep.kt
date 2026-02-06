@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.game.steps
 
+import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
@@ -70,7 +71,9 @@ class VotingStep(
         session.addLog(LogType.EXPEL_POLL_STARTED, "放逐投票開始", null)
 
         // Delegate UI creation & scheduling to ExpelService
-        expelService.startExpelPollUI(session, channel, true, (getDurationSeconds(session) * 1000L))
+        expelService.startExpelPollUI(session, channel, true, (getDurationSeconds(session) * 1000L)) {
+            WerewolfApplication.gameStateService.nextStep(session)
+        }
     }
 
     private fun endExpelPoll(session: Session, message: String) {

@@ -75,10 +75,11 @@ class ExpelServiceImpl : ExpelService {
         session: Session,
         channel: GuildMessageChannel,
         allowPK: Boolean,
-        durationMillis: Long
+        durationMillis: Long,
+        callback: (() -> Unit)?
     ) {
         // Create poll instance and register
-        val poll = ExpelPoll(channel.guild.idLong, channel.idLong, session, null)
+        val poll = ExpelPoll(channel.guild.idLong, channel.idLong, session, null, callback)
         polls[channel.guild.idLong] = poll
 
         // Populate candidates

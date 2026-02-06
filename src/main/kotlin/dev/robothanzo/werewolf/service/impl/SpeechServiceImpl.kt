@@ -201,7 +201,7 @@ class SpeechServiceImpl(
             val member = event.member ?: return
             val session = speechSession.session
             val player = session.getPlayer(event.user.idLong)
-            
+
             if (speechSession.lastSpeaker != null && !member.isAdmin()) {
                 if (player?.id == speechSession.lastSpeaker) {
                     event.hook.editOriginal(":x: 若要跳過發言請按左邊的跳過按鈕").queue()
@@ -253,7 +253,7 @@ class SpeechServiceImpl(
         }
     }
 
-    override fun startAutoSpeechFlow(session: Session, channelId: Long) {
+    override fun startAutoSpeechFlow(session: Session, channelId: Long, callback: (() -> Unit)?) {
         val guildId = session.guildId
         if (speechSessions.containsKey(guildId))
             return
@@ -261,7 +261,8 @@ class SpeechServiceImpl(
         val speechSession = SpeechSession(
             guildId = guildId,
             channelId = channelId,
-            session = session
+            session = session,
+            finishedCallback = callback
         )
         speechSessions[guildId] = speechSession
 
@@ -302,7 +303,7 @@ class SpeechServiceImpl(
         )?.queue()
 
         for (c in guild.textChannels) {
-            c.sendMessage("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯我是白天分隔線⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯").queue()
+            c.sendMessage("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯我是白天分隔線⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯").queue()
         }
 
         nextSpeaker(guildId)
@@ -468,56 +469,57 @@ class SpeechServiceImpl(
             // Update session timer to match TOTAL remaining time
             val totalDuration = time + getTotalQueueDuration(speechSession.order)
             session.currentStepEndTime = System.currentTimeMillis() + (totalDuration * 1000L)
-        val t = thread(start = true) {
-            try {
-                player.user?.idLong?.let { userId ->
-                    val member = guild.getMemberById(userId)
-                    member?.let { guild.mute(it, false).queue() }
-                }
-            } catch (_: Exception) {
-            }
-
-            val message = session.courtTextChannel?.sendMessage(
-                "${player.user?.asMention ?: player.nickname} 你有 $time 秒可以發言\n"
-            )
-                ?.setComponents(
-                    ActionRow.of(
-                        Button.danger("skipSpeech", "跳過 (發言者按)").withEmoji(Emoji.fromUnicode("U+23ed")),
-                        Button.danger("interruptSpeech", "下台 (玩家或法官按)").withEmoji(Emoji.fromUnicode("U+1f5d1"))
-                    )
-                )
-                ?.complete() ?: return@thread
-
-            val voiceChannel = session.courtVoiceChannel
-            try {
-                if (time > 30) {
-                    Thread.sleep((time - 30) * 1000L)
-                    if (!speechSession.shouldStopCurrentSpeaker) {
-                        voiceChannel?.play(Audio.Resource.TIMER_30S_REMAINING)
-                        Thread.sleep(30000)
+            val t = thread(start = true) {
+                try {
+                    player.user?.idLong?.let { userId ->
+                        val member = guild.getMemberById(userId)
+                        member?.let { guild.mute(it, false).queue() }
                     }
-                } else {
-                    Thread.sleep(time * 1000L)
+                } catch (_: Exception) {
                 }
-                if (!speechSession.shouldStopCurrentSpeaker) {
-                    voiceChannel?.play(Audio.Resource.TIMER_ENDED)
-                    message.reply("計時結束").queue()
-                    nextSpeaker(guildId)
-                }
-            } catch (_: InterruptedException) {
-                if (!speechSession.shouldStopCurrentSpeaker) {
-                    voiceChannel?.play(Audio.Resource.TIMER_ENDED)
-                }
-            } catch (ignored: Exception) {
-                if (!speechSession.shouldStopCurrentSpeaker) {
-                    ignored.printStackTrace()
-                    voiceChannel?.play(Audio.Resource.TIMER_ENDED)
-                    message.reply("發言中斷（可能發言者離開或發生錯誤）").queue()
-                    nextSpeaker(guildId)
+
+                val message = session.courtTextChannel?.sendMessage(
+                    "${player.user?.asMention ?: player.nickname} 你有 $time 秒可以發言\n"
+                )
+                    ?.setComponents(
+                        ActionRow.of(
+                            Button.danger("skipSpeech", "跳過 (發言者按)").withEmoji(Emoji.fromUnicode("U+23ed")),
+                            Button.danger("interruptSpeech", "下台 (玩家或法官按)")
+                                .withEmoji(Emoji.fromUnicode("U+1f5d1"))
+                        )
+                    )
+                    ?.complete() ?: return@thread
+
+                val voiceChannel = session.courtVoiceChannel
+                try {
+                    if (time > 30) {
+                        Thread.sleep((time - 30) * 1000L)
+                        if (!speechSession.shouldStopCurrentSpeaker) {
+                            voiceChannel?.play(Audio.Resource.TIMER_30S_REMAINING)
+                            Thread.sleep(30000)
+                        }
+                    } else {
+                        Thread.sleep(time * 1000L)
+                    }
+                    if (!speechSession.shouldStopCurrentSpeaker) {
+                        voiceChannel?.play(Audio.Resource.TIMER_ENDED)
+                        message.reply("計時結束").queue()
+                        nextSpeaker(guildId)
+                    }
+                } catch (_: InterruptedException) {
+                    if (!speechSession.shouldStopCurrentSpeaker) {
+                        voiceChannel?.play(Audio.Resource.TIMER_ENDED)
+                    }
+                } catch (ignored: Exception) {
+                    if (!speechSession.shouldStopCurrentSpeaker) {
+                        ignored.printStackTrace()
+                        voiceChannel?.play(Audio.Resource.TIMER_ENDED)
+                        message.reply("發言中斷（可能發言者離開或發生錯誤）").queue()
+                        nextSpeaker(guildId)
+                    }
                 }
             }
-        }
-        speechSession.speakingThread = t
+            speechSession.speakingThread = t
         }
     }
 
@@ -526,6 +528,7 @@ class SpeechServiceImpl(
         session.speakingThread?.interrupt()
         session.speakingThread = null
     }
+
     private fun getSpeakerDuration(isPolice: Boolean): Int {
         return if (isPolice) 210 else 180
     }

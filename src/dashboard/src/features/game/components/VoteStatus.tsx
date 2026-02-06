@@ -2,14 +2,16 @@ import React, {useEffect, useState} from 'react';
 import {Clock} from 'lucide-react';
 import {Player} from '@/types';
 import {useTranslation} from '@/lib/i18n';
+import {usePlayerContext} from '@/features/players/contexts/PlayerContext';
 
 interface VoteStatusProps {
-    candidates: { id: number, voters: number[] }[];
+    candidates: { id: number, voters: string[] }[];
     totalVoters?: number;
     endTime?: number;
     players: Player[];
     title?: string;
     onTimerExpired?: () => void;
+    guildId?: string;
 }
 
 export const VoteStatus: React.FC<VoteStatusProps> = ({
@@ -18,9 +20,11 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                                                           endTime,
                                                           players,
                                                           title,
-                                                          onTimerExpired
+                                                          onTimerExpired,
+                                                          guildId
                                                       }) => {
     const {t} = useTranslation();
+    const {userInfoCache, fetchUserInfo} = usePlayerContext();
     const [timeLeft, setTimeLeft] = useState(0);
 
     useEffect(() => {
@@ -108,16 +112,26 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                                         // Try to find voter by userId (assuming voterId is userId string) 
                                         // The backend sends userId as string for voters. 
                                         // Player.userId is key.
-                                        const voter = players.find(p => p.id === voterId);
+                                        const voter = players.find(p => p.userId === voterId);
+
+                                        // Fetch user info if missing
+                                        if (voter?.userId && !userInfoCache[voter.userId] && guildId) {
+                                            fetchUserInfo(voter.userId, guildId);
+                                        }
+
+                                        const cachedUser = voter?.userId ? userInfoCache[voter.userId] : null;
+                                        const displayName = cachedUser ? cachedUser.name : (voter?.name || voter?.userId || t('vote.unknown'));
+                                        const displayAvatar = cachedUser ? cachedUser.avatar : (voter?.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png');
+
                                         return (
                                             <div key={voterId}
                                                  className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2 py-1 rounded-md text-xs border border-slate-200 dark:border-slate-700 shadow-sm animate-in zoom-in-50">
                                                 <img
-                                                    src={voter?.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}
+                                                    src={displayAvatar}
                                                     className="w-4 h-4 rounded-full" alt=""/>
                                                 <span
                                                     className="font-medium text-slate-600 dark:text-slate-400 max-w-[80px] truncate">
-                                                    {voter?.name || 'Unknown'}
+                                                    {displayName}
                                                 </span>
                                             </div>
                                         );
