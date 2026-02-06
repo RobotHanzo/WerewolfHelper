@@ -111,7 +111,8 @@ class PlayerServiceImpl(
                         role,
                         listOf(
                             Permission.VIEW_CHANNEL,
-                            Permission.MESSAGE_SEND
+                            Permission.MESSAGE_SEND,
+                            Permission.USE_APPLICATION_COMMANDS
                         ),
                         listOf()
                     )
@@ -120,8 +121,7 @@ class PlayerServiceImpl(
                         listOf(),
                         listOf(
                             Permission.VIEW_CHANNEL,
-                            Permission.MESSAGE_SEND,
-                            Permission.USE_APPLICATION_COMMANDS
+                            Permission.MESSAGE_SEND
                         )
                     ),
                 "創建頻道: $name",

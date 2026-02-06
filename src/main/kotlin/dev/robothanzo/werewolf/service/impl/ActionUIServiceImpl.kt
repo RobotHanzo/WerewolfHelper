@@ -15,7 +15,8 @@ import org.springframework.stereotype.Service
 
 @Service
 class ActionUIServiceImpl(
-    private val nightManager: NightManager
+    private val nightManager: NightManager,
+    private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry
 ) : ActionUIService {
     private val log = LoggerFactory.getLogger(ActionUIServiceImpl::class.java)
 
@@ -44,10 +45,12 @@ class ActionUIServiceImpl(
                 )
             }.toMutableList()
 
-            actionButtons.add(Button.danger("skipAction", "跳過"))
+            if (availableActions.all { it.isOptional }) {
+                actionButtons.add(Button.danger("skipAction", "跳過"))
+            }
 
             val message = player.channel?.sendMessage(actionText)?.setComponents(
-                ActionRow.of(actionButtons)
+                dev.robothanzo.werewolf.utils.MsgUtils.spreadButtonsAcrossActionRows(actionButtons)
             )?.complete()
 
             // Create/Update action data
@@ -256,9 +259,36 @@ class ActionUIServiceImpl(
 
         if (expiredIds.isNotEmpty() || expiredGroupIds.isNotEmpty()) {
             expiredIds.forEach { playerIdStr ->
-                val data = actionDataMap[playerIdStr]
-                // Clear prompt info but keep usage
-                data?.let {
+                val data = actionDataMap[playerIdStr] ?: return@forEach
+
+                // If there's a mandatory action, pick a random target and submit
+                val mandatoryActionId = data.availableActions.find {
+                    roleRegistry.getAction(it.actionId)?.isOptional == false
+                }?.actionId
+
+                if (mandatoryActionId != null) {
+                    val action = roleRegistry.getAction(mandatoryActionId)!!
+                    val eligible = action.eligibleTargets(
+                        session,
+                        data.playerId,
+                        session.alivePlayers().values.map { it.id }
+                    )
+                    val target = eligible.randomOrNull()
+                    if (target != null) {
+                        log.info("Auto-submitting mandatory action $mandatoryActionId for player $playerIdStr due to timeout")
+                        WerewolfApplication.roleActionService.submitAction(
+                            guildId,
+                            mandatoryActionId,
+                            data.playerId,
+                            listOf(target),
+                            "SYSTEM"
+                        )
+                        return@forEach
+                    }
+                }
+
+                // Default skip behavior for optional actions
+                data.let {
                     it.availableActions = emptyList()
                     it.selectedAction = null
                     it.selectedTargets = emptyList()

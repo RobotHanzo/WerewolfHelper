@@ -16,33 +16,43 @@ import dev.robothanzo.werewolf.game.model.Role as GameRole
 
 data class Player(
     var id: Int = 0,
-    private var roleId: Long = 0,
-    private var channelId: Long = 0,
+    var roleId: Long = 0,
+    var channelId: Long = 0,
     var jinBaoBao: Boolean = false,
     var duplicated: Boolean = false,
     var idiot: Boolean = false,
     var police: Boolean = false,
     var rolePositionLocked: Boolean = false,
     var actionSubmitted: Boolean = false, // Track if player has submitted an action this phase
-    private var userId: Long? = null,
+    var userId: Long? = null,
     var roles: MutableList<String>? = LinkedList(), // stuff like wolf, villager...etc
     var deadRoles: MutableList<String>? = LinkedList()
 ) : Comparable<Player> {
     @Transient
     @BsonIgnore
     var session: Session? = null // Reference to the session this player belongs to
+
+    @get:BsonIgnore
     val user: User?
         get() = userId?.let {
             WerewolfApplication.jda.getUserById(it) ?: WerewolfApplication.jda.retrieveUserById(it).complete()
         }
+
+    @get:BsonIgnore
     val member: Member?
         get() = userId?.let {
             session?.guild?.getMemberById(it) ?: session?.guild?.retrieveMemberById(user!!.idLong)?.complete()
         }
+
+    @get:BsonIgnore
     val role: Role?
         get() = roleId.let { session?.guild?.getRoleById(it) }
+
+    @get:BsonIgnore
     val channel: TextChannel?
         get() = WerewolfApplication.jda.getTextChannelById(channelId)
+
+    @get:BsonIgnore
     val wolf: Boolean
         get() = roles?.any { isWolf(it) } ?: false
 

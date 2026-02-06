@@ -793,4 +793,170 @@ class RoleActionTests {
             }
         }
     }
+
+    @Nested
+    @DisplayName("Dark Merchant Action Tests")
+    inner class DarkMerchantActionTests {
+        private lateinit var tradeAction: DarkMerchantTradeAction
+        private lateinit var seerGift: MerchantSeerCheckAction
+        private lateinit var testSession: Session
+
+        @BeforeEach
+        fun setup() {
+            tradeAction = DarkMerchantTradeAction()
+            val roleRegistry = mock<dev.robothanzo.werewolf.game.roles.RoleRegistry>()
+            seerGift = MerchantSeerCheckAction(roleRegistry)
+            testSession = Session(guildId = 1L)
+
+            // Mock static bridge
+            dev.robothanzo.werewolf.WerewolfApplication.gameSessionService = mock()
+        }
+
+        @Test
+        @DisplayName("Dark Merchant trading with werewolf should die")
+        fun testTradeWithWolf() {
+            val merchantId = 1
+            val wolfId = 2
+            val merchant = createPlayer(merchantId, 101L, listOf("黑市商人"))
+            val wolf = createPlayer(wolfId, 102L, listOf("狼人"))
+
+            testSession.players[merchantId.toString()] = merchant
+            testSession.players[wolfId.toString()] = wolf
+
+            val actionInstance = RoleActionInstance(
+                actor = merchantId,
+                actionDefinitionId = dev.robothanzo.werewolf.game.roles.PredefinedRoles.DARK_MERCHANT_TRADE,
+                targets = listOf(wolfId),
+                submittedBy = ActionSubmissionSource.PLAYER
+            )
+
+            val result = tradeAction.execute(testSession, actionInstance, ActionExecutionResult())
+
+            assertTrue(result.deaths.containsKey(DeathCause.UNKNOWN))
+            assertTrue(result.deaths[DeathCause.UNKNOWN]?.contains(merchantId) == true)
+        }
+
+        @Test
+        @DisplayName("Dark Merchant trading with villager should succeed and set flags")
+        fun testTradeWithVillager() {
+            val merchantId = 1
+            val villagerId = 2
+            val merchant = createPlayer(merchantId, 101L, listOf("黑市商人"))
+            val villager = createPlayer(villagerId, 102L, listOf("平民"))
+
+            testSession.players[merchantId.toString()] = merchant
+            testSession.players[villagerId.toString()] = villager
+
+            val actionInstance = RoleActionInstance(
+                actor = merchantId,
+                actionDefinitionId = dev.robothanzo.werewolf.game.roles.PredefinedRoles.DARK_MERCHANT_TRADE,
+                targets = listOf(villagerId),
+                submittedBy = ActionSubmissionSource.PLAYER,
+                metadata = mutableMapOf("skillType" to "SEER")
+            )
+
+            val result = tradeAction.execute(testSession, actionInstance, ActionExecutionResult())
+
+            assertEquals(villagerId, testSession.stateData.roleFlags["DarkMerchantTradeRecipient"])
+            assertEquals("SEER", testSession.stateData.roleFlags["DarkMerchantGiftedSkill"])
+            assertFalse(result.deaths.containsKey(DeathCause.UNKNOWN))
+        }
+    }
+
+    @Nested
+    @DisplayName("Wolf Brother Special Tests")
+    inner class WolfBrotherTests {
+        private lateinit var seerAction: SeerCheckAction
+        private lateinit var testSession: Session
+        private lateinit var mockChannel: TextChannel
+
+        @Suppress("DEPRECATION")
+        private lateinit var mockMessageAction: MessageCreateAction
+
+        @BeforeEach
+        fun setup() {
+            val roleRegistry = mock<dev.robothanzo.werewolf.game.roles.RoleRegistry>()
+            val wolfRole = mock<dev.robothanzo.werewolf.game.model.Role>()
+            whenever(wolfRole.camp).thenReturn(Camp.WEREWOLF)
+            whenever(roleRegistry.getRole("狼人")).thenReturn(wolfRole)
+            whenever(roleRegistry.getRole("狼弟")).thenReturn(wolfRole)
+
+            seerAction = SeerCheckAction(roleRegistry)
+            testSession = Session(guildId = 1L)
+
+            mockChannel = mock<TextChannel>()
+            mockMessageAction = mock<MessageCreateAction>()
+            whenever(mockChannel.sendMessage(any<String>())).thenReturn(mockMessageAction)
+        }
+
+        @Test
+        @DisplayName("Seer checking Wolf Younger Brother when Wolf Brother is alive should return Good")
+        fun testSeerCheckYoungerBrotherAlive() {
+            val seerId = 1
+            val youngerBrotherId = 2
+            val brotherId = 3
+
+            val seer = createPlayer(seerId, 101L, listOf("預言家")).apply {
+                session = testSession
+                whenever(dev.robothanzo.werewolf.WerewolfApplication.jda.getTextChannelById(channelId)).thenReturn(
+                    mockChannel
+                )
+            }
+            val youngerBrother = createPlayer(youngerBrotherId, 102L, listOf("狼弟"))
+            val brother = createPlayer(brotherId, 103L, listOf("狼兄"))
+
+            testSession.players[seerId.toString()] = seer
+            testSession.players[youngerBrotherId.toString()] = youngerBrother
+            testSession.players[brotherId.toString()] = brother
+
+            val actionInstance = RoleActionInstance(
+                actor = seerId,
+                actionDefinitionId = dev.robothanzo.werewolf.game.roles.PredefinedRoles.SEER_CHECK,
+                targets = listOf(youngerBrotherId),
+                submittedBy = ActionSubmissionSource.PLAYER
+            )
+
+            seerAction.execute(testSession, actionInstance, ActionExecutionResult())
+
+            verify(mockChannel).sendMessage(org.mockito.kotlin.check<String> { content ->
+                assertTrue(content.contains("好人"))
+            })
+        }
+
+        @Test
+        @DisplayName("Seer checking Wolf Younger Brother when Wolf Brother is dead should return Wolf")
+        fun testSeerCheckYoungerBrotherDead() {
+            val seerId = 1
+            val youngerBrotherId = 2
+            val brotherId = 3
+
+            val seer = createPlayer(seerId, 101L, listOf("預言家")).apply {
+                this.session = testSession
+                whenever(dev.robothanzo.werewolf.WerewolfApplication.jda.getTextChannelById(channelId)).thenReturn(
+                    mockChannel
+                )
+            }
+            val youngerBrother = createPlayer(youngerBrotherId, 102L, listOf("狼弟"))
+            val brother = createPlayer(brotherId, 103L, listOf("狼兄")).apply {
+                deadRoles = mutableListOf("狼兄") // Mark as dead
+            }
+
+            testSession.players[seerId.toString()] = seer
+            testSession.players[youngerBrotherId.toString()] = youngerBrother
+            testSession.players[brotherId.toString()] = brother
+
+            val actionInstance = RoleActionInstance(
+                actor = seerId,
+                actionDefinitionId = dev.robothanzo.werewolf.game.roles.PredefinedRoles.SEER_CHECK,
+                targets = listOf(youngerBrotherId),
+                submittedBy = ActionSubmissionSource.PLAYER
+            )
+
+            seerAction.execute(testSession, actionInstance, ActionExecutionResult())
+
+            verify(mockChannel).sendMessage(org.mockito.kotlin.check<String> { content ->
+                assertTrue(content.contains("狼人"))
+            })
+        }
+    }
 }

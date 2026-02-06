@@ -10,7 +10,6 @@ import dev.robothanzo.werewolf.model.Candidate
 import dev.robothanzo.werewolf.utils.CmdUtils
 import dev.robothanzo.werewolf.utils.isAdmin
 import dev.robothanzo.werewolf.utils.player
-import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
@@ -123,7 +122,13 @@ class ButtonListener : ListenerAdapter() {
                             )
                         )
                         val message =
-                            event.hook.sendMessage(targetMessage).setComponents(ActionRow.of(targetButtons)).complete()
+                            event.hook.sendMessage(targetMessage)
+                                .setComponents(
+                                    dev.robothanzo.werewolf.utils.MsgUtils.spreadButtonsAcrossActionRows(
+                                        targetButtons
+                                    )
+                                )
+                                .complete()
                         actionData?.targetPromptId = message.idLong
 
                         // RoleActionService.updateActionStatus already uses Persistent Session calls internally

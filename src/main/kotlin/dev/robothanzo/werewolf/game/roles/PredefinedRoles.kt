@@ -10,6 +10,7 @@ object PredefinedRoles {
     const val GUARD_PRIORITY = 150
     const val HUNTER_PRIORITY = 250
     const val POLICE_PRIORITY = 400
+    const val DARK_MERCHANT_PRIORITY = 50
 
     // Action IDs
     const val WEREWOLF_KILL = "WEREWOLF_KILL"
@@ -19,6 +20,13 @@ object PredefinedRoles {
     const val GUARD_PROTECT = "GUARD_PROTECT"
     const val HUNTER_REVENGE = "HUNTER_REVENGE"
     const val WOLF_KING_REVENGE = "WOLF_KING_REVENGE"
+    const val DARK_MERCHANT_TRADE_SEER = "DARK_MERCHANT_TRADE_SEER"
+    const val DARK_MERCHANT_TRADE_POISON = "DARK_MERCHANT_TRADE_POISON"
+    const val DARK_MERCHANT_TRADE_GUN = "DARK_MERCHANT_TRADE_GUN"
+    const val MERCHANT_SEER_CHECK = "MERCHANT_SEER_CHECK"
+    const val MERCHANT_POISON = "MERCHANT_POISON"
+    const val MERCHANT_GUN = "MERCHANT_GUN"
+    const val WOLF_YOUNGER_BROTHER_EXTRA_KILL = "WOLF_YOUNGER_BROTHER_EXTRA_KILL"
 
     // Special death causes (legacy)
     const val DOUBLE_PROTECTION = "DOUBLE_PROTECTION"

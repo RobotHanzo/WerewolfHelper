@@ -56,11 +56,12 @@ class MessageListener : ListenerAdapter() {
         val roles = player.roles
         if (roles.isNullOrEmpty()) return false
 
-        val firstRole = roles.filterNot { player.deadRoles?.contains(it) == true }.first()
+        val firstRole = roles.filterNot { player.deadRoles?.contains(it) == true }.firstOrNull() ?: return false
         return firstRole.contains("狼人") ||
                 roles.contains("狼兄") ||
                 firstRole.contains("狼王") ||
                 firstRole.contains("狼美人") ||
+                firstRole.contains("白狼王") ||
                 firstRole.contains("血月使者") ||
                 firstRole.contains("惡靈騎士") ||
                 firstRole.contains("夢魘") ||
@@ -71,9 +72,11 @@ class MessageListener : ListenerAdapter() {
         if (event.author.isBot) return
         val session = CmdUtils.getSession(event.guild) ?: return
 
-        for (player in session.alivePlayers().values) {
+        val alivePlayers = session.alivePlayers().values
+        val isJudgeChannel = event.channel == session.judgeTextChannel
+
+        for (player in alivePlayers) {
             if (!player.roles.isNullOrEmpty()) {
-                val isJudgeChannel = event.channel == session.judgeTextChannel
                 if ((player.channel == event.channel && shouldSend(player, session)) ||
                     isJudgeChannel
                 ) {
@@ -87,6 +90,9 @@ class MessageListener : ListenerAdapter() {
                                 if (isJudgeChannel) 0 else lockedSession.getPlayer(event.author.idLong)?.id ?: 0
                             val displayName = event.member?.effectiveName ?: event.author.effectiveName
                             val senderName = if (isJudgeChannel) "法官頻道 (${displayName})" else displayName
+
+                            // We should probably filter who sees these in the dashboard too, but for simplicity we'll keep all for now
+                            // but mark them if possible.
                             messagesList.add(
                                 dev.robothanzo.werewolf.game.model.WerewolfMessage(
                                     senderId = senderId,
@@ -110,7 +116,7 @@ class MessageListener : ListenerAdapter() {
                     val message = WebhookMessageBuilder()
                         .setContent(event.message.contentRaw)
                         .setUsername(
-                            (if (event.channel.idLong == session.judgeTextChannel?.idLong) "法官頻道" else player.nickname) +
+                            (if (isJudgeChannel) "法官頻道" else player.nickname) +
                                     " (" + event.author.name + ")"
                         )
                         .setAvatarUrl(event.author.avatarUrl)

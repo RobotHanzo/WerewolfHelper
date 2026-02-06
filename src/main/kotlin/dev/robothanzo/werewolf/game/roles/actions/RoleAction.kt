@@ -79,6 +79,13 @@ interface RoleAction {
     val allowMultiplePerPhase: Boolean
         get() = false
 
+    /**
+     * Whether this action is optional. If false, the player MUST select a target.
+     * Skipping or timing out will result in a random selection (or other mandatory behavior).
+     */
+    val isOptional: Boolean
+        get() = true
+
     fun getUsageCount(session: Session, actor: Int): Int {
         return session.stateData.actionData[actor.toString()]?.usage?.get(actionId) ?: 0
     }
@@ -180,7 +187,8 @@ abstract class BaseRoleAction(
     override val usageLimit: Int = -1,
     override val requiresAliveTarget: Boolean = true,
     override val isImmediate: Boolean = false,
-    override val allowMultiplePerPhase: Boolean = false
+    override val allowMultiplePerPhase: Boolean = false,
+    override val isOptional: Boolean = true
 ) : RoleAction
 
 /**

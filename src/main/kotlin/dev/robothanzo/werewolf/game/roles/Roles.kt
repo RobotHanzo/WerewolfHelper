@@ -50,3 +50,37 @@ class WolfKing(@Transient private val revengeAction: WolfKingRevengeAction) : Ba
 
 @Component
 class Villager : BaseRole("平民", Camp.VILLAGER)
+
+@Component
+class WolfBrother(@Transient private val killAction: WerewolfKillAction) : BaseRole("狼兄", Camp.WEREWOLF) {
+    override fun getActions(): List<RoleAction> = listOf(killAction)
+
+    override fun onDeath(context: RoleEventContext) {
+        // Record the day the Wolf Brother died
+        context.session.stateData.roleFlags["WolfBrotherDiedDay"] = context.session.day
+    }
+}
+
+@Component
+class WolfYoungerBrother(
+    @Transient private val killAction: WerewolfKillAction,
+    @Transient private val extraKillAction: WolfYoungerBrotherExtraKillAction
+) : BaseRole("狼弟", Camp.WEREWOLF) {
+    override fun getActions(): List<RoleAction> = listOf(killAction, extraKillAction)
+}
+
+@Component
+class DarkMerchant(
+    @Transient private val tradeSeerAction: DarkMerchantTradeSeerAction,
+    @Transient private val tradePoisonAction: DarkMerchantTradePoisonAction,
+    @Transient private val tradeGunAction: DarkMerchantTradeGunAction,
+    @Transient private val seerAction: MerchantSeerCheckAction,
+    @Transient private val poisonAction: MerchantPoisonAction,
+    @Transient private val gunAction: MerchantGunAction
+) : BaseRole("黑市商人", Camp.GOD) {
+    override fun getActions(): List<RoleAction> = listOf(tradeSeerAction, tradePoisonAction, tradeGunAction)
+
+    override fun onDeath(context: RoleEventContext) {
+        // Nothing special on death for now
+    }
+}

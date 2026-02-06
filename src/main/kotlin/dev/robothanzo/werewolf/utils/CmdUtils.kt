@@ -83,9 +83,9 @@ fun Member.isAdmin(): Boolean {
     return this.hasPermission(Permission.ADMINISTRATOR)
 }
 
-fun Member.isSpectator(): Boolean {
+fun Member.isSpectator(strict: Boolean = false): Boolean {
     val session = CmdUtils.getSession(this.guild) ?: return true
-    return this.roles.isEmpty() || this.roles.contains(session.spectatorRole)
+    return (!strict && this.roles.isEmpty()) || this.roles.contains(session.spectatorRole)
 }
 
 fun Member.player(aliveOnly: Boolean = true): Player? {

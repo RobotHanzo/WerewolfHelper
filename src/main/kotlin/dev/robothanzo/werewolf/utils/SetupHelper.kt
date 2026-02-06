@@ -38,8 +38,8 @@ object SetupHelper {
             color = Color.YELLOW,
             hoisted = true,
             permissions = listOf(Permission.ADMINISTRATOR)
-        ).queue { judgeRole ->
-            session.setJudgeRoleId(judgeRole.idLong)
+        ).queue({ judgeRole ->
+            session.judgeRoleId = judgeRole.idLong
 
             // 2. Create Player Roles and Channels
             createPlayerRolesAndChannels(session, config.players).thenAccept { players ->
@@ -50,17 +50,26 @@ object SetupHelper {
                     name = "旁觀者/死人",
                     color = Color(0x654321),
                     permissions = listOf(Permission.VIEW_CHANNEL)
-                ).queue { deadRole ->
-                    session.setSpectatorRoleId(deadRole.idLong)
+                ).queue({ deadRole ->
+                    session.spectatorRoleId = deadRole.idLong
                     applySpectatorOverrides(guild, players, deadRole)
 
                     // 4. Create remaining core channels
+                    log.info("Creating core channels for guild {}", guild.id)
                     createChannels(guild, deadRole, guild.publicRole, session).thenAccept {
+                        log.info("Core channels created. Finalizing setup.")
                         finalizeSetup(guild, config, session)
+                    }.exceptionally { ex ->
+                        log.error("Failed to create channels in guild {}: {}", guild.id, ex.message)
+                        null
                     }
-                }
+                }, { ex ->
+                    log.error("Failed to create spectator role in guild {}: {}", guild.id, ex.message)
+                })
             }
-        }
+        }, { ex ->
+            log.error("Failed to create judge role in guild {}: {}", guild.id, ex.message)
+        })
     }
 
     // --- Extension Functions for Cleaner Syntax ---
@@ -192,8 +201,8 @@ object SetupHelper {
                     Permission.MESSAGE_ADD_REACTION
                 ))
             )
-        ).queue { courtText ->
-            session.setCourtTextChannelId(courtText.idLong)
+        ).queue({ courtText ->
+            session.courtTextChannelId = courtText.idLong
 
             // Court Voice
             guild.createVoiceChannel(
@@ -202,8 +211,8 @@ object SetupHelper {
                     publicRole to (listOf(Permission.VOICE_SPEAK) to listOf(Permission.USE_EMBEDDED_ACTIVITIES)),
                     deadRole to (listOf(Permission.VIEW_CHANNEL) to listOf(Permission.VOICE_SPEAK))
                 )
-            ).queue { courtVoice ->
-                session.setCourtVoiceChannelId(courtVoice.idLong)
+            ).queue({ courtVoice ->
+                session.courtVoiceChannelId = courtVoice.idLong
 
                 // Spectator Text
                 guild.createTextChannel(
@@ -215,8 +224,8 @@ object SetupHelper {
                             Permission.USE_APPLICATION_COMMANDS
                         ))
                     )
-                ).queue { specText ->
-                    session.setSpectatorTextChannelId(specText.idLong)
+                ).queue({ specText ->
+                    session.spectatorTextChannelId = specText.idLong
 
                     // Spectator Voice
                     guild.createVoiceChannel(
@@ -225,7 +234,7 @@ object SetupHelper {
                             deadRole to (listOf(Permission.VIEW_CHANNEL, Permission.VOICE_SPEAK) to emptyList()),
                             publicRole to (emptyList<Permission>() to listOf(Permission.VIEW_CHANNEL))
                         )
-                    ).queue {
+                    ).queue({ _ ->
                         // Judge Text
                         guild.createTextChannel(
                             "法官",
@@ -236,14 +245,29 @@ object SetupHelper {
                                     Permission.USE_APPLICATION_COMMANDS
                                 ))
                             )
-                        ).queue { judgeText ->
-                            session.setJudgeTextChannelId(judgeText.idLong)
+                        ).queue({ judgeText ->
+                            session.judgeTextChannelId = judgeText.idLong
                             future.complete(null)
-                        }
-                    }
-                }
-            }
-        }
+                        }, { ex ->
+                            log.error("Failed to create judge text channel in guild {}: {}", guild.id, ex.message)
+                            future.completeExceptionally(ex)
+                        })
+                    }, { ex ->
+                        log.error("Failed to create spectator voice channel in guild {}: {}", guild.id, ex.message)
+                        future.completeExceptionally(ex)
+                    })
+                }, { ex ->
+                    log.error("Failed to create spectator text channel in guild {}: {}", guild.id, ex.message)
+                    future.completeExceptionally(ex)
+                })
+            }, { ex ->
+                log.error("Failed to create court voice channel in guild {}: {}", guild.id, ex.message)
+                future.completeExceptionally(ex)
+            })
+        }, { ex ->
+            log.error("Failed to create court text channel in guild {}: {}", guild.id, ex.message)
+            future.completeExceptionally(ex)
+        })
         return future
     }
 
@@ -267,25 +291,34 @@ object SetupHelper {
         }
         val id = Player.ID_FORMAT.format(current.toLong())
         val guild = session.guild ?: throw Exception("Guild not found")
-        guild.createRole("玩家$id", MsgUtils.randomColor, true).queue { playerRole ->
+        guild.createRole("玩家$id", MsgUtils.randomColor, true).queue({ playerRole ->
             guild.createTextChannel(
                 "玩家$id",
                 mapOf(
-                    playerRole to (listOf(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND) to emptyList()),
-                    guild.publicRole to (emptyList<Permission>() to listOf(
+                    playerRole to (listOf(
                         Permission.VIEW_CHANNEL,
                         Permission.MESSAGE_SEND,
                         Permission.USE_APPLICATION_COMMANDS
+                    ) to emptyList()),
+                    guild.publicRole to (emptyList<Permission>() to listOf(
+                        Permission.VIEW_CHANNEL,
+                        Permission.MESSAGE_SEND
                     ))
                 )
-            ).queue { playerChannel ->
+            ).queue({ playerChannel ->
                 players[current.toString()] = Player(
                     id = current,
                     roleId = playerRole.idLong,
                     channelId = playerChannel.idLong
                 )
                 createPlayerRecursively(session, total, current + 1, players, future)
-            }
-        }
+            }, { ex ->
+                log.error("Failed to create text channel for player {} in guild {}: {}", id, guild.id, ex.message)
+                future.completeExceptionally(ex)
+            })
+        }, { ex ->
+            log.error("Failed to create role for player {} in guild {}: {}", id, guild.id, ex.message)
+            future.completeExceptionally(ex)
+        })
     }
 }

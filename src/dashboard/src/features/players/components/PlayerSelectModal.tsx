@@ -18,7 +18,11 @@ export const PlayerSelectModal: React.FC<PlayerSelectModalProps> = ({title, play
 
     const filteredPlayers = players
         .filter(p => filter ? filter(p) : true)
-        .filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || (p.userId && p.userId.includes(search)));
+        .filter(p => {
+            const nameMatch = p.name?.toLowerCase().includes(search.toLowerCase());
+            const userIdMatch = p.userId?.toLowerCase().includes(search.toLowerCase());
+            return nameMatch || userIdMatch;
+        });
 
     return (
         <div
@@ -75,8 +79,8 @@ export const PlayerSelectModal: React.FC<PlayerSelectModalProps> = ({title, play
                                         <DiscordName userId={p.userId} fallbackName={p.name}/>
                                     </div>
                                     <div className="text-xs text-slate-500 truncate flex gap-1">
-                                        {p.roles.map(r => <span key={r}
-                                                                className="bg-slate-200 dark:bg-slate-800 px-1 rounded">{r}</span>)}
+                                        {p.roles?.map(r => <span key={r}
+                                                                 className="bg-slate-200 dark:bg-slate-800 px-1 rounded">{r}</span>)}
                                     </div>
                                 </div>
                                 <Check

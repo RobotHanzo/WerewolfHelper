@@ -21,7 +21,8 @@ interface RoleActionService {
         actionDefinitionId: String,
         actorPlayerId: Int,
         targetPlayerIds: List<Int>,
-        submittedBy: String // "PLAYER" or "JUDGE"
+        submittedBy: String, // "PLAYER" or "JUDGE"
+        metadata: Map<String, Any> = emptyMap()
     ): Map<String, Any>
 
     /**

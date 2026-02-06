@@ -3,6 +3,7 @@ package dev.robothanzo.werewolf.service.impl
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.*
+import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import dev.robothanzo.werewolf.service.NightManager
@@ -25,7 +26,8 @@ class RoleActionServiceImpl(
         actionDefinitionId: String,
         actorPlayerId: Int,
         targetPlayerIds: List<Int>,
-        submittedBy: String
+        submittedBy: String,
+        metadata: Map<String, Any>
     ): Map<String, Any> {
         return WerewolfApplication.gameSessionService.withLockedSession(guildId) { session ->
             val actionDef = roleRegistry.getAction(actionDefinitionId)
@@ -60,7 +62,8 @@ class RoleActionServiceImpl(
                 actor = actorPlayerId,
                 actionDefinitionId = actionDefinitionId,
                 targets = targetPlayerIds,
-                submittedBy = source
+                submittedBy = source,
+                metadata = metadata
             )
 
             // Store in pending actions
@@ -121,6 +124,22 @@ class RoleActionServiceImpl(
             }
         }
 
+        // Gifted actions for DarkMerchantTradeRecipient
+        if (session.stateData.roleFlags["DarkMerchantTradeRecipient"] == playerId) {
+            val skillType = session.stateData.roleFlags["DarkMerchantGiftedSkill"] as? String
+            val giftedActionId = when (skillType) {
+                "SEER" -> PredefinedRoles.MERCHANT_SEER_CHECK
+                "POISON" -> PredefinedRoles.MERCHANT_POISON
+                "GUN" -> PredefinedRoles.MERCHANT_GUN
+                else -> null
+            }
+            giftedActionId?.let { id ->
+                if (isActionAvailable(session, playerId, id)) {
+                    roleRegistry.getAction(id)?.let { actions.add(it) }
+                }
+            }
+        }
+
         return actions
     }
 
@@ -173,7 +192,22 @@ class RoleActionServiceImpl(
         }
 
         val usage = getActionUsageCount(session, playerId, actionDefinitionId)
-        return usage < action.usageLimit
+        if (usage >= action.usageLimit) return false
+
+        // Wolf Younger Brother extra kill logic
+        val currentPlayer = session.getPlayer(playerId)
+        if (actionDefinitionId == PredefinedRoles.WOLF_YOUNGER_BROTHER_EXTRA_KILL) {
+            // Delegate to action's isAvailable method which now contains the logic
+            return action.isAvailable(session, playerId)
+        }
+
+        if (actionDefinitionId == PredefinedRoles.WEREWOLF_KILL && currentPlayer?.roles?.contains("狼弟") == true) {
+            val isWolfBrotherAlive = session.alivePlayers().values.any { it.roles?.contains("狼兄") == true }
+            // Younger Brother only gets to kill if Brother is dead
+            if (isWolfBrotherAlive) return false
+        }
+
+        return true
     }
 
     override fun getPendingActions(session: Session): List<RoleActionInstance> {

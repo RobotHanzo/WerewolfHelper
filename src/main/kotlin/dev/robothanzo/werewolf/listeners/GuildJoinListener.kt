@@ -20,6 +20,7 @@ class GuildJoinListener : ListenerAdapter() {
     private val log = LoggerFactory.getLogger(GuildJoinListener::class.java)
 
     override fun onGuildJoin(event: GuildJoinEvent) {
+        log.info("Bot joined guild: {} ({})", event.guild.name, event.guild.id)
         checkAndSetup(event.guild)
     }
 
@@ -37,6 +38,12 @@ class GuildJoinListener : ListenerAdapter() {
 
     private fun checkAndSetup(guild: Guild) {
         val ownerId = guild.ownerIdLong
+        log.info(
+            "Checking pending setup for guild: {} (Owner: {}). Pending owners: {}",
+            guild.id,
+            ownerId,
+            Server.pendingSetups.keys
+        )
 
         if (Server.pendingSetups.containsKey(ownerId)) {
             if (guild.selfMember.isAdmin()) {
@@ -46,6 +53,7 @@ class GuildJoinListener : ListenerAdapter() {
                     SetupHelper.setup(guild, setupConfig)
                 }
             } else {
+                log.warn("Bot is missing Administrator permission in guild {}", guild.id)
                 // Try to warn in default channel
                 val defaultChannel = guild.defaultChannel
                 if (defaultChannel is TextChannel && defaultChannel.canTalk()) {

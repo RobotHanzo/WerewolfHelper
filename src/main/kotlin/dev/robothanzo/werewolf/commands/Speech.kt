@@ -6,13 +6,10 @@ import dev.robothanzo.jda.interactions.annotations.slash.options.Option
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.utils.CmdUtils
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
-import org.slf4j.LoggerFactory
 import java.time.Duration
 
 @Command
 class Speech {
-    private val log = LoggerFactory.getLogger(Speech::class.java)
-
     @Subcommand(description = "開始自動發言流程")
     fun auto(event: SlashCommandInteractionEvent) {
         event.deferReply(false).queue()

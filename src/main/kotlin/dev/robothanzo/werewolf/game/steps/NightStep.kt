@@ -47,6 +47,12 @@ class NightStep(
                 player.actionSubmitted = false
             }
 
+            // Increment day count at the start of the night (assuming day starts at 0 or 1 and increments here)
+            // Note: session.day is usually incremented in SetupStep or at the end of DayStep.
+            // If session.day is incremented here, we need to be careful.
+            // Let's check where session.day is incremented.
+            // Assuming session.day is correct for the current night.
+
             // Log night start
             session.addLog(LogType.SYSTEM, "夜晚開始，各職業請準備行動")
 
@@ -61,6 +67,11 @@ class NightStep(
 
             for (p in session.alivePlayers().values) {
                 if (p.wolf) {
+                    // Wolf Younger Brother (狼弟) only joins discussion if Brother is dead
+                    val isBrotherAlive = session.alivePlayers().values.any { it.roles?.contains("狼兄") == true }
+                    if (p.roles?.contains("狼弟") == true && isBrotherAlive) {
+                        continue
+                    }
                     werewolfVotes[p.id.toString()] = WolfVote(
                         voterId = p.id
                     )
@@ -99,7 +110,13 @@ class NightStep(
     private suspend fun processNightPhases(guildId: Long, service: GameStateService) {
         // 1. Werewolf Voting Phase
         val session = gameSessionService.getSession(guildId).orElseThrow()
-        val werewolves = session.players.values.filter { it.alive && it.wolf }.map { it.id }
+        val werewolves = session.players.values.filter { p ->
+            p.alive && p.wolf && (p.roles?.contains("狼弟") != true || session.alivePlayers().values.none {
+                it.roles?.contains(
+                    "狼兄"
+                ) == true
+            })
+        }.map { it.id }
 
         if (werewolves.isNotEmpty()) {
             gameSessionService.withLockedSession(guildId) { lockedSession ->
@@ -142,9 +159,14 @@ class NightStep(
 
             val actors = mutableListOf<Int>()
             for (player in lockedSession.players.values) {
-                if (!player.alive || player.wolf) continue
+                if (!player.alive) continue
                 val pid = player.id
-                val actions = roleActionService.getAvailableActionsForPlayer(lockedSession, pid)
+                var actions = roleActionService.getAvailableActionsForPlayer(lockedSession, pid)
+
+                // Filter out standard werewolf kill as it's handled in the group phase
+                if (player.wolf) {
+                    actions = actions.filter { it.actionId != PredefinedRoles.WEREWOLF_KILL }
+                }
 
                 if (actions.isNotEmpty()) {
                     actors.add(pid)

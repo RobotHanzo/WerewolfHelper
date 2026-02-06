@@ -26,18 +26,18 @@ import dev.robothanzo.werewolf.game.model.Role as GameRole
 data class Session(
     @Id
     @param:BsonId
-    private var _id: ObjectId? = null,
+    var _id: ObjectId? = null,
 
     @Version
     var version: Long? = null,
     @Indexed(unique = true)
     var guildId: Long = 0,
-    private var courtTextChannelId: Long = 0,
-    private var courtVoiceChannelId: Long = 0,
-    private var spectatorTextChannelId: Long = 0,
-    private var judgeTextChannelId: Long = 0,
-    private var judgeRoleId: Long = 0,
-    private var spectatorRoleId: Long = 0,
+    var courtTextChannelId: Long = 0,
+    var courtVoiceChannelId: Long = 0,
+    var spectatorTextChannelId: Long = 0,
+    var judgeTextChannelId: Long = 0,
+    var judgeRoleId: Long = 0,
+    var spectatorRoleId: Long = 0,
     var owner: Long = 0,
     var doubleIdentities: Boolean = false,
     var hasAssignedRoles: Boolean = false,
@@ -131,30 +131,6 @@ data class Session(
     @get:BsonIgnore
     val judgeTextChannel: TextChannel?
         get() = guild?.getTextChannelById(judgeTextChannelId)
-
-    fun setCourtTextChannelId(id: Long) {
-        courtTextChannelId = id
-    }
-
-    fun setCourtVoiceChannelId(id: Long) {
-        courtVoiceChannelId = id
-    }
-
-    fun setSpectatorTextChannelId(id: Long) {
-        spectatorTextChannelId = id
-    }
-
-    fun setJudgeTextChannelId(id: Long) {
-        judgeTextChannelId = id
-    }
-
-    fun setJudgeRoleId(id: Long) {
-        judgeRoleId = id
-    }
-
-    fun setSpectatorRoleId(id: Long) {
-        spectatorRoleId = id
-    }
 
     fun hasEnded(simulateRoleRemovalArg: String?): Result {
         var simulateRoleRemoval = simulateRoleRemovalArg

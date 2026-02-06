@@ -54,7 +54,12 @@ class Server {
             .setColor(Color.GREEN)
 
         event.replyEmbeds(eb.build()).setEphemeral(true).queue()
-        log.info("Queued a server setup for user {} with {} players", userId, players)
+        log.info(
+            "Queued a server setup for user {} with {} players. Pending setups: {}",
+            userId,
+            players,
+            pendingSetups.size
+        )
     }
 
     @Subcommand(description = "列出所在之伺服器")

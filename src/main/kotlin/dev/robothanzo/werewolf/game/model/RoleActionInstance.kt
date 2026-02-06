@@ -10,6 +10,7 @@ data class RoleActionInstance(
     val actionDefinitionId: String,
     val targets: List<Int>,
     val submittedBy: ActionSubmissionSource,
+    val metadata: Map<String, Any> = emptyMap(),
     val timestamp: Long = System.currentTimeMillis(),
     var processed: Boolean = false
 )

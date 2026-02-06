@@ -68,7 +68,7 @@ class RoleServiceImpl(
                 !member.user.isBot &&
                         !member.isOwner &&
                         !member.isAdmin() &&
-                        !member.isSpectator()
+                        !member.isSpectator(strict = true)
             }.toMutableList()
 
             progressCallback(10)
