@@ -11,7 +11,7 @@ export interface Session {
 }
 
 export interface SessionPlayer {
-    id: string;
+    id: number;
     roleId: string;
     channelId: string;
     userId?: string;
@@ -48,6 +48,7 @@ export interface GameState {
     currentStep?: string; // Display name
     stateData?: any;
     isManualStep?: boolean; // True if duration is -1 (manual advance)
+    currentNightStatus?: NightStatus;
 }
 
 export interface PoliceState {
@@ -56,9 +57,9 @@ export interface PoliceState {
     allowEnroll: boolean;
     allowUnEnroll: boolean;
     candidates: {
-        id: string;   // Player ID (internal)
+        id: number;   // Player ID (internal)
         quit?: boolean;
-        voters: string[]; // List of User IDs (or Player IDs depending on backend mapping)
+        voters: number[]; // List of Player IDs
     }[];
 }
 
@@ -66,14 +67,14 @@ export interface ExpelState {
     voting: boolean;
     endTime?: number;
     candidates: {
-        id: string;
+        id: number;
         quit?: boolean;
-        voters: string[];
+        voters: number[];
     }[];
 }
 
 export interface WerewolfMessage {
-    senderId: string;
+    senderId: number;
     senderName: string;
     avatarUrl?: string | null;
     content: string;
@@ -81,19 +82,19 @@ export interface WerewolfMessage {
 }
 
 export interface WerewolfVote {
-    voterId: string;
+    voterId: number;
     voterName: string;
-    targetId: string | null;
+    targetId: number | null;
     targetName: string | null;
 }
 
 export interface ActionSubmissionStatus {
-    playerId: string;
+    playerId: number;
     playerName: string;
     role: string;
-    status: 'PENDING' | 'SUBMITTED' | 'SKIPPED';
+    status: 'PENDING' | 'SUBMITTED' | 'SKIPPED' | 'ACTING';
     actionType: string | null;
-    targetId: string | null;
+    targetId: number | null;
     targetName: string | null;
     submittedAt: number | null;
 }
@@ -110,16 +111,16 @@ export interface NightStatus {
 }
 
 export interface SpeechState {
-    order: string[]; // List of Player IDs (internal IDs)
-    currentSpeakerId?: string;
+    order: number[]; // List of Player IDs (internal IDs)
+    currentSpeakerId?: number;
     endTime: number;
     totalTime: number;
     isPaused?: boolean;
-    interruptVotes?: string[];
+    interruptVotes?: number[];
 }
 
 export interface Player {
-    id: string;
+    id: number;
     name: string;
     userId?: string; // Discord User ID
     username?: string; // Discord username

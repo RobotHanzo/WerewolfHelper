@@ -379,7 +379,7 @@ class PoliceServiceImpl(
 
     private fun setPolice(guildId: Long, playerId: Int) {
         gameSessionService.withLockedSession(guildId) { session ->
-            val player = session.players[playerId.toString()] ?: return@withLockedSession
+            val player = session.getPlayer(playerId) ?: return@withLockedSession
             player.police = true
             player.updateNickname()
 
@@ -483,7 +483,7 @@ class PoliceServiceImpl(
 
             if (senderPlayer?.user?.idLong == event.user.idLong) {
                 if (session.recipientId != null) {
-                    val recipientPlayer = guildSession.players[session.recipientId.toString()]
+                    val recipientPlayer = guildSession.getPlayer(session.recipientId!!)
                     if (recipientPlayer != null) {
                         recipientPlayer.police = true
                         recipientPlayer.updateNickname()

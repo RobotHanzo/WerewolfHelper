@@ -35,7 +35,7 @@ class Hunter(@Transient private val revengeAction: HunterRevengeAction) : BaseRo
     override fun getActions(): List<RoleAction> = listOf(revengeAction)
 
     override fun onDeath(context: RoleEventContext) {
-        context.session.stateData.roleFlags["${revengeAction.actionId}Available"] = context.actorUserId
+        context.session.stateData.roleFlags["${revengeAction.actionId}Available"] = context.actorPlayerId
     }
 }
 
@@ -44,7 +44,7 @@ class WolfKing(@Transient private val revengeAction: WolfKingRevengeAction) : Ba
     override fun getActions(): List<RoleAction> = listOf(revengeAction)
 
     override fun onDeath(context: RoleEventContext) {
-        context.session.stateData.roleFlags["${revengeAction.actionId}Available"] = context.actorUserId
+        context.session.stateData.roleFlags["${revengeAction.actionId}Available"] = context.actorPlayerId
     }
 }
 

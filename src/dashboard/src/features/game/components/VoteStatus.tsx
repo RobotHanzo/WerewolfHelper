@@ -4,7 +4,7 @@ import {Player} from '@/types';
 import {useTranslation} from '@/lib/i18n';
 
 interface VoteStatusProps {
-    candidates: { id: string, voters: string[] }[];
+    candidates: { id: number, voters: number[] }[];
     totalVoters?: number;
     endTime?: number;
     players: Player[];
@@ -108,7 +108,7 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                                         // Try to find voter by userId (assuming voterId is userId string) 
                                         // The backend sends userId as string for voters. 
                                         // Player.userId is key.
-                                        const voter = players.find(p => p.userId === voterId);
+                                        const voter = players.find(p => p.id === voterId);
                                         return (
                                             <div key={voterId}
                                                  className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2 py-1 rounded-md text-xs border border-slate-200 dark:border-slate-700 shadow-sm animate-in zoom-in-50">

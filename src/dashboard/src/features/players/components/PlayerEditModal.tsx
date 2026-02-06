@@ -29,7 +29,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
     // Default to session setting if available, otherwise fallback to player data
     const isDoubleIdentity = doubleIdentities !== undefined ? doubleIdentities : player.roles.length > 1;
 
-    const [transferTarget, setTransferTarget] = useState<string>('');
+    const [transferTarget, setTransferTarget] = useState<number | ''>('');
     const [loading, setLoading] = useState(false);
 
     // Filter alive players excluding current player for transfer
@@ -66,21 +66,10 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
     };
 
     const handleTransferPolice = async () => {
-        if (!transferTarget) return;
+        if (transferTarget === '') return;
         setLoading(true);
         try {
             await api.setPolice(guildId, transferTarget); // Set new sheriff
-            // We might also need to remove sheriff from current player if API doesn't handle swap automatically
-            // But usually setPolice handles the "who is police" logic. 
-            // Assuming setPolice just sets a flag. If we want to strictly transfer, 
-            // the backend might need a specific endpoint or we manually unset current.
-            // Based on previous code, the backend `force_police` clears others. 
-            // So calling setPolice on target should be enough if using that logic.
-            // Wait, previous code used `api.setPolice` which hits `/police` endpoint.
-
-            // To be safe and since `force_police` logic in Player.java clears others, 
-            // we can assume calling it on new target is sufficient.
-
             onClose();
         } catch (error) {
             console.error('Failed to transfer police:', error);
@@ -199,7 +188,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                                     <select
                                         className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                         value={transferTarget}
-                                        onChange={(e) => setTransferTarget(e.target.value)}
+                                        onChange={(e) => setTransferTarget(e.target.value === '' ? '' : Number(e.target.value))}
                                     >
                                         <option value="">{t('players.selectTarget', 'Select Target...')}</option>
                                         {potentialSheriffs.map(p => (

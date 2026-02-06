@@ -5,7 +5,7 @@ import {useTranslation} from '@/lib/i18n';
 
 interface PlayerCardProps {
     player: Player;
-    onAction: (id: string, action: string) => void;
+    onAction: (id: number, action: string) => void;
     readonly?: boolean;
 }
 

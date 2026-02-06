@@ -29,7 +29,7 @@ class ActionUIServiceImpl(
         if (availableActions.isEmpty()) return null
 
         return try {
-            val player = session.players[playerId.toString()] ?: return null
+            val player = session.getPlayer(playerId) ?: return null
 
             // Send action prompt to player's channel
             val actionText = buildString {

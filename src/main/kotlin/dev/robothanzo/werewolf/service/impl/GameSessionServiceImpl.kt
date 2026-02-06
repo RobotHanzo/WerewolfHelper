@@ -135,19 +135,19 @@ class GameSessionServiceImpl(
         speechService.getSpeechSession(session.guildId)?.let { speechSession ->
             val speechJson = mutableMapOf<String, Any>()
 
-            val orderIds = mutableListOf<String>()
+            val orderIds = mutableListOf<Int>()
             for (p in speechSession.order) {
-                orderIds.add(p.id.toString())
+                orderIds.add(p.id)
             }
             speechJson["order"] = orderIds
 
-            speechJson["currentSpeakerId"] = speechSession.lastSpeaker?.let { session.getPlayer(it) }?.id ?: ""
+            speechJson["currentSpeakerId"] = speechSession.lastSpeaker?.let { session.getPlayer(it) }?.id ?: -1
             speechJson["endTime"] = speechSession.currentSpeechEndTime
             speechJson["totalTime"] = speechSession.totalSpeechTime
 
-            val interruptVotes = mutableListOf<String>()
+            val interruptVotes = mutableListOf<Int>()
             for (uid in speechSession.interruptVotes) {
-                interruptVotes.add(uid.toString())
+                interruptVotes.add(uid)
             }
             speechJson["interruptVotes"] = interruptVotes
 
@@ -168,9 +168,9 @@ class GameSessionServiceImpl(
             val candidatesList = mutableListOf<Map<String, Any>>()
             for (c in policeSession.candidates.values) {
                 val candidateJson = mutableMapOf<String, Any>()
-                candidateJson["id"] = c.player.id.toString()
+                candidateJson["id"] = c.player.id
                 candidateJson["quit"] = c.quit
-                candidateJson["voters"] = c.electors.map { it.toString() }
+                candidateJson["voters"] = c.electors
                 candidatesList.add(candidateJson)
             }
             policeJson["candidates"] = candidatesList
@@ -188,8 +188,8 @@ class GameSessionServiceImpl(
             val expelCandidatesList = mutableListOf<Map<String, Any>>()
             expelService.getPollCandidates(gid)?.values?.forEach { c ->
                 val candidateJson = mutableMapOf<String, Any>()
-                candidateJson["id"] = c.player.id.toString()
-                candidateJson["voters"] = c.electors.map { it.toString() }
+                candidateJson["id"] = c.player.id
+                candidateJson["voters"] = c.electors
                 expelCandidatesList.add(candidateJson)
             }
             expelJson["candidates"] = expelCandidatesList
@@ -236,10 +236,10 @@ class GameSessionServiceImpl(
 
     override fun playersToJSON(session: Session): List<Map<String, Any>> {
         val players = mutableListOf<Map<String, Any>>()
-        for ((_, player) in session.players) {
+        for (player in session.players.values) {
             val playerJson = mutableMapOf<String, Any>()
 
-            playerJson["id"] = player.id.toString()
+            playerJson["id"] = player.id
             playerJson["roleId"] = player.role?.idLong?.toString() ?: ""
             playerJson["channelId"] = player.channel?.idLong?.toString() ?: ""
             playerJson["userId"] =
@@ -256,8 +256,8 @@ class GameSessionServiceImpl(
         }
 
         players.sortWith { a, b ->
-            val idA = (a["id"] as? String)?.toInt() ?: 0
-            val idB = (b["id"] as? String)?.toInt() ?: 0
+            val idA = a["id"] as Int
+            val idB = b["id"] as Int
             idA.compareTo(idB)
         }
 

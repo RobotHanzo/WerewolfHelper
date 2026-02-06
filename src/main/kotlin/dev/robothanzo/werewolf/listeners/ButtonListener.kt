@@ -160,13 +160,13 @@ class ButtonListener : ListenerAdapter() {
                     // Update UI status to SKIPPED so the night can resolve early
                     WerewolfApplication.roleActionService.updateActionStatus(
                         event.guild!!.idLong,
-                        player.user?.idLong ?: event.user.idLong,
+                        player.id,
                         ActionStatus.SKIPPED,
-                        targetUserIds = listOf(SKIP_TARGET_ID),
+                        targetPlayerIds = listOf(SKIP_TARGET_ID),
                         session = session
                     )
                     // Clear the action prompt to cancel reminder
-                    WerewolfApplication.actionUIService.clearPrompt(session, player.user?.idLong ?: event.user.idLong)
+                    WerewolfApplication.actionUIService.clearPrompt(session, player.id)
                     event.hook.editOriginal(":white_check_mark: 已跳過").queue()
                 }
                 return
@@ -187,7 +187,7 @@ class ButtonListener : ListenerAdapter() {
 
                     val actionData = WerewolfApplication.actionUIService.getActionData(
                         session,
-                        player.user?.idLong ?: event.user.idLong
+                        player.id
                     )
                     val actionId = actionData?.selectedAction?.actionId
                     if (actionId == null) {
@@ -200,18 +200,18 @@ class ButtonListener : ListenerAdapter() {
                         WerewolfApplication.roleActionService.submitAction(
                             guildId,
                             actionId,
-                            player.user?.idLong ?: event.user.idLong,
+                            player.id,
                             listOf(SKIP_TARGET_ID),
                             if (isJudge) "JUDGE" else "PLAYER"
                         )
 
-                        WerewolfApplication.actionUIService.clearPrompt(session, player.id.toString())
+                        WerewolfApplication.actionUIService.clearPrompt(session, player.id)
                         player.actionSubmitted = true
                         event.hook.editOriginal(":white_check_mark: 已選擇 **跳過** 本回合行動").queue()
                         return@withLockedSession
                     }
 
-                    val target = session.players[targetId]
+                    val target = session.getPlayer(targetId)
 
                     if (target == null) {
                         event.hook.editOriginal(":x: 找不到目標").queue()
@@ -222,21 +222,19 @@ class ButtonListener : ListenerAdapter() {
                         return@withLockedSession
                     }
 
-
                     // Submit action with target
-                    val targetUserId = target.user?.idLong ?: return@withLockedSession
                     WerewolfApplication.actionUIService.submitTargetSelection(
                         guildId,
-                        player.user?.idLong ?: event.user.idLong,
-                        targetUserId,
+                        player.id,
+                        target.id,
                         session
                     )
 
                     val result = WerewolfApplication.roleActionService.submitAction(
                         guildId,
                         actionId,
-                        player.user?.idLong ?: event.user.idLong,
-                        listOf(targetUserId),
+                        player.id,
+                        listOf(target.id),
                         if (isJudge) "JUDGE" else "PLAYER"
                     )
 
@@ -244,7 +242,7 @@ class ButtonListener : ListenerAdapter() {
                         // Clear the prompt after submission
                         WerewolfApplication.actionUIService.clearPrompt(
                             session,
-                            player.user?.idLong ?: event.user.idLong
+                            player.id
                         )
                         player.actionSubmitted = true
                         event.hook.editOriginal(":white_check_mark: 已選擇 **${target.nickname}** 為目標").queue()

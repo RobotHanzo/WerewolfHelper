@@ -1,6 +1,5 @@
 package dev.robothanzo.werewolf.service.impl
 
-import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.service.GameSessionService
@@ -15,7 +14,6 @@ import java.util.*
 
 @Service
 class RoleServiceImpl(
-    private val sessionRepository: SessionRepository,
     private val gameSessionService: GameSessionService
 ) : RoleService {
     private val log = LoggerFactory.getLogger(RoleServiceImpl::class.java)
@@ -209,12 +207,10 @@ class RoleServiceImpl(
                             )
                         )
                         CmdUtils.schedule({
-                            val innerSession = sessionRepository.findByGuildId(guildId).orElse(null)
-                            if (innerSession != null) {
-                                val innerPlayer = innerSession.players[player.id.toString()]
+                            gameSessionService.withLockedSession(guildId) {
+                                val innerPlayer = it.getPlayer(player.id)
                                 if (innerPlayer != null) {
                                     innerPlayer.rolePositionLocked = true
-                                    gameSessionService.saveSession(innerSession)
                                     innerPlayer.channel?.sendMessage("身分順序已鎖定")?.queue()
                                 }
                             }

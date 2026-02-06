@@ -145,7 +145,7 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
                     className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700">
                     <VoteStatus
                         candidates={police.candidates.filter(c => !c.quit)}
-                        totalVoters={players.filter(p => p.isAlive && !police.candidates.some(c => c.id === String(p.id))).length}
+                        totalVoters={players.filter(p => p.isAlive && !police.candidates.some(c => c.id === p.id)).length}
                         endTime={stageEndTime}
                         players={players}
                         title={t('vote.policeElection')}
@@ -331,7 +331,7 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
                                 </h4>
                                 <div className="flex flex-wrap gap-2">
                                     {speech.interruptVotes.map(voterId => {
-                                        const voter = players.find(p => String(p.userId) === String(voterId));
+                                        const voter = players.find(p => p.id === voterId);
                                         return (
                                             <div key={voterId}
                                                  className="animate-in zoom-in-50 fade-in duration-300 flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-1 rounded text-xs border border-red-100 dark:border-red-900/50 shadow-sm">

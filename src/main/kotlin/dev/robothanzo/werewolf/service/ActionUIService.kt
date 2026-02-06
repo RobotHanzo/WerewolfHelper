@@ -56,11 +56,6 @@ interface ActionUIService {
     fun getActionData(session: Session, playerId: Int): ActionData?
 
     /**
-     * Update the Discord message ID for an active prompt
-     */
-    fun updateTargetPromptId(guildId: Long, playerId: Int, messageId: Long)
-
-    /**
      * Record a vote in a group action
      */
     fun submitGroupVote(

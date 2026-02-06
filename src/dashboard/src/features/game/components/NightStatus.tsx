@@ -1,14 +1,15 @@
 import React, {useEffect, useState} from 'react';
 import {useWebSocket} from '@/lib/websocket';
 import {ChevronRight, Clock, MessageCircle, Skull, Users} from 'lucide-react';
-import {usePlayerContext} from '@/features/players/contexts/PlayerContext';
+import {ActionSubmissionStatus, Player} from '@/types';
 
 interface NightStatusProps {
     guildId?: string;
+    players?: Player[];
 }
 
 interface WerewolfMessage {
-    senderId: string;
+    senderId: number;
     senderName: string;
     avatarUrl?: string | null;
     content: string;
@@ -16,17 +17,8 @@ interface WerewolfMessage {
 }
 
 interface WerewolfVote {
-    voterId: string;
-    targetId: string | null;
-}
-
-interface ActionSubmissionStatus {
-    playerId: string;
-    role: string;
-    status: 'PENDING' | 'SUBMITTED' | 'SKIPPED' | 'ACTING';
-    actionType: string | null;
-    targetId: string | null;
-    submittedAt: number | null;
+    voterId: number;
+    targetId: number | null;
 }
 
 interface NightStatusData {
@@ -39,11 +31,10 @@ interface NightStatusData {
     actionStatuses: ActionSubmissionStatus[];
 }
 
-export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId}) => {
+export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, players = []}) => {
     const [nightStatus, setNightStatus] = useState<NightStatusData | null>(null);
     const [activeTab, setActiveTab] = useState<'werewolves' | 'actions'>('werewolves');
     const messageScrollContainerRef = React.useRef<HTMLDivElement>(null);
-    const {userInfoCache, fetchUserInfo} = usePlayerContext();
 
     // Get guildId from URL or props
     const pathParts = typeof window !== 'undefined' ? window.location.pathname.split('/') : [];
@@ -105,97 +96,69 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId}) 
         fetchNightStatus();
     }, [guildId]);
 
-    // Fetch user info for messages, votes and statuses
-    useEffect(() => {
-        if (!nightStatus || !guildId) return;
-
-        // Messages
-        nightStatus.werewolfMessages.forEach(msg => {
-            if (msg.senderId && msg.senderId.length > 5 && !userInfoCache[msg.senderId]) {
-                fetchUserInfo(msg.senderId, guildId);
-            }
-        });
-
-        // Votes
-        nightStatus.werewolfVotes.forEach(vote => {
-            if (vote.voterId && !userInfoCache[vote.voterId]) {
-                fetchUserInfo(vote.voterId, guildId);
-            }
-            if (vote.targetId && vote.targetId !== '-1' && !userInfoCache[vote.targetId]) {
-                fetchUserInfo(vote.targetId, guildId);
-            }
-        });
-
-        // Action Statuses
-        nightStatus.actionStatuses.forEach(status => {
-            if (status.playerId && !userInfoCache[status.playerId]) {
-                fetchUserInfo(status.playerId, guildId);
-            }
-            if (status.targetId && status.targetId !== '-1' && !userInfoCache[status.targetId]) {
-                fetchUserInfo(status.targetId, guildId);
-            }
-        });
-    }, [nightStatus, guildId, userInfoCache, fetchUserInfo]);
-
     if (!nightStatus) {
         return null;
     }
 
     const enrichedMessages = nightStatus.werewolfMessages.map(msg => {
-        const cached = userInfoCache[msg.senderId];
+        const sender = players.find(p => p.id === msg.senderId);
         return {
             ...msg,
-            senderName: cached ? cached.name : '...',
-            avatarUrl: cached ? cached.avatar : undefined
+            senderName: msg.senderName || sender?.name || `玩家 ${msg.senderId}`,
+            avatarUrl: msg.avatarUrl || sender?.avatar || undefined,
         };
     });
 
     const enrichedVotes = nightStatus.werewolfVotes.map(vote => {
-        const voter = userInfoCache[vote.voterId];
-        const target = vote.targetId ? userInfoCache[vote.targetId] : null;
+        const voter = players.find(p => p.id === vote.voterId);
+        const target = vote.targetId ? players.find(p => p.id === vote.targetId) : null;
+
         return {
             ...vote,
-            voterName: voter ? voter.name : '...',
-            targetName: vote.targetId === '-1' ? '跳過' : (target ? target.name : '...')
+            voterName: voter?.name || `玩家 ${vote.voterId}`,
+            targetName: vote.targetId === -1 ? '跳過' : (target ? target.name : (vote.targetId ? `玩家 ${vote.targetId}` : '未投票'))
         };
     });
 
     // Filter out wolf actions from the main list
-    const enrichedStatuses = nightStatus.actionStatuses
+    const enrichedStatuses = (nightStatus.actionStatuses || [])
         .filter(status => !status.role.includes('狼'))
         .map(status => {
-            const actor = userInfoCache[status.playerId];
-            const target = status.targetId ? userInfoCache[status.targetId] : null;
+            const player = players.find(p => p.id === status.playerId);
+            const targetId = status.targetId;
+            const target = (targetId !== null && targetId > 0) ? players.find(p => p.id === targetId) : null;
+
             return {
                 ...status,
-                playerName: actor ? actor.name : '...',
-                avatarUrl: actor ? actor.avatar : undefined,
-                targetName: status.targetId === '-1' ? '跳過' : (target ? target.name : (status.targetId ? '...' : null)),
-                targetAvatarUrl: target ? target.avatar : undefined
+                playerName: player?.name || `玩家 ${status.playerId}`,
+                avatarUrl: player?.avatar,
+                targetName: targetId === -1 ? '跳過' : (target ? target.name : (targetId !== null && targetId > 0 ? `玩家 ${targetId}` : (status.status === 'SUBMITTED' ? '已提交' : null))),
+                targetAvatarUrl: target?.avatar,
             };
         });
 
     // Calculate wolf kill target
     const wolfVotes = nightStatus.werewolfVotes;
-    const voteCounts: Record<string, number> = {};
+    const voteCounts: Record<number, number> = {};
     wolfVotes.forEach(v => {
-        if (v.targetId) {
+        if (v.targetId !== null) {
             voteCounts[v.targetId] = (voteCounts[v.targetId] || 0) + 1;
         }
     });
 
-    let topTargetId: string | null = null;
+    let topTargetId: number | null = null;
     let maxVotes = 0;
-    Object.entries(voteCounts).forEach(([targetId, count]) => {
+    Object.entries(voteCounts).forEach(([tid, count]) => {
+        const targetId = Number(tid);
         if (count > maxVotes) {
             maxVotes = count;
             topTargetId = targetId;
         }
     });
 
-    const wolfTargetInfo = topTargetId && topTargetId !== '-1' ? userInfoCache[topTargetId] : null;
-    const wolfTargetName = topTargetId === '-1' ? '跳過' : (wolfTargetInfo ? wolfTargetInfo.name : (topTargetId ? '...' : '未定'));
-    const wolfTargetAvatar = wolfTargetInfo ? wolfTargetInfo.avatar : undefined;
+    const topTarget = topTargetId ? players.find(p => p.id === topTargetId) : null;
+    const wolfTargetName = topTargetId === -1 ? '跳過' : (topTarget ? topTarget.name : (topTargetId ? `玩家 ${topTargetId}` : '未定'));
+    const wolfTargetAvatar = topTarget?.avatar;
 
     return (
         <div className="w-full h-full bg-slate-900 text-white p-4 overflow-hidden flex flex-col">
@@ -379,9 +342,9 @@ const WerewolfVotingScreen: React.FC<WerewolfVotingScreenProps> = ({
                                             ) : (
                                                 <div
                                                     className="w-10 h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity min-h-[1.5rem]">
-                          <span className="text-[10px] text-slate-500 font-mono">
-                            •
-                          </span>
+                                                    <span className="text-[10px] text-slate-500 font-mono">
+                                                        •
+                                                    </span>
                                                 </div>
                                             )}
                                         </div>
@@ -391,8 +354,11 @@ const WerewolfVotingScreen: React.FC<WerewolfVotingScreenProps> = ({
                                                     <span
                                                         className="font-semibold text-red-400 text-[15px]">{msg.senderName}</span>
                                                     <span className="text-[10px] text-slate-500 font-medium">
-                            {new Date(msg.timestamp).toLocaleTimeString('zh-TW', {hour: '2-digit', minute: '2-digit'})}
-                          </span>
+                                                        {new Date(msg.timestamp).toLocaleTimeString('zh-TW', {
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </span>
                                                 </div>
                                             )}
                                             <div
@@ -428,8 +394,8 @@ const WerewolfVotingScreen: React.FC<WerewolfVotingScreenProps> = ({
                                     <ChevronRight className="w-3 h-3 text-amber-400"/>
                                     <span
                                         className={vote.targetName === '跳過' ? 'text-slate-400' : 'text-red-400 font-semibold'}>
-                    {vote.targetName || '未投票'}
-                  </span>
+                                        {vote.targetName || '未投票'}
+                                    </span>
                                 </div>
                             </div>
                         ))
@@ -544,7 +510,7 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                                     </div>
                                 )}
 
-                                {status.targetName && (
+                                {status.targetName && status.targetId !== null && status.targetId > 0 && (
                                     <div
                                         className="bg-white/10 rounded px-2 py-1 flex items-center justify-between gap-2">
                                         <div className="min-w-0">

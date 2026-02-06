@@ -161,7 +161,7 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
             case 'NIGHT_PHASE':
                 return (
                     <div className="animate-in fade-in duration-300 h-full overflow-hidden">
-                        <NightStatus guildId={guildId}/>
+                        <NightStatus guildId={guildId} players={gameState.players}/>
                     </div>
                 );
 

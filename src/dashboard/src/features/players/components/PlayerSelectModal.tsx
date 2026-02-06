@@ -6,7 +6,7 @@ import {Player} from '@/types';
 interface PlayerSelectModalProps {
     title: string;
     players: Player[];
-    onSelect: (playerId: string) => void;
+    onSelect: (playerId: number | string) => void;
     onClose: () => void;
     filter?: (p: Player) => boolean;
 }

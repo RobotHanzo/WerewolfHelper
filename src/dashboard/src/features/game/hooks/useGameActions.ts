@@ -14,8 +14,8 @@ export const useGameActions = (
 
     // Modal States that are triggered by actions
     const [showTimerModal, setShowTimerModal] = useState(false);
-    const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
-    const [deathConfirmPlayerId, setDeathConfirmPlayerId] = useState<string | null>(null);
+    const [editingPlayerId, setEditingPlayerId] = useState<number | null>(null);
+    const [deathConfirmPlayerId, setDeathConfirmPlayerId] = useState<number | null>(null);
     const [playerSelectModal, setPlayerSelectModal] = useState<{
         visible: boolean;
         type: 'ASSIGN_JUDGE' | 'DEMOTE_JUDGE' | 'FORCE_POLICE' | null;
@@ -25,7 +25,7 @@ export const useGameActions = (
     // Removed addLog function
 
 
-    const handleAction = async (playerId: string, actionType: string) => {
+    const handleAction = async (playerId: number, actionType: string) => {
         if (!guildId) return;
         const player = gameState.players.find(p => p.id === playerId);
         if (!player) return;
@@ -38,30 +38,18 @@ export const useGameActions = (
 
         try {
             if (actionType === 'kill') {
-                if (player.userId) {
-                    setDeathConfirmPlayerId(playerId);
-                } else {
-                    console.warn('Cannot kill unassigned player via API');
-                }
+                setDeathConfirmPlayerId(playerId);
             } else if (actionType === 'revive') {
-                if (player.userId) {
-                    await api.revivePlayer(guildId, player.userId);
-                }
+                await api.revivePlayer(guildId, player.id);
             } else if (actionType.startsWith('revive_role:')) {
                 const role = actionType.split(':')[1];
-                if (player.userId) {
-                    await api.reviveRole(guildId, player.userId, role);
-                }
+                await api.reviveRole(guildId, player.id, role);
             } else if (actionType === 'toggle-jin') {
                 // Toggle Jin Bao Bao logic
             } else if (actionType === 'sheriff') {
-                if (player.userId) {
-                    await api.setPolice(guildId, player.userId);
-                }
+                await api.setPolice(guildId, player.id);
             } else if (actionType === 'switch_role_order') {
-                if (player.userId) {
-                    await api.switchRoleOrder(guildId, player.userId);
-                }
+                await api.switchRoleOrder(guildId, player.id);
             }
 
         } catch (error) {
@@ -257,16 +245,16 @@ export const useGameActions = (
         }
     };
 
-    const handlePlayerSelect = async (playerId: string) => {
-        const player = (playerSelectModal.customPlayers || gameState.players).find(p => p.id === playerId);
-        if (!player || !guildId || !player.userId) return;
+    const handlePlayerSelect = async (playerId: number | string) => {
+        const player = (playerSelectModal.customPlayers || gameState.players).find(p => p.id == playerId);
+        if (!player || !guildId) return;
 
-        if (playerSelectModal.type === 'ASSIGN_JUDGE') {
+        if (playerSelectModal.type === 'ASSIGN_JUDGE' && player.userId) {
             await api.updateUserRole(guildId, player.userId, 'JUDGE');
-        } else if (playerSelectModal.type === 'DEMOTE_JUDGE') {
+        } else if (playerSelectModal.type === 'DEMOTE_JUDGE' && player.userId) {
             await api.updateUserRole(guildId, player.userId, 'SPECTATOR');
         } else if (playerSelectModal.type === 'FORCE_POLICE') {
-            await api.setPolice(guildId, player.userId);
+            await api.setPolice(guildId, player.id);
         }
 
         // Close modal after action?

@@ -80,27 +80,27 @@ export class ApiClient {
         return this.request(`/api/sessions/${guildId}/players/assign`, {method: 'POST'});
     }
 
-    async markPlayerDead(guildId: string, userId: string, lastWords: boolean = false) {
-        return this.request(`/api/sessions/${guildId}/players/${userId}/died?lastWords=${lastWords}`, {method: 'POST'});
+    async markPlayerDead(guildId: string, playerId: number, lastWords: boolean = false) {
+        return this.request(`/api/sessions/${guildId}/players/${playerId}/died?lastWords=${lastWords}`, {method: 'POST'});
     }
 
-    async setPolice(guildId: string, userId: string) {
-        return this.request(`/api/sessions/${guildId}/players/${userId}/police`, {method: 'POST'});
+    async setPolice(guildId: string, playerId: number) {
+        return this.request(`/api/sessions/${guildId}/players/${playerId}/police`, {method: 'POST'});
     }
 
-    async updatePlayerRoles(guildId: string, userId: string, roles: string[]) {
-        return this.request(`/api/sessions/${guildId}/players/${userId}/roles`, {
+    async updatePlayerRoles(guildId: string, playerId: number, roles: string[]) {
+        return this.request(`/api/sessions/${guildId}/players/${playerId}/roles`, {
             method: 'POST',
             body: JSON.stringify(roles)
         });
     }
 
-    async reviveRole(guildId: string, userId: string, role: string) {
-        return this.request(`/api/sessions/${guildId}/players/${userId}/revive-role?role=${encodeURIComponent(role)}`, {method: 'POST'});
+    async reviveRole(guildId: string, playerId: number, role: string) {
+        return this.request(`/api/sessions/${guildId}/players/${playerId}/revive-role?role=${encodeURIComponent(role)}`, {method: 'POST'});
     }
 
-    async revivePlayer(guildId: string, userId: string) {
-        return this.request(`/api/sessions/${guildId}/players/${userId}/revive`, {method: 'POST'});
+    async revivePlayer(guildId: string, playerId: number) {
+        return this.request(`/api/sessions/${guildId}/players/${playerId}/revive`, {method: 'POST'});
     }
 
     // Role management
@@ -117,14 +117,14 @@ export class ApiClient {
     }
 
     // Role Order
-    async switchRoleOrder(guildId: string, playerId: string) {
+    async switchRoleOrder(guildId: string, playerId: number) {
         return this.request(`/api/sessions/${guildId}/players/${playerId}/switch-role-order`, {
             method: 'POST'
         });
     }
 
     // Role Position Lock
-    async setPlayerRoleLock(guildId: string, playerId: string, locked: boolean) {
+    async setPlayerRoleLock(guildId: string, playerId: number, locked: boolean) {
         return this.request(`/api/sessions/${guildId}/players/${playerId}/role-lock?locked=${locked}`, {
             method: 'POST'
         });

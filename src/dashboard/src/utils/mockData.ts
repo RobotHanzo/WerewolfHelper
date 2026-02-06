@@ -12,8 +12,7 @@ export const MOCK_AVATARS = [
 ];
 
 export const INITIAL_PLAYERS: Player[] = Array.from({length: 8}).map((_, i) => ({
-    id: `p-${i}`,
-    discordId: `u-${i}`,
+    id: i + 1,
     name: `Player ${i + 1}`,
     avatar: MOCK_AVATARS[i],
     roles: i === 0 ? ['WEREWOLF'] : i === 1 ? ['SEER'] : i === 2 ? ['WITCH'] : ['VILLAGER'],
@@ -24,5 +23,4 @@ export const INITIAL_PLAYERS: Player[] = Array.from({length: 8}).map((_, i) => (
     isProtected: false,
     isPoisoned: false,
     isSilenced: false,
-    hasVoted: false,
 }));

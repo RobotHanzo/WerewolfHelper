@@ -53,7 +53,7 @@ class DiscordServiceImpl(
             }
 
             AudioSourceManagers.registerLocalSource(WerewolfApplication.playerManager)
-            JDAInteractions("dev.robothanzo.werewolf.commands").registerInteractions(jda).queue()
+            JDAInteractions("dev.robothanzo.werewolf").registerInteractions(jda).queue()
             jda.awaitReady()
             jda.presence.activity = Activity.competing("狼人殺 by Hanzo")
             log.info("JDA Initialized: {}", jda.selfUser.asTag)

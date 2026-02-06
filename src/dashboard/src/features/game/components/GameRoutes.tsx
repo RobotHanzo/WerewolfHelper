@@ -12,7 +12,7 @@ interface GameRoutesProps {
     guildId: string;
     gameState: GameState;
     readonly?: boolean;
-    onPlayerAction: (playerId: string, actionType: string) => void;
+    onPlayerAction: (playerId: number, actionType: string) => void;
     user?: User | null;
 }
 

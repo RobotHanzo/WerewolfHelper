@@ -148,7 +148,6 @@ class SpeechServiceImpl(
         event.deferReply(true).queue()
         val guild = event.guild ?: return
         val guildId = guild.idLong
-        val session = sessionRepository.findByGuildId(guildId).orElse(null) ?: return
 
         val speechSession = speechSessions[guildId]
         if (speechSession == null) {

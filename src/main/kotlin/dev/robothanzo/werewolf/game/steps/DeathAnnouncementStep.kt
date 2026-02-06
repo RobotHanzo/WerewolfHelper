@@ -28,7 +28,7 @@ class DeathAnnouncementStep(
             val resolutionResult = roleActionService.resolveNightActions(lockedSession)
 
             // Process deaths - mark players as dead based on resolution result
-            val allDeaths = mutableSetOf<Long>()
+            val allDeaths = mutableSetOf<Int>()
 
             for ((deathCause, deaths) in resolutionResult.deaths) {
                 for (userId in deaths) {

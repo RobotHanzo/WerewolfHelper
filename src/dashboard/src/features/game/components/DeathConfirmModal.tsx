@@ -18,10 +18,8 @@ export const DeathConfirmModal: React.FC<DeathConfirmModalProps> = ({player, gui
     const handleConfirm = async () => {
         setLoading(true);
         try {
-            if (player.userId) {
-                await api.markPlayerDead(guildId, player.userId, lastWords);
-                onClose();
-            }
+            await api.markPlayerDead(guildId, player.id, lastWords);
+            onClose();
         } catch (error) {
             console.error('Failed to mark player as dead:', error);
         } finally {

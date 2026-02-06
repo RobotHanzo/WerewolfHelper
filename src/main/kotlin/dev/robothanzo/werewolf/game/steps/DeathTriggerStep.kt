@@ -3,7 +3,10 @@ package dev.robothanzo.werewolf.game.steps
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
-import dev.robothanzo.werewolf.service.*
+import dev.robothanzo.werewolf.service.GameActionService
+import dev.robothanzo.werewolf.service.GameSessionService
+import dev.robothanzo.werewolf.service.GameStateService
+import dev.robothanzo.werewolf.service.RoleActionService
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 
@@ -17,8 +20,7 @@ class DeathTriggerStep(
     private val roleActionService: RoleActionService,
     private val gameActionService: GameActionService,
     @param:Lazy
-    private val gameSessionService: GameSessionService,
-    private val discordService: DiscordService
+    private val gameSessionService: GameSessionService
 ) : GameStep {
     override val id = "DEATH_TRIGGER"
     override val name = "死亡技能觸發"
@@ -29,8 +31,7 @@ class DeathTriggerStep(
         gameSessionService.withLockedSession(guildId) { lockedSession ->
             // Check if any players have death triggers available
             val playersWithTriggers = lockedSession.players.values
-                .mapNotNull { it.user?.idLong }
-                .filter { userId -> roleActionService.hasDeathTriggerAvailable(lockedSession, userId) }
+                .filter { roleActionService.hasDeathTriggerAvailable(lockedSession, it.id) }
 
             if (playersWithTriggers.isEmpty()) {
                 // No death triggers available
@@ -39,22 +40,19 @@ class DeathTriggerStep(
             }
 
             // Notify players with available death triggers
-            for (userId in playersWithTriggers) {
-                val player = lockedSession.getPlayer(userId)
-                if (player != null) {
-                    val roles = player.roles?.filter { it == "獵人" || it == "狼王" } ?: emptyList()
-                    val roleName = roles.firstOrNull() ?: "未知角色"
+            for (player in playersWithTriggers) {
+                val roles = player.roles?.filter { it == "獵人" || it == "狼王" } ?: emptyList()
+                val roleName = roles.firstOrNull() ?: "未知角色"
 
-                    lockedSession.addLog(
-                        LogType.SYSTEM,
-                        "${player.nickname} 的 $roleName 技能已觸發，可以選擇一名玩家帶走",
-                        mapOf("userId" to userId, "role" to roleName)
-                    )
+                lockedSession.addLog(
+                    LogType.SYSTEM,
+                    "${player.nickname} 的 $roleName 技能已觸發，可以選擇一名玩家帶走",
+                    mapOf("playerId" to player.id, "role" to roleName)
+                )
 
-                    // Send notification to player channel
-                    player.channel?.sendMessage("你的 $roleName 已死亡！你可以選擇一名玩家帶走。請在遊戲頻道使用指令選擇目標。")
-                        ?.queue()
-                }
+                // Send notification to player channel
+                player.channel?.sendMessage("你的 $roleName 已死亡！你可以選擇一名玩家帶走。請在遊戲頻道使用指令選擇目標。")
+                    ?.queue()
             }
 
             gameSessionService.broadcastSessionUpdate(lockedSession)

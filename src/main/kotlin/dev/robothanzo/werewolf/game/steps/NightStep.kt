@@ -4,6 +4,7 @@ import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.game.model.ActionData
+import dev.robothanzo.werewolf.game.model.ActionStatus
 import dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID
 import dev.robothanzo.werewolf.game.model.WolfVote
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
@@ -34,41 +35,39 @@ class NightStep(
     override fun onStart(session: Session, service: GameStateService) {
         val guildId = session.guildId
 
-        gameSessionService.withLockedSession(guildId) { lockedSession ->
+        gameSessionService.withLockedSession(guildId) { session ->
             // Mute everyone
             gameActionService.muteAll(guildId, true)
 
             // Clear pending actions from previous night
-            lockedSession.stateData.pendingActions.clear()
+            session.stateData.pendingActions.clear()
 
             // Reset actionSubmitted flag for all players
-            for ((_, player) in lockedSession.players) {
+            for (player in session.players.values) {
                 player.actionSubmitted = false
             }
 
             // Log night start
-            lockedSession.addLog(LogType.SYSTEM, "夜晚開始，各職業請準備行動")
+            session.addLog(LogType.SYSTEM, "夜晚開始，各職業請準備行動")
 
             // Initialize night status tracking
-            lockedSession.stateData.phaseType = "WEREWOLF_VOTING"
+            session.stateData.phaseType = "WEREWOLF_VOTING"
             val now = System.currentTimeMillis()
-            lockedSession.stateData.phaseStartTime = now
-            lockedSession.stateData.phaseEndTime = now + 90_000 // Wolf phase lasts 90s
-            lockedSession.stateData.werewolfMessages.clear()
+            session.stateData.phaseStartTime = now
+            session.stateData.phaseEndTime = now + 90_000 // Wolf phase lasts 90s
+            session.stateData.werewolfMessages.clear()
 
             val werewolfVotes = mutableMapOf<String, WolfVote>()
 
-            for ((_, p) in lockedSession.players) {
-                if (!p.alive) continue
-
+            for (p in session.alivePlayers().values) {
                 if (p.wolf) {
                     werewolfVotes[p.id.toString()] = WolfVote(
                         voterId = p.id
                     )
                 } else {
-                    val actions = roleActionService.getAvailableActionsForPlayer(lockedSession, p.id)
+                    val actions = roleActionService.getAvailableActionsForPlayer(session, p.id)
                     if (actions.isNotEmpty()) {
-                        val actionData = lockedSession.stateData.actionData.getOrPut(p.id.toString()) {
+                        val actionData = session.stateData.actionData.getOrPut(p.id.toString()) {
                             ActionData(playerId = p.id)
                         }
                         actionData.status = ActionStatus.PENDING
@@ -83,8 +82,8 @@ class NightStep(
                 }
             }
 
-            lockedSession.stateData.werewolfVotes.clear()
-            lockedSession.stateData.werewolfVotes.putAll(werewolfVotes)
+            session.stateData.werewolfVotes.clear()
+            session.stateData.werewolfVotes.putAll(werewolfVotes)
         }
 
         // Orchestrate the night phases
@@ -328,31 +327,7 @@ class NightStep(
         val action = input["action"] as? String
 
         return when (action) {
-            "submit_action" -> {
-                val actionDefinitionId = input["actionDefinitionId"] as? String
-                val actorPlayerId = (input["actorPlayerId"] as? Number)?.toInt()
-
-                @Suppress("UNCHECKED_CAST")
-                val targetPlayerIds =
-                    (input["targetPlayerIds"] as? List<*>)?.mapNotNull { (it as? Number)?.toInt() } ?: emptyList()
-                val submittedBy = input["submittedBy"] as? String ?: "PLAYER"
-
-                if (actionDefinitionId == null || actorPlayerId == null) {
-                    return mapOf("success" to false, "error" to "Missing required parameters")
-                }
-
-                roleActionService.submitAction(
-                    session.guildId,
-                    actionDefinitionId,
-                    actorPlayerId,
-                    targetPlayerIds,
-                    submittedBy
-                )
-
-                mapOf("success" to true)
-            }
-
-            else -> mapOf("success" to true)
+            else -> mapOf("success" to false)
         }
     }
 
