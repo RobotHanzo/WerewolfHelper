@@ -1,7 +1,6 @@
 package dev.robothanzo.werewolf.service.impl
 
 import club.minnced.discord.jdave.interop.JDaveSessionFactory
-import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers
 import dev.robothanzo.jda.interactions.JDAInteractions
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.service.DiscordService
@@ -47,8 +46,6 @@ class DiscordServiceImpl(
                 jda.addEventListener(listener)
                 log.debug("Registered event listener: ${listener.javaClass.simpleName}")
             }
-
-            AudioSourceManagers.registerLocalSource(WerewolfApplication.playerManager)
 
             // Offload blocking/heavy initialization to a background thread to speed up startup
             Thread {
