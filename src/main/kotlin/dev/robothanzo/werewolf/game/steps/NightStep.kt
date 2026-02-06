@@ -20,6 +20,7 @@ import kotlin.jvm.optionals.getOrNull
 @Component
 class NightStep(
     private val gameActionService: GameActionService,
+    private val speechService: SpeechService,
     private val roleActionService: RoleActionService,
     private val actionUIService: ActionUIService,
     private val nightManager: NightManager,
@@ -37,7 +38,7 @@ class NightStep(
 
         gameSessionService.withLockedSession(guildId) { session ->
             // Mute everyone
-            gameActionService.muteAll(guildId, true)
+            speechService.setAllMute(guildId, true)
 
             // Clear pending actions from previous night
             session.stateData.pendingActions.clear()
@@ -236,7 +237,7 @@ class NightStep(
     private fun allWolvesVoted(guildId: Long): Boolean {
         val session = gameSessionService.getSession(guildId).orElse(null) ?: return true
         val groupState = actionUIService.getGroupState(session, PredefinedRoles.WEREWOLF_KILL) ?: return true
-        return groupState.votes.size >= groupState.participants.size
+        return groupState.votes.filter { it.targetPlayerId != null }.size >= groupState.participants.size
     }
 
     private fun allActorsSubmitted(guildId: Long): Boolean {

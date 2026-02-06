@@ -6,6 +6,5 @@ package dev.robothanzo.werewolf.game.model
 data class GameSettings(
     var witchCanSaveSelf: Boolean = true,
     var allowWolfSelfKill: Boolean = false,
-    var hiddenRoleOnDeath: Boolean = false,
-    var roleFlags: MutableMap<String, Any> = mutableMapOf() // For custom roles etc.
+    var hiddenRoleOnDeath: Boolean = false
 )

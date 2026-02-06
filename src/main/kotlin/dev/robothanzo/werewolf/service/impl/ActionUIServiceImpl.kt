@@ -60,7 +60,7 @@ class ActionUIServiceImpl(
             }
 
             actionData.availableActions =
-                availableActions.map { ActionInfo(it.actionId, it.actionName, it.roleName, it.timing) }
+                availableActions.map { ActionInfo(it.actionId, it.actionName, it.timing) }
             actionData.expiresAt = expiresAt
             actionData.targetPromptId = message?.idLong
             actionData.status = ActionStatus.ACTING

@@ -187,19 +187,4 @@ class GameActionServiceImpl(
             data["percent"] = percent
         gameSessionService.broadcastEvent("PROGRESS", data)
     }
-
-    override fun muteAll(guildId: Long, mute: Boolean) {
-        val session = gameSessionService.getSession(guildId).orElseThrow {
-            RuntimeException("Session not found for guild ID: $guildId")
-        }
-        session.courtVoiceChannel?.let {
-            for (member in it.members) {
-                // Check if member is judge? Judge usually shouldn't be muted?
-                // Logic: Mute everyone if mute=true.
-                if (!member.user.isBot) {
-                    member.mute(mute).queue()
-                }
-            }
-        }
-    }
 }

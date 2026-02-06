@@ -26,7 +26,7 @@ class SetupStep(
         speechService.interruptSession(session.guildId)
         policeService.interrupt(session.guildId)
         expelService.removePoll(session.guildId)
-        gameActionService.muteAll(session.guildId, false)
+        speechService.setAllMute(session.guildId, false)
         session.addLog(LogType.SYSTEM, "進入遊戲設置")
     }
 

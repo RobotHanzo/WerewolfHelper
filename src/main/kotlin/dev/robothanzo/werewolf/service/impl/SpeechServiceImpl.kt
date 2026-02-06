@@ -7,7 +7,6 @@ import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.SpeechOrder
 import dev.robothanzo.werewolf.model.SpeechSession
-import dev.robothanzo.werewolf.service.GameActionService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.SpeechService
 import dev.robothanzo.werewolf.utils.MsgUtils
@@ -33,7 +32,6 @@ import kotlin.jvm.optionals.getOrNull
 
 @Service
 class SpeechServiceImpl(
-    @param:Lazy private val gameActionService: GameActionService,
     @param:Lazy private val gameSessionService: GameSessionService
 ) : SpeechService {
     private val speechSessions: MutableMap<Long, SpeechSession> = ConcurrentHashMap()
@@ -266,7 +264,7 @@ class SpeechServiceImpl(
         val guild = session.guild ?: return
 
         if (session.muteAfterSpeech)
-            gameActionService.muteAll(guildId, true)
+            setAllMute(guildId, true)
         for (player in session.alivePlayers().values) {
             if (player.police) {
                 session.courtTextChannel?.sendMessageEmbeds(
@@ -377,7 +375,7 @@ class SpeechServiceImpl(
     override fun setAllMute(guildId: Long, mute: Boolean) {
         val guild = WerewolfApplication.jda.getGuildById(guildId) ?: return
         for (member in guild.members) {
-            if (member.isAdmin())
+            if (member.isAdmin() || member.user.isBot)
                 continue
             try {
                 guild.mute(member, mute).queue()

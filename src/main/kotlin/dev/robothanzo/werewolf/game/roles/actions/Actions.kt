@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component
 @Component
 class WerewolfKillAction : BaseRoleAction(
     actionId = PredefinedRoles.WEREWOLF_KILL,
-    roleName = "狼人",
     actionName = "擊殺",
     priority = PredefinedRoles.WEREWOLF_PRIORITY,
     timing = ActionTiming.NIGHT
@@ -38,8 +37,7 @@ class WerewolfKillAction : BaseRoleAction(
 @Component
 class WolfYoungerBrotherExtraKillAction : BaseRoleAction(
     actionId = PredefinedRoles.WOLF_YOUNGER_BROTHER_EXTRA_KILL,
-    roleName = "狼弟",
-    actionName = "額外擊殺",
+    actionName = "狼弟復仇刀",
     priority = PredefinedRoles.WEREWOLF_PRIORITY + 1,
     timing = ActionTiming.NIGHT,
     isOptional = false
@@ -77,7 +75,6 @@ class SeerCheckAction(
     @Transient @param:Lazy private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry
 ) : BaseRoleAction(
     actionId = PredefinedRoles.SEER_CHECK,
-    roleName = "預言家",
     actionName = "查驗",
     priority = PredefinedRoles.SEER_PRIORITY,
     timing = ActionTiming.NIGHT,
@@ -117,7 +114,6 @@ class SeerCheckAction(
 @Component
 class WitchAntidoteAction : BaseRoleAction(
     actionId = PredefinedRoles.WITCH_ANTIDOTE,
-    roleName = "女巫",
     actionName = "解藥",
     priority = PredefinedRoles.WITCH_ANTIDOTE_PRIORITY,
     timing = ActionTiming.NIGHT,
@@ -153,7 +149,6 @@ class WitchAntidoteAction : BaseRoleAction(
 @Component
 class WitchPoisonAction : BaseRoleAction(
     actionId = PredefinedRoles.WITCH_POISON,
-    roleName = "女巫",
     actionName = "毒藥",
     priority = PredefinedRoles.WITCH_POISON_PRIORITY,
     timing = ActionTiming.NIGHT,
@@ -176,7 +171,6 @@ class WitchPoisonAction : BaseRoleAction(
 @Component
 class GuardProtectAction : BaseRoleAction(
     actionId = PredefinedRoles.GUARD_PROTECT,
-    roleName = "守衛",
     actionName = "守護",
     priority = PredefinedRoles.GUARD_PRIORITY,
     timing = ActionTiming.NIGHT
@@ -213,7 +207,6 @@ class GuardProtectAction : BaseRoleAction(
 @Component
 class HunterRevengeAction : BaseRoleAction(
     actionId = PredefinedRoles.HUNTER_REVENGE,
-    roleName = "獵人",
     actionName = "開槍",
     priority = PredefinedRoles.HUNTER_PRIORITY,
     timing = ActionTiming.DEATH_TRIGGER
@@ -244,7 +237,6 @@ class HunterRevengeAction : BaseRoleAction(
 @Component
 class WolfKingRevengeAction : BaseRoleAction(
     actionId = "WOLF_KING_REVENGE",
-    roleName = "狼王",
     actionName = "復仇",
     priority = PredefinedRoles.HUNTER_PRIORITY,
     timing = ActionTiming.DEATH_TRIGGER
@@ -275,7 +267,6 @@ class WolfKingRevengeAction : BaseRoleAction(
 @Component
 class DeathResolutionAction : BaseRoleAction(
     actionId = "DEATH_RESOLUTION",
-    roleName = "SYSTEM",
     actionName = "結算",
     priority = 1000,
     timing = ActionTiming.NIGHT,
@@ -318,7 +309,6 @@ abstract class DarkMerchantTradeAction(
     private val skillType: String
 ) : BaseRoleAction(
     actionId = actionId,
-    roleName = "黑市商人",
     actionName = actionName,
     priority = PredefinedRoles.DARK_MERCHANT_PRIORITY,
     timing = ActionTiming.NIGHT,
@@ -377,7 +367,6 @@ class MerchantSeerCheckAction(
     @Transient @param:Lazy private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry
 ) : BaseRoleAction(
     actionId = PredefinedRoles.MERCHANT_SEER_CHECK,
-    roleName = "好人 (商人贈予)",
     actionName = "查驗",
     priority = PredefinedRoles.SEER_PRIORITY + 1,
     timing = ActionTiming.NIGHT,
@@ -410,7 +399,6 @@ class MerchantSeerCheckAction(
 @Component
 class MerchantPoisonAction : BaseRoleAction(
     actionId = PredefinedRoles.MERCHANT_POISON,
-    roleName = "好人 (商人贈予)",
     actionName = "毒藥",
     priority = PredefinedRoles.WITCH_POISON_PRIORITY + 1,
     timing = ActionTiming.NIGHT,
@@ -433,7 +421,6 @@ class MerchantPoisonAction : BaseRoleAction(
 @Component
 class MerchantGunAction : BaseRoleAction(
     actionId = PredefinedRoles.MERCHANT_GUN,
-    roleName = "好人 (商人贈予)",
     actionName = "獵槍",
     priority = PredefinedRoles.HUNTER_PRIORITY + 1,
     timing = ActionTiming.NIGHT,

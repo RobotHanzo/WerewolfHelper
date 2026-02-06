@@ -66,12 +66,4 @@ interface GameActionService {
      * @param percent the progress percentage (0-100)
      */
     fun broadcastProgress(guildId: Long, message: String?, percent: Int?)
-
-    /**
-     * Mutes or unmutes all players in the game (except maybe the judge).
-     *
-     * @param guildId the ID of the guild
-     * @param mute    true to mute, false to unmute
-     */
-    fun muteAll(guildId: Long, mute: Boolean)
 }

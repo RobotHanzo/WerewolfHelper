@@ -37,6 +37,7 @@ class GameSessionServiceImpl(
     private val steps = stepList.associateBy { it.id }
     private val sessionLocks = ConcurrentHashMap<Long, Any>()
     private val sessionCache = ConcurrentHashMap<Long, Session>()
+    private val threadLocalSessions = ThreadLocal<MutableMap<Long, Session>>()
 
     private fun getLock(guildId: Long): Any = sessionLocks.computeIfAbsent(guildId) { Any() }
 
@@ -92,6 +93,14 @@ class GameSessionServiceImpl(
             }
             // Update cache with the latest persisted instance
             sessionCache[session.guildId] = saved
+
+            // Sync with thread-local if active
+            threadLocalSessions.get()?.let { currentSessions ->
+                if (currentSessions.containsKey(session.guildId)) {
+                    currentSessions[session.guildId] = saved
+                }
+            }
+            
             // Sync version back to the input object to prevent stale version errors 
             // if the caller continues to use the old reference.
             session.version = saved.version
@@ -100,11 +109,31 @@ class GameSessionServiceImpl(
     }
 
     override fun <T> withLockedSession(guildId: Long, block: (Session) -> T): T {
+        val currentSessions =
+            threadLocalSessions.get() ?: mutableMapOf<Long, Session>().also { threadLocalSessions.set(it) }
+        val existingSession = currentSessions[guildId]
+
+        if (existingSession != null) {
+            // Reentrant call: already have the lock and session for this thread
+            log.trace("Reentrant session lock for guild {}", guildId)
+            return block(existingSession)
+        }
+
         synchronized(getLock(guildId)) {
+            // Check cache again inside lock as it might have changed
             val session = sessionCache[guildId] ?: getSession(guildId).orElseThrow { Exception("Session not found") }
-            val result = block(session)
-            saveSession(session)
-            return result
+
+            currentSessions[guildId] = session
+            try {
+                val result = block(session)
+                saveSession(session)
+                return result
+            } finally {
+                currentSessions.remove(guildId)
+                if (currentSessions.isEmpty()) {
+                    threadLocalSessions.remove()
+                }
+            }
         }
     }
 

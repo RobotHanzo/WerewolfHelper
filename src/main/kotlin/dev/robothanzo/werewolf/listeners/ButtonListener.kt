@@ -104,7 +104,7 @@ class ButtonListener : ListenerAdapter() {
                         val targetMessage = buildString {
                             appendLine("🎯 **選擇目標**")
                             appendLine()
-                            appendLine("請選擇 **${action.roleName}** 的 **${action.actionName}** 目標：")
+                            appendLine("請選擇 **${action.actionName}** 目標：")
                         }
 
                         val targetButtons = eligiblePlayers.map { p ->

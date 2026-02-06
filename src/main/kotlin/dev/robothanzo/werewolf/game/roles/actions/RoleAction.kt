@@ -27,11 +27,6 @@ interface RoleAction {
     val actionId: String
 
     /**
-     * The role name this action belongs to
-     */
-    val roleName: String
-
-    /**
      * The display name of this action (e.g., "查驗", "擊殺", "毒殺")
      */
     val actionName: String
@@ -107,7 +102,6 @@ interface RoleAction {
         // Basic actor check
         val actorPlayer = session.getPlayer(actor.toString()) ?: return "Actor not found"
         if (!actorPlayer.alive) return "Actor not alive"
-        if (actorPlayer.roles?.contains(roleName) != true) return "Actor does not have role $roleName"
 
         // Usage limit check
         if (!isAvailable(session, actor)) return "已達到使用限制"
@@ -176,7 +170,6 @@ interface RoleAction {
  */
 abstract class BaseRoleAction(
     override val actionId: String,
-    override val roleName: String,
     override val actionName: String,
     override val priority: Int,
     override val timing: ActionTiming,
@@ -193,7 +186,6 @@ abstract class BaseRoleAction(
  */
 data class GenericRoleAction(
     override val actionId: String,
-    override val roleName: String,
     override val actionName: String,
     override val priority: Int,
     override val timing: ActionTiming,

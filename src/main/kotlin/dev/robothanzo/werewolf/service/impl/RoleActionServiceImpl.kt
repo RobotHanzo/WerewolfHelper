@@ -311,7 +311,6 @@ class RoleActionServiceImpl(
                 actionData.selectedAction = ActionInfo(
                     actionDef.actionId,
                     actionDef.actionName,
-                    actionDef.roleName,
                     actionDef.timing
                 )
             }

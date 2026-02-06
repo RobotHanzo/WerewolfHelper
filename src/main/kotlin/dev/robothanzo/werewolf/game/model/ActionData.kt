@@ -6,7 +6,6 @@ package dev.robothanzo.werewolf.game.model
 data class ActionInfo(
     val actionId: String,
     val actionName: String,
-    val roleName: String,
     val timing: ActionTiming
 )
 
