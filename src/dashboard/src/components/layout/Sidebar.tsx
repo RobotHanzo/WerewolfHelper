@@ -3,8 +3,7 @@ import {useTranslation} from '@/lib/i18n';
 import {ThemeToggle} from '@/components/ui/ThemeToggle';
 import {useAuth} from '@/features/auth/contexts/AuthContext';
 import {useLocation} from 'react-router-dom';
-import {useEffect, useState} from 'react';
-import {api} from '@/lib/api';
+import {DiscordUser} from '@/components/DiscordUser';
 
 interface SidebarProps {
     onLogout: () => void;
@@ -34,27 +33,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const {t} = useTranslation();
     const {user} = useAuth();
     const location = useLocation();
-    const [userInfo, setUserInfo] = useState<{ name: string, avatar: string } | null>(null);
 
     const isDashboardActive = location.pathname.endsWith(user?.guildId ? `/server/${user.guildId}` : '/') && !location.pathname.includes('/settings') && !location.pathname.includes('/spectator') && !location.pathname.includes('/speech') && !location.pathname.includes('/players');
     const isPlayersActive = location.pathname.includes('/players');
     const isSettingsActive = location.pathname.includes('/settings');
     const isSpectatorActive = location.pathname.includes('/spectator');
     const isSpeechActive = location.pathname.includes('/speech');
-
-    useEffect(() => {
-        const fetchUserInfo = async () => {
-            if (user?.guildId && user?.userId) {
-                try {
-                    const data: any = await api.getUserInfo(user.guildId, user.userId);
-                    setUserInfo({name: data.name, avatar: data.avatar});
-                } catch (e) {
-                    console.error('Failed to fetch user info for sidebar', e);
-                }
-            }
-        };
-        fetchUserInfo();
-    }, [user?.guildId, user?.userId]);
 
     return (
         <aside
@@ -134,38 +118,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="p-4 border-t border-slate-300 dark:border-slate-800 space-y-3">
                 {/* User Profile */}
                 {user && (
-                    <div className="flex items-center gap-3 px-2 py-2 bg-slate-200/50 dark:bg-slate-800/50 rounded-lg">
-                        <img
-                            src={userInfo?.avatar || (user.avatar ? `https://cdn.discordapp.com/avatars/${user.userId}/${user.avatar}.png?size=64` : `https://cdn.discordapp.com/embed/avatars/${parseInt(user.userId) % 5}.png`)}
-                            alt={userInfo?.name || user.username}
-                            className="w-10 h-10 rounded-full ring-2 ring-indigo-200 dark:ring-indigo-900"
-                        />
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                                {userInfo?.name || user.username}
-                            </p>
-                            {user.role === 'JUDGE' ? (
-                                <button
-                                    onClick={onToggleSpectatorMode}
-                                    className={`inline-block px-2 py-0.5 text-xs font-medium rounded transition-colors cursor-pointer ${isSpectatorMode
-                                        ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900'
-                                        : 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900'
-                                    }`}
-                                    title={isSpectatorMode ? t('sidebar.backToJudge') : t('sidebar.viewAsSpectator')}
-                                >
-                                    {isSpectatorMode ? t('userRoles.SPECTATOR') : t('userRoles.JUDGE')}
-                                </button>
-                            ) : (
-                                <span
-                                    className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${user.role === 'SPECTATOR'
-                                        ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
-                                        : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'
-                                    }`}>
-                                    {t(`userRoles.${user.role}`) || user.role}
-                                </span>
-                            )}
-                        </div>
-                    </div>
+                    <DiscordUser
+                        userId={user.userId}
+                        guildId={user.guildId}
+                        fallbackName={user.username}
+                        avatarClassName="w-10 h-10 rounded-full ring-2 ring-indigo-200 dark:ring-indigo-900"
+                    >
+                        {({name, avatarElement}) => (
+                            <div
+                                className="flex items-center gap-3 px-2 py-2 bg-slate-200/50 dark:bg-slate-800/50 rounded-lg">
+                                {avatarElement}
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                                        {name}
+                                    </p>
+                                    {user.role === 'JUDGE' ? (
+                                        <button
+                                            onClick={onToggleSpectatorMode}
+                                            className={`inline-block px-2 py-0.5 text-xs font-medium rounded transition-colors cursor-pointer ${isSpectatorMode
+                                                ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900'
+                                                : 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900'
+                                            }`}
+                                            title={isSpectatorMode ? t('sidebar.backToJudge') : t('sidebar.viewAsSpectator')}
+                                        >
+                                            {isSpectatorMode ? t('userRoles.SPECTATOR') : t('userRoles.JUDGE')}
+                                        </button>
+                                    ) : (
+                                        <span
+                                            className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${user.role === 'SPECTATOR'
+                                                ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                                                : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'
+                                            }`}>
+                                            {t(`userRoles.${user.role}`) || user.role}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </DiscordUser>
                 )}
 
                 {/* Connection Status */}

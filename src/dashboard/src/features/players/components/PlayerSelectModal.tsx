@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import {Check, Search, X} from 'lucide-react';
 import {useTranslation} from '@/lib/i18n';
 import {Player} from '@/types';
+import {DiscordUser} from '@/components/DiscordUser';
 
 interface PlayerSelectModalProps {
     title: string;
@@ -63,28 +64,28 @@ export const PlayerSelectModal: React.FC<PlayerSelectModalProps> = ({title, play
                                 }}
                                 className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group text-left"
                             >
-                                <div className="relative">
-                                    <img
-                                        src={
-                                            p.avatar?.startsWith('http')
-                                                ? p.avatar
-                                                : p.avatar
-                                                    ? `https://cdn.discordapp.com/avatars/${p.userId}/${p.avatar}.png?size=64`
-                                                    : `https://cdn.discordapp.com/embed/avatars/${parseInt(p.userId || "0") % 5}.png`
-                                        }
-                                        alt={p.name}
-                                        className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700"
-                                    />
-                                    {/* Status indicators if needed, e.g. role icons */}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div
-                                        className="font-medium text-slate-900 dark:text-slate-200 truncate">{p.name}</div>
-                                    <div className="text-xs text-slate-500 truncate flex gap-1">
-                                        {p.roles.map(r => <span key={r}
-                                                                className="bg-slate-200 dark:bg-slate-800 px-1 rounded">{r}</span>)}
-                                    </div>
-                                </div>
+                                <DiscordUser
+                                    userId={p.userId}
+                                    fallbackName={p.name}
+                                    avatarClassName="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700"
+                                >
+                                    {({name, avatarElement}) => (
+                                        <>
+                                            <div className="relative">
+                                                {avatarElement}
+                                                {/* Status indicators if needed, e.g. role icons */}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div
+                                                    className="font-medium text-slate-900 dark:text-slate-200 truncate">{name}</div>
+                                                <div className="text-xs text-slate-500 truncate flex gap-1">
+                                                    {p.roles.map(r => <span key={r}
+                                                                            className="bg-slate-200 dark:bg-slate-800 px-1 rounded">{r}</span>)}
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </DiscordUser>
                                 <Check
                                     className="w-4 h-4 text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"/>
                             </button>

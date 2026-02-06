@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {useWebSocket} from '@/lib/websocket';
 import {ChevronRight, Clock, MessageCircle, Skull, Users} from 'lucide-react';
 import {ActionSubmissionStatus, Player} from '@/types';
+import {DiscordUser} from '@/components/DiscordUser';
 
 interface NightStatusProps {
     guildId?: string;
@@ -106,6 +107,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
             ...msg,
             senderName: msg.senderName || sender?.name || `玩家 ${msg.senderId}`,
             avatarUrl: msg.avatarUrl || sender?.avatar || undefined,
+            senderUserId: sender?.userId || undefined,
         };
     });
 
@@ -116,7 +118,9 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
         return {
             ...vote,
             voterName: voter?.name || `玩家 ${vote.voterId}`,
-            targetName: vote.targetId === -1 ? '跳過' : (target ? target.name : (vote.targetId ? `玩家 ${vote.targetId}` : '未投票'))
+            voterUserId: voter?.userId || undefined,
+            targetName: vote.targetId === -1 ? '跳過' : (target ? target.name : (vote.targetId ? `玩家 ${vote.targetId}` : '未投票')),
+            targetUserId: target?.userId || undefined,
         };
     });
 
@@ -132,8 +136,10 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
                 ...status,
                 playerName: player?.name || `玩家 ${status.playerId}`,
                 avatarUrl: player?.avatar,
+                playerUserId: player?.userId || undefined,
                 targetName: targetId === -1 ? '跳過' : (target ? target.name : (targetId !== null && targetId > 0 ? `玩家 ${targetId}` : (status.status === 'SUBMITTED' ? '已提交' : null))),
                 targetAvatarUrl: target?.avatar,
+                targetUserId: target?.userId || undefined,
             };
         });
 
@@ -158,7 +164,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
 
     const topTarget = topTargetId ? players.find(p => p.id === topTargetId) : null;
     const wolfTargetName = topTargetId === -1 ? '跳過' : (topTarget ? topTarget.name : (topTargetId ? `玩家 ${topTargetId}` : '未定'));
-    const wolfTargetAvatar = topTarget?.avatar;
+    const wolfTargetUserId = topTarget?.userId || undefined;
 
     return (
         <div className="w-full h-full bg-slate-900 text-white p-4 overflow-hidden flex flex-col">
@@ -259,13 +265,15 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
                         messages={enrichedMessages}
                         votes={enrichedVotes}
                         messageScrollContainerRef={messageScrollContainerRef}
+                        guildId={guildId}
                     />
                 ) : (
                     <RoleActionsScreen
                         statuses={enrichedStatuses}
                         wolfTargetName={wolfTargetName}
-                        wolfTargetAvatar={wolfTargetAvatar}
+                        wolfTargetUserId={wolfTargetUserId}
                         wolfVoteCount={maxVotes}
+                        guildId={guildId}
                     />
                 )}
             </div>
@@ -274,15 +282,17 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
 };
 
 interface WerewolfVotingScreenProps {
-    messages: Array<WerewolfMessage & { senderName: string, avatarUrl?: string }>;
-    votes: Array<WerewolfVote & { voterName: string, targetName: string }>;
+    messages: Array<WerewolfMessage & { senderName: string, avatarUrl?: string, senderUserId?: string }>;
+    votes: Array<WerewolfVote & { voterName: string, voterUserId?: string, targetName: string, targetUserId?: string }>;
     messageScrollContainerRef: React.RefObject<HTMLDivElement>;
+    guildId?: string;
 }
 
 const WerewolfVotingScreen: React.FC<WerewolfVotingScreenProps> = ({
                                                                        messages,
                                                                        votes,
                                                                        messageScrollContainerRef,
+                                                                       guildId
                                                                    }) => {
     return (
         <div className="grid grid-cols-3 gap-4 h-full">
@@ -323,47 +333,51 @@ const WerewolfVotingScreen: React.FC<WerewolfVotingScreenProps> = ({
                                             : (isPredecessor ? 'pt-2 pb-0 mt-4' : 'py-2 mt-4')
                                         } hover:bg-slate-700/30 ${!isContinuation ? 'rounded-t-md' : ''} ${!isPredecessor ? 'rounded-b-md' : ''}`}
                                     >
-                                        <div className="flex-shrink-0 w-10">
-                                            {!isContinuation ? (
-                                                <div className="mt-0.5">
-                                                    {msg.avatarUrl ? (
-                                                        <img
-                                                            src={msg.avatarUrl}
-                                                            alt={msg.senderName}
-                                                            className="w-10 h-10 rounded-full shadow-sm shadow-black/20"
-                                                        />
-                                                    ) : (
+                                        <DiscordUser
+                                            userId={msg.senderUserId}
+                                            guildId={guildId}
+                                            fallbackName={msg.senderName}
+                                            avatarClassName="w-10 h-10 rounded-full shadow-sm shadow-black/20"
+                                            useInitialsFallback={true}
+                                            avatarFallbackClassName="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center"
+                                            avatarFallbackTextClassName="text-xs font-bold text-slate-300"
+                                        >
+                                            {({name, avatarElement}) => (
+                                                <>
+                                                    <div className="flex-shrink-0 w-10">
+                                                        {!isContinuation ? (
+                                                            <div className="mt-0.5">
+                                                                {avatarElement}
+                                                            </div>
+                                                        ) : (
+                                                            <div
+                                                                className="w-10 h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity min-h-[1.5rem]">
+                                                                <span className="text-[10px] text-slate-500 font-mono">
+                                                                    •
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        {!isContinuation && (
+                                                            <div className="flex items-baseline gap-2 mb-0.5">
+                                                                <span
+                                                                    className="font-semibold text-red-400 text-[15px]">{name}</span>
+                                                                <span
+                                                                    className="text-[10px] text-slate-500 font-medium">
+                                                                    {new Date(msg.timestamp).toLocaleTimeString('zh-TW', {
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit'
+                                                                    })}
+                                                                </span>
+                                                            </div>
+                                                        )}
                                                         <div
-                                                            className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center text-xs font-bold text-slate-300">
-                                                            {msg.senderName.substring(0, 1)}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div
-                                                    className="w-10 h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity min-h-[1.5rem]">
-                                                    <span className="text-[10px] text-slate-500 font-mono">
-                                                        •
-                                                    </span>
-                                                </div>
+                                                            className="text-[15px] text-slate-200 leading-normal break-words">{msg.content}</div>
+                                                    </div>
+                                                </>
                                             )}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            {!isContinuation && (
-                                                <div className="flex items-baseline gap-2 mb-0.5">
-                                                    <span
-                                                        className="font-semibold text-red-400 text-[15px]">{msg.senderName}</span>
-                                                    <span className="text-[10px] text-slate-500 font-medium">
-                                                        {new Date(msg.timestamp).toLocaleTimeString('zh-TW', {
-                                                            hour: '2-digit',
-                                                            minute: '2-digit'
-                                                        })}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            <div
-                                                className="text-[15px] text-slate-200 leading-normal break-words">{msg.content}</div>
-                                        </div>
+                                        </DiscordUser>
                                     </div>
                                 );
                             });
@@ -389,13 +403,30 @@ const WerewolfVotingScreen: React.FC<WerewolfVotingScreenProps> = ({
                                 className="animate-slide-in bg-slate-700/50 rounded px-2 py-2 hover:bg-slate-700 transition-colors text-xs"
                                 style={{animationDelay: `${idx * 50}ms`}}
                             >
-                                <div className="font-semibold text-cyan-400 mb-1">{vote.voterName}</div>
+                                <DiscordUser
+                                    userId={vote.voterUserId}
+                                    guildId={guildId}
+                                    fallbackName={vote.voterName}
+                                >
+                                    {({name}) => (
+                                        <div className="font-semibold text-cyan-400 mb-1">{name}</div>
+                                    )}
+                                </DiscordUser>
                                 <div className="flex items-center gap-1">
                                     <ChevronRight className="w-3 h-3 text-amber-400"/>
-                                    <span
-                                        className={vote.targetName === '跳過' ? 'text-slate-400' : 'text-red-400 font-semibold'}>
-                                        {vote.targetName || '未投票'}
-                                    </span>
+                                    <DiscordUser
+                                        userId={vote.targetUserId}
+                                        guildId={guildId}
+                                        fallbackName={vote.targetName || '未投票'}
+                                        showAvatar={false}
+                                    >
+                                        {({name}) => (
+                                            <span
+                                                className={vote.targetName === '跳過' ? 'text-slate-400' : 'text-red-400 font-semibold'}>
+                                                {name}
+                                            </span>
+                                        )}
+                                    </DiscordUser>
                                 </div>
                             </div>
                         ))
@@ -410,19 +441,23 @@ interface RoleActionsScreenProps {
     statuses: Array<ActionSubmissionStatus & {
         playerName: string,
         avatarUrl?: string,
+        playerUserId?: string,
         targetName: string | null,
-        targetAvatarUrl?: string
+        targetAvatarUrl?: string,
+        targetUserId?: string
     }>;
     wolfTargetName: string;
-    wolfTargetAvatar?: string;
+    wolfTargetUserId?: string;
     wolfVoteCount: number;
+    guildId?: string;
 }
 
 const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                                                                  statuses,
                                                                  wolfTargetName,
-                                                                 wolfTargetAvatar,
-                                                                 wolfVoteCount
+                                                                 wolfTargetUserId,
+                                                                 wolfVoteCount,
+                                                                 guildId
                                                              }) => {
     const getRoleBorderColor = (role: string): string => {
         if (role.includes('狼')) return 'border-red-500/50 hover:border-red-500';
@@ -466,13 +501,12 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                         </div>
                     </div>
                 </div>
-                {wolfTargetAvatar && (
-                    <img
-                        src={wolfTargetAvatar}
-                        alt={wolfTargetName}
-                        className="w-10 h-10 rounded-full border-2 border-red-600/50"
-                    />
-                )}
+                <DiscordUser
+                    userId={wolfTargetUserId}
+                    guildId={guildId}
+                    fallbackName={wolfTargetName}
+                    avatarClassName="w-10 h-10 rounded-full border-2 border-red-600/50"
+                />
             </div>
 
             {/* Grid of actions */}
@@ -489,17 +523,22 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                             style={{animationDelay: `${100 + index * 75}ms`}}
                         >
                             <div className="flex items-start justify-between mb-3">
-                                <div className="min-w-0">
-                                    <h3 className="font-bold text-lg leading-tight truncate">{status.playerName}</h3>
-                                    <p className="text-xs opacity-70 mt-0.5">{status.role}</p>
-                                </div>
-                                {status.avatarUrl && (
-                                    <img
-                                        src={status.avatarUrl}
-                                        alt={status.playerName}
-                                        className="w-10 h-10 rounded-full border border-slate-700 shadow-sm flex-shrink-0 ml-3"
-                                    />
-                                )}
+                                <DiscordUser
+                                    userId={status.playerUserId}
+                                    guildId={guildId}
+                                    fallbackName={status.playerName}
+                                    avatarClassName="w-10 h-10 rounded-full border border-slate-700 shadow-sm flex-shrink-0 ml-3"
+                                >
+                                    {({name, avatarElement}) => (
+                                        <>
+                                            <div className="min-w-0">
+                                                <h3 className="font-bold text-lg leading-tight truncate">{name}</h3>
+                                                <p className="text-xs opacity-70 mt-0.5">{status.role}</p>
+                                            </div>
+                                            {avatarElement}
+                                        </>
+                                    )}
+                                </DiscordUser>
                             </div>
 
                             <div className="space-y-2">
@@ -515,15 +554,23 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                                         className="bg-white/10 rounded px-2 py-1 flex items-center justify-between gap-2">
                                         <div className="min-w-0">
                                             <p className="text-[10px] opacity-60 uppercase font-bold tracking-tight">目標</p>
-                                            <p className="font-semibold text-sm truncate">{status.targetName}</p>
+                                            <DiscordUser
+                                                userId={status.targetUserId}
+                                                guildId={guildId}
+                                                fallbackName={status.targetName || ''}
+                                                showAvatar={false}
+                                            >
+                                                {({name}) => (
+                                                    <p className="font-semibold text-sm truncate">{name}</p>
+                                                )}
+                                            </DiscordUser>
                                         </div>
-                                        {status.targetAvatarUrl && (
-                                            <img
-                                                src={status.targetAvatarUrl}
-                                                alt={status.targetName}
-                                                className="w-6 h-6 rounded-full border border-slate-600 flex-shrink-0"
-                                            />
-                                        )}
+                                        <DiscordUser
+                                            userId={status.targetUserId}
+                                            guildId={guildId}
+                                            fallbackName={status.targetName || ''}
+                                            avatarClassName="w-6 h-6 rounded-full border border-slate-600 flex-shrink-0"
+                                        />
                                     </div>
                                 )}
 

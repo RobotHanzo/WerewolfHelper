@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {Clock} from 'lucide-react';
 import {Player} from '@/types';
 import {useTranslation} from '@/lib/i18n';
-import {usePlayerContext} from '@/features/players/contexts/PlayerContext';
+import {DiscordUser} from '@/components/DiscordUser';
 
 interface VoteStatusProps {
     candidates: { id: number, voters: string[] }[];
@@ -24,7 +24,6 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                                                           guildId
                                                       }) => {
     const {t} = useTranslation();
-    const {userInfoCache, fetchUserInfo} = usePlayerContext();
     const [timeLeft, setTimeLeft] = useState(0);
 
     useEffect(() => {
@@ -91,18 +90,25 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                             {/* Candidate Info */}
                             <div
                                 className="flex items-center gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
-                                <img
-                                    src={player?.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}
-                                    className="w-10 h-10 rounded-full shadow-sm"
-                                    alt={player?.name}
-                                />
-                                <div className="flex-1">
-                                    <h4 className="font-bold text-slate-800 dark:text-slate-200">{player?.name || `Candidate ${candidate.id}`}</h4>
-                                    <span
-                                        className="text-xs font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-900/50">
-                                        {candidate.voters.length} {t('vote.count')}
-                                    </span>
-                                </div>
+                                <DiscordUser
+                                    userId={player?.userId}
+                                    guildId={guildId}
+                                    fallbackName={player?.name || `Candidate ${candidate.id}`}
+                                    avatarClassName="w-10 h-10 rounded-full shadow-sm"
+                                >
+                                    {({name, avatarElement}) => (
+                                        <>
+                                            {avatarElement}
+                                            <div className="flex-1">
+                                                <h4 className="font-bold text-slate-800 dark:text-slate-200">{name}</h4>
+                                                <span
+                                                    className="text-xs font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-900/50">
+                                                    {candidate.voters.length} {t('vote.count')}
+                                                </span>
+                                            </div>
+                                        </>
+                                    )}
+                                </DiscordUser>
                             </div>
 
                             {/* Voters List */}
@@ -113,27 +119,26 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                                         // The backend sends userId as string for voters. 
                                         // Player.userId is key.
                                         const voter = players.find(p => p.userId === voterId);
-
-                                        // Fetch user info if missing
-                                        if (voter?.userId && !userInfoCache[voter.userId] && guildId) {
-                                            fetchUserInfo(voter.userId, guildId);
-                                        }
-
-                                        const cachedUser = voter?.userId ? userInfoCache[voter.userId] : null;
-                                        const displayName = cachedUser ? cachedUser.name : (voter?.name || voter?.userId || t('vote.unknown'));
-                                        const displayAvatar = cachedUser ? cachedUser.avatar : (voter?.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png');
-
+                                        const resolvedUserId = voter?.userId || voterId;
                                         return (
-                                            <div key={voterId}
-                                                 className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2 py-1 rounded-md text-xs border border-slate-200 dark:border-slate-700 shadow-sm animate-in zoom-in-50">
-                                                <img
-                                                    src={displayAvatar}
-                                                    className="w-4 h-4 rounded-full" alt=""/>
-                                                <span
-                                                    className="font-medium text-slate-600 dark:text-slate-400 max-w-[80px] truncate">
-                                                    {displayName}
-                                                </span>
-                                            </div>
+                                            <DiscordUser
+                                                key={voterId}
+                                                userId={resolvedUserId}
+                                                guildId={guildId}
+                                                fallbackName={voter?.name || voter?.userId || t('vote.unknown')}
+                                                avatarClassName="w-4 h-4 rounded-full"
+                                            >
+                                                {({name, avatarElement}) => (
+                                                    <div
+                                                        className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2 py-1 rounded-md text-xs border border-slate-200 dark:border-slate-700 shadow-sm animate-in zoom-in-50">
+                                                        {avatarElement}
+                                                        <span
+                                                            className="font-medium text-slate-600 dark:text-slate-400 max-w-[80px] truncate">
+                                                            {name}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </DiscordUser>
                                         );
                                     })
                                 ) : (

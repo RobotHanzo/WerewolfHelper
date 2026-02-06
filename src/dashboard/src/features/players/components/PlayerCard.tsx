@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {ArrowLeftRight, HeartPulse, Lock, MicOff, Settings, Shield, Skull, Unlock} from 'lucide-react';
 import {Player} from '@/types';
 import {useTranslation} from '@/lib/i18n';
+import {DiscordUser} from '@/components/DiscordUser';
 
 interface PlayerCardProps {
     player: Player;
@@ -76,18 +77,22 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({player, onAction, readonl
                 <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-3">
                         <div className="relative">
-                            {player.avatar ? (
-                                <img
-                                    src={player.avatar}
-                                    alt={player.name}
-                                    className="w-12 h-12 rounded-full border-2 border-slate-400 dark:border-slate-600 bg-slate-300 dark:bg-slate-700 object-cover"
-                                />
-                            ) : (
-                                <div
-                                    className="w-12 h-12 rounded-full border-2 border-slate-400 dark:border-slate-600 bg-slate-300 dark:bg-slate-700 flex items-center justify-center">
-                                    <Settings className="w-6 h-6 text-slate-500 dark:text-slate-400"/>
-                                </div>
-                            )}
+                            <DiscordUser
+                                userId={player.userId}
+                                fallbackName={player.name}
+                                avatarClassName="w-12 h-12 rounded-full border-2 border-slate-400 dark:border-slate-600 bg-slate-300 dark:bg-slate-700 object-cover"
+                            >
+                                {({avatarElement}) => (
+                                    player.avatar || player.userId ? (
+                                        avatarElement
+                                    ) : (
+                                        <div
+                                            className="w-12 h-12 rounded-full border-2 border-slate-400 dark:border-slate-600 bg-slate-300 dark:bg-slate-700 flex items-center justify-center">
+                                            <Settings className="w-6 h-6 text-slate-500 dark:text-slate-400"/>
+                                        </div>
+                                    )
+                                )}
+                            </DiscordUser>
                             {player.isSheriff && (
                                 <div
                                     className="absolute -bottom-1 -right-1 bg-green-600 text-white rounded-full p-0.5 border-2 border-slate-200 dark:border-slate-800"
@@ -123,8 +128,12 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({player, onAction, readonl
                         </div>
                         <div>
                             <div>
-                                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm md:text-base leading-tight">{player.name}</h3>
-                                {player.avatar && player.username && (
+                                <DiscordUser userId={player.userId} fallbackName={player.name}>
+                                    {({name}) => (
+                                        <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm md:text-base leading-tight">{name}</h3>
+                                    )}
+                                </DiscordUser>
+                                {player.username && (
                                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">@{player.username}</p>
                                 )}
                             </div>

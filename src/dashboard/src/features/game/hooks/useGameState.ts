@@ -52,7 +52,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
                 id: player.id,
                 name: cachedUser ? cachedUser.name : (player.name || `${t('messages.player')} ${player.id}`),
                 userId: player.userId,
-                username: cachedUser ? cachedUser.name : player.username, // Fallback or use name as username
+                username: player.username,
                 avatar: cachedUser ? cachedUser.avatar : (player.avatar || null),
                 roles: player.roles || [],
                 deadRoles: player.deadRoles || [],

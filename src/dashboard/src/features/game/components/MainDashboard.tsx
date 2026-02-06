@@ -5,8 +5,8 @@ import {api} from '@/lib/api';
 import {GameState, User} from '@/types';
 import {SpeechManager} from '@/features/speech/components/SpeechManager';
 import {VoteStatus} from './VoteStatus';
+import {DiscordUser} from '@/components/DiscordUser';
 import {NightStatus} from './NightStatus';
-import {usePlayerContext} from '@/features/players/contexts/PlayerContext';
 
 interface MainDashboardProps {
     guildId: string;
@@ -17,7 +17,6 @@ interface MainDashboardProps {
 
 export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashboardProps) => {
     const {t} = useTranslation();
-    const {userInfoCache, fetchUserInfo} = usePlayerContext();
     const [isWorking, setIsWorking] = useState(false);
     const [transitionClass, setTransitionClass] = useState('stage-enter-forward');
     const [isStageAnimating, setIsStageAnimating] = useState(false);
@@ -263,57 +262,46 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {deadPlayers.map((player: any) => {
-                                        const cachedUser = player.userId ? userInfoCache[player.userId] : null;
-                                        if (player.userId && !cachedUser && guildId) {
-                                            fetchUserInfo(player.userId, guildId);
-                                        }
-                                        const displayName = cachedUser ? cachedUser.name : player.name;
-                                        const displayAvatar = cachedUser ? cachedUser.avatar : player.avatar;
-
-                                        return (
-                                            <div
-                                                key={player.id}
-                                                className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
-                                            >
+                                    {deadPlayers.map((player: any) => (
+                                        <DiscordUser
+                                            key={player.id}
+                                            userId={player.userId}
+                                            guildId={guildId}
+                                            fallbackName={player.name}
+                                            avatarClassName="w-full h-full object-cover"
+                                        >
+                                            {({name, avatarElement}) => (
                                                 <div
-                                                    className="absolute inset-0 from-slate-100/60 to-slate-200/60 dark:from-slate-800/60 dark:to-slate-900/60"/>
-                                                <div className="relative p-4 flex items-center gap-3">
-                                                    <div className="relative">
-                                                        <div
-                                                            className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden ring-2 ring-red-300/60 dark:ring-red-600/40">
-                                                            {displayAvatar ? (
-                                                                <img
-                                                                    src={displayAvatar}
-                                                                    alt={displayName}
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            ) : (
-                                                                <div
-                                                                    className="w-full h-full flex items-center justify-center text-slate-500 dark:text-slate-300 text-sm">
-                                                                    {displayName?.slice(0, 1) || 'P'}
-                                                                </div>
-                                                            )}
+                                                    className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
+                                                >
+                                                    <div
+                                                        className="absolute inset-0 from-slate-100/60 to-slate-200/60 dark:from-slate-800/60 dark:to-slate-900/60"/>
+                                                    <div className="relative p-4 flex items-center gap-3">
+                                                        <div className="relative">
+                                                            <div
+                                                                className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden ring-2 ring-red-300/60 dark:ring-red-600/40">
+                                                                {avatarElement}
+                                                            </div>
+                                                            <div
+                                                                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow">
+                                                                <Skull className="w-3 h-3"/>
+                                                            </div>
                                                         </div>
-                                                        <div
-                                                            className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow">
-                                                            <Skull className="w-3 h-3"/>
-                                                        </div>
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <div
-                                                            className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                                                            {displayName}
-                                                        </div>
-                                                        <div className="text-xs text-slate-500 dark:text-slate-400">
-                                                            {t('dashboard.eliminated', 'Eliminated')}
+                                                        <div className="min-w-0">
+                                                            <div
+                                                                className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                                                                {name}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                                {t('dashboard.eliminated', 'Eliminated')}
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                    <div className="relative px-4 pb-4"/>
                                                 </div>
-                                                <div className="relative px-4 pb-4"/>
-                                            </div>
-                                        );
-                                    })}
+                                            )}
+                                        </DiscordUser>
+                                    ))}
                                 </div>
                             )}
                         </div>

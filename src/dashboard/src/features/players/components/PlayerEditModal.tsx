@@ -3,6 +3,7 @@ import {useTranslation} from '@/lib/i18n';
 import {Player} from '@/types';
 import {ChevronRight, Shield, Users, X} from 'lucide-react';
 import {api} from '@/lib/api';
+import {DiscordUser} from '@/components/DiscordUser';
 
 interface PlayerEditModalProps {
     player: Player;
@@ -86,9 +87,20 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                 <div
                     className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
                     <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        <span className="text-xl">{player.avatar ?
-                            <img src={player.avatar} className="w-6 h-6 rounded-full inline-block"/> : '👤'}</span>
-                        {t('players.edit')} - {player.name}
+                        <DiscordUser
+                            userId={player.userId}
+                            fallbackName={player.name}
+                            avatarClassName="w-6 h-6 rounded-full inline-block"
+                        >
+                            {({name, avatarElement}) => (
+                                <>
+                                    <span className="text-xl">
+                                        {avatarElement}
+                                    </span>
+                                    {t('players.edit')} - {name}
+                                </>
+                            )}
+                        </DiscordUser>
                     </h2>
                     <button onClick={onClose}
                             className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
