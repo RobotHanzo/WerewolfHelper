@@ -83,18 +83,10 @@ class MessageListener : ListenerAdapter() {
                             // Record if it's from the judge channel or the werewolf's own channel
                             val messagesList = lockedSession.stateData.werewolfMessages
 
-                            val senderId = if (isJudgeChannel) {
-                                0
-                            } else {
-                                lockedSession.getPlayer(event.author.idLong)?.id ?: 0
-                            }
-
-                            val senderName = if (isJudgeChannel) {
-                                "法官頻道 (${event.member?.effectiveName ?: event.author.name})"
-                            } else {
-                                lockedSession.getPlayer(senderId)?.nickname ?: "未知玩家"
-                            }
-
+                            val senderId =
+                                if (isJudgeChannel) 0 else lockedSession.getPlayer(event.author.idLong)?.id ?: 0
+                            val displayName = event.member?.effectiveName ?: event.author.effectiveName
+                            val senderName = if (isJudgeChannel) "法官頻道 (${displayName})" else displayName
                             messagesList.add(
                                 dev.robothanzo.werewolf.game.model.WerewolfMessage(
                                     senderId = senderId,
