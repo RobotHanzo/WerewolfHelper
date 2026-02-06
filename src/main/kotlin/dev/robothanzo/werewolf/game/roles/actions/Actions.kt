@@ -23,7 +23,9 @@ class WerewolfKillAction : BaseRoleAction(
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
-        if (action.targets.isEmpty()) return accumulatedState
+        if (action.targets.isEmpty() || action.targets.first() == dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID) {
+            return accumulatedState
+        }
 
         val deaths = accumulatedState.deaths.toMutableMap()
         val killList = (deaths[DeathCause.WEREWOLF] ?: emptyList()).toMutableList()
@@ -62,13 +64,11 @@ class WolfYoungerBrotherExtraKillAction : BaseRoleAction(
         // Check if Wolf Brother died in the previous day
         val wolfBrotherDiedDay = session.stateData.roleFlags["WolfBrotherDiedDay"] as? Int ?: return false
 
-        // The extra kill is only available on the night immediately following the Wolf Brother's death
-        // Wolf Brother dies during day X -> Night X+1 (which is the start of day X+1 cycle)
-        // session.day is incremented at the start of NIGHT_PHASE
-        // So if Wolf Brother died on Day X, we are now at Night X+1 (session.day == X+1).
-        // We want to allow the action if wolfBrotherDiedDay == session.day - 1
+        // So if Wolf Brother died on Day X, we are now at Night X+1 (session.day == X).
+        // Since session.day is only incremented at the start of DEATH_ANNOUNCEMENT,
+        // it remains X during the following night.
 
-        return wolfBrotherDiedDay == session.day - 1
+        return wolfBrotherDiedDay == session.day
     }
 }
 
@@ -189,7 +189,7 @@ class GuardProtectAction : BaseRoleAction(
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
         val lastProtected = session.stateData.lastGuardProtectedId
 
-        if (lastProtected == targetId && session.day > 1) return accumulatedState
+        if (lastProtected == targetId && session.day > 0) return accumulatedState
 
         session.stateData.lastGuardProtectedId = targetId
         return accumulatedState.copy(protectedPlayers = accumulatedState.protectedPlayers + targetId)
@@ -202,7 +202,7 @@ class GuardProtectAction : BaseRoleAction(
         accumulatedState: ActionExecutionResult
     ): List<Int> {
         val lastProtected = session.stateData.lastGuardProtectedId
-        return if (lastProtected != null && session.day > 1) {
+        return if (lastProtected != null && session.day > 0) {
             alivePlayers.filter { it != lastProtected }
         } else {
             alivePlayers
@@ -293,8 +293,11 @@ class DeathResolutionAction : BaseRoleAction(
             .filter { it in accumulatedState.saved }
             .filter { it in accumulatedState.protectedPlayers }
 
-        accumulatedState.saved.forEach { savedId -> deaths.values.forEach { it.remove(savedId) } }
-        accumulatedState.protectedPlayers.forEach { protectedId -> deaths[DeathCause.WEREWOLF]?.remove(protectedId) }
+        accumulatedState.saved.forEach { savedId ->
+            deaths.values.forEach { it.removeIf { id -> id == savedId } }
+        }
+        val protectedPlayers = accumulatedState.protectedPlayers
+        deaths[DeathCause.WEREWOLF]?.removeIf { it in protectedPlayers }
 
         if (doubleProtected.isNotEmpty()) {
             deaths[DeathCause.DOUBLE_PROTECTION] = doubleProtected.toMutableList()

@@ -79,9 +79,12 @@ class WerewolfApplication {
 
         private fun extractSoundFiles() {
             try {
-                val jarFile = JarFile(
-                    File(WerewolfApplication::class.java.protectionDomain.codeSource.location.toURI())
-                )
+                val sourceFile = File(WerewolfApplication::class.java.protectionDomain.codeSource.location.toURI())
+                if (!sourceFile.isFile || !sourceFile.name.endsWith(".jar", ignoreCase = true)) {
+                    return
+                }
+
+                val jarFile = JarFile(sourceFile)
                 val soundFolder = File("sounds")
                 if (!soundFolder.exists()) {
                     if (!soundFolder.mkdir()) {
@@ -93,22 +96,23 @@ class WerewolfApplication {
 
                 val entries = jarFile.entries()
                 while (entries.hasMoreElements()) {
-                    val s = entries.nextElement().toString()
+                    val entry = entries.nextElement()
+                    val s = entry.name
                     if (s.startsWith("sounds/") && s.endsWith(".mp3")) {
-                        val entry = jarFile.getEntry(s)
                         val outputFile = File(soundFolder, s.split("/").last())
-
-                        jarFile.getInputStream(entry).use { input ->
-                            FileOutputStream(outputFile).use { output ->
-                                input.copyTo(output)
+                        // Only extract if file doesn't exist or we want to force refresh
+                        if (!outputFile.exists()) {
+                            jarFile.getInputStream(entry).use { input ->
+                                FileOutputStream(outputFile).use { output ->
+                                    input.copyTo(output)
+                                }
                             }
                         }
                     }
                 }
                 jarFile.close()
             } catch (e: Exception) {
-                LoggerFactory.getLogger(WerewolfApplication::class.java)
-                    .warn("Failed to extract sound files (ignore if running in IDE): {}", e.message)
+                // Silently fail or log debug - we don't want to slow down startup with stack traces
             }
         }
     }

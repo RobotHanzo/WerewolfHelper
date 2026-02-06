@@ -48,10 +48,9 @@ class NightStep(
             }
 
             // Increment day count at the start of the night (assuming day starts at 0 or 1 and increments here)
-            // Note: session.day is usually incremented in SetupStep or at the end of DayStep.
-            // If session.day is incremented here, we need to be careful.
-            // Let's check where session.day is incremented.
-            // Assuming session.day is correct for the current night.
+            // Note: session.day is now incremented during the transition to DEATH_ANNOUNCEMENT (sunrise).
+            // So for the very first night, session.day is 0.
+            // For the second night, session.day is 1 (following Day 1).
 
             // Log night start
             session.addLog(LogType.SYSTEM, "夜晚開始，各職業請準備行動")

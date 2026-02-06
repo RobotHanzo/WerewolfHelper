@@ -54,15 +54,17 @@ class GameStateServiceImpl(
 
         val nextStep = steps[stepId] ?: throw IllegalArgumentException("Unknown step: $stepId")
 
-        val pendingActionsSnapshot = session.stateData.pendingActions.toMutableList()
-
+        val oldState = session.stateData
         session.currentState = stepId
-        // Reset state data for new step
-        session.stateData = GameStateData()
 
-        if (pendingActionsSnapshot.isNotEmpty()) {
-            session.stateData.pendingActions.addAll(pendingActionsSnapshot)
-        }
+        // Reset state data for new step while preserving persistent fields
+        session.stateData = GameStateData(
+            pendingActions = oldState.pendingActions,
+            actionData = oldState.actionData,
+            lastGuardProtectedId = oldState.lastGuardProtectedId,
+            roleFlags = oldState.roleFlags,
+            deathTriggerAvailableMap = oldState.deathTriggerAvailableMap
+        )
 
         // Timer Logic
         val duration = nextStep.getDurationSeconds(session)
@@ -82,33 +84,27 @@ class GameStateServiceImpl(
 
     override fun nextStep(session: Session) {
         val currentId = session.currentState
-
-        // Custom logic for flow control
         if (currentId == "SETUP") {
             startStep(session, "NIGHT_PHASE")
             return
         }
 
-        // Find next in list
         val idx = gameFlow.indexOf(currentId)
-        if (idx == -1) {
-            // Fallback or error
-            return
-        }
+        if (idx == -1) return
 
         var nextIdx = (idx + 1) % gameFlow.size
         var nextId = gameFlow[nextIdx]
 
-        // Handle cycles (Day increment)
-        if (nextId == "NIGHT_PHASE") {
+        // Handle cycles (Day increment at sunrise)
+        if (nextId == "DEATH_ANNOUNCEMENT") {
             session.day += 1
             sessionService.saveSession(session)
             session.addLog(LogType.SYSTEM, "進入第 ${session.day} 天")
         }
 
         // Conditional Skips
-        if (nextId == "SHERIFF_ELECTION" && session.day != 1) {
-            // Skip sheriff election after day 1
+        if (nextId == "SHERIFF_ELECTION" && session.day != 0) {
+            // Skip sheriff election after night 1 (which has day 0)
             nextIdx = (nextIdx + 1) % gameFlow.size
             nextId = gameFlow[nextIdx]
         }

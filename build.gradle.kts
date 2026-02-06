@@ -47,6 +47,11 @@ dependencies {
 
     compileOnly("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+
+    // Spring Context Indexer for faster startup
+    annotationProcessor("org.springframework:spring-context-indexer")
+    
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
 }

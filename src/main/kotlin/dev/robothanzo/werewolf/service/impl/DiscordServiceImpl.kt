@@ -53,10 +53,18 @@ class DiscordServiceImpl(
             }
 
             AudioSourceManagers.registerLocalSource(WerewolfApplication.playerManager)
-            JDAInteractions("dev.robothanzo.werewolf").registerInteractions(jda).queue()
-            jda.awaitReady()
-            jda.presence.activity = Activity.competing("狼人殺 by Hanzo")
-            log.info("JDA Initialized: {}", jda.selfUser.asTag)
+
+            // Offload blocking/heavy initialization to a background thread to speed up startup
+            Thread {
+                try {
+                    JDAInteractions("dev.robothanzo.werewolf").registerInteractions(jda).queue()
+                    jda.awaitReady()
+                    jda.presence.activity = Activity.competing("狼人殺 by Hanzo")
+                    log.info("JDA Fully Ready: {}", jda.selfUser.asTag)
+                } catch (e: Exception) {
+                    log.error("Failed to finish JDA background initialization", e)
+                }
+            }.start()
 
             WerewolfApplication.jda = jda
         } catch (e: Exception) {

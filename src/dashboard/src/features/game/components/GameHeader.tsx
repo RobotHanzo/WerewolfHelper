@@ -42,6 +42,9 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
         ? players.find(p => p.id === speech.currentSpeakerId)
         : null;
 
+    // Ensure we show at least Day 1 if the game has started (not in LOBBY)
+    const displayDay = dayCount === 0 && phase !== 'LOBBY' ? 1 : dayCount;
+
     return (
         <header
             className="h-16 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border-b border-slate-300 dark:border-slate-800 flex items-center justify-between px-6 z-10">
@@ -53,7 +56,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                         {phase === 'DAY' ? <Sun className="w-5 h-5 text-orange-500"/> :
                             <Moon className="w-5 h-5 text-indigo-500 dark:text-indigo-400"/>}
                         <span className="font-bold text-lg">
-                            {currentStep ? currentStep : t(`phases.${phase}`)} {dayCount > 0 && `#${dayCount}`}
+                            {displayDay > 0 && `Day ${displayDay} - `}{currentStep ? currentStep : t(`phases.${phase}`)}
                         </span>
                     </div>
                 </div>

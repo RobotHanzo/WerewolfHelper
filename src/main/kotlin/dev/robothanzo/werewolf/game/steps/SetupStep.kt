@@ -53,6 +53,8 @@ class SetupStep(
             }
 
             "start_game" -> {
+                // Initialize day to 0 for the first night (Morning 1 will increment to 1)
+                session.day = 0
                 gameStateService.startStep(session, "NIGHT_PHASE")
                 mapOf("success" to true)
             }
