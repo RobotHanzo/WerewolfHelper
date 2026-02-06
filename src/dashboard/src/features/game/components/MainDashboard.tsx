@@ -5,7 +5,7 @@ import {api} from '@/lib/api';
 import {GameState, User} from '@/types';
 import {SpeechManager} from '@/features/speech/components/SpeechManager';
 import {VoteStatus} from './VoteStatus';
-import {DiscordUser} from '@/components/DiscordUser';
+import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 import {NightStatus} from './NightStatus';
 
 interface MainDashboardProps {
@@ -263,44 +263,37 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {deadPlayers.map((player: any) => (
-                                        <DiscordUser
+                                        <div
                                             key={player.id}
-                                            userId={player.userId}
-                                            guildId={guildId}
-                                            fallbackName={player.name}
-                                            avatarClassName="w-full h-full object-cover"
+                                            className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
                                         >
-                                            {({name, avatarElement}) => (
-                                                <div
-                                                    className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
-                                                >
+                                            <div
+                                                className="absolute inset-0 from-slate-100/60 to-slate-200/60 dark:from-slate-800/60 dark:to-slate-900/60"/>
+                                            <div className="relative p-4 flex items-center gap-3">
+                                                <div className="relative">
                                                     <div
-                                                        className="absolute inset-0 from-slate-100/60 to-slate-200/60 dark:from-slate-800/60 dark:to-slate-900/60"/>
-                                                    <div className="relative p-4 flex items-center gap-3">
-                                                        <div className="relative">
-                                                            <div
-                                                                className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden ring-2 ring-red-300/60 dark:ring-red-600/40">
-                                                                {avatarElement}
-                                                            </div>
-                                                            <div
-                                                                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow">
-                                                                <Skull className="w-3 h-3"/>
-                                                            </div>
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <div
-                                                                className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                                                                {name}
-                                                            </div>
-                                                            <div className="text-xs text-slate-500 dark:text-slate-400">
-                                                                {t('dashboard.eliminated', 'Eliminated')}
-                                                            </div>
-                                                        </div>
+                                                        className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden ring-2 ring-red-300/60 dark:ring-red-600/40">
+                                                        <DiscordAvatar userId={player.userId} guildId={guildId}
+                                                                       avatarClassName="w-full h-full object-cover"/>
                                                     </div>
-                                                    <div className="relative px-4 pb-4"/>
+                                                    <div
+                                                        className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow">
+                                                        <Skull className="w-3 h-3"/>
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </DiscordUser>
+                                                <div className="min-w-0">
+                                                    <div
+                                                        className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                                                        <DiscordName userId={player.userId} guildId={guildId}
+                                                                     fallbackName={player.name}/>
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                        {t('dashboard.eliminated', 'Eliminated')}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="relative px-4 pb-4"/>
+                                        </div>
                                     ))}
                                 </div>
                             )}

@@ -3,7 +3,7 @@ import {useTranslation} from '@/lib/i18n';
 import {Player} from '@/types';
 import {Skull, X} from 'lucide-react';
 import {api} from '@/lib/api';
-import {DiscordUser} from '@/components/DiscordUser';
+import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 
 interface DeathConfirmModalProps {
     player: Player;
@@ -45,25 +45,19 @@ export const DeathConfirmModal: React.FC<DeathConfirmModalProps> = ({player, gui
                 </div>
 
                 <div className="p-6 space-y-4">
-                    <DiscordUser
-                        userId={player.userId}
-                        fallbackName={player.name}
-                        avatarClassName="w-12 h-12 rounded-full"
-                    >
-                        {({name, avatarElement}) => (
-                            <div className="flex items-center gap-3">
-                                <div className="text-4xl">
-                                    {avatarElement}
-                                </div>
-                                <div>
-                                    <p className="font-bold text-lg dark:text-slate-200">{name}</p>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                                        {player.roles.join(', ') || t('roles.unknown')}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                    </DiscordUser>
+                    <div className="flex items-center gap-3">
+                        <div className="text-4xl">
+                            <DiscordAvatar userId={player.userId} avatarClassName="w-12 h-12 rounded-full"/>
+                        </div>
+                        <div>
+                            <p className="font-bold text-lg dark:text-slate-200">
+                                <DiscordName userId={player.userId} fallbackName={player.name}/>
+                            </p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                                {player.roles.join(', ') || t('roles.unknown')}
+                            </p>
+                        </div>
+                    </div>
 
                     <div
                         className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg text-sm text-slate-600 dark:text-slate-300">

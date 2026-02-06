@@ -1,6 +1,6 @@
 import {Clock, Mic, SkipForward, Square} from 'lucide-react';
 import {Player} from '@/types';
-import {DiscordUser} from '@/components/DiscordUser';
+import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 
 interface SpeakerCardProps {
     player: Player;
@@ -16,28 +16,23 @@ export const SpeakerCard = ({player, timeLeft, t, readonly, onSkip, onInterrupt}
         <div className="absolute inset-0 bg-indigo-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
         <div
             className="relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl border-2 border-indigo-500 flex flex-col items-center gap-4 text-center">
-            <DiscordUser
-                userId={player.userId}
-                fallbackName={player.name}
-                avatarClassName="w-24 h-24 rounded-full border-4 border-indigo-100 dark:border-indigo-900 shadow-sm transition-transform duration-700 hover:rotate-6"
-            >
-                {({name, avatarElement}) => (
-                    <>
-                        <div className="relative">
-                            {avatarElement}
-                            <div
-                                className="absolute -bottom-2 -right-2 bg-indigo-600 text-white p-2 rounded-full shadow-lg animate-bounce">
-                                <Mic className="w-5 h-5 animate-pulse"/>
-                            </div>
-                        </div>
+            <>
+                <div className="relative">
+                    <DiscordAvatar userId={player.userId}
+                                   avatarClassName="w-24 h-24 rounded-full border-4 border-indigo-100 dark:border-indigo-900 shadow-sm transition-transform duration-700 hover:rotate-6"/>
+                    <div
+                        className="absolute -bottom-2 -right-2 bg-indigo-600 text-white p-2 rounded-full shadow-lg animate-bounce">
+                        <Mic className="w-5 h-5 animate-pulse"/>
+                    </div>
+                </div>
 
-                        <div>
-                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{name}</h2>
-                            <span className="text-indigo-500 font-medium">{t('speechManager.speaking')}</span>
-                        </div>
-                    </>
-                )}
-            </DiscordUser>
+                <div>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                        <DiscordName userId={player.userId} fallbackName={player.name}/>
+                    </h2>
+                    <span className="text-indigo-500 font-medium">{t('speechManager.speaking')}</span>
+                </div>
+            </>
 
             <div
                 className="flex items-center gap-2 text-3xl font-mono font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-900 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700">

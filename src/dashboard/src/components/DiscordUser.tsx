@@ -2,26 +2,25 @@ import React, {useEffect, useMemo, useState} from 'react';
 import {usePlayerContext} from '@/features/players/contexts/PlayerContext';
 import {useAuth} from '@/features/auth/contexts/AuthContext';
 
-export interface DiscordUserRenderProps {
-    name: string;
-    isLoading: boolean;
-    avatarElement: React.ReactNode;
-}
-
-export interface DiscordUserProps {
+export interface DiscordUserBaseProps {
     userId?: string | null;
     guildId?: string;
+}
+
+export interface DiscordNameBaseProps extends DiscordUserBaseProps {
     fallbackName?: string;
-    showAvatar?: boolean;
-    showName?: boolean;
+}
+
+export interface DiscordAvatarProps extends DiscordUserBaseProps {
     avatarClassName?: string;
     loadingAvatarClassName?: string;
     avatarFallbackClassName?: string;
     avatarFallbackTextClassName?: string;
     useInitialsFallback?: boolean;
+}
+
+export interface DiscordNameProps extends DiscordNameBaseProps {
     nameClassName?: string;
-    className?: string;
-    children?: (data: DiscordUserRenderProps) => React.ReactNode;
 }
 
 const resolveAvatarUrl = (userId?: string | null, avatar?: string | null) => {
@@ -31,21 +30,7 @@ const resolveAvatarUrl = (userId?: string | null, avatar?: string | null) => {
     return `https://cdn.discordapp.com/avatars/${userId}/${avatar}.png?size=128`;
 };
 
-export const DiscordUser: React.FC<DiscordUserProps> = ({
-                                                            userId,
-                                                            guildId: propGuildId,
-                                                            fallbackName,
-                                                            showAvatar = true,
-                                                            showName = false,
-                                                            avatarClassName,
-                                                            loadingAvatarClassName,
-                                                            avatarFallbackClassName,
-                                                            avatarFallbackTextClassName,
-                                                            useInitialsFallback = false,
-                                                            nameClassName,
-                                                            className,
-                                                            children
-                                                        }) => {
+const useDiscordUserData = ({userId, guildId: propGuildId, fallbackName}: DiscordNameBaseProps) => {
     const {user} = useAuth();
     const {userInfoCache, fetchUserInfo} = usePlayerContext();
     const [isLoading, setIsLoading] = useState(false);
@@ -77,6 +62,20 @@ export const DiscordUser: React.FC<DiscordUserProps> = ({
         return resolveAvatarUrl(userId, cachedUser?.avatar || null);
     }, [userId, cachedUser?.avatar]);
 
+    return {name, avatarUrl, isLoading, cachedUser};
+};
+
+export const DiscordAvatar: React.FC<DiscordAvatarProps> = ({
+                                                                userId,
+                                                                guildId,
+                                                                avatarClassName,
+                                                                loadingAvatarClassName,
+                                                                avatarFallbackClassName,
+                                                                avatarFallbackTextClassName,
+                                                                useInitialsFallback = false
+                                                            }) => {
+    const {name, avatarUrl, cachedUser} = useDiscordUserData({userId, guildId});
+
     const shouldUseInitialsFallback =
         useInitialsFallback && !userId && !cachedUser?.avatar;
 
@@ -86,34 +85,27 @@ export const DiscordUser: React.FC<DiscordUserProps> = ({
         />
     );
 
-    const avatarElement = showAvatar
-        ? (!avatarUrl
-            ? (shouldUseInitialsFallback
-                ? (
-                    <div className={avatarFallbackClassName || avatarClassName}>
-                        <span className={avatarFallbackTextClassName}>{name.substring(0, 1)}</span>
-                    </div>
-                )
-                : loadingElement)
-            : (
-                <img
-                    src={avatarUrl}
-                    alt={name}
-                    className={avatarClassName}
-                />
-            ))
-        : null;
-
-    if (children) {
-        return <>{children({name, isLoading, avatarElement})}</>;
+    if (!avatarUrl) {
+        if (shouldUseInitialsFallback) {
+            return (
+                <div className={avatarFallbackClassName || avatarClassName}>
+                    <span className={avatarFallbackTextClassName}>{name.substring(0, 1)}</span>
+                </div>
+            );
+        }
+        return loadingElement;
     }
 
     return (
-        <div className={className}>
-            {avatarElement}
-            {showName && (
-                <span className={nameClassName}>{name}</span>
-            )}
-        </div>
+        <img
+            src={avatarUrl}
+            alt={name}
+            className={avatarClassName}
+        />
     );
+};
+
+export const DiscordName: React.FC<DiscordNameProps> = ({userId, guildId, fallbackName, nameClassName}) => {
+    const {name} = useDiscordUserData({userId, guildId, fallbackName});
+    return <span className={nameClassName}>{name}</span>;
 };

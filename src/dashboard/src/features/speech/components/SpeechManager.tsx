@@ -6,7 +6,7 @@ import {api} from '@/lib/api';
 import {useTranslation} from '@/lib/i18n';
 
 import {SpeakerCard} from './SpeakerCard';
-import {DiscordUser} from '@/components/DiscordUser';
+import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 
 interface SpeechManagerProps {
     speech?: SpeechState;
@@ -215,21 +215,16 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
                             {police.candidates.map(candidate => {
                                 const p = players.find(x => x.id === candidate.id);
                                 return (
-                                    <DiscordUser
-                                        key={candidate.id}
-                                        userId={p?.userId}
-                                        fallbackName={p?.name || `Player ${candidate.id}`}
-                                        avatarClassName="w-12 h-12 rounded-full mb-2"
-                                    >
-                                        {({name, avatarElement}) => (
-                                            <div
-                                                className="flex flex-col items-center p-3 bg-white dark:bg-slate-800 rounded-xl shadow border border-slate-200 dark:border-slate-700 animate-in zoom-in-50">
-                                                {avatarElement}
-                                                <span
-                                                    className="font-medium text-slate-800 dark:text-slate-200">{name}</span>
-                                            </div>
-                                        )}
-                                    </DiscordUser>
+                                    <div
+                                        className="flex flex-col items-center p-3 bg-white dark:bg-slate-800 rounded-xl shadow border border-slate-200 dark:border-slate-700 animate-in zoom-in-50">
+                                        <DiscordAvatar userId={p?.userId}
+                                                       avatarClassName="w-12 h-12 rounded-full mb-2"/>
+                                        <span
+                                            className="font-medium text-slate-800 dark:text-slate-200">
+                                            <DiscordName userId={p?.userId}
+                                                         fallbackName={p?.name || `Player ${candidate.id}`}/>
+                                        </span>
+                                    </div>
                                 );
                             })}
                         </div>
@@ -343,21 +338,16 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
                                     {speech.interruptVotes.map(voterId => {
                                         const voter = players.find(p => p.id === voterId);
                                         return (
-                                            <DiscordUser
-                                                key={voterId}
-                                                userId={voter?.userId}
-                                                fallbackName={voter?.name || String(voterId)}
-                                                avatarClassName="w-4 h-4 rounded-full"
-                                            >
-                                                {({name, avatarElement}) => (
-                                                    <div
-                                                        className="animate-in zoom-in-50 fade-in duration-300 flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-1 rounded text-xs border border-red-100 dark:border-red-900/50 shadow-sm">
-                                                        {avatarElement}
-                                                        <span
-                                                            className="text-slate-700 dark:text-slate-300">{name}</span>
-                                                    </div>
-                                                )}
-                                            </DiscordUser>
+                                            <div
+                                                className="animate-in zoom-in-50 fade-in duration-300 flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-1 rounded text-xs border border-red-100 dark:border-red-900/50 shadow-sm">
+                                                <DiscordAvatar userId={voter?.userId}
+                                                               avatarClassName="w-4 h-4 rounded-full"/>
+                                                <span
+                                                    className="text-slate-700 dark:text-slate-300">
+                                                    <DiscordName userId={voter?.userId}
+                                                                 fallbackName={voter?.name || String(voterId)}/>
+                                                </span>
+                                            </div>
                                         );
                                     })}
                                 </div>
@@ -379,19 +369,14 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
                                                 className="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-slate-800 rounded-full text-xs font-bold text-slate-500">
                                                 {idx + 1}
                                             </span>
-                                            <DiscordUser
-                                                userId={player.userId}
-                                                fallbackName={player.name}
-                                                avatarClassName="w-8 h-8 rounded-full"
-                                            >
-                                                {({name, avatarElement}) => (
-                                                    <div className="flex items-center gap-2">
-                                                        {avatarElement}
-                                                        <span
-                                                            className="font-medium text-slate-700 dark:text-slate-300">{name}</span>
-                                                    </div>
-                                                )}
-                                            </DiscordUser>
+                                            <div className="flex items-center gap-2">
+                                                <DiscordAvatar userId={player.userId}
+                                                               avatarClassName="w-8 h-8 rounded-full"/>
+                                                <span
+                                                    className="font-medium text-slate-700 dark:text-slate-300">
+                                                    <DiscordName userId={player.userId} fallbackName={player.name}/>
+                                                </span>
+                                            </div>
                                         </div>
                                         <span className="text-xs text-slate-400">{t('speechManager.waiting')}</span>
                                     </div>

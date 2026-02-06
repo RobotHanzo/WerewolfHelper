@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {useWebSocket} from '@/lib/websocket';
 import {ChevronRight, Clock, MessageCircle, Skull, Users} from 'lucide-react';
 import {ActionSubmissionStatus, Player} from '@/types';
-import {DiscordUser} from '@/components/DiscordUser';
+import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 
 interface NightStatusProps {
     guildId?: string;
@@ -333,51 +333,44 @@ const WerewolfVotingScreen: React.FC<WerewolfVotingScreenProps> = ({
                                             : (isPredecessor ? 'pt-2 pb-0 mt-4' : 'py-2 mt-4')
                                         } hover:bg-slate-700/30 ${!isContinuation ? 'rounded-t-md' : ''} ${!isPredecessor ? 'rounded-b-md' : ''}`}
                                     >
-                                        <DiscordUser
-                                            userId={msg.senderUserId}
-                                            guildId={guildId}
-                                            fallbackName={msg.senderName}
-                                            avatarClassName="w-10 h-10 rounded-full shadow-sm shadow-black/20"
-                                            useInitialsFallback={true}
-                                            avatarFallbackClassName="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center"
-                                            avatarFallbackTextClassName="text-xs font-bold text-slate-300"
-                                        >
-                                            {({name, avatarElement}) => (
-                                                <>
-                                                    <div className="flex-shrink-0 w-10">
-                                                        {!isContinuation ? (
-                                                            <div className="mt-0.5">
-                                                                {avatarElement}
-                                                            </div>
-                                                        ) : (
-                                                            <div
-                                                                className="w-10 h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity min-h-[1.5rem]">
-                                                                <span className="text-[10px] text-slate-500 font-mono">
-                                                                    •
-                                                                </span>
-                                                            </div>
-                                                        )}
+                                        <>
+                                            <div className="flex-shrink-0 w-10">
+                                                {!isContinuation ? (
+                                                    <div className="mt-0.5">
+                                                        <DiscordAvatar userId={msg.senderUserId} guildId={guildId}
+                                                                       avatarClassName="w-10 h-10 rounded-full shadow-sm shadow-black/20"
+                                                                       useInitialsFallback={true}
+                                                                       avatarFallbackClassName="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center"
+                                                                       avatarFallbackTextClassName="text-xs font-bold text-slate-300"/>
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        {!isContinuation && (
-                                                            <div className="flex items-baseline gap-2 mb-0.5">
-                                                                <span
-                                                                    className="font-semibold text-red-400 text-[15px]">{name}</span>
-                                                                <span
-                                                                    className="text-[10px] text-slate-500 font-medium">
-                                                                    {new Date(msg.timestamp).toLocaleTimeString('zh-TW', {
-                                                                        hour: '2-digit',
-                                                                        minute: '2-digit'
-                                                                    })}
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                        <div
-                                                            className="text-[15px] text-slate-200 leading-normal break-words">{msg.content}</div>
+                                                ) : (
+                                                    <div
+                                                        className="w-10 h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity min-h-[1.5rem]">
+                                                        <span className="text-[10px] text-slate-500 font-mono">
+                                                            •
+                                                        </span>
                                                     </div>
-                                                </>
-                                            )}
-                                        </DiscordUser>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                {!isContinuation && (
+                                                    <div className="flex items-baseline gap-2 mb-0.5">
+                                                        <span className="font-semibold text-red-400 text-[15px]">
+                                                            <DiscordName userId={msg.senderUserId} guildId={guildId}
+                                                                         fallbackName={msg.senderName}/>
+                                                        </span>
+                                                        <span className="text-[10px] text-slate-500 font-medium">
+                                                            {new Date(msg.timestamp).toLocaleTimeString('zh-TW', {
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <div
+                                                    className="text-[15px] text-slate-200 leading-normal break-words">{msg.content}</div>
+                                            </div>
+                                        </>
                                     </div>
                                 );
                             });
@@ -403,30 +396,17 @@ const WerewolfVotingScreen: React.FC<WerewolfVotingScreenProps> = ({
                                 className="animate-slide-in bg-slate-700/50 rounded px-2 py-2 hover:bg-slate-700 transition-colors text-xs"
                                 style={{animationDelay: `${idx * 50}ms`}}
                             >
-                                <DiscordUser
-                                    userId={vote.voterUserId}
-                                    guildId={guildId}
-                                    fallbackName={vote.voterName}
-                                >
-                                    {({name}) => (
-                                        <div className="font-semibold text-cyan-400 mb-1">{name}</div>
-                                    )}
-                                </DiscordUser>
+                                <div className="font-semibold text-cyan-400 mb-1">
+                                    <DiscordName userId={vote.voterUserId} guildId={guildId}
+                                                 fallbackName={vote.voterName}/>
+                                </div>
                                 <div className="flex items-center gap-1">
                                     <ChevronRight className="w-3 h-3 text-amber-400"/>
-                                    <DiscordUser
-                                        userId={vote.targetUserId}
-                                        guildId={guildId}
-                                        fallbackName={vote.targetName || '未投票'}
-                                        showAvatar={false}
-                                    >
-                                        {({name}) => (
-                                            <span
-                                                className={vote.targetName === '跳過' ? 'text-slate-400' : 'text-red-400 font-semibold'}>
-                                                {name}
-                                            </span>
-                                        )}
-                                    </DiscordUser>
+                                    <span
+                                        className={vote.targetName === '跳過' ? 'text-slate-400' : 'text-red-400 font-semibold'}>
+                                        <DiscordName userId={vote.targetUserId} guildId={guildId}
+                                                     fallbackName={vote.targetName || '未投票'}/>
+                                    </span>
                                 </div>
                             </div>
                         ))
@@ -501,12 +481,8 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                         </div>
                     </div>
                 </div>
-                <DiscordUser
-                    userId={wolfTargetUserId}
-                    guildId={guildId}
-                    fallbackName={wolfTargetName}
-                    avatarClassName="w-10 h-10 rounded-full border-2 border-red-600/50"
-                />
+                <DiscordAvatar userId={wolfTargetUserId} guildId={guildId}
+                               avatarClassName="w-10 h-10 rounded-full border-2 border-red-600/50"/>
             </div>
 
             {/* Grid of actions */}
@@ -523,22 +499,15 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                             style={{animationDelay: `${100 + index * 75}ms`}}
                         >
                             <div className="flex items-start justify-between mb-3">
-                                <DiscordUser
-                                    userId={status.playerUserId}
-                                    guildId={guildId}
-                                    fallbackName={status.playerName}
-                                    avatarClassName="w-10 h-10 rounded-full border border-slate-700 shadow-sm flex-shrink-0 ml-3"
-                                >
-                                    {({name, avatarElement}) => (
-                                        <>
-                                            <div className="min-w-0">
-                                                <h3 className="font-bold text-lg leading-tight truncate">{name}</h3>
-                                                <p className="text-xs opacity-70 mt-0.5">{status.role}</p>
-                                            </div>
-                                            {avatarElement}
-                                        </>
-                                    )}
-                                </DiscordUser>
+                                <div className="min-w-0">
+                                    <h3 className="font-bold text-lg leading-tight truncate">
+                                        <DiscordName userId={status.playerUserId} guildId={guildId}
+                                                     fallbackName={status.playerName}/>
+                                    </h3>
+                                    <p className="text-xs opacity-70 mt-0.5">{status.role}</p>
+                                </div>
+                                <DiscordAvatar userId={status.playerUserId} guildId={guildId}
+                                               avatarClassName="w-10 h-10 rounded-full border border-slate-700 shadow-sm flex-shrink-0 ml-3"/>
                             </div>
 
                             <div className="space-y-2">
@@ -554,23 +523,13 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                                         className="bg-white/10 rounded px-2 py-1 flex items-center justify-between gap-2">
                                         <div className="min-w-0">
                                             <p className="text-[10px] opacity-60 uppercase font-bold tracking-tight">目標</p>
-                                            <DiscordUser
-                                                userId={status.targetUserId}
-                                                guildId={guildId}
-                                                fallbackName={status.targetName || ''}
-                                                showAvatar={false}
-                                            >
-                                                {({name}) => (
-                                                    <p className="font-semibold text-sm truncate">{name}</p>
-                                                )}
-                                            </DiscordUser>
+                                            <p className="font-semibold text-sm truncate">
+                                                <DiscordName userId={status.targetUserId} guildId={guildId}
+                                                             fallbackName={status.targetName || ''}/>
+                                            </p>
                                         </div>
-                                        <DiscordUser
-                                            userId={status.targetUserId}
-                                            guildId={guildId}
-                                            fallbackName={status.targetName || ''}
-                                            avatarClassName="w-6 h-6 rounded-full border border-slate-600 flex-shrink-0"
-                                        />
+                                        <DiscordAvatar userId={status.targetUserId} guildId={guildId}
+                                                       avatarClassName="w-6 h-6 rounded-full border border-slate-600 flex-shrink-0"/>
                                     </div>
                                 )}
 

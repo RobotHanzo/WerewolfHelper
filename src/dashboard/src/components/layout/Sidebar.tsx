@@ -3,7 +3,7 @@ import {useTranslation} from '@/lib/i18n';
 import {ThemeToggle} from '@/components/ui/ThemeToggle';
 import {useAuth} from '@/features/auth/contexts/AuthContext';
 import {useLocation} from 'react-router-dom';
-import {DiscordUser} from '@/components/DiscordUser';
+import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 
 interface SidebarProps {
     onLogout: () => void;
@@ -118,44 +118,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="p-4 border-t border-slate-300 dark:border-slate-800 space-y-3">
                 {/* User Profile */}
                 {user && (
-                    <DiscordUser
-                        userId={user.userId}
-                        guildId={user.guildId}
-                        fallbackName={user.username}
-                        avatarClassName="w-10 h-10 rounded-full ring-2 ring-indigo-200 dark:ring-indigo-900"
-                    >
-                        {({name, avatarElement}) => (
-                            <div
-                                className="flex items-center gap-3 px-2 py-2 bg-slate-200/50 dark:bg-slate-800/50 rounded-lg">
-                                {avatarElement}
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                                        {name}
-                                    </p>
-                                    {user.role === 'JUDGE' ? (
-                                        <button
-                                            onClick={onToggleSpectatorMode}
-                                            className={`inline-block px-2 py-0.5 text-xs font-medium rounded transition-colors cursor-pointer ${isSpectatorMode
-                                                ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900'
-                                                : 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900'
-                                            }`}
-                                            title={isSpectatorMode ? t('sidebar.backToJudge') : t('sidebar.viewAsSpectator')}
-                                        >
-                                            {isSpectatorMode ? t('userRoles.SPECTATOR') : t('userRoles.JUDGE')}
-                                        </button>
-                                    ) : (
-                                        <span
-                                            className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${user.role === 'SPECTATOR'
-                                                ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
-                                                : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'
-                                            }`}>
-                                            {t(`userRoles.${user.role}`) || user.role}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </DiscordUser>
+                    <div
+                        className="flex items-center gap-3 px-2 py-2 bg-slate-200/50 dark:bg-slate-800/50 rounded-lg">
+                        <DiscordAvatar userId={user.userId} guildId={user.guildId}
+                                       avatarClassName="w-10 h-10 rounded-full ring-2 ring-indigo-200 dark:ring-indigo-900"/>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                                <DiscordName userId={user.userId} guildId={user.guildId} fallbackName={user.username}/>
+                            </p>
+                            {user.role === 'JUDGE' ? (
+                                <button
+                                    onClick={onToggleSpectatorMode}
+                                    className={`inline-block px-2 py-0.5 text-xs font-medium rounded transition-colors cursor-pointer ${isSpectatorMode
+                                        ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900'
+                                        : 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900'
+                                    }`}
+                                    title={isSpectatorMode ? t('sidebar.backToJudge') : t('sidebar.viewAsSpectator')}
+                                >
+                                    {isSpectatorMode ? t('userRoles.SPECTATOR') : t('userRoles.JUDGE')}
+                                </button>
+                            ) : (
+                                <span
+                                    className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${user.role === 'SPECTATOR'
+                                        ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                                        : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'
+                                    }`}>
+                                    {t(`userRoles.${user.role}`) || user.role}
+                                </span>
+                            )}
+                        </div>
+                    </div>
                 )}
 
                 {/* Connection Status */}

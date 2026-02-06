@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {Clock} from 'lucide-react';
 import {Player} from '@/types';
 import {useTranslation} from '@/lib/i18n';
-import {DiscordUser} from '@/components/DiscordUser';
+import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 
 interface VoteStatusProps {
     candidates: { id: number, voters: string[] }[];
@@ -90,25 +90,21 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                             {/* Candidate Info */}
                             <div
                                 className="flex items-center gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
-                                <DiscordUser
-                                    userId={player?.userId}
-                                    guildId={guildId}
-                                    fallbackName={player?.name || `Candidate ${candidate.id}`}
-                                    avatarClassName="w-10 h-10 rounded-full shadow-sm"
-                                >
-                                    {({name, avatarElement}) => (
-                                        <>
-                                            {avatarElement}
-                                            <div className="flex-1">
-                                                <h4 className="font-bold text-slate-800 dark:text-slate-200">{name}</h4>
-                                                <span
-                                                    className="text-xs font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-900/50">
-                                                    {candidate.voters.length} {t('vote.count')}
-                                                </span>
-                                            </div>
-                                        </>
-                                    )}
-                                </DiscordUser>
+                                <DiscordAvatar userId={player?.userId} guildId={guildId}
+                                               avatarClassName="w-10 h-10 rounded-full shadow-sm"/>
+                                <div className="flex-1">
+                                    <h4 className="font-bold text-slate-800 dark:text-slate-200">
+                                        <DiscordName
+                                            userId={player?.userId}
+                                            guildId={guildId}
+                                            fallbackName={player?.name || `Candidate ${candidate.id}`}
+                                        />
+                                    </h4>
+                                    <span
+                                        className="text-xs font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-900/50">
+                                        {candidate.voters.length} {t('vote.count')}
+                                    </span>
+                                </div>
                             </div>
 
                             {/* Voters List */}
@@ -121,24 +117,19 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                                         const voter = players.find(p => p.userId === voterId);
                                         const resolvedUserId = voter?.userId || voterId;
                                         return (
-                                            <DiscordUser
-                                                key={voterId}
-                                                userId={resolvedUserId}
-                                                guildId={guildId}
-                                                fallbackName={voter?.name || voter?.userId || t('vote.unknown')}
-                                                avatarClassName="w-4 h-4 rounded-full"
-                                            >
-                                                {({name, avatarElement}) => (
-                                                    <div
-                                                        className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2 py-1 rounded-md text-xs border border-slate-200 dark:border-slate-700 shadow-sm animate-in zoom-in-50">
-                                                        {avatarElement}
-                                                        <span
-                                                            className="font-medium text-slate-600 dark:text-slate-400 max-w-[80px] truncate">
-                                                            {name}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </DiscordUser>
+                                            <div
+                                                className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2 py-1 rounded-md text-xs border border-slate-200 dark:border-slate-700 shadow-sm animate-in zoom-in-50">
+                                                <DiscordAvatar userId={resolvedUserId} guildId={guildId}
+                                                               avatarClassName="w-4 h-4 rounded-full"/>
+                                                <span
+                                                    className="font-medium text-slate-600 dark:text-slate-400 max-w-[80px] truncate">
+                                                    <DiscordName
+                                                        userId={resolvedUserId}
+                                                        guildId={guildId}
+                                                        fallbackName={voter?.name || voter?.userId || t('vote.unknown')}
+                                                    />
+                                                </span>
+                                            </div>
                                         );
                                     })
                                 ) : (
