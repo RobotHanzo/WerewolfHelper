@@ -209,6 +209,7 @@ class NightStep(
                     // Sync votes to session state for dashboard inside lock
                     gameSessionService.withLockedSession(guildId) { lockedSession ->
                         syncWolfVotes(lockedSession)
+                        nightManager.broadcastNightStatus(lockedSession)
                     }
                     allWolvesVoted(guildId)
                 }
@@ -355,6 +356,6 @@ class NightStep(
     }
 
     override fun getDurationSeconds(session: Session): Int {
-        return 120 // Allow extra time for wolf discussion and UI interaction
+        return 150
     }
 }

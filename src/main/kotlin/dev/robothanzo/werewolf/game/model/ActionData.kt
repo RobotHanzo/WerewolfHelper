@@ -52,7 +52,7 @@ data class GroupActionState(
 
 data class GroupVote(
     val playerId: Int,
-    val targetPlayerId: Int
+    val targetPlayerId: Int?
 )
 
 const val SKIP_TARGET_ID = -1

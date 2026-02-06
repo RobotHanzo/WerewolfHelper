@@ -2,7 +2,6 @@ package dev.robothanzo.werewolf.listeners
 
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.commands.Server
-import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.utils.SetupHelper
 import dev.robothanzo.werewolf.utils.isAdmin
 import net.dv8tion.jda.api.entities.Guild
@@ -16,7 +15,7 @@ import org.springframework.stereotype.Component
 
 @Component
 class GuildJoinListener(
-    private val sessionRepository: SessionRepository
+    private val gameSessionService: dev.robothanzo.werewolf.service.GameSessionService
 ) : ListenerAdapter() {
     private val log = LoggerFactory.getLogger(GuildJoinListener::class.java)
 
@@ -33,7 +32,7 @@ class GuildJoinListener(
 
     override fun onGuildLeave(event: GuildLeaveEvent) {
         log.info("Bot left guild: {}", event.guild.id)
-        sessionRepository.deleteByGuildId(event.guild.idLong)
+        gameSessionService.deleteSession(event.guild.idLong)
         WerewolfApplication.speechService.interruptSession(event.guild.idLong)
     }
 

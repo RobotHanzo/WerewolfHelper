@@ -89,7 +89,7 @@ class Server {
             gid = guildId.toLong()
         }
 
-        val session = WerewolfApplication.sessionRepository.findByGuildId(gid).orElse(null)
+        val session = WerewolfApplication.gameSessionService.getSession(gid).orElse(null)
         if (session == null) {
             event.hook.editOriginal(":x:").queue()
         } else {

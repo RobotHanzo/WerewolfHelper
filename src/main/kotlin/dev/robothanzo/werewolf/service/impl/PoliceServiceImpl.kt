@@ -2,7 +2,6 @@ package dev.robothanzo.werewolf.service.impl
 
 import dev.robothanzo.werewolf.audio.Audio
 import dev.robothanzo.werewolf.audio.Audio.play
-import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
@@ -30,7 +29,6 @@ import java.util.concurrent.ConcurrentHashMap
 
 @Service
 class PoliceServiceImpl(
-    private val sessionRepository: SessionRepository,
     private val gameSessionService: GameSessionService,
     private val speechService: SpeechService
 ) : PoliceService {
@@ -466,19 +464,21 @@ class PoliceServiceImpl(
     override fun selectNewPolice(event: EntitySelectInteractionEvent) {
         val guild = event.guild ?: return
         val session = transferSessions[guild.idLong] ?: return
-        val targetMember = event.mentions.members.first()
-        val guildSession = sessionRepository.findByGuildId(guild.idLong).orElse(null) ?: return
-        val targetPlayer = guildSession.getPlayer(targetMember.idLong)
+        val targetMember = event.mentions.members.firstOrNull() ?: return
 
-        if (targetPlayer == null || !session.possibleRecipientIds.contains(targetPlayer.id)) {
-            event.reply(":x: 你不能移交警徽給這個人").setEphemeral(true).queue()
-        } else {
-            val senderPlayer = guildSession.getPlayer(session.senderId)
-            if (senderPlayer?.user?.idLong == event.user.idLong) {
-                session.recipientId = targetPlayer.id
-                event.reply(":white_check_mark: 請按下移交來完成移交動作").setEphemeral(true).queue()
+        gameSessionService.withLockedSession(guild.idLong) { guildSession ->
+            val targetPlayer = guildSession.getPlayer(targetMember.idLong)
+
+            if (targetPlayer == null || !session.possibleRecipientIds.contains(targetPlayer.id)) {
+                event.reply(":x: 你不能移交警徽給這個人").setEphemeral(true).queue()
             } else {
-                event.reply(":x: 你不是原本的警長").setEphemeral(true).queue()
+                val senderPlayer = guildSession.getPlayer(session.senderId)
+                if (senderPlayer?.user?.idLong == event.user.idLong) {
+                    session.recipientId = targetPlayer.id
+                    event.reply(":white_check_mark: 請按下移交來完成移交動作").setEphemeral(true).queue()
+                } else {
+                    event.reply(":x: 你不是原本的警長").setEphemeral(true).queue()
+                }
             }
         }
     }
@@ -487,33 +487,34 @@ class PoliceServiceImpl(
         val guild = event.guild ?: return
         if (transferSessions.containsKey(guild.idLong)) {
             val session = transferSessions[guild.idLong] ?: return
-            val guildSession = sessionRepository.findByGuildId(guild.idLong).orElse(null) ?: return
-            val senderPlayer = guildSession.getPlayer(session.senderId)
 
-            if (senderPlayer?.user?.idLong == event.user.idLong) {
-                if (session.recipientId != null) {
-                    val recipientPlayer = guildSession.getPlayer(session.recipientId!!)
-                    if (recipientPlayer != null) {
-                        recipientPlayer.police = true
-                        recipientPlayer.updateNickname()
-                        event.reply(":white_check_mark: 警徽已移交給 ${recipientPlayer.user?.asMention ?: recipientPlayer.nickname}")
-                            .queue()
+            gameSessionService.withLockedSession(guild.idLong) { guildSession ->
+                val senderPlayer = guildSession.getPlayer(session.senderId)
+
+                if (senderPlayer?.user?.idLong == event.user.idLong) {
+                    if (session.recipientId != null) {
+                        val recipientPlayer = guildSession.getPlayer(session.recipientId!!)
+                        if (recipientPlayer != null) {
+                            recipientPlayer.police = true
+                            recipientPlayer.updateNickname()
+                            event.reply(":white_check_mark: 警徽已移交給 ${recipientPlayer.user?.asMention ?: recipientPlayer.nickname}")
+                                .queue()
+                        }
+
+                        // Update Sender
+                        senderPlayer.police = false
+                        senderPlayer.updateNickname()
+
+                        log.info("Transferred police to {} in guild {}", session.recipientId, guild.idLong)
+                        transferSessions.remove(guild.idLong)
+
+                        session.callback?.invoke()
+                    } else {
+                        event.reply(":x: 請先選擇要移交警徽的對象").setEphemeral(true).queue()
                     }
-
-                    // Update Sender
-                    senderPlayer.police = false
-                    senderPlayer.updateNickname()
-
-                    gameSessionService.saveSession(guildSession)
-                    log.info("Transferred police to {} in guild {}", session.recipientId, guild.idLong)
-                    transferSessions.remove(guild.idLong)
-
-                    session.callback?.invoke()
                 } else {
-                    event.reply(":x: 請先選擇要移交警徽的對象").setEphemeral(true).queue()
+                    event.reply(":x: 你不是原本的警長").setEphemeral(true).queue()
                 }
-            } else {
-                event.reply(":x: 你不是原本的警長").setEphemeral(true).queue()
             }
         }
     }
@@ -522,15 +523,22 @@ class PoliceServiceImpl(
         val guild = event.guild ?: return
         if (transferSessions.containsKey(guild.idLong)) {
             val session = transferSessions[guild.idLong] ?: return
-            val guildSession = sessionRepository.findByGuildId(guild.idLong).orElse(null) ?: return
-            val senderPlayer = guildSession.getPlayer(session.senderId)
 
-            if (senderPlayer?.user?.idLong == event.user.idLong) {
-                transferSessions.remove(guild.idLong)
-                event.reply(":white_check_mark: 警徽已撕毀").setEphemeral(false).queue()
-                session.callback?.invoke()
-            } else {
-                event.reply(":x: 你不是原本的警長").setEphemeral(true).queue()
+            gameSessionService.withLockedSession(guild.idLong) { guildSession ->
+                val senderPlayer = guildSession.getPlayer(session.senderId)
+
+                if (senderPlayer?.user?.idLong == event.user.idLong) {
+                    transferSessions.remove(guild.idLong)
+
+                    // Update Sender
+                    senderPlayer.police = false
+                    senderPlayer.updateNickname()
+
+                    event.reply(":white_check_mark: 警徽已撕毀").setEphemeral(false).queue()
+                    session.callback?.invoke()
+                } else {
+                    event.reply(":x: 你不是原本的警長").setEphemeral(true).queue()
+                }
             }
         }
     }

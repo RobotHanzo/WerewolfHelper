@@ -1,6 +1,5 @@
 package dev.robothanzo.werewolf.service.impl
 
-import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
@@ -15,8 +14,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class GameActionServiceImpl(
-    @param:Lazy private val gameSessionService: GameSessionService,
-    private val sessionRepository: SessionRepository,
+    @param:Lazy private val gameSessionService: GameSessionService
 ) : GameActionService {
     @Throws(Exception::class)
     override fun resetGame(
@@ -191,7 +189,7 @@ class GameActionServiceImpl(
     }
 
     override fun muteAll(guildId: Long, mute: Boolean) {
-        val session = sessionRepository.findByGuildId(guildId).orElseThrow {
+        val session = gameSessionService.getSession(guildId).orElseThrow {
             RuntimeException("Session not found for guild ID: $guildId")
         }
         session.courtVoiceChannel?.let {

@@ -29,5 +29,5 @@ data class GameStateData(
  */
 data class WolfVote(
     val voterId: Int,
-    var targetId: Int = -1
+    var targetId: Int? = null
 )

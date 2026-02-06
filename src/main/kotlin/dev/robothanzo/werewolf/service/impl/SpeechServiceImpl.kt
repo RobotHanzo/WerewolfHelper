@@ -2,7 +2,6 @@ package dev.robothanzo.werewolf.service.impl
 
 import dev.robothanzo.werewolf.audio.Audio
 import dev.robothanzo.werewolf.audio.Audio.play
-import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.SpeechOrder
@@ -34,7 +33,6 @@ import kotlin.jvm.optionals.getOrNull
 
 @Service
 class SpeechServiceImpl(
-    private val sessionRepository: SessionRepository,
     private val discordService: DiscordService,
     @param:Lazy private val gameActionService: GameActionService,
     @param:Lazy private val gameSessionService: GameSessionService
@@ -86,7 +84,7 @@ class SpeechServiceImpl(
         val speechSession = SpeechSession(
             guildId = guild.idLong,
             channelId = channelId,
-            session = sessionRepository.findByGuildId(guild.idLong).orElse(null),
+            session = gameSessionService.getSession(guild.idLong).orElse(null),
             order = orderList,
             finishedCallback = callback
         )
@@ -120,7 +118,7 @@ class SpeechServiceImpl(
         event.deferReply(true).queue()
         val guild = event.guild ?: return
         val guildId = guild.idLong
-        val session = sessionRepository.findByGuildId(guildId).orElse(null) ?: return
+        val session = gameSessionService.getSession(guildId).orElse(null) ?: return
 
         val order = SpeechOrder.fromString(event.selectedOptions.first().value)
         if (!speechSessions.containsKey(guildId)) {
@@ -177,7 +175,7 @@ class SpeechServiceImpl(
         val speechSession = speechSessions[guildId]
 
         if (speechSession != null) {
-            val currentPlayer = sessionRepository.findByGuildId(guildId).getOrNull()?.getPlayer(event.user.idLong)
+            val currentPlayer = gameSessionService.getSession(guildId).getOrNull()?.getPlayer(event.user.idLong)
             if (speechSession.lastSpeaker != null
                 && currentPlayer?.id != speechSession.lastSpeaker
             ) {
@@ -356,7 +354,7 @@ class SpeechServiceImpl(
         if (speechSession != null) {
             val guild = discordService.getGuild(guildId)
             if (guild != null) {
-                val session = sessionRepository.findByGuildId(guildId).getOrNull()
+                val session = gameSessionService.getSession(guildId).getOrNull()
                 session?.courtTextChannel?.sendMessage("法官已強制終止發言流程")?.queue()
             }
 

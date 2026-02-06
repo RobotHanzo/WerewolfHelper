@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {useWebSocket} from '@/lib/websocket';
-import {ChevronRight, Clock, MessageCircle, Skull, Users} from 'lucide-react';
+import {ChevronRight, Clock, FastForward, MessageCircle, Skull, Users} from 'lucide-react';
 import {ActionSubmissionStatus, Player} from '@/types';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 
@@ -113,13 +113,25 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
 
     const enrichedVotes = nightStatus.werewolfVotes.map(vote => {
         const voter = players.find(p => p.id === vote.voterId);
-        const target = vote.targetId ? players.find(p => p.id === vote.targetId) : null;
+        const rawTargetId = vote.targetId;
+        const targetId = (rawTargetId !== null && rawTargetId !== undefined) ? Number(rawTargetId) : null;
+        const target = (targetId !== null && targetId > 0) ? players.find(p => p.id === targetId) : null;
+
+        let targetName = '未投票';
+        if (targetId === -1) {
+            targetName = '跳過';
+        } else if (target) {
+            targetName = target.name;
+        } else if (targetId !== null && targetId > 0) {
+            targetName = `玩家 ${targetId}`;
+        }
 
         return {
             ...vote,
+            targetId,
             voterName: voter?.name || `玩家 ${vote.voterId}`,
             voterUserId: voter?.userId || undefined,
-            targetName: vote.targetId === -1 ? '跳過' : (target ? target.name : (vote.targetId ? `玩家 ${vote.targetId}` : '未投票')),
+            targetName,
             targetUserId: target?.userId || undefined,
         };
     });
@@ -129,15 +141,28 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
         .filter(status => !status.role.includes('狼'))
         .map(status => {
             const player = players.find(p => p.id === status.playerId);
-            const targetId = status.targetId;
+            const rawTargetId = status.targetId;
+            const targetId = (rawTargetId !== null && rawTargetId !== undefined) ? Number(rawTargetId) : null;
             const target = (targetId !== null && targetId > 0) ? players.find(p => p.id === targetId) : null;
+
+            let targetName = null;
+            if (targetId === -1) {
+                targetName = '跳過';
+            } else if (target) {
+                targetName = target.name;
+            } else if (targetId !== null && targetId > 0) {
+                targetName = `玩家 ${targetId}`;
+            } else if (status.status === 'SUBMITTED') {
+                targetName = '已提交';
+            }
 
             return {
                 ...status,
+                targetId,
                 playerName: player?.name || `玩家 ${status.playerId}`,
                 avatarUrl: player?.avatar,
                 playerUserId: player?.userId || undefined,
-                targetName: targetId === -1 ? '跳過' : (target ? target.name : (targetId !== null && targetId > 0 ? `玩家 ${targetId}` : (status.status === 'SUBMITTED' ? '已提交' : null))),
+                targetName,
                 targetAvatarUrl: target?.avatar,
                 targetUserId: target?.userId || undefined,
             };
@@ -162,8 +187,15 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
         }
     });
 
-    const topTarget = topTargetId ? players.find(p => p.id === topTargetId) : null;
-    const wolfTargetName = topTargetId === -1 ? '跳過' : (topTarget ? topTarget.name : (topTargetId ? `玩家 ${topTargetId}` : '未定'));
+    const topTarget = (topTargetId !== null && topTargetId > 0) ? players.find(p => p.id === topTargetId) : null;
+    let wolfTargetName = '未定';
+    if (topTargetId === -1) {
+        wolfTargetName = '跳過';
+    } else if (topTarget) {
+        wolfTargetName = topTarget.name;
+    } else if (topTargetId !== null && topTargetId > 0) {
+        wolfTargetName = `玩家 ${topTargetId}`;
+    }
     const wolfTargetUserId = topTarget?.userId || undefined;
 
     return (
@@ -272,6 +304,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
                         statuses={enrichedStatuses}
                         wolfTargetName={wolfTargetName}
                         wolfTargetUserId={wolfTargetUserId}
+                        wolfTargetId={topTargetId}
                         wolfVoteCount={maxVotes}
                         guildId={guildId}
                     />
@@ -428,6 +461,7 @@ interface RoleActionsScreenProps {
     }>;
     wolfTargetName: string;
     wolfTargetUserId?: string;
+    wolfTargetId: number | null;
     wolfVoteCount: number;
     guildId?: string;
 }
@@ -436,6 +470,7 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                                                                  statuses,
                                                                  wolfTargetName,
                                                                  wolfTargetUserId,
+                                                                 wolfTargetId,
                                                                  wolfVoteCount,
                                                                  guildId
                                                              }) => {
@@ -481,8 +516,15 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                         </div>
                     </div>
                 </div>
-                <DiscordAvatar userId={wolfTargetUserId} guildId={guildId}
-                               avatarClassName="w-10 h-10 rounded-full border-2 border-red-600/50"/>
+                {wolfTargetId === -1 ? (
+                    <div
+                        className="w-10 h-10 rounded-full border-2 border-amber-500/50 bg-amber-500/20 flex items-center justify-center">
+                        <FastForward className="w-5 h-5 text-amber-500"/>
+                    </div>
+                ) : (
+                    <DiscordAvatar userId={wolfTargetUserId} guildId={guildId}
+                                   avatarClassName="w-10 h-10 rounded-full border-2 border-red-600/50"/>
+                )}
             </div>
 
             {/* Grid of actions */}
@@ -518,7 +560,7 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                                     </div>
                                 )}
 
-                                {status.targetName && status.targetId !== null && status.targetId > 0 && (
+                                {status.targetName && status.targetId !== null && (
                                     <div
                                         className="bg-white/10 rounded px-2 py-1 flex items-center justify-between gap-2">
                                         <div className="min-w-0">
@@ -528,8 +570,15 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                                                              fallbackName={status.targetName || ''}/>
                                             </p>
                                         </div>
-                                        <DiscordAvatar userId={status.targetUserId} guildId={guildId}
-                                                       avatarClassName="w-6 h-6 rounded-full border border-slate-600 flex-shrink-0"/>
+                                        {status.targetId === -1 ? (
+                                            <div
+                                                className="w-6 h-6 rounded-full border border-amber-500/50 bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                                                <FastForward className="w-3 h-3 text-amber-500"/>
+                                            </div>
+                                        ) : (
+                                            <DiscordAvatar userId={status.targetUserId} guildId={guildId}
+                                                           avatarClassName="w-6 h-6 rounded-full border border-slate-600 flex-shrink-0"/>
+                                        )}
                                     </div>
                                 )}
 

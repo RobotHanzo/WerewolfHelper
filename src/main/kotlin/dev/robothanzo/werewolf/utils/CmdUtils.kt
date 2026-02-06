@@ -47,8 +47,7 @@ object CmdUtils {
 
     fun getSession(guild: Guild?): Session? {
         if (guild == null) return null
-        val session = WerewolfApplication.sessionRepository.findByGuildId(guild.idLong).orElse(null)
-        session?.populatePlayerSessions()
+        val session = WerewolfApplication.gameSessionService.getSession(guild.idLong).orElse(null)
         return session
     }
 

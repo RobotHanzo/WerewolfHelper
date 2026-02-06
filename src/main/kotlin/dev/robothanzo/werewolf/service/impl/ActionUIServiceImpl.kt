@@ -126,6 +126,17 @@ class ActionUIServiceImpl(
                     )?.queue()
                 }
 
+            // Initialize empty votes for all participants so dashboard shows them as "Not Voted"
+            participants.forEach { pid ->
+                session.stateData.werewolfVotes.getOrPut(pid.toString()) {
+                    WolfVote(voterId = pid, targetId = null)
+                }
+                // Also add to groupState.votes
+                if (groupState.votes.none { it.playerId == pid }) {
+                    groupState.votes.add(GroupVote(pid, null))
+                }
+            }
+
             WerewolfApplication.gameSessionService.saveSession(session)
             log.info("Group action state created: $actionId with ${participants.size} participants")
             groupState
@@ -176,6 +187,7 @@ class ActionUIServiceImpl(
 
             // Notify NightManager of activity
             nightManager.notifyPhaseUpdate(guildId)
+            nightManager.broadcastNightStatus(lockedSession)
 
             true
         }
@@ -203,9 +215,17 @@ class ActionUIServiceImpl(
             groupState.votes.removeIf { it.playerId == playerId }
             groupState.votes.add(GroupVote(playerId, targetPlayerId))
 
+            // Sync to werewolfVotes immediately for dashboard
+            val votesMap = lockedSession.stateData.werewolfVotes
+            val wolfVote = votesMap.getOrPut(playerId.toString()) {
+                dev.robothanzo.werewolf.game.model.WolfVote(voterId = playerId)
+            }
+            wolfVote.targetId = targetPlayerId
+
             log.info("Player $playerId voted for target $targetPlayerId in group action $groupStateId")
 
             nightManager.notifyPhaseUpdate(guildId)
+            nightManager.broadcastNightStatus(lockedSession)
             true
         }
     }
@@ -214,7 +234,7 @@ class ActionUIServiceImpl(
         if (groupState.votes.isEmpty()) return null
 
         val voteCounts = groupState.votes
-            .filter { it.targetPlayerId != SKIP_TARGET_ID }
+            .filter { it.targetPlayerId != null && it.targetPlayerId != SKIP_TARGET_ID }
             .groupingBy { it.targetPlayerId }
             .eachCount()
 

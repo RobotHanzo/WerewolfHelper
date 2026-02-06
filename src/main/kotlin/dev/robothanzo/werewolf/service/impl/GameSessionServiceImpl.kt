@@ -87,8 +87,15 @@ class GameSessionServiceImpl(
     override fun saveSession(session: Session): Session {
         synchronized(getLock(session.guildId)) {
             val saved = sessionRepository.save(session)
-            // Sync version back to the original object to prevent stale version errors
-            // if this object is saved again later in the same thread.
+            // Transfer transient state to the new instance if it's different
+            if (saved !== session) {
+                saved.hydratedRoles = session.hydratedRoles
+                saved.populatePlayerSessions()
+            }
+            // Update cache with the latest persisted instance
+            sessionCache[session.guildId] = saved
+            // Sync version back to the input object to prevent stale version errors 
+            // if the caller continues to use the old reference.
             session.version = saved.version
             return saved
         }
@@ -104,7 +111,10 @@ class GameSessionServiceImpl(
     }
 
     override fun deleteSession(guildId: Long) {
-        sessionRepository.deleteByGuildId(guildId)
+        synchronized(getLock(guildId)) {
+            sessionRepository.deleteByGuildId(guildId)
+            sessionCache.remove(guildId)
+        }
     }
 
     override fun sessionToJSON(session: Session): Map<String, Any> {

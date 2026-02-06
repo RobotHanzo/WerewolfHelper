@@ -1,6 +1,5 @@
 package dev.robothanzo.werewolf.discord
 
-import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.GroupVote
 import dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID
@@ -19,7 +18,7 @@ import kotlin.jvm.optionals.getOrNull
  */
 @Component
 class ActionSelectionListener(
-    private val sessionRepository: SessionRepository,
+    private val gameSessionService: dev.robothanzo.werewolf.service.GameSessionService,
     @param:Lazy
     private val actionUIService: ActionUIService
 ) : ListenerAdapter() {
@@ -48,7 +47,7 @@ class ActionSelectionListener(
     ) {
         val actionId = componentId.removePrefix("group_target_")
         val targetPlayerId = event.selectedOptions.firstOrNull()?.value?.toIntOrNull() ?: return
-        val session = sessionRepository.findByGuildId(guildId).getOrNull() ?: return
+        val session = gameSessionService.getSession(guildId).getOrNull() ?: return
         val player = session.getPlayerByChannel(event.channelIdLong) ?: return
         if (player.user?.idLong != userId && event.member?.isAdmin() != true) {
             event.reply("❌ 這不是你的投票").setEphemeral(true).queue()

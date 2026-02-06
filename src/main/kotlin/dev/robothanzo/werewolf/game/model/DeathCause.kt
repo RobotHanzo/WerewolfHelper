@@ -11,5 +11,6 @@ enum class DeathCause(val logMessage: String) {
     WOLF_KING_REVENGE("被狼王帶走"),
     DOUBLE_PROTECTION("同時受到女巫解藥與守衛守護而死亡"),
     EXPEL("被放逐"),
+    TRADED_WITH_WOLF("與狼人黑市交易技能而亡"),
     UNKNOWN("死亡原因未知")
 }
