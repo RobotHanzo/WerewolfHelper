@@ -31,7 +31,7 @@ class PlayerServiceImplTest {
     @BeforeEach
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        playerService = PlayerServiceImpl(sessionRepository, discordService, gameSessionService)
+        playerService = PlayerServiceImpl(gameSessionService)
 
         // Initialize WerewolfApplication.jda to a mock so Player.send() doesn't throw
         val mockJda = org.mockito.Mockito.mock(net.dv8tion.jda.api.JDA::class.java)
@@ -83,13 +83,13 @@ class PlayerServiceImplTest {
         player.session = session
         session.players["1"] = player
 
-        whenever(sessionRepository.save(any())).thenReturn(session)
+        whenever(gameSessionService.saveSession(any())).thenReturn(session)
 
         val roles = listOf("狼人", "平民")
         playerService.updatePlayerRoles(player, roles)
 
         assertEquals(roles, player.roles)
-        verify(sessionRepository).save(session)
+        verify(gameSessionService).saveSession(session)
     }
 
     @Test
@@ -105,7 +105,7 @@ class PlayerServiceImplTest {
 
         // The provided player instance should be updated even if not stored in session.players
         assertEquals(roles, missingPlayer.roles)
-        verify(sessionRepository).save(session)
+        verify(gameSessionService).saveSession(session)
     }
 
     @Test
@@ -117,14 +117,14 @@ class PlayerServiceImplTest {
         player.session = session
         session.players["1"] = player
 
-        whenever(sessionRepository.save(any())).thenReturn(session)
+        whenever(gameSessionService.saveSession(any())).thenReturn(session)
 
         playerService.switchRoleOrder(player)
 
         // Verify roles were swapped
         assertEquals("平民", player.roles?.get(0))
         assertEquals("狼人", player.roles?.get(1))
-        verify(sessionRepository).save(session)
+        verify(gameSessionService).saveSession(session)
     }
 
     @Test
@@ -135,7 +135,7 @@ class PlayerServiceImplTest {
         player.session = session
         session.players["1"] = player
 
-        whenever(sessionRepository.save(any())).thenReturn(session)
+        whenever(gameSessionService.saveSession(any())).thenReturn(session)
 
         assertFalse(player.rolePositionLocked)
         playerService.setRolePositionLock(player, true)
@@ -145,6 +145,6 @@ class PlayerServiceImplTest {
         assertFalse(player.rolePositionLocked)
 
         // Verify save was called (may be multiple times due to addLog calling saveSession)
-        verify(sessionRepository, atLeastOnce()).save(any())
+        verify(gameSessionService, atLeastOnce()).saveSession(any())
     }
 }

@@ -20,7 +20,6 @@ import org.mockito.Mock
 import org.mockito.Mockito.mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.any
-import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.*
@@ -41,6 +40,9 @@ class GameSessionServiceImplTest {
     @Mock
     private lateinit var expelService: ExpelService
 
+    @Mock
+    private lateinit var roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry
+
     private lateinit var gameSessionService: GameSessionServiceImpl
     private val emptyStepList: List<GameStep> = emptyList()
 
@@ -52,6 +54,7 @@ class GameSessionServiceImplTest {
             discordService,
             webSocketHandler,
             speechService,
+            roleRegistry,
             emptyStepList,
             expelService
         )
@@ -218,21 +221,4 @@ class GameSessionServiceImplTest {
         }
     }
 
-    @Test
-    fun testUpdateSessionSettingsSuccess() {
-        val session = Session(guildId = 123L)
-
-        whenever(sessionRepository.save(any())).thenReturn(session)
-
-        val settings = mapOf(
-            "muteAfterSpeech" to true,
-            "doubleIdentities" to false
-        )
-        gameSessionService.updateSettings(session, settings)
-
-        assertEquals(true, session.muteAfterSpeech)
-        assertEquals(false, session.doubleIdentities)
-        // Verify save was called (may be called multiple times due to addLog)
-        verify(sessionRepository, atLeastOnce()).save(any())
-    }
 }

@@ -4,10 +4,13 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.ActionSubmissionSource
+import dev.robothanzo.werewolf.game.model.Camp
 import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.game.model.RoleActionInstance
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -15,6 +18,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 /**
@@ -69,9 +73,9 @@ class RoleActionTests {
         @Test
         @DisplayName("Werewolf kill with single target")
         fun testWerewolfKillSingleTarget() {
-            val targetId = 2L
+            val targetId = 2
             val action = RoleActionInstance(
-                actor = 1L,
+                actor = 1,
                 actionDefinitionId = "WEREWOLF_KILL",
                 targets = listOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER
@@ -87,7 +91,7 @@ class RoleActionTests {
         @DisplayName("Werewolf kill with no targets")
         fun testWerewolfKillNoTarget() {
             val action = RoleActionInstance(
-                actor = 1L,
+                actor = 1,
                 actionDefinitionId = "WEREWOLF_KILL",
                 targets = emptyList(),
                 submittedBy = ActionSubmissionSource.PLAYER
@@ -101,15 +105,15 @@ class RoleActionTests {
         @Test
         @DisplayName("Multiple werewolves killing same target")
         fun testMultipleWerewolvesKillingSameTarget() {
-            val targetId = 2L
+            val targetId = 2
             val action1 = RoleActionInstance(
-                actor = 1L,
+                actor = 1,
                 actionDefinitionId = "WEREWOLF_KILL",
                 targets = listOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER
             )
             val action2 = RoleActionInstance(
-                actor = 3L,
+                actor = 3,
                 actionDefinitionId = "WEREWOLF_KILL",
                 targets = listOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER
@@ -138,15 +142,15 @@ class RoleActionTests {
         @Test
         @DisplayName("Witch saves player from werewolf kill")
         fun testWitchSavesFromKill() {
-            val targetId = 2L
+            val targetId = 2
             val wolfKillAction = RoleActionInstance(
-                actor = 1L,
+                actor = 1,
                 actionDefinitionId = "WEREWOLF_KILL",
                 targets = listOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER
             )
             val witchAntidoteAction = RoleActionInstance(
-                actor = 5L,
+                actor = 5,
                 actionDefinitionId = "WITCH_ANTIDOTE",
                 targets = listOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER
@@ -162,16 +166,16 @@ class RoleActionTests {
         @Test
         @DisplayName("Witch cannot save player not being killed")
         fun testWitchCannotSaveNonTarget() {
-            val targetId = 2L
-            val saveTargetId = 3L
+            val targetId = 2
+            val saveTargetId = 3
             val wolfKillAction = RoleActionInstance(
-                actor = 1L,
+                actor = 1,
                 actionDefinitionId = "WEREWOLF_KILL",
                 targets = listOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER
             )
             val witchAntidoteAction = RoleActionInstance(
-                actor = 5L,
+                actor = 5,
                 actionDefinitionId = "WITCH_ANTIDOTE",
                 targets = listOf(saveTargetId),
                 submittedBy = ActionSubmissionSource.PLAYER
@@ -190,10 +194,10 @@ class RoleActionTests {
         @Test
         @DisplayName("Witch can save self when setting allows")
         fun testWitchCanSaveSelfWhenAllowed() {
-            session.stateData["settings"] = mapOf("witchCanSaveSelf" to true)
-            val witchId = 5L
+            session.settings.witchCanSaveSelf = true
+            val witchId = 5
             val wolfKillAction = RoleActionInstance(
-                actor = 1L,
+                actor = 1,
                 actionDefinitionId = "WEREWOLF_KILL",
                 targets = listOf(witchId),
                 submittedBy = ActionSubmissionSource.PLAYER
@@ -215,10 +219,10 @@ class RoleActionTests {
         @Test
         @DisplayName("Witch cannot save self when setting disallows")
         fun testWitchCannotSaveSelfWhenDisallowed() {
-            session.stateData["settings"] = mapOf("witchCanSaveSelf" to false)
-            val witchId = 5L
+            session.settings.witchCanSaveSelf = false
+            val witchId = 5
             val wolfKillAction = RoleActionInstance(
-                actor = 1L,
+                actor = 1,
                 actionDefinitionId = "WEREWOLF_KILL",
                 targets = listOf(witchId),
                 submittedBy = ActionSubmissionSource.PLAYER
@@ -252,9 +256,9 @@ class RoleActionTests {
         @Test
         @DisplayName("Guard protects player from werewolf kill")
         fun testGuardProtectsFromKill() {
-            val targetId = 2L
+            val targetId = 2
             val guardAction = RoleActionInstance(
-                actor = 4L,
+                actor = 4,
                 actionDefinitionId = "GUARD_PROTECT",
                 targets = listOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER
@@ -269,11 +273,11 @@ class RoleActionTests {
         @DisplayName("Guard cannot protect same player on consecutive nights")
         fun testGuardCannotProtectSamePlayerConsecutively() {
             session.day = 2
-            val targetId = 2L
-            session.stateData["lastGuardProtected"] = targetId
+            val targetId = 2
+            session.stateData.lastGuardProtectedId = targetId
 
             val guardAction = RoleActionInstance(
-                actor = 4L,
+                actor = 4,
                 actionDefinitionId = "GUARD_PROTECT",
                 targets = listOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER
@@ -290,11 +294,11 @@ class RoleActionTests {
         @DisplayName("Guard can protect same player on day 1")
         fun testGuardCanProtectSamePlayerOnDay1() {
             session.day = 1
-            val targetId = 2L
-            session.stateData["lastGuardProtected"] = targetId
+            val targetId = 2
+            session.stateData.lastGuardProtectedId = targetId
 
             val guardAction = RoleActionInstance(
-                actor = 4L,
+                actor = 4,
                 actionDefinitionId = "GUARD_PROTECT",
                 targets = listOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER
@@ -310,12 +314,12 @@ class RoleActionTests {
         @DisplayName("Guard can protect different player after protecting one previously")
         fun testGuardCanProtectDifferentPlayer() {
             session.day = 2
-            val lastTargetId = 2L
-            val newTargetId = 3L
-            session.stateData["lastGuardProtected"] = lastTargetId
+            val lastTargetId = 2
+            val newTargetId = 3
+            session.stateData.lastGuardProtectedId = lastTargetId
 
             val guardAction = RoleActionInstance(
-                actor = 4L,
+                actor = 4,
                 actionDefinitionId = "GUARD_PROTECT",
                 targets = listOf(newTargetId),
                 submittedBy = ActionSubmissionSource.PLAYER
@@ -342,9 +346,9 @@ class RoleActionTests {
         @Test
         @DisplayName("Witch poisons player")
         fun testWitchPoisons() {
-            val targetId = 2L
+            val targetId = 2
             val poisonAction = RoleActionInstance(
-                actor = 5L,
+                actor = 5,
                 actionDefinitionId = "WITCH_POISON",
                 targets = listOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER
@@ -359,11 +363,11 @@ class RoleActionTests {
         @Test
         @DisplayName("Witch poison is ignored by protection")
         fun testWitchPoisonIgnoresProtection() {
-            val targetId = 2L
+            val targetId = 2
 
             // Guard protects first
             val guardAction = RoleActionInstance(
-                actor = 4L,
+                actor = 4,
                 actionDefinitionId = "GUARD_PROTECT",
                 targets = listOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER
@@ -373,7 +377,7 @@ class RoleActionTests {
 
             // Witch poisons
             val poisonAction = RoleActionInstance(
-                actor = 5L,
+                actor = 5,
                 actionDefinitionId = "WITCH_POISON",
                 targets = listOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER
@@ -391,52 +395,74 @@ class RoleActionTests {
     inner class SeerCheckActionTests {
         private lateinit var action: SeerCheckAction
         private lateinit var testSession: Session
+        private lateinit var mockChannel: TextChannel
+
+        @Suppress("DEPRECATION")
+        private lateinit var mockMessageAction: MessageCreateAction
 
         @BeforeEach
         fun setup() {
-            action = SeerCheckAction()
+            val wolfRole = mock<dev.robothanzo.werewolf.game.model.Role>()
+            whenever(wolfRole.camp).thenReturn(Camp.WEREWOLF)
+
+            val villagerRole = mock<dev.robothanzo.werewolf.game.model.Role>()
+            whenever(villagerRole.camp).thenReturn(Camp.VILLAGER)
+
+            val seerRole = mock<dev.robothanzo.werewolf.game.model.Role>()
+            whenever(seerRole.camp).thenReturn(Camp.VILLAGER)
+
+            val mockRoleRegistry = mock<dev.robothanzo.werewolf.game.roles.RoleRegistry>()
+            action = SeerCheckAction(mockRoleRegistry)
             testSession = Session(guildId = 123L)
+            testSession.hydratedRoles["狼人"] = wolfRole
+            testSession.hydratedRoles["平民"] = villagerRole
+            testSession.hydratedRoles["預言家"] = seerRole
+
             testSession.players = mutableMapOf(
                 "1" to createPlayer(1, 1L, listOf("狼人")),
                 "2" to createPlayer(2, 2L, listOf("平民")),
                 "3" to createPlayer(3, 3L, listOf("預言家"))
             )
+
+            mockChannel = mock<TextChannel>()
+            @Suppress("DEPRECATION")
+            mockMessageAction = mock<MessageCreateAction>()
+            whenever(mockChannel.sendMessage(any<String>())).thenReturn(mockMessageAction)
+            whenever(WerewolfApplication.jda.getTextChannelById(300L)).thenReturn(mockChannel)
         }
 
         @Test
         @DisplayName("Seer checks werewolf")
         fun testSeerChecksWerewolf() {
-            val targetId = 1L
+            val targetId = 1
             val checkAction = RoleActionInstance(
-                actor = 3L,
+                actor = 3,
                 actionDefinitionId = "SEER_CHECK",
                 targets = listOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER
             )
 
-            val result = action.execute(testSession, checkAction, ActionExecutionResult())
+            action.execute(testSession, checkAction, ActionExecutionResult())
 
-            @Suppress("UNCHECKED_CAST")
-            val seerChecks = result.metadata["seerChecks"] as? Map<Long, String>
-            assertEquals("werewolf", seerChecks?.get(3L))
+            assertTrue(checkAction.processed)
+            verify(mockChannel).sendMessage(org.mockito.ArgumentMatchers.contains("狼人"))
         }
 
         @Test
         @DisplayName("Seer checks villager")
         fun testSeerChecksVillager() {
-            val targetId = 2L
+            val targetId = 2
             val checkAction = RoleActionInstance(
-                actor = 3L,
+                actor = 3,
                 actionDefinitionId = "SEER_CHECK",
                 targets = listOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER
             )
 
-            val result = action.execute(testSession, checkAction, ActionExecutionResult())
+            action.execute(testSession, checkAction, ActionExecutionResult())
 
-            @Suppress("UNCHECKED_CAST")
-            val seerChecks = result.metadata["seerChecks"] as? Map<Long, String>
-            assertEquals("villager", seerChecks?.get(3L))
+            assertTrue(checkAction.processed)
+            verify(mockChannel).sendMessage(org.mockito.ArgumentMatchers.contains("好人"))
         }
     }
 
@@ -453,14 +479,14 @@ class RoleActionTests {
         @Test
         @DisplayName("Saved player is removed from deaths")
         fun testSavedPlayerRemovedFromDeaths() {
-            val targetId = 2L
+            val targetId = 2
             val accumulatedState = ActionExecutionResult(
                 deaths = mutableMapOf(DeathCause.WEREWOLF to mutableListOf(targetId)),
                 saved = mutableListOf(targetId)
             )
 
             val dummyAction = RoleActionInstance(
-                actor = 0L,
+                actor = 0,
                 actionDefinitionId = "DEATH_RESOLUTION",
                 targets = emptyList(),
                 submittedBy = ActionSubmissionSource.JUDGE
@@ -477,7 +503,7 @@ class RoleActionTests {
         @Test
         @DisplayName("Protected player is removed from werewolf kills only")
         fun testProtectedPlayerRemovedFromWerewolfKillsOnly() {
-            val targetId = 2L
+            val targetId = 2
             val accumulatedState = ActionExecutionResult(
                 deaths = mutableMapOf(
                     DeathCause.WEREWOLF to mutableListOf(targetId),
@@ -487,7 +513,7 @@ class RoleActionTests {
             )
 
             val dummyAction = RoleActionInstance(
-                actor = 0L,
+                actor = 0,
                 actionDefinitionId = "DEATH_RESOLUTION",
                 targets = emptyList(),
                 submittedBy = ActionSubmissionSource.JUDGE
@@ -504,7 +530,7 @@ class RoleActionTests {
         @Test
         @DisplayName("SPECIAL CASE: Witch save + guard protection = player dies (DOUBLE_PROTECTION)")
         fun testDoubleProtectionPlayerDies() {
-            val targetId = 2L
+            val targetId = 2
             // Player is killed by werewolf, saved by witch, AND protected by guard
             val accumulatedState = ActionExecutionResult(
                 deaths = mutableMapOf(DeathCause.WEREWOLF to mutableListOf(targetId)),
@@ -513,7 +539,7 @@ class RoleActionTests {
             )
 
             val dummyAction = RoleActionInstance(
-                actor = 0L,
+                actor = 0,
                 actionDefinitionId = "DEATH_RESOLUTION",
                 targets = emptyList(),
                 submittedBy = ActionSubmissionSource.JUDGE
@@ -529,15 +555,15 @@ class RoleActionTests {
             assertFalse(result.deaths[DeathCause.WEREWOLF]?.contains(targetId) == true)
 
             @Suppress("UNCHECKED_CAST")
-            val doubleProtected = result.metadata["doubleProtectedPlayers"] as? List<Long>
+            val doubleProtected = result.metadata["doubleProtectedPlayers"] as? List<Int>
             assertTrue(doubleProtected?.contains(targetId) == true)
         }
 
         @Test
         @DisplayName("SPECIAL CASE: Multiple players with double protection all die")
         fun testMultipleDoubleProtectionPlayersDie() {
-            val target1 = 2L
-            val target2 = 3L
+            val target1 = 2
+            val target2 = 3
             val accumulatedState = ActionExecutionResult(
                 deaths = mutableMapOf(DeathCause.WEREWOLF to mutableListOf(target1, target2)),
                 saved = mutableListOf(target1, target2),
@@ -545,7 +571,7 @@ class RoleActionTests {
             )
 
             val dummyAction = RoleActionInstance(
-                actor = 0L,
+                actor = 0,
                 actionDefinitionId = "DEATH_RESOLUTION",
                 targets = emptyList(),
                 submittedBy = ActionSubmissionSource.JUDGE
@@ -563,7 +589,7 @@ class RoleActionTests {
         @Test
         @DisplayName("SPECIAL CASE: Protection alone prevents death, not double protection")
         fun testProtectionAlonePreventsDeathNotDoublyProtected() {
-            val targetId = 2L
+            val targetId = 2
             // Only protected, not saved
             val accumulatedState = ActionExecutionResult(
                 deaths = mutableMapOf(DeathCause.WEREWOLF to mutableListOf(targetId)),
@@ -571,7 +597,7 @@ class RoleActionTests {
             )
 
             val dummyAction = RoleActionInstance(
-                actor = 0L,
+                actor = 0,
                 actionDefinitionId = "DEATH_RESOLUTION",
                 targets = emptyList(),
                 submittedBy = ActionSubmissionSource.JUDGE
@@ -591,7 +617,7 @@ class RoleActionTests {
         @Test
         @DisplayName("SPECIAL CASE: Witch save alone prevents death, not double protection")
         fun testWitchSaveAlonePreventsDeathNotDoublyProtected() {
-            val targetId = 2L
+            val targetId = 2
             // Only saved, not protected
             val accumulatedState = ActionExecutionResult(
                 deaths = mutableMapOf(DeathCause.WEREWOLF to mutableListOf(targetId)),
@@ -599,7 +625,7 @@ class RoleActionTests {
             )
 
             val dummyAction = RoleActionInstance(
-                actor = 0L,
+                actor = 0,
                 actionDefinitionId = "DEATH_RESOLUTION",
                 targets = emptyList(),
                 submittedBy = ActionSubmissionSource.JUDGE
@@ -620,11 +646,11 @@ class RoleActionTests {
         @DisplayName("Empty death list is removed from results")
         fun testEmptyDeathListRemoved() {
             val accumulatedState = ActionExecutionResult(
-                deaths = mutableMapOf(DeathCause.WEREWOLF to mutableListOf<Long>())
+                deaths = mutableMapOf(DeathCause.WEREWOLF to mutableListOf<Int>())
             )
 
             val dummyAction = RoleActionInstance(
-                actor = 0L,
+                actor = 0,
                 actionDefinitionId = "DEATH_RESOLUTION",
                 targets = emptyList(),
                 submittedBy = ActionSubmissionSource.JUDGE
@@ -644,10 +670,10 @@ class RoleActionTests {
         @Test
         @DisplayName("Scenario: Werewolf kills, witch saves, guard protects = player dies")
         fun testCompleteDoubleProtectionScenario() {
-            val werewolfId = 1L
-            val targetId = 2L
-            val witchId = 5L
-            val guardId = 4L
+            val werewolfId = 1
+            val targetId = 2
+            val witchId = 5
+            val guardId = 4
 
             // Step 1: Werewolf kills
             val wolfKillAction = RoleActionInstance(
@@ -685,7 +711,7 @@ class RoleActionTests {
 
             // Step 4: Death resolution
             val deathResolutionAction = RoleActionInstance(
-                actor = 0L,
+                actor = 0,
                 actionDefinitionId = "DEATH_RESOLUTION",
                 targets = emptyList(),
                 submittedBy = ActionSubmissionSource.JUDGE
@@ -701,12 +727,12 @@ class RoleActionTests {
         @Test
         @DisplayName("Scenario: Two werewolves kill, witch saves one, guard protects the other")
         fun testComplexMultiKillScenario() {
-            val wolf1 = 1L
-            val wolf2 = 3L
-            val target1 = 2L
-            val target2 = 4L
-            val witchId = 5L
-            val guardId = 4L
+            val wolf1 = 1
+            val wolf2 = 3
+            val target1 = 2
+            val target2 = 4
+            val witchId = 5
+            val guardId = 4
 
             var result = ActionExecutionResult()
 
@@ -753,7 +779,7 @@ class RoleActionTests {
 
             // Death resolution
             val deathResolution = RoleActionInstance(
-                actor = 0L,
+                actor = 0,
                 actionDefinitionId = "DEATH_RESOLUTION",
                 targets = emptyList(),
                 submittedBy = ActionSubmissionSource.JUDGE

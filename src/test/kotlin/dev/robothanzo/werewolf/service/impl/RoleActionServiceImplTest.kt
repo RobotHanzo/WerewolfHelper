@@ -4,6 +4,8 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.ActionTiming
+import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.User
@@ -27,16 +29,31 @@ class RoleActionServiceImplTest {
     @Mock
     private lateinit var nightManager: dev.robothanzo.werewolf.service.NightManager
 
+    @Mock
+    private lateinit var gameSessionService: dev.robothanzo.werewolf.service.GameSessionService
+
+    @Mock
+    private lateinit var roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry
+
     private lateinit var roleActionService: RoleActionServiceImpl
 
     @BeforeEach
     fun setup() {
         MockitoAnnotations.openMocks(this)
         roleActionService = RoleActionServiceImpl(
-            sessionRepository,
             roleActionExecutor,
-            nightManager
+            nightManager,
+            roleRegistry
         )
+        WerewolfApplication.gameSessionService = gameSessionService
+
+        whenever(gameSessionService.withLockedSession(any(), any<((Session) -> Any?)>())).thenAnswer { invocation ->
+            val block = invocation.arguments[1] as (Session) -> Any?
+            val guildId = invocation.arguments[0] as Long
+            val sessionOpt = sessionRepository.findByGuildId(guildId)
+            if (sessionOpt.isEmpty) throw IllegalArgumentException("Session not found")
+            block(sessionOpt.get())
+        }
 
         val mockJda = mock<JDA>()
         whenever(mockJda.getUserById(any<Long>())).thenAnswer { invocation ->
@@ -70,11 +87,10 @@ class RoleActionServiceImplTest {
         whenever(sessionRepository.save(any())).thenReturn(session)
 
         val result = roleActionService.submitAction(
-
             guildId = guildId,
             actionDefinitionId = "INVALID_ACTION",
-            actorUserId = actorUserId,
-            targetUserIds = listOf(targetUserId),
+            actorPlayerId = 1,
+            targetPlayerIds = listOf(2),
             submittedBy = "PLAYER"
         )
 
@@ -95,8 +111,8 @@ class RoleActionServiceImplTest {
             roleActionService.submitAction(
                 guildId = guildId,
                 actionDefinitionId = "WEREWOLF_KILL",
-                actorUserId = 456L,
-                targetUserIds = listOf(789L),
+                actorPlayerId = 1,
+                targetPlayerIds = listOf(2),
                 submittedBy = "PLAYER"
             )
         }
@@ -112,8 +128,8 @@ class RoleActionServiceImplTest {
         val result = roleActionService.submitAction(
             guildId = guildId,
             actionDefinitionId = "WEREWOLF_KILL",
-            actorUserId = 999L,  // Non-existent
-            targetUserIds = listOf(789L),
+            actorPlayerId = 999,  // Non-existent
+            targetPlayerIds = listOf(2),
             submittedBy = "PLAYER"
         )
 
@@ -138,8 +154,8 @@ class RoleActionServiceImplTest {
         val result = roleActionService.submitAction(
             guildId = guildId,
             actionDefinitionId = "WEREWOLF_KILL",
-            actorUserId = actorUserId,
-            targetUserIds = listOf(789L),
+            actorPlayerId = 1,
+            targetPlayerIds = listOf(2),
             submittedBy = "PLAYER"
         )
 
@@ -165,11 +181,16 @@ class RoleActionServiceImplTest {
 
         whenever(sessionRepository.findByGuildId(guildId)).thenReturn(Optional.of(session))
 
+        val mockAction = mock<RoleAction>()
+        whenever(mockAction.timing).thenReturn(ActionTiming.NIGHT)
+        whenever(mockAction.validate(any(), any(), any())).thenReturn(null)
+        whenever(roleRegistry.getAction("WEREWOLF_KILL")).thenReturn(mockAction)
+
         val result = roleActionService.submitAction(
             guildId = guildId,
             actionDefinitionId = "WEREWOLF_KILL",
-            actorUserId = actorUserId,
-            targetUserIds = listOf(targetUserId),
+            actorPlayerId = 1,
+            targetPlayerIds = listOf(2),
             submittedBy = "PLAYER"
         )
 
@@ -194,8 +215,8 @@ class RoleActionServiceImplTest {
         val result = roleActionService.submitAction(
             guildId = guildId,
             actionDefinitionId = "WEREWOLF_KILL",
-            actorUserId = actorUserId,
-            targetUserIds = listOf(999L),  // Non-existent target
+            actorPlayerId = 1,
+            targetPlayerIds = listOf(999),  // Non-existent target
             submittedBy = "PLAYER"
         )
 
@@ -212,7 +233,7 @@ class RoleActionServiceImplTest {
 
         session.players["1"] = player
 
-        val actions = roleActionService.getAvailableActionsForPlayer(session, userId)
+        val actions = roleActionService.getAvailableActionsForPlayer(session, 1)
 
         // Result depends on PredefinedRoles configuration
         assertNotNull(actions)
@@ -229,7 +250,7 @@ class RoleActionServiceImplTest {
 
         session.players["1"] = player
 
-        val actions = roleActionService.getAvailableActionsForPlayer(session, userId)
+        val actions = roleActionService.getAvailableActionsForPlayer(session, 1)
 
         assertTrue(actions.isEmpty())
     }
@@ -238,7 +259,7 @@ class RoleActionServiceImplTest {
     fun testGetAvailableActionsPlayerNotFound() {
         val session = Session(guildId = 123L)
 
-        val actions = roleActionService.getAvailableActionsForPlayer(session, 999L)
+        val actions = roleActionService.getAvailableActionsForPlayer(session, 999)
 
         assertTrue(actions.isEmpty())
     }
@@ -254,7 +275,7 @@ class RoleActionServiceImplTest {
         session.players["1"] = player
 
         val available = roleActionService.isActionAvailable(
-            session, userId, "WEREWOLF_KILL"
+            session, 1, "WEREWOLF_KILL"
         )
 
         assertNotNull(available)
@@ -264,17 +285,12 @@ class RoleActionServiceImplTest {
     fun testGetPendingActions() {
         val session = Session(guildId = 123L)
 
-        // Add a pending action
-        @Suppress("UNCHECKED_CAST")
-        val pendingActions = (session.stateData.getOrPut("pendingActions") {
-            mutableListOf<Map<String, Any>>()
-        } as MutableList<Map<String, Any>>)
-
-        pendingActions.add(
-            mapOf(
-                "actor" to 456L,
-                "actionDefinitionId" to "WEREWOLF_KILL",
-                "targets" to listOf(789L)
+        session.stateData.pendingActions.add(
+            dev.robothanzo.werewolf.game.model.RoleActionInstance(
+                actor = 1,
+                actionDefinitionId = "WEREWOLF_KILL",
+                targets = listOf(2),
+                submittedBy = dev.robothanzo.werewolf.game.model.ActionSubmissionSource.PLAYER
             )
         )
 
@@ -289,7 +305,7 @@ class RoleActionServiceImplTest {
         val userId = 456L
 
         val count = roleActionService.getActionUsageCount(
-            session, userId, "WEREWOLF_KILL"
+            session, 1, "WEREWOLF_KILL"
         )
 
         assertNotNull(count)
@@ -307,7 +323,7 @@ class RoleActionServiceImplTest {
 
         session.players["1"] = player
 
-        val hasDeathTrigger = roleActionService.hasDeathTriggerAvailable(session, userId)
+        val hasDeathTrigger = roleActionService.hasDeathTriggerAvailable(session, 1)
 
         assertNotNull(hasDeathTrigger)
     }

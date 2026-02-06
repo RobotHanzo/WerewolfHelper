@@ -32,7 +32,6 @@ class PoliceServiceImplTest {
         MockitoAnnotations.openMocks(this)
         policeService = PoliceServiceImpl(
             sessionRepository,
-            discordService,
             gameSessionService,
             speechService
         )

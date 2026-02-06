@@ -12,57 +12,57 @@ class SpeechSessionTest {
 
     @BeforeEach
     fun setup() {
-        session = Session(guildId = 123L)
+        session = Session(guildId = 123)
         speechSession = SpeechSession(
-            guildId = 123L,
-            channelId = 456L,
+            guildId = 123,
+            channelId = 456,
             session = session
         )
     }
 
     @Test
     fun testSpeechSessionInitialization() {
-        assertEquals(123L, speechSession.guildId)
-        assertEquals(456L, speechSession.channelId)
+        assertEquals(123, speechSession.guildId)
+        assertEquals(456, speechSession.channelId)
         assertEquals(session, speechSession.session)
         assertTrue(speechSession.interruptVotes.isEmpty())
         assertTrue(speechSession.order.isEmpty())
         assertNull(speechSession.speakingThread)
         assertNull(speechSession.lastSpeaker)
         assertNull(speechSession.finishedCallback)
-        assertEquals(0L, speechSession.currentSpeechEndTime)
+        assertEquals(0, speechSession.currentSpeechEndTime)
         assertEquals(0, speechSession.totalSpeechTime)
         assertTrue(!speechSession.shouldStopCurrentSpeaker)
     }
 
     @Test
     fun testAddInterruptVotes() {
-        speechSession.interruptVotes.add(100L)
-        speechSession.interruptVotes.add(200L)
-        speechSession.interruptVotes.add(300L)
+        speechSession.interruptVotes.add(100)
+        speechSession.interruptVotes.add(200)
+        speechSession.interruptVotes.add(300)
 
         assertEquals(3, speechSession.interruptVotes.size)
-        assertTrue(speechSession.interruptVotes.contains(100L))
-        assertTrue(speechSession.interruptVotes.contains(200L))
-        assertTrue(speechSession.interruptVotes.contains(300L))
+        assertTrue(speechSession.interruptVotes.contains(100))
+        assertTrue(speechSession.interruptVotes.contains(200))
+        assertTrue(speechSession.interruptVotes.contains(300))
     }
 
     @Test
     fun testRemoveInterruptVotes() {
-        speechSession.interruptVotes.add(100L)
-        speechSession.interruptVotes.add(200L)
+        speechSession.interruptVotes.add(100)
+        speechSession.interruptVotes.add(200)
 
-        speechSession.interruptVotes.remove(100L)
+        speechSession.interruptVotes.remove(100)
 
         assertEquals(1, speechSession.interruptVotes.size)
-        assertTrue(speechSession.interruptVotes.contains(200L))
+        assertTrue(speechSession.interruptVotes.contains(200))
     }
 
     @Test
     fun testAddPlayersToSpeechOrder() {
-        val player1 = Player(id = 1, roleId = 1L, channelId = 1L, userId = 100L)
-        val player2 = Player(id = 2, roleId = 2L, channelId = 2L, userId = 200L)
-        val player3 = Player(id = 3, roleId = 3L, channelId = 3L, userId = 300L)
+        val player1 = Player(id = 1, roleId = 1, channelId = 1, userId = 100)
+        val player2 = Player(id = 2, roleId = 2, channelId = 2, userId = 200)
+        val player3 = Player(id = 3, roleId = 3, channelId = 3, userId = 300)
 
         speechSession.order.add(player1)
         speechSession.order.add(player2)
@@ -76,11 +76,11 @@ class SpeechSessionTest {
 
     @Test
     fun testSetLastSpeaker() {
-        speechSession.lastSpeaker = 100L
-        assertEquals(100L, speechSession.lastSpeaker)
+        speechSession.lastSpeaker = 100
+        assertEquals(100, speechSession.lastSpeaker)
 
-        speechSession.lastSpeaker = 200L
-        assertEquals(200L, speechSession.lastSpeaker)
+        speechSession.lastSpeaker = 200
+        assertEquals(200, speechSession.lastSpeaker)
     }
 
     @Test
@@ -127,27 +127,27 @@ class SpeechSessionTest {
 
     @Test
     fun testComplexSpeechSessionScenario() {
-        val player1 = Player(id = 1, roleId = 1L, channelId = 1L, userId = 100L)
-        val player2 = Player(id = 2, roleId = 2L, channelId = 2L, userId = 200L)
+        val player1 = Player(id = 1, roleId = 1, channelId = 1, userId = 100)
+        val player2 = Player(id = 2, roleId = 2, channelId = 2, userId = 200)
 
         speechSession.order.add(player1)
         speechSession.order.add(player2)
-        speechSession.lastSpeaker = 100L
+        speechSession.lastSpeaker = 100
         speechSession.totalSpeechTime = 30
         speechSession.currentSpeechEndTime = System.currentTimeMillis() + 30000
-        speechSession.interruptVotes.add(200L)
-        speechSession.interruptVotes.add(300L)
+        speechSession.interruptVotes.add(200)
+        speechSession.interruptVotes.add(300)
 
         assertEquals(2, speechSession.order.size)
-        assertEquals(100L, speechSession.lastSpeaker)
+        assertEquals(100, speechSession.lastSpeaker)
         assertEquals(30, speechSession.totalSpeechTime)
         assertEquals(2, speechSession.interruptVotes.size)
     }
 
     @Test
     fun testClearSpeechOrder() {
-        val player1 = Player(id = 1, roleId = 1L, channelId = 1L, userId = 100L)
-        val player2 = Player(id = 2, roleId = 2L, channelId = 2L, userId = 200L)
+        val player1 = Player(id = 1, roleId = 1, channelId = 1, userId = 100)
+        val player2 = Player(id = 2, roleId = 2, channelId = 2, userId = 200)
 
         speechSession.order.add(player1)
         speechSession.order.add(player2)
@@ -159,8 +159,8 @@ class SpeechSessionTest {
 
     @Test
     fun testClearInterruptVotes() {
-        speechSession.interruptVotes.add(100L)
-        speechSession.interruptVotes.add(200L)
+        speechSession.interruptVotes.add(100)
+        speechSession.interruptVotes.add(200)
         assertEquals(2, speechSession.interruptVotes.size)
 
         speechSession.interruptVotes.clear()
