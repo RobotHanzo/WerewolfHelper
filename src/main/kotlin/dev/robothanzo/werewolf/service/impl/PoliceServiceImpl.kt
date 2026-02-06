@@ -443,12 +443,12 @@ class PoliceServiceImpl(
                     .setDescription("請選擇要移交警徽的對象，若要撕掉警徽，請按下撕毀按鈕\n請在30秒內做出選擇，否則警徽將被自動撕毀")
                     .build()
             )?.setComponents(
-                    ActionRow.of(selectMenu.build()),
-                    ActionRow.of(
-                        Button.success("confirmNewPolice", "移交"),
-                        Button.danger("destroyPolice", "撕毀")
-                    )
+                ActionRow.of(selectMenu.build()),
+                ActionRow.of(
+                    Button.success("confirmNewPolice", "移交"),
+                    Button.danger("destroyPolice", "撕毀")
                 )
+            )
                 ?.complete()
             if (message == null) return
 

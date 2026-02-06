@@ -26,7 +26,7 @@ class SpeechController(
             return ResponseEntity.notFound().build<Any>()
         val session = sessionOpt.get()
 
-        val guild = discordService.getGuild(guildId) ?: return ResponseEntity.notFound().build<Any>()
+        discordService.getGuild(guildId) ?: return ResponseEntity.notFound().build<Any>()
         val channel = session.courtTextChannel
 
         if (channel != null) {
@@ -60,7 +60,7 @@ class SpeechController(
             return ResponseEntity.notFound().build<Any>()
         val session = sessionOpt.get()
 
-        val guild = discordService.getGuild(guildId) ?: return ResponseEntity.notFound().build<Any>()
+        discordService.getGuild(guildId) ?: return ResponseEntity.notFound().build<Any>()
         val channel = session.courtTextChannel
 
         if (channel != null) {
@@ -111,7 +111,7 @@ class SpeechController(
             return ResponseEntity.notFound().build<Any>()
         val session = sessionOpt.get()
 
-        val guild = discordService.getGuild(guildId) ?: return ResponseEntity.notFound().build<Any>()
+        discordService.getGuild(guildId) ?: return ResponseEntity.notFound().build<Any>()
         val channel = session.courtTextChannel
         val voiceChannel = session.courtVoiceChannel
 

@@ -1,9 +1,8 @@
 package dev.robothanzo.werewolf.listeners
 
-import com.mongodb.client.model.Filters.eq
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.commands.Server
-import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.utils.SetupHelper
 import dev.robothanzo.werewolf.utils.isAdmin
 import net.dv8tion.jda.api.entities.Guild
@@ -16,7 +15,9 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
-class GuildJoinListener : ListenerAdapter() {
+class GuildJoinListener(
+    private val sessionRepository: SessionRepository
+) : ListenerAdapter() {
     private val log = LoggerFactory.getLogger(GuildJoinListener::class.java)
 
     override fun onGuildJoin(event: GuildJoinEvent) {
@@ -32,7 +33,7 @@ class GuildJoinListener : ListenerAdapter() {
 
     override fun onGuildLeave(event: GuildLeaveEvent) {
         log.info("Bot left guild: {}", event.guild.id)
-        Session.fetchCollection().deleteOne(eq("guildId", event.guild.idLong))
+        sessionRepository.deleteByGuildId(event.guild.idLong)
         WerewolfApplication.speechService.interruptSession(event.guild.idLong)
     }
 

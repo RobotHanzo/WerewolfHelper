@@ -1,12 +1,10 @@
 package dev.robothanzo.werewolf.commands
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.mongodb.client.model.Filters.eq
 import dev.robothanzo.jda.interactions.annotations.slash.Command
 import dev.robothanzo.jda.interactions.annotations.slash.Subcommand
 import dev.robothanzo.jda.interactions.annotations.slash.options.Option
 import dev.robothanzo.werewolf.WerewolfApplication
-import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.utils.CmdUtils
 import dev.robothanzo.werewolf.utils.MsgUtils
 import net.dv8tion.jda.api.EmbedBuilder
@@ -91,7 +89,7 @@ class Server {
             gid = guildId.toLong()
         }
 
-        val session = Session.fetchCollection().find(eq("guildId", gid)).first()
+        val session = WerewolfApplication.sessionRepository.findByGuildId(gid).orElse(null)
         if (session == null) {
             event.hook.editOriginal(":x:").queue()
         } else {

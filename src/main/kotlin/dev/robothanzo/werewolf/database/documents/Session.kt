@@ -1,8 +1,6 @@
 package dev.robothanzo.werewolf.database.documents
 
-import com.mongodb.client.MongoCollection
 import dev.robothanzo.werewolf.WerewolfApplication
-import dev.robothanzo.werewolf.database.Database
 import dev.robothanzo.werewolf.game.model.GameSettings
 import dev.robothanzo.werewolf.game.model.GameStateData
 import net.dv8tion.jda.api.entities.Guild
@@ -10,10 +8,8 @@ import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import org.bson.codecs.pojo.annotations.BsonId
-import org.bson.codecs.pojo.annotations.BsonIgnore
 import org.bson.types.ObjectId
 import org.springframework.data.annotation.Id
-import org.springframework.data.annotation.Transient
 import org.springframework.data.annotation.Version
 import org.springframework.data.domain.Persistable
 import org.springframework.data.mongodb.core.index.Indexed
@@ -22,12 +18,22 @@ import java.io.Serializable
 import java.util.*
 import dev.robothanzo.werewolf.game.model.Role as GameRole
 
+data class DiscordIDs(
+    var guildId: Long = 0,
+    var courtTextChannelId: Long = 0,
+    var courtVoiceChannelId: Long = 0,
+    var spectatorTextChannelId: Long = 0,
+    var judgeTextChannelId: Long = 0,
+    var judgeRoleId: Long = 0,
+    var spectatorRoleId: Long = 0,
+    var owner: Long = 0,
+)
+
 @Document(collection = "sessions")
 data class Session(
     @Id
     @param:BsonId
     var _id: ObjectId? = null,
-
     @Version
     var version: Long? = null,
     @Indexed(unique = true)
@@ -55,16 +61,23 @@ data class Session(
     // Game Settings
     var settings: GameSettings = GameSettings()
 ) : Persistable<ObjectId>, Serializable {
-    @get:BsonIgnore
-    @set:BsonIgnore
-    @Transient
     var hydratedRoles: MutableMap<String, GameRole> = HashMap()
-
-
     override fun getId(): ObjectId? = _id
-
-    @BsonIgnore
     override fun isNew(): Boolean = _id == null
+    val guild: Guild?
+        get() = WerewolfApplication.jda.getGuildById(guildId)
+    val spectatorRole: Role?
+        get() = guild?.getRoleById(spectatorRoleId)
+    val judgeRole: Role?
+        get() = guild?.getRoleById(judgeRoleId)
+    val courtTextChannel: TextChannel?
+        get() = guild?.getTextChannelById(courtTextChannelId)
+    val courtVoiceChannel: VoiceChannel?
+        get() = guild?.getVoiceChannelById(courtVoiceChannelId)
+    val spectatorTextChannel: TextChannel?
+        get() = guild?.getTextChannelById(spectatorTextChannelId)
+    val judgeTextChannel: TextChannel?
+        get() = guild?.getTextChannelById(judgeTextChannelId)
 
     /**
      * Populate player.session references after loading from database
@@ -95,7 +108,6 @@ data class Session(
         return players.filter { it.value.alive }
     }
 
-    @get:BsonIgnore
     val police: Player?
         get() {
             for (player in players.values) {
@@ -103,34 +115,6 @@ data class Session(
             }
             return null
         }
-
-    @get:BsonIgnore
-    val guild: Guild?
-        get() = WerewolfApplication.jda.getGuildById(guildId)
-
-    @get:BsonIgnore
-    val spectatorRole: Role?
-        get() = guild?.getRoleById(spectatorRoleId)
-
-    @get:BsonIgnore
-    val judgeRole: Role?
-        get() = guild?.getRoleById(judgeRoleId)
-
-    @get:BsonIgnore
-    val courtTextChannel: TextChannel?
-        get() = guild?.getTextChannelById(courtTextChannelId)
-
-    @get:BsonIgnore
-    val courtVoiceChannel: VoiceChannel?
-        get() = guild?.getVoiceChannelById(courtVoiceChannelId)
-
-    @get:BsonIgnore
-    val spectatorTextChannel: TextChannel?
-        get() = guild?.getTextChannelById(spectatorTextChannelId)
-
-    @get:BsonIgnore
-    val judgeTextChannel: TextChannel?
-        get() = guild?.getTextChannelById(judgeTextChannelId)
 
     fun hasEnded(simulateRoleRemovalArg: String?): Result {
         var simulateRoleRemoval = simulateRoleRemovalArg
@@ -237,12 +221,6 @@ data class Session(
                     metadata = metadata
                 )
             )
-        }
-    }
-
-    companion object {
-        fun fetchCollection(): MongoCollection<Session> {
-            return Database.database.getCollection("sessions", Session::class.java)
         }
     }
 }

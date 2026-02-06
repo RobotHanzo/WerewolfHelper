@@ -18,7 +18,7 @@ class SheriffElectionStep(
     override val name = "警長參選"
 
     override fun onStart(session: Session, service: GameStateService) {
-        val guild = discordService.getGuild(session.guildId) ?: return
+        discordService.getGuild(session.guildId) ?: return
         val channel = session.courtTextChannel ?: return
         policeService.startEnrollment(session, channel, null) {
             service.nextStep(session)
@@ -49,7 +49,7 @@ class SheriffElectionStep(
             }
 
             "start" -> {
-                val guild = discordService.getGuild(session.guildId) ?: return mapOf(
+                discordService.getGuild(session.guildId) ?: return mapOf(
                     "success" to false,
                     "message" to "Guild not found"
                 )

@@ -95,10 +95,7 @@ interface RoleAction {
      */
     fun isAvailable(session: Session, actor: Int): Boolean {
         // Check usage limit
-        if (usageLimit != -1 && getUsageCount(session, actor) >= usageLimit) {
-            return false
-        }
-        return true
+        return !(usageLimit != -1 && getUsageCount(session, actor) >= usageLimit)
     }
 
     /**

@@ -3,7 +3,6 @@ package dev.robothanzo.werewolf
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers
-import dev.robothanzo.werewolf.database.Database
 import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import dev.robothanzo.werewolf.service.*
@@ -112,7 +111,8 @@ class WerewolfApplication {
                 }
                 jarFile.close()
             } catch (e: Exception) {
-                // Silently fail or log debug - we don't want to slow down startup with stack traces
+                LoggerFactory.getLogger(WerewolfApplication::class.java)
+                    .warn("Failed to extract sound files (ignore if running in IDE): {}", e.message)
             }
         }
     }
@@ -139,9 +139,6 @@ class WerewolfApplication {
         @PostConstruct
         fun init() {
             log.info("Initializing Static Bridge...")
-            // Initialize legacy DB (if it exists)
-            Database.initDatabase()
-
             gameSessionService = gameSessionServiceBean
             roleService = roleServiceBean
             roleActionService = roleActionServiceBean

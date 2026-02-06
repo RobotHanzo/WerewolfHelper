@@ -59,7 +59,7 @@ class VotingStep(
             return
         }
 
-        val guild = discordService.getGuild(session.guildId) ?: return
+        discordService.getGuild(session.guildId) ?: return
         val channel = session.courtTextChannel ?: return
 
         val candidates = session.alivePlayers().values

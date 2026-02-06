@@ -32,27 +32,22 @@ data class Player(
     @BsonIgnore
     var session: Session? = null // Reference to the session this player belongs to
 
-    @get:BsonIgnore
     val user: User?
         get() = userId?.let {
             WerewolfApplication.jda.getUserById(it) ?: WerewolfApplication.jda.retrieveUserById(it).complete()
         }
 
-    @get:BsonIgnore
     val member: Member?
         get() = userId?.let {
             session?.guild?.getMemberById(it) ?: session?.guild?.retrieveMemberById(user!!.idLong)?.complete()
         }
 
-    @get:BsonIgnore
     val role: Role?
         get() = roleId.let { session?.guild?.getRoleById(it) }
 
-    @get:BsonIgnore
     val channel: TextChannel?
         get() = WerewolfApplication.jda.getTextChannelById(channelId)
 
-    @get:BsonIgnore
     val wolf: Boolean
         get() = roles?.any { isWolf(it) } ?: false
 
@@ -60,7 +55,6 @@ data class Player(
         userId = id
     }
 
-    @get:BsonIgnore
     val alive: Boolean
         get() {
             if (roles == null || roles!!.isEmpty()) return false
@@ -68,7 +62,6 @@ data class Player(
             return deadRoles!!.size < roles!!.size
         }
 
-    @get:BsonIgnore
     val nickname: String
         get() {
             val sb = StringBuilder()

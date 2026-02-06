@@ -31,7 +31,7 @@ class PlayerServiceImpl(
         onProgress: (String) -> Unit,
         onPercent: (Int) -> Unit
     ) {
-        val guildId = session.guildId
+        session.guildId
         val guild = session.guild ?: throw Exception("Guild not found")
 
         onPercent(0)
@@ -150,7 +150,7 @@ class PlayerServiceImpl(
     override fun updatePlayerRoles(player: Player, roles: List<String>) {
         try {
             val session = player.session ?: throw Exception("Player session not found")
-            
+
             val finalRoles = roles.toMutableList()
             val isDuplicated = roles.contains("複製人")
             player.duplicated = isDuplicated

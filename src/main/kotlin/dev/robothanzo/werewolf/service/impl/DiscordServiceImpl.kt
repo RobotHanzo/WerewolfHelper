@@ -4,7 +4,6 @@ import club.minnced.discord.jdave.interop.JDaveSessionFactory
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers
 import dev.robothanzo.jda.interactions.JDAInteractions
 import dev.robothanzo.werewolf.WerewolfApplication
-import dev.robothanzo.werewolf.database.Database
 import dev.robothanzo.werewolf.service.DiscordService
 import jakarta.annotation.PostConstruct
 import net.dv8tion.jda.api.JDA
@@ -43,9 +42,6 @@ class DiscordServiceImpl(
     fun init() {
         log.info("Initializing Discord Service...")
         try {
-            // Ensure Database is init (legacy)
-            Database.initDatabase()
-
             // Register all Spring-managed EventListener beans
             eventListeners.forEach { listener ->
                 jda.addEventListener(listener)

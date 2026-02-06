@@ -161,7 +161,7 @@ object SetupHelper {
     }
 
     private fun finalizeSetup(guild: Guild, config: Server.PendingSetup, session: Session) {
-        Session.fetchCollection().insertOne(session)
+        WerewolfApplication.sessionRepository.save(session)
         log.info("Successfully registered guild as a session: {}", guild.id)
 
         val courtChannel = session.courtTextChannel
