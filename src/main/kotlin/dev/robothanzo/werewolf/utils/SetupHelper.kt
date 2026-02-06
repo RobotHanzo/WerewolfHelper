@@ -126,7 +126,7 @@ object SetupHelper {
     }
 
     private fun createSession(guild: Guild, config: Server.PendingSetup): Session {
-        val session = Session(guildId = guild.idLong)
+        val session = WerewolfApplication.gameSessionService.createSession(guild.idLong)
         session.doubleIdentities = config.doubleIdentity
         session.owner = guild.ownerIdLong
 
@@ -161,7 +161,7 @@ object SetupHelper {
     }
 
     private fun finalizeSetup(guild: Guild, config: Server.PendingSetup, session: Session) {
-        WerewolfApplication.sessionRepository.save(session)
+        WerewolfApplication.gameSessionService.saveSession(session)
         log.info("Successfully registered guild as a session: {}", guild.id)
 
         val courtChannel = session.courtTextChannel

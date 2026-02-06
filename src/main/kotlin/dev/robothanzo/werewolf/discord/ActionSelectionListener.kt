@@ -93,7 +93,7 @@ class ActionSelectionListener(
     ): String {
         val voteCounts = votes.groupingBy { it.targetPlayerId }.eachCount()
         val lines = mutableListOf<String>()
-        lines.add("📊 **狼人投票即時統計**")
+        lines.add("📊 **狼人投票即時統計 (下方顯示投票擊殺之目標)**")
         lines.add("已投票: ${votes.size}/$totalVoters")
 
         val sortedTargets = voteCounts.entries.sortedByDescending { it.value }
@@ -101,6 +101,7 @@ class ActionSelectionListener(
             lines.add("尚未有人投票")
         } else {
             for ((targetPlayerId, count) in sortedTargets) {
+                targetPlayerId ?: continue
                 val label = if (targetPlayerId == SKIP_TARGET_ID) {
                     "跳過"
                 } else {

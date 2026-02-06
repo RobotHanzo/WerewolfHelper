@@ -9,10 +9,6 @@ import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.audio.AudioModuleConfig
 import net.dv8tion.jda.api.entities.Activity
-import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.Member
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
-import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.hooks.EventListener
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.ChunkingFilter
@@ -64,24 +60,5 @@ class DiscordServiceImpl(
             log.error("Failed to initialize JDA", e)
             throw RuntimeException(e)
         }
-    }
-
-    override fun getGuild(guildId: Long): Guild? {
-        return jda.getGuildById(guildId)
-    }
-
-    override fun getMember(guildId: Long, userId: String?): Member? {
-        val guild = getGuild(guildId) ?: return null
-        return userId?.let { guild.getMemberById(it) }
-    }
-
-    override fun getTextChannel(guildId: Long, channelId: Long): TextChannel? {
-        val guild = getGuild(guildId) ?: return null
-        return guild.getTextChannelById(channelId)
-    }
-
-    override fun getVoiceChannel(guildId: Long, channelId: Long): VoiceChannel? {
-        val guild = getGuild(guildId) ?: return null
-        return guild.getVoiceChannelById(channelId)
     }
 }

@@ -1,8 +1,8 @@
 package dev.robothanzo.werewolf.controller
 
+import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.model.SpeechOrder
 import dev.robothanzo.werewolf.security.annotations.CanManageGuild
-import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.PoliceService
 import dev.robothanzo.werewolf.service.SpeechService
@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/sessions/{guildId}/speech")
 class SpeechController(
     private val gameSessionService: GameSessionService,
-    private val discordService: DiscordService,
     private val speechService: SpeechService,
     private val policeService: PoliceService // Injected to replace static access
 ) {
@@ -26,7 +25,7 @@ class SpeechController(
             return ResponseEntity.notFound().build<Any>()
         val session = sessionOpt.get()
 
-        discordService.getGuild(guildId) ?: return ResponseEntity.notFound().build<Any>()
+        WerewolfApplication.jda.getGuildById(guildId) ?: return ResponseEntity.notFound().build<Any>()
         val channel = session.courtTextChannel
 
         if (channel != null) {
@@ -60,7 +59,7 @@ class SpeechController(
             return ResponseEntity.notFound().build<Any>()
         val session = sessionOpt.get()
 
-        discordService.getGuild(guildId) ?: return ResponseEntity.notFound().build<Any>()
+        WerewolfApplication.jda.getGuildById(guildId) ?: return ResponseEntity.notFound().build<Any>()
         val channel = session.courtTextChannel
 
         if (channel != null) {
@@ -111,7 +110,7 @@ class SpeechController(
             return ResponseEntity.notFound().build<Any>()
         val session = sessionOpt.get()
 
-        discordService.getGuild(guildId) ?: return ResponseEntity.notFound().build<Any>()
+        WerewolfApplication.jda.getGuildById(guildId) ?: return ResponseEntity.notFound().build<Any>()
         val channel = session.courtTextChannel
         val voiceChannel = session.courtVoiceChannel
 

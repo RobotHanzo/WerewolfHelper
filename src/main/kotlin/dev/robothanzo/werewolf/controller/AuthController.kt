@@ -3,7 +3,6 @@ package dev.robothanzo.werewolf.controller
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.AuthSession
 import dev.robothanzo.werewolf.database.documents.UserRole
-import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.utils.isAdmin
 import io.mokulu.discord.oauth.DiscordAPI
 import io.mokulu.discord.oauth.DiscordOAuth
@@ -19,9 +18,7 @@ import java.io.IOException
 
 @RestController
 @RequestMapping("/api/auth")
-class AuthController(
-    private val discordService: DiscordService
-) {
+class AuthController {
     private val log = LoggerFactory.getLogger(AuthController::class.java)
 
     companion object {
@@ -80,7 +77,7 @@ class AuthController(
                     authSession.guildId = state
 
                     // Attempt to pre-calculate role
-                    val member = discordService.getMember(gid, user.id.toString())
+                    val member = WerewolfApplication.jda.getGuildById(gid)?.getMemberById(user.id)
                     if (member != null && (member.isAdmin())
                     ) {
                         authSession.role = UserRole.JUDGE
@@ -122,10 +119,10 @@ class AuthController(
 
         return try {
             val gid = guildId.toLong()
-            discordService.getGuild(gid)
+            WerewolfApplication.jda.getGuildById(gid)
                 ?: return ResponseEntity.badRequest().body(mapOf("success" to false, "error" to "Guild not found"))
 
-            val member = discordService.getMember(gid, user.userId)
+            val member = user.userId?.let { WerewolfApplication.jda.getGuildById(gid)?.getMemberById(it) }
                 ?: return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(mapOf("success" to false, "error" to "Not a member"))
 

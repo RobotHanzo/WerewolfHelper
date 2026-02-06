@@ -8,7 +8,6 @@ import dev.robothanzo.werewolf.database.documents.UserRole
 import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.game.model.GameSettings
 import dev.robothanzo.werewolf.security.GlobalWebSocketHandler
-import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.ExpelService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.SpeechService
@@ -27,7 +26,6 @@ import java.util.concurrent.ConcurrentHashMap
 @Service
 class GameSessionServiceImpl(
     private val sessionRepository: SessionRepository,
-    private val discordService: DiscordService,
     private val webSocketHandler: GlobalWebSocketHandler,
     private val speechService: SpeechService,
     private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry,
@@ -281,7 +279,7 @@ class GameSessionServiceImpl(
         var guildName = "Unknown Server"
         var guildIcon: String? = null
         try {
-            val guild = discordService.getGuild(session.guildId)
+            val guild = WerewolfApplication.jda.getGuildById(session.guildId)
             if (guild != null) {
                 guildName = guild.name
                 guildIcon = guild.iconUrl

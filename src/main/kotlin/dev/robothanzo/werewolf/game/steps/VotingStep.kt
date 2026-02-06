@@ -5,7 +5,6 @@ import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.model.Candidate
-import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.ExpelService
 import dev.robothanzo.werewolf.service.GameStateService
 import org.springframework.stereotype.Component
@@ -13,7 +12,6 @@ import java.util.concurrent.ConcurrentHashMap
 
 @Component
 class VotingStep(
-    private val discordService: DiscordService,
     private val expelService: ExpelService
 ) : GameStep {
     override val id = "VOTING_PHASE"
@@ -59,7 +57,7 @@ class VotingStep(
             return
         }
 
-        discordService.getGuild(session.guildId) ?: return
+        WerewolfApplication.jda.getGuildById(session.guildId) ?: return
         val channel = session.courtTextChannel ?: return
 
         val candidates = session.alivePlayers().values

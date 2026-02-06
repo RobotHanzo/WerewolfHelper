@@ -1,8 +1,8 @@
 package dev.robothanzo.werewolf.game.steps
 
+import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
-import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.GameStateService
 import dev.robothanzo.werewolf.service.PoliceService
 import org.springframework.context.annotation.Lazy
@@ -11,14 +11,13 @@ import org.springframework.stereotype.Component
 @Component
 class SheriffElectionStep(
     @param:Lazy
-    private val policeService: PoliceService,
-    private val discordService: DiscordService
+    private val policeService: PoliceService
 ) : GameStep {
     override val id = "SHERIFF_ELECTION"
     override val name = "警長參選"
 
     override fun onStart(session: Session, service: GameStateService) {
-        discordService.getGuild(session.guildId) ?: return
+        WerewolfApplication.jda.getGuildById(session.guildId) ?: return
         val channel = session.courtTextChannel ?: return
         policeService.startEnrollment(session, channel, null) {
             service.nextStep(session)
@@ -49,7 +48,7 @@ class SheriffElectionStep(
             }
 
             "start" -> {
-                discordService.getGuild(session.guildId) ?: return mapOf(
+                WerewolfApplication.jda.getGuildById(session.guildId) ?: return mapOf(
                     "success" to false,
                     "message" to "Guild not found"
                 )

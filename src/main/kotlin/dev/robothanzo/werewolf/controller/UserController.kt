@@ -1,7 +1,7 @@
 package dev.robothanzo.werewolf.controller
 
+import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.security.annotations.CanViewGuild
-import dev.robothanzo.werewolf.service.DiscordService
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -11,16 +11,14 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/users")
-class UserController(
-    private val discordService: DiscordService
-) {
+class UserController {
     private val log = LoggerFactory.getLogger(UserController::class.java)
 
     @GetMapping("/{guildId}/{userId}")
     @CanViewGuild
     fun getUser(@PathVariable guildId: Long, @PathVariable userId: String): ResponseEntity<*> {
         return try {
-            val member = discordService.getMember(guildId, userId)
+            val member = WerewolfApplication.jda.getGuildById(guildId)?.getMemberById(userId)
             if (member != null) {
                 ResponseEntity.ok(
                     mapOf(

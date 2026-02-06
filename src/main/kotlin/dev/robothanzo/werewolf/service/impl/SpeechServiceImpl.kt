@@ -1,12 +1,12 @@
 package dev.robothanzo.werewolf.service.impl
 
+import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.audio.Audio
 import dev.robothanzo.werewolf.audio.Audio.play
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.model.SpeechOrder
 import dev.robothanzo.werewolf.model.SpeechSession
-import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.GameActionService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.SpeechService
@@ -33,7 +33,6 @@ import kotlin.jvm.optionals.getOrNull
 
 @Service
 class SpeechServiceImpl(
-    private val discordService: DiscordService,
     @param:Lazy private val gameActionService: GameActionService,
     @param:Lazy private val gameSessionService: GameSessionService
 ) : SpeechService {
@@ -308,7 +307,7 @@ class SpeechServiceImpl(
     }
 
     override fun startTimer(guildId: Long, channelId: Long, voiceChannelId: Long, seconds: Int) {
-        val guild = discordService.getGuild(guildId) ?: return
+        val guild = WerewolfApplication.jda.getGuildById(guildId) ?: return
         val textChannel = guild.getTextChannelById(channelId) ?: return
         val voiceChannel = guild.getVoiceChannelById(voiceChannelId)
 
@@ -352,7 +351,7 @@ class SpeechServiceImpl(
     override fun interruptSession(guildId: Long) {
         val speechSession = speechSessions[guildId]
         if (speechSession != null) {
-            val guild = discordService.getGuild(guildId)
+            val guild = WerewolfApplication.jda.getGuildById(guildId)
             if (guild != null) {
                 val session = gameSessionService.getSession(guildId).getOrNull()
                 session?.courtTextChannel?.sendMessage("法官已強制終止發言流程")?.queue()
@@ -367,7 +366,7 @@ class SpeechServiceImpl(
     override fun skipToNext(guildId: Long) {
         val speechSession = speechSessions[guildId]
         if (speechSession != null) {
-            val guild = discordService.getGuild(guildId)
+            val guild = WerewolfApplication.jda.getGuildById(guildId)
             if (guild != null) {
                 speechSession.session.courtTextChannel?.sendMessage("法官已強制該玩家下台")?.queue()
             }
@@ -376,7 +375,7 @@ class SpeechServiceImpl(
     }
 
     override fun setAllMute(guildId: Long, mute: Boolean) {
-        val guild = discordService.getGuild(guildId) ?: return
+        val guild = WerewolfApplication.jda.getGuildById(guildId) ?: return
         for (member in guild.members) {
             if (member.isAdmin())
                 continue
@@ -435,7 +434,7 @@ class SpeechServiceImpl(
         speechSession.shouldStopCurrentSpeaker = false
 
         gameSessionService.withLockedSession(guildId) { session ->
-            val guild = discordService.getGuild(guildId) ?: return@withLockedSession
+            val guild = WerewolfApplication.jda.getGuildById(guildId) ?: return@withLockedSession
 
             speechSession.lastSpeaker?.let { lastSpeakerPid ->
                 val lastPlayer = session.getPlayer(lastSpeakerPid)

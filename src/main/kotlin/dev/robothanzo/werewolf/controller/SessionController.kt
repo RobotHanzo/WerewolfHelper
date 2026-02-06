@@ -1,7 +1,6 @@
 package dev.robothanzo.werewolf.controller
 
 import dev.robothanzo.werewolf.security.annotations.CanViewGuild
-import dev.robothanzo.werewolf.service.DiscordService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.utils.IdentityUtils
 import org.springframework.http.HttpStatus
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/sessions")
 class SessionController(
     private val gameSessionService: GameSessionService,
-    private val discordService: DiscordService,
     private val identityUtils: IdentityUtils
 ) {
 
@@ -29,7 +27,7 @@ class SessionController(
 
         val data = gameSessionService.getAllSessions().filter { session ->
             // Check if user is in guild
-            discordService.getMember(session.guildId, user.userId) != null
+            user.userId?.let { session.guild?.getMemberById(it) } != null
         }.map { session -> gameSessionService.sessionToSummaryJSON(session) }
         return ResponseEntity.ok(mapOf("success" to true, "data" to data))
     }

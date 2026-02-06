@@ -3,7 +3,6 @@ package dev.robothanzo.werewolf
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers
-import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import dev.robothanzo.werewolf.service.*
 import jakarta.annotation.PostConstruct
@@ -67,7 +66,6 @@ class WerewolfApplication {
         lateinit var actionUIService: ActionUIService
         lateinit var roleActionExecutor: RoleActionExecutor
         lateinit var roleEventService: RoleEventService
-        lateinit var sessionRepository: SessionRepository
         val playerManager: AudioPlayerManager = DefaultAudioPlayerManager()
 
         @JvmStatic
@@ -131,7 +129,6 @@ class WerewolfApplication {
         private val actionUIServiceBean: ActionUIService,
         private val roleActionExecutorBean: RoleActionExecutor,
         private val roleEventServiceBean: RoleEventService,
-        private val sessionRepositoryBean: SessionRepository,
         private val gameStateServiceBean: GameStateService
     ) {
         private val log = LoggerFactory.getLogger(StaticBridge::class.java)
@@ -150,7 +147,6 @@ class WerewolfApplication {
             actionUIService = actionUIServiceBean
             roleActionExecutor = roleActionExecutorBean
             roleEventService = roleEventServiceBean
-            sessionRepository = sessionRepositoryBean
             gameStateService = gameStateServiceBean
             jda = discordServiceBean.jda
 
