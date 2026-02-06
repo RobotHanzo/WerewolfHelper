@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 import org.springframework.data.annotation.Id
+import org.springframework.data.annotation.Transient
 import org.springframework.data.annotation.Version
 import org.springframework.data.domain.Persistable
 import org.springframework.data.mongodb.core.index.Indexed
@@ -61,7 +62,9 @@ data class Session(
     // Game Settings
     var settings: GameSettings = GameSettings()
 ) : Persistable<ObjectId>, Serializable {
+    @Transient
     var hydratedRoles: MutableMap<String, GameRole> = HashMap()
+
     override fun getId(): ObjectId? = _id
     override fun isNew(): Boolean = _id == null
     val guild: Guild?

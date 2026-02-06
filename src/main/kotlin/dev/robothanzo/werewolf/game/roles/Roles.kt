@@ -73,10 +73,7 @@ class WolfYoungerBrother(
 class DarkMerchant(
     @Transient private val tradeSeerAction: DarkMerchantTradeSeerAction,
     @Transient private val tradePoisonAction: DarkMerchantTradePoisonAction,
-    @Transient private val tradeGunAction: DarkMerchantTradeGunAction,
-    @Transient private val seerAction: MerchantSeerCheckAction,
-    @Transient private val poisonAction: MerchantPoisonAction,
-    @Transient private val gunAction: MerchantGunAction
+    @Transient private val tradeGunAction: DarkMerchantTradeGunAction
 ) : BaseRole("黑市商人", Camp.GOD) {
     override fun getActions(): List<RoleAction> = listOf(tradeSeerAction, tradePoisonAction, tradeGunAction)
 
