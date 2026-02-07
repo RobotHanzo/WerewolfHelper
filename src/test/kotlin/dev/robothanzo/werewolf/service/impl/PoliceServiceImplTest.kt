@@ -31,7 +31,6 @@ class PoliceServiceImplTest {
     fun setup() {
         MockitoAnnotations.openMocks(this)
         policeService = PoliceServiceImpl(
-            sessionRepository,
             gameSessionService,
             speechService
         )

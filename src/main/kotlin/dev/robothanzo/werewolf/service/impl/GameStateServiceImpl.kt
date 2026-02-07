@@ -59,13 +59,8 @@ class GameStateServiceImpl(
 
         // Reset state data for new step while preserving persistent fields
         session.stateData = GameStateData(
-            pendingActions = oldState.pendingActions,
-            actionData = oldState.actionData,
-            lastGuardProtectedId = oldState.lastGuardProtectedId,
+            playerOwnedActions = oldState.playerOwnedActions,
             deathTriggerAvailableMap = oldState.deathTriggerAvailableMap,
-            darkMerchantTradeRecipientId = oldState.darkMerchantTradeRecipientId,
-            darkMerchantGiftedSkill = oldState.darkMerchantGiftedSkill,
-            wolfBrotherDiedDay = oldState.wolfBrotherDiedDay
         )
 
         // Timer Logic

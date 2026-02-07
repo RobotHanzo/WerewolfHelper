@@ -122,7 +122,6 @@ data class Player(
             }
         }
 
-        WerewolfApplication.gameSessionService.saveSession(session)
 
         if (killedRole != null) {
             val metadata = mutableMapOf<String, Any>()
@@ -200,8 +199,6 @@ data class Player(
                     this,
                     {
                         transferPolice()
-                        guild.modifyMemberRoles(member, session.spectatorRole).queue()
-                        updateNickname()
                     }
                 )
             } else {
@@ -234,6 +231,7 @@ data class Player(
         session?.let {
             member?.let { it1 -> it.guild?.modifyMemberRoles(it1, it.spectatorRole) }?.queue()
             updateNickname()
+            WerewolfApplication.gameSessionService.saveSession(it)
         }
     }
 

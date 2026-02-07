@@ -17,8 +17,7 @@ class GameController(
     private val roleService: RoleService,
     private val gameActionService: GameActionService,
     private val gameSessionService: GameSessionService,
-    private val gameStateService: GameStateService,
-    private val nightManager: NightManager
+    private val gameStateService: GameStateService
 ) {
     // --- Game State ---
     @GetMapping("/state")
@@ -72,13 +71,6 @@ class GameController(
     }
 
     // --- Players ---
-    @GetMapping("/players")
-    @CanViewGuild
-    fun getPlayers(@PathVariable guildId: Long): ResponseEntity<*> {
-        val session = gameSessionService.getSession(guildId)
-            .orElseThrow { Exception("Session not found") }
-        return ResponseEntity.ok(mapOf("success" to true, "data" to playerService.getPlayersJSON(session)))
-    }
 
     @PostMapping("/players/assign")
     @CanManageGuild
@@ -333,39 +325,6 @@ class GameController(
             ResponseEntity.ok(mapOf("success" to true))
         } catch (e: Exception) {
             ResponseEntity.internalServerError().body(mapOf("success" to false, "error" to e.message))
-        }
-    }
-
-    @GetMapping("/night-status")
-    @CanViewGuild
-    fun getNightStatus(@PathVariable guildId: Long): ResponseEntity<*> {
-        return try {
-            val session = gameSessionService.getSession(guildId)
-                .orElseThrow { Exception("Session not found") }
-
-            if (session.currentState != "NIGHT_PHASE") {
-                return ResponseEntity.ok(
-                    mapOf(
-                        "success" to false,
-                        "message" to "Not in night phase"
-                    )
-                )
-            }
-
-            val nightStatus = nightManager.buildNightStatus(session)
-            ResponseEntity.ok(
-                mapOf(
-                    "success" to true,
-                    "data" to nightStatus
-                )
-            )
-        } catch (e: Exception) {
-            ResponseEntity.internalServerError().body(
-                mapOf(
-                    "success" to false,
-                    "error" to e.message
-                )
-            )
         }
     }
 }

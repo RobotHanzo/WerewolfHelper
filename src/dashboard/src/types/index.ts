@@ -75,7 +75,7 @@ export interface ExpelState {
 
 export interface WerewolfMessage {
     senderId: number;
-    senderName: string;
+    senderName?: string;
     avatarUrl?: string | null;
     content: string;
     timestamp: number;
@@ -83,20 +83,20 @@ export interface WerewolfMessage {
 
 export interface WerewolfVote {
     voterId: number;
-    voterName: string;
-    targetId: number | null;
-    targetName: string | null;
+    voterName?: string;
+    targetId: number | string | null;
+    targetName?: string | null;
 }
 
 export interface ActionSubmissionStatus {
     playerId: number;
-    playerName: string;
+    playerName?: string;
     role: string;
-    status: 'PENDING' | 'SUBMITTED' | 'SKIPPED' | 'ACTING';
+    status: 'PENDING' | 'SUBMITTED' | 'SKIPPED' | 'ACTING' | 'PROCESSED';
     actionType: string | null;
-    targetId: number | null;
-    targetName: string | null;
-    submittedAt: number | null;
+    targetId: number | string | null;
+    targetName?: string | null;
+    submittedAt?: number | null;
 }
 
 export interface NightStatus {
@@ -104,7 +104,6 @@ export interface NightStatus {
     phaseType: 'WEREWOLF_VOTING' | 'ROLE_ACTIONS';
     startTime: number;
     endTime: number;
-    remainingSeconds: number;
     werewolfMessages: WerewolfMessage[];
     werewolfVotes: WerewolfVote[];
     actionStatuses: ActionSubmissionStatus[];

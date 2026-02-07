@@ -33,9 +33,6 @@ class SpeechServiceImplTest {
     fun setup() {
         MockitoAnnotations.openMocks(this)
         speechService = SpeechServiceImpl(
-            sessionRepository,
-            discordService,
-            gameActionService,
             gameSessionService
         )
     }

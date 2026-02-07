@@ -25,7 +25,7 @@ class RoleActionServiceImpl(
         guildId: Long,
         actionDefinitionId: String,
         actorPlayerId: Int,
-        targetPlayerIds: List<Int>,
+        targetPlayerIds: MutableList<Int>,
         submittedBy: String,
         metadata: Map<String, Any>
     ): Map<String, Any> {
@@ -53,31 +53,45 @@ class RoleActionServiceImpl(
             // Perform centralized validation
             val validationError = actionDef.validate(session, actorPlayerId, targetPlayerIds)
             if (validationError != null) {
+                log.warn(
+                    "Action validation failed for action {} by actor {}: {}",
+                    actionDefinitionId,
+                    actorPlayerId,
+                    validationError
+                )
                 return@withLockedSession mapOf("success" to false, "error" to validationError)
             }
 
             // Create action instance
-            val source = if (submittedBy == "JUDGE") ActionSubmissionSource.JUDGE else ActionSubmissionSource.PLAYER
+            val source = when (submittedBy) {
+                "JUDGE" -> ActionSubmissionSource.JUDGE
+                "SYSTEM" -> ActionSubmissionSource.SYSTEM
+                else -> ActionSubmissionSource.PLAYER
+            }
+
             val action = RoleActionInstance(
                 actor = actorPlayerId,
+                actorRole = (actor.roles?.firstOrNull() ?: "未知"),
                 actionDefinitionId = actionDefinitionId,
                 targets = targetPlayerIds,
                 submittedBy = source,
-                metadata = metadata
+                status = if (targetPlayerIds.contains(SKIP_TARGET_ID)) ActionStatus.SKIPPED else ActionStatus.SUBMITTED
             )
 
-            // Store in pending actions
-            session.stateData.pendingActions.add(action)
+            // Store in submitted actions (centralized list)
+            // Remove existing action of same definition from same actor to prevent duplicates
+            session.stateData.submittedActions.removeIf { it.actor == actorPlayerId && it.actionDefinitionId == actionDefinitionId }
+            session.stateData.submittedActions.add(action)
 
-            // Mark action as submitted (for players only, not judges)
+            // Mark action as submitted (for players only)
             if (submittedBy == "PLAYER") {
                 actor.actionSubmitted = true
             }
 
             log.info(
-                "[ActionSubmit] Stored action for guild {}. Pending actions now: {}",
+                "[ActionSubmit] Stored action for guild {}. Submitted actions now: {}",
                 guildId,
-                session.stateData.pendingActions.size
+                session.stateData.submittedActions.size
             )
 
             // Execute immediately if requested (e.g., Seer)
@@ -143,23 +157,69 @@ class RoleActionServiceImpl(
         return actions
     }
 
-    override fun getAvailableActionsForJudge(session: Session): Map<Int, List<RoleAction>> {
-        val result = mutableMapOf<Int, List<RoleAction>>()
-        for (player in session.alivePlayers().values) {
-            val playerId = player.id
-            val actions = getAvailableActionsForPlayer(session, playerId)
-            if (actions.isNotEmpty()) {
-                result[playerId] = actions
+    override fun resolveNightActions(session: Session): NightResolutionResult {
+        val actionsToProcess = session.stateData.submittedActions
+            .filter { it.status == ActionStatus.SUBMITTED }
+            .toMutableList()
+
+        log.info(
+            "NightResolution: Initial actions to process: {}",
+            actionsToProcess.map { "${it.actionDefinitionId} by ${it.actor}" })
+
+        // Self-Healing: Check if WEREWOLF_KILL is missing but valid votes exist
+        val wolfKillAction = actionsToProcess.find { it.actionDefinitionId == PredefinedRoles.WEREWOLF_KILL }
+        if (wolfKillAction == null) {
+            val wolfState = session.stateData.wolfStates[PredefinedRoles.WEREWOLF_KILL]
+            if (wolfState != null && wolfState.votes.any { it.targetId != null && it.targetId != SKIP_TARGET_ID }) {
+                log.info("NightResolution: WEREWOLF_KILL action missing/skipped! Attempting to reconstruct from votes...")
+                // Re-resolve vote
+                val voteCounts = wolfState.votes
+                    .filter { it.targetId != null && it.targetId != SKIP_TARGET_ID }
+                    .groupingBy { it.targetId!! }
+                    .eachCount()
+
+                if (voteCounts.isNotEmpty()) {
+                    val maxVotes = voteCounts.maxOf { it.value }
+                    val topTargets = voteCounts.filterValues { it == maxVotes }.keys.toList()
+                    val chosenTarget = topTargets.randomOrNull()
+
+                    if (chosenTarget != null) {
+                        val reconstructedAction = RoleActionInstance(
+                            actor = wolfState.electorates.firstOrNull() ?: 0,
+                            actorRole = "WEREWOLF",
+                            actionDefinitionId = PredefinedRoles.WEREWOLF_KILL,
+                            targets = arrayListOf(chosenTarget),
+                            submittedBy = ActionSubmissionSource.SYSTEM,
+                            status = ActionStatus.SUBMITTED
+                        )
+                        log.info("NightResolution: Reconstructed WEREWOLF_KILL: {}", reconstructedAction)
+                        actionsToProcess.add(reconstructedAction)
+                    }
+                }
             }
         }
-        return result
-    }
 
-    override fun resolveNightActions(session: Session): NightResolutionResult {
-        val pendingActions = session.stateData.pendingActions
+        if (actionsToProcess.isEmpty()) {
+            log.warn("NightResolution: No actions to process!")
+            return NightResolutionResult(emptyMap(), emptyList())
+        }
 
         // Execute all actions using the new action executor
-        val executionResult = roleActionExecutor.executeActions(session, pendingActions)
+        val executionResult = roleActionExecutor.executeActions(session, actionsToProcess)
+        log.info(
+            "NightResolution: ExecutionResult - Deaths={}, Saved={}, Protected={}",
+            executionResult.deaths, executionResult.saved, executionResult.protectedPlayers
+        )
+
+        // Move processed actions to executedActions record
+        val currentDay = session.day
+        val history = session.stateData.executedActions.getOrPut(currentDay) { mutableListOf() }
+        history.addAll(actionsToProcess)
+
+        // Mark as PROCESSED or remove from submitted list
+        session.stateData.submittedActions.removeIf {
+            it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.SKIPPED
+        }
 
         return NightResolutionResult(
             deaths = executionResult.deaths,
@@ -211,11 +271,12 @@ class RoleActionServiceImpl(
     }
 
     override fun getPendingActions(session: Session): List<RoleActionInstance> {
-        return session.stateData.pendingActions
+        return session.stateData.submittedActions.filter { it.status == ActionStatus.SUBMITTED }
     }
 
     override fun getActionUsageCount(session: Session, playerId: Int, actionDefinitionId: String): Int {
-        return session.stateData.actionData[playerId.toString()]?.usage?.get(actionDefinitionId) ?: 0
+        val action = roleRegistry.getAction(actionDefinitionId) ?: return 0
+        return action.getUsageCount(session, playerId)
     }
 
     override fun executeDeathTriggers(session: Session): List<Int> {
@@ -240,15 +301,11 @@ class RoleActionServiceImpl(
             killedByTriggers.addAll(deaths)
         }
 
-        // Clear pending death trigger actions
-        val remainingActions = getPendingActions(session)
-            .filter {
-                val action = roleRegistry.getAction(it.actionDefinitionId)
-                action?.timing != ActionTiming.DEATH_TRIGGER
-            }
-
-        session.stateData.pendingActions.clear()
-        session.stateData.pendingActions.addAll(remainingActions)
+        // Clear pending death trigger actions from submittedActions
+        session.stateData.submittedActions.removeIf {
+            val action = roleRegistry.getAction(it.actionDefinitionId)
+            action?.timing == ActionTiming.DEATH_TRIGGER && it.status == ActionStatus.SUBMITTED
+        }
         WerewolfApplication.gameSessionService.saveSession(session)
 
         return killedByTriggers
@@ -296,37 +353,39 @@ class RoleActionServiceImpl(
         activeSession: Session
     ) {
         val actorPlayer = activeSession.getPlayer(actorPlayerId) ?: return
+        val actorRole = actorPlayer.roles?.firstOrNull() ?: "未知"
 
-        val actionData = activeSession.stateData.actionData.getOrPut(actorPlayerId.toString()) {
-            ActionData(
-                playerId = actorPlayerId,
-                role = (actorPlayer.roles?.firstOrNull() ?: "未知")
+        // Find match by actor only (reuse any pending action)
+        val actionInstance = activeSession.stateData.submittedActions.find {
+            it.actor == actorPlayerId && it.status != ActionStatus.SUBMITTED
+        }
+
+        if (actionInstance == null) {
+            // Create new only if absolutely needed
+            val newInstance = RoleActionInstance(
+                actor = actorPlayerId,
+                actorRole = actorRole,
+                actionDefinitionId = actionId ?: "",
+                targets = if (targetPlayerIds.isNotEmpty()) targetPlayerIds.toMutableList() else mutableListOf(),
+                submittedBy = ActionSubmissionSource.PLAYER,
+                status = status
             )
-        }
-
-        actionData.status = status
-        if (actionId != null) {
-            val actionDef = roleRegistry.getAction(actionId)
-            if (actionDef != null) {
-                actionData.selectedAction = ActionInfo(
-                    actionDef.actionId,
-                    actionDef.actionName,
-                    actionDef.timing
-                )
+            activeSession.stateData.submittedActions.add(newInstance)
+        } else {
+            // Mutate existing
+            if (actionId != null) actionInstance.actionDefinitionId = actionId
+            if (targetPlayerIds.isNotEmpty()) {
+                actionInstance.targets.clear()
+                actionInstance.targets.addAll(targetPlayerIds)
             }
+            actionInstance.status = status
         }
-
-        if (targetPlayerIds.isNotEmpty()) {
-            actionData.selectedTargets = targetPlayerIds
-        }
-
-        actionData.submittedAt = System.currentTimeMillis()
 
         // session save handled by gameSessionService
         WerewolfApplication.gameSessionService.saveSession(activeSession)
 
         // Broadcast update via NightManager
-        nightManager.broadcastNightStatus(activeSession)
+        WerewolfApplication.gameSessionService.broadcastSessionUpdate(activeSession)
         nightManager.notifyPhaseUpdate(guildId)
     }
 }

@@ -9,14 +9,6 @@ import dev.robothanzo.werewolf.database.documents.Session
  */
 interface PlayerService {
     /**
-     * Serializes all players of a session to a JSON-compatible List of Maps.
-     *
-     * @param session the session containing the players
-     * @return a list of serialized player maps
-     */
-    fun getPlayersJSON(session: Session): List<Map<String, Any>>
-
-    /**
      * Initializes the player count for a game session.
      *
      * @param guildId    the ID of the guild

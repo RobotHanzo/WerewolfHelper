@@ -20,7 +20,7 @@ interface RoleActionService {
         guildId: Long,
         actionDefinitionId: String,
         actorPlayerId: Int,
-        targetPlayerIds: List<Int>,
+        targetPlayerIds: MutableList<Int>,
         submittedBy: String, // "PLAYER" or "JUDGE"
         metadata: Map<String, Any> = emptyMap()
     ): Map<String, Any>
@@ -29,11 +29,6 @@ interface RoleActionService {
      * Get available actions for a specific player based on their roles
      */
     fun getAvailableActionsForPlayer(session: Session, playerId: Int): List<RoleAction>
-
-    /**
-     * Get all available actions that can be manually cast by judge
-     */
-    fun getAvailableActionsForJudge(session: Session): Map<Int, List<RoleAction>>
 
     /**
      * Resolve all pending night actions and return death results

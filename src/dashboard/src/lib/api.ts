@@ -72,9 +72,6 @@ export class ApiClient {
     }
 
     // Player endpoints
-    async getPlayers(guildId: string) {
-        return this.request(`/api/sessions/${guildId}/players`);
-    }
 
     async assignRoles(guildId: string) {
         return this.request(`/api/sessions/${guildId}/players/assign`, {method: 'POST'});

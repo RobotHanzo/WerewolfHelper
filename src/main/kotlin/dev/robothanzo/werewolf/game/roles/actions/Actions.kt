@@ -1,10 +1,7 @@
 package dev.robothanzo.werewolf.game.roles.actions
 
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.ActionTiming
-import dev.robothanzo.werewolf.game.model.Camp
-import dev.robothanzo.werewolf.game.model.DeathCause
-import dev.robothanzo.werewolf.game.model.RoleActionInstance
+import dev.robothanzo.werewolf.game.model.*
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import org.springframework.context.annotation.Lazy
 import org.springframework.data.annotation.Transient
@@ -22,15 +19,15 @@ class WerewolfKillAction : BaseRoleAction(
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
+        println("WerewolfKillAction: Inputs - Targets=${action.targets}")
         if (action.targets.isEmpty() || action.targets.first() == dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID) {
+            println("WerewolfKillAction: Skipped due to empty or skip target")
             return accumulatedState
         }
 
-        val deaths = accumulatedState.deaths.toMutableMap()
-        val killList = (deaths[DeathCause.WEREWOLF] ?: emptyList()).toMutableList()
-        killList.add(action.targets[0])
-        deaths[DeathCause.WEREWOLF] = killList
-        return accumulatedState.copy(deaths = deaths)
+        accumulatedState.deaths.getOrPut(DeathCause.WEREWOLF) { mutableListOf() }.add(action.targets[0])
+        println("WerewolfKillAction: Added kill ${action.targets[0]}. New Wolf deaths: ${accumulatedState.deaths[DeathCause.WEREWOLF]}")
+        return accumulatedState
     }
 }
 
@@ -49,11 +46,8 @@ class WolfYoungerBrotherExtraKillAction : BaseRoleAction(
     ): ActionExecutionResult {
         if (action.targets.isEmpty() || action.targets[0] == -1) return accumulatedState
 
-        val deaths = accumulatedState.deaths.toMutableMap()
-        val killList = (deaths[DeathCause.WEREWOLF] ?: emptyList()).toMutableList()
-        killList.add(action.targets[0])
-        deaths[DeathCause.WEREWOLF] = killList
-        return accumulatedState.copy(deaths = deaths)
+        accumulatedState.deaths.getOrPut(DeathCause.WEREWOLF) { mutableListOf() }.add(action.targets[0])
+        return accumulatedState
     }
 
     override fun isAvailable(session: Session, actor: Int): Boolean {
@@ -101,11 +95,11 @@ class SeerCheckAction(
             } ?: false
         }
 
-        if (!action.processed) {
+        if (action.status != ActionStatus.PROCESSED) {
             val seerPlayer = session.getPlayer(action.actor)
             val resultText = if (isWolf) "狼人" else "好人"
             seerPlayer?.channel?.sendMessage("🔮 **查驗結果**：${target.nickname} 是 **$resultText**")?.queue()
-            action.processed = true
+            action.status = ActionStatus.PROCESSED
         }
         return accumulatedState
     }
@@ -131,7 +125,8 @@ class WitchAntidoteAction : BaseRoleAction(
         if (targetId !in werewolfKillList) return accumulatedState
         if (targetId == action.actor && !session.settings.witchCanSaveSelf) return accumulatedState
 
-        return accumulatedState.copy(saved = accumulatedState.saved + targetId)
+        accumulatedState.saved.add(targetId)
+        return accumulatedState
     }
 
     override fun eligibleTargets(
@@ -160,11 +155,8 @@ class WitchPoisonAction : BaseRoleAction(
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
-        val deaths = accumulatedState.deaths.toMutableMap()
-        val poisonList = (deaths[DeathCause.POISON] ?: emptyList()).toMutableList()
-        poisonList.add(targetId)
-        deaths[DeathCause.POISON] = poisonList
-        return accumulatedState.copy(deaths = deaths)
+        accumulatedState.deaths.getOrPut(DeathCause.POISON) { mutableListOf() }.add(targetId)
+        return accumulatedState
     }
 }
 
@@ -183,10 +175,10 @@ class GuardProtectAction : BaseRoleAction(
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
         val lastProtected = session.stateData.lastGuardProtectedId
 
-        if (lastProtected == targetId && session.day > 0) return accumulatedState
+        if (lastProtected == targetId && session.day > 1) return accumulatedState
 
-        session.stateData.lastGuardProtectedId = targetId
-        return accumulatedState.copy(protectedPlayers = accumulatedState.protectedPlayers + targetId)
+        accumulatedState.protectedPlayers.add(targetId)
+        return accumulatedState
     }
 
     override fun eligibleTargets(
@@ -196,7 +188,7 @@ class GuardProtectAction : BaseRoleAction(
         accumulatedState: ActionExecutionResult
     ): List<Int> {
         val lastProtected = session.stateData.lastGuardProtectedId
-        return if (lastProtected != null && session.day > 0) {
+        return if (lastProtected != null && session.day > 1) {
             alivePlayers.filter { it != lastProtected }
         } else {
             alivePlayers
@@ -217,11 +209,9 @@ class HunterRevengeAction : BaseRoleAction(
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
-        val deaths = accumulatedState.deaths.toMutableMap()
-        val currentList = deaths.getOrDefault(DeathCause.HUNTER_REVENGE, emptyList())
-        deaths[DeathCause.HUNTER_REVENGE] = currentList + targetId
+        accumulatedState.deaths.getOrPut(DeathCause.HUNTER_REVENGE) { mutableListOf() }.add(targetId)
         session.stateData.deathTriggerAvailableMap.remove(actionId)
-        return accumulatedState.copy(deaths = deaths)
+        return accumulatedState
     }
 
     override fun eligibleTargets(
@@ -247,11 +237,9 @@ class WolfKingRevengeAction : BaseRoleAction(
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
-        val deaths = accumulatedState.deaths.toMutableMap()
-        val currentList = deaths.getOrDefault(DeathCause.WOLF_KING_REVENGE, emptyList())
-        deaths[DeathCause.WOLF_KING_REVENGE] = currentList + targetId
+        accumulatedState.deaths.getOrPut(DeathCause.WOLF_KING_REVENGE) { mutableListOf() }.add(targetId)
         session.stateData.deathTriggerAvailableMap.remove(actionId)
-        return accumulatedState.copy(deaths = deaths)
+        return accumulatedState
     }
 
     override fun eligibleTargets(
@@ -266,7 +254,7 @@ class WolfKingRevengeAction : BaseRoleAction(
 
 @Component
 class DeathResolutionAction : BaseRoleAction(
-    actionId = "DEATH_RESOLUTION",
+    actionId = PredefinedRoles.DEATH_RESOLUTION,
     actionName = "結算",
     priority = 1000,
     timing = ActionTiming.NIGHT,
@@ -277,29 +265,42 @@ class DeathResolutionAction : BaseRoleAction(
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
-        val deaths = accumulatedState.deaths.mapValues { it.value.toMutableList() }.toMutableMap()
+        println("DeathResolution: Starting. Deaths=${accumulatedState.deaths}, Saved=${accumulatedState.saved}, Protected=${accumulatedState.protectedPlayers}")
 
+        val deaths = accumulatedState.deaths
         val werewolfTargets = deaths[DeathCause.WEREWOLF]?.toSet() ?: emptySet()
         val doubleProtected = werewolfTargets
             .filter { it in accumulatedState.saved }
             .filter { it in accumulatedState.protectedPlayers }
 
+        if (doubleProtected.isNotEmpty()) println("DeathResolution: Double protected players found: $doubleProtected")
+
         accumulatedState.saved.forEach { savedId ->
-            deaths.values.forEach { it.removeIf { id -> id == savedId } }
+            if (deaths.values.any { it.contains(savedId) }) {
+                println("DeathResolution: Saving player $savedId from death")
+                deaths.values.forEach { it.removeIf { id -> id == savedId } }
+            }
         }
         val protectedPlayers = accumulatedState.protectedPlayers
-        deaths[DeathCause.WEREWOLF]?.removeIf { it in protectedPlayers }
+        if (protectedPlayers.isNotEmpty()) {
+            val killedProtected = deaths[DeathCause.WEREWOLF]?.filter { it in protectedPlayers }
+            if (killedProtected?.isNotEmpty() == true) {
+                println("DeathResolution: Guard protecting players $killedProtected from Wolf kill")
+                deaths[DeathCause.WEREWOLF]?.removeIf { it in protectedPlayers }
+            }
+        }
 
         if (doubleProtected.isNotEmpty()) {
             deaths[DeathCause.DOUBLE_PROTECTION] = doubleProtected.toMutableList()
+            println("DeathResolution: Adding DOUBLE_PROTECTION death for $doubleProtected")
         }
 
         deaths.entries.removeIf { it.value.isEmpty() }
+        println("DeathResolution: Final deaths map: $deaths")
 
-        val metadata = accumulatedState.metadata.toMutableMap()
-        if (doubleProtected.isNotEmpty()) metadata["doubleProtectedPlayers"] = doubleProtected
+        if (doubleProtected.isNotEmpty()) accumulatedState.metadata["doubleProtectedPlayers"] = doubleProtected
 
-        return accumulatedState.copy(deaths = deaths, metadata = metadata)
+        return accumulatedState
     }
 }
 
@@ -326,17 +327,12 @@ abstract class DarkMerchantTradeAction(
         val actorPlayer = session.getPlayer(action.actor)
         if (isWolf) {
             // Merchant dies
-            val deaths = accumulatedState.deaths.toMutableMap()
-            val unknownList = (deaths[DeathCause.UNKNOWN] ?: emptyList()).toMutableList()
-            unknownList.add(action.actor)
-            deaths[DeathCause.UNKNOWN] = unknownList
+            accumulatedState.deaths.getOrPut(DeathCause.UNKNOWN) { mutableListOf() }.add(action.actor)
             session.addLog(dev.robothanzo.werewolf.database.documents.LogType.SYSTEM, "黑市商人與狼人交易，不幸出局")
             actorPlayer?.channel?.sendMessage("🌙 **交易失敗**：你交易的對象是狼人，你不幸出局...")?.queue()
-            return accumulatedState.copy(deaths = deaths)
+            return accumulatedState
         } else {
             // Trade success, recipient gets a skill next night
-            session.stateData.darkMerchantTradeRecipientId = targetId
-            session.stateData.darkMerchantGiftedSkill = skillType
             session.addLog(
                 dev.robothanzo.werewolf.database.documents.LogType.SYSTEM,
                 "黑市商人交易成功，將技能 $skillType 贈予了玩家 $targetId"
@@ -385,12 +381,12 @@ class MerchantSeerCheckAction(
             (session.hydratedRoles[role] ?: roleRegistry.getRole(role))?.camp == Camp.WEREWOLF
         } ?: false
 
-        if (!action.processed) {
+        if (action.status != ActionStatus.PROCESSED) {
             val actorPlayer = session.getPlayer(action.actor)
             val resultText = if (isWolf) "狼人" else "好人"
             actorPlayer?.channel?.sendMessage("🔮 **查驗結果 (商人贈予)**：${target.nickname} 是 **$resultText**")
                 ?.queue()
-            action.processed = true
+            action.status = ActionStatus.PROCESSED
         }
         return accumulatedState
     }
@@ -410,11 +406,8 @@ class MerchantPoisonAction : BaseRoleAction(
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
-        val deaths = accumulatedState.deaths.toMutableMap()
-        val poisonList = (deaths[DeathCause.POISON] ?: emptyList()).toMutableList()
-        poisonList.add(targetId)
-        deaths[DeathCause.POISON] = poisonList
-        return accumulatedState.copy(deaths = deaths)
+        accumulatedState.deaths.getOrPut(DeathCause.POISON) { mutableListOf() }.add(targetId)
+        return accumulatedState
     }
 }
 
@@ -432,9 +425,7 @@ class MerchantGunAction : BaseRoleAction(
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
-        val deaths = accumulatedState.deaths.toMutableMap()
-        val currentList = deaths.getOrDefault(DeathCause.HUNTER_REVENGE, emptyList())
-        deaths[DeathCause.HUNTER_REVENGE] = currentList + targetId
-        return accumulatedState.copy(deaths = deaths)
+        accumulatedState.deaths.getOrPut(DeathCause.HUNTER_REVENGE) { mutableListOf() }.add(targetId)
+        return accumulatedState
     }
 }

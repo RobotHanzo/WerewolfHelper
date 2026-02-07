@@ -1,8 +1,8 @@
 package dev.robothanzo.werewolf.discord
 
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.GroupVote
 import dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID
+import dev.robothanzo.werewolf.game.model.WolfVote
 import dev.robothanzo.werewolf.service.ActionUIService
 import dev.robothanzo.werewolf.utils.isAdmin
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
@@ -75,9 +75,9 @@ class ActionSelectionListener(
         event.reply("✅ 你投票支持擊殺: **$targetName**").setEphemeral(true).queue()
 
         // Broadcast real-time tally to wolves
-        val tallyMessage = buildWolfTallyMessage(finalSession, finalGroupState.votes, finalGroupState.participants.size)
+        val tallyMessage = buildWolfTallyMessage(finalSession, finalGroupState.votes, finalGroupState.electorates.size)
         finalSession.players.values
-            .filter { it.id in finalGroupState.participants }
+            .filter { it.id in finalGroupState.electorates }
             .forEach { p ->
                 p.channel?.sendMessage(tallyMessage)?.queue()
             }
@@ -88,13 +88,14 @@ class ActionSelectionListener(
 
     private fun buildWolfTallyMessage(
         session: Session,
-        votes: List<GroupVote>,
+        votes: List<WolfVote>,
         totalVoters: Int
     ): String {
         val voteCounts = votes.groupingBy { it.targetId }.eachCount()
         val lines = mutableListOf<String>()
         lines.add("📊 **狼人投票即時統計 (下方顯示投票擊殺之目標)**")
-        lines.add("已投票: ${votes.size}/$totalVoters")
+        val votedCount = votes.count { it.targetId != null }
+        lines.add("已投票: $votedCount/$totalVoters")
 
         val sortedTargets = voteCounts.entries.sortedByDescending { it.value }
         if (sortedTargets.isEmpty()) {

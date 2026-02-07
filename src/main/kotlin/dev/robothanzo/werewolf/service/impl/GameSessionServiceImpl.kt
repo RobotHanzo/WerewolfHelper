@@ -415,12 +415,7 @@ class GameSessionServiceImpl(
                 return
             }
             val guildId = if (guildIdObj is Long) guildIdObj.toString() else guildIdObj as String
-
-            val mapper = jacksonObjectMapper()
-            val envelope = mapOf("type" to type, "data" to data)
-            val jsonMessage = mapper.writeValueAsString(envelope)
-
-            webSocketHandler.broadcastToGuild(guildId, jsonMessage)
+            webSocketHandler.broadcastToGuild(guildId, mapOf("type" to type, "data" to data).json())
         } catch (_: InterruptedException) {
             // Thread was interrupted - clear the flag and continue
             Thread.interrupted()
@@ -430,4 +425,8 @@ class GameSessionServiceImpl(
         }
     }
 
+    fun Map<*, *>.json(): String {
+        val mapper = jacksonObjectMapper()
+        return mapper.writeValueAsString(this)
+    }
 }

@@ -20,10 +20,6 @@ class PlayerServiceImpl(
 ) : PlayerService {
     private val log = LoggerFactory.getLogger(PlayerServiceImpl::class.java)
 
-    override fun getPlayersJSON(session: Session): List<Map<String, Any>> {
-        return gameSessionService.playersToJSON(session)
-    }
-
     @Throws(Exception::class)
     override fun setPlayerCount(
         session: Session,

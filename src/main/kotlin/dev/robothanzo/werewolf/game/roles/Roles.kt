@@ -1,8 +1,6 @@
 package dev.robothanzo.werewolf.game.roles
 
-import dev.robothanzo.werewolf.game.model.BaseRole
-import dev.robothanzo.werewolf.game.model.Camp
-import dev.robothanzo.werewolf.game.model.RoleEventContext
+import dev.robothanzo.werewolf.game.model.*
 import dev.robothanzo.werewolf.game.roles.actions.*
 import org.springframework.data.annotation.Transient
 import org.springframework.stereotype.Component
@@ -56,8 +54,16 @@ class WolfBrother(@Transient private val killAction: WerewolfKillAction) : BaseR
     override fun getActions(): List<RoleAction> = listOf(killAction)
 
     override fun onDeath(context: RoleEventContext) {
-        // Record the day the Wolf Brother died
-        context.session.stateData.wolfBrotherDiedDay = context.session.day
+        // Record the day the Wolf Brother died by adding a DEATH action to executedActions
+        val deathAction = RoleActionInstance(
+            actor = context.actorPlayerId,
+            actorRole = "狼兄",
+            actionDefinitionId = "DEATH",
+            targets = arrayListOf(),
+            submittedBy = ActionSubmissionSource.SYSTEM,
+            status = ActionStatus.PROCESSED
+        )
+        context.session.stateData.executedActions.getOrPut(context.session.day) { mutableListOf() }.add(deathAction)
     }
 }
 

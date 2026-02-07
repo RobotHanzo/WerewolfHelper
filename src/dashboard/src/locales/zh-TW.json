@@ -39,7 +39,16 @@
       "SEER_CHECK": "預言查驗",
       "WITCH_ANTIDOTE": "女巫解藥",
       "WITCH_POISON": "女巫毒藥",
-      "GUARD_PROTECT": "守衛守護"
+      "GUARD_PROTECT": "守衛守護",
+      "DARK_MERCHANT_TRADE_GUN": "黑市商人 (獵槍)",
+      "DARK_MERCHANT_TRADE_SEER": "黑市商人 (預言)",
+      "DARK_MERCHANT_TRADE_POISON": "黑市商人 (毒藥)",
+      "HUNTER_REVENGE": "獵人開槍",
+      "WOLF_KING_REVENGE": "狼王復仇",
+      "WOLF_YOUNGER_BROTHER_EXTRA_KILL": "狼弟復仇",
+      "MERCHANT_SEER_CHECK": "查驗 (商人贈予)",
+      "MERCHANT_POISON": "毒藥 (商人贈予)",
+      "MERCHANT_GUN": "獵槍 (商人贈予)"
     },
     "timing": {
       "NIGHT": "夜晚",

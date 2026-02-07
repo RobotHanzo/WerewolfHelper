@@ -37,16 +37,6 @@ class DeathAnnouncementStep(
             for ((deathCause, deaths) in resolutionResult.deaths) {
                 for (userId in deaths) {
                     allDeaths.add(userId)
-
-                    // Log the specific death cause (for admin purposes only)
-                    lockedSession.addLog(
-                        LogType.PLAYER_DIED,
-                        "玩家 $userId ${deathCause.logMessage}",
-                        mapOf(
-                            "userId" to userId,
-                            "deathCause" to deathCause.name
-                        )
-                    )
                 }
             }
 

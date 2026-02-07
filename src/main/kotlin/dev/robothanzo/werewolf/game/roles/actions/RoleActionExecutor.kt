@@ -3,6 +3,7 @@ package dev.robothanzo.werewolf.game.roles.actions
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.ActionSubmissionSource
 import dev.robothanzo.werewolf.game.model.RoleActionInstance
+import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import org.springframework.stereotype.Component
 
@@ -23,6 +24,9 @@ class RoleActionExecutor(private val roleRegistry: RoleRegistry) {
         session: Session,
         pendingActions: List<RoleActionInstance>
     ): ActionExecutionResult {
+        println("RoleActionExecutor: Starting execution of ${pendingActions.size} actions.")
+        pendingActions.forEach { println(" - Action: ${it.actionDefinitionId} by Actor ${it.actor} (Targets: ${it.targets})") }
+
         // Sort actions by priority (lower number = higher priority = executes first)
         val sortedActions = pendingActions.sortedBy { action ->
             roleRegistry.getAction(action.actionDefinitionId)?.priority ?: Int.MAX_VALUE
@@ -32,18 +36,35 @@ class RoleActionExecutor(private val roleRegistry: RoleRegistry) {
         var result = ActionExecutionResult()
 
         for (action in sortedActions) {
-            result = executeActionInstance(session, action, result)
+            try {
+                println("RoleActionExecutor: Executing ${action.actionDefinitionId} for Actor ${action.actor}...")
+                val previousDeaths = result.deaths.toString()
+                result = executeActionInstance(session, action, result)
+                println("RoleActionExecutor: Finished ${action.actionDefinitionId}. Deaths changed: $previousDeaths -> ${result.deaths}")
+            } catch (e: Exception) {
+                // Log error but continue execution of other actions
+                println("Error executing action ${action.actionDefinitionId} for player ${action.actor}: ${e.message}")
+                e.printStackTrace()
+            }
         }
 
         // Execute death resolution as final step
-        val deathResolution = roleRegistry.getAction("DEATH_RESOLUTION") ?: return result
+        val deathResolution = roleRegistry.getAction(PredefinedRoles.DEATH_RESOLUTION)
+        if (deathResolution == null) {
+            println("RoleActionExecutor: CRITICAL WARNING - DEATH_RESOLUTION action not found! Returning raw accumulated state.")
+            return result
+        }
+        println("RoleActionExecutor: Executing DEATH_RESOLUTION...")
         val dummyAction = RoleActionInstance(
             actor = 0,
-            actionDefinitionId = "DEATH_RESOLUTION",
-            targets = emptyList(),
-            submittedBy = ActionSubmissionSource.JUDGE
+            actorRole = "SYSTEM",
+            actionDefinitionId = PredefinedRoles.DEATH_RESOLUTION,
+            targets = arrayListOf(),
+            submittedBy = ActionSubmissionSource.JUDGE,
+            status = dev.robothanzo.werewolf.game.model.ActionStatus.SUBMITTED
         )
         result = deathResolution.execute(session, dummyAction, result)
+        println("RoleActionExecutor: Final Result - Deaths: ${result.deaths}, Saved: ${result.saved}, Protected: ${result.protectedPlayers}")
 
         return result
     }
@@ -60,6 +81,7 @@ class RoleActionExecutor(private val roleRegistry: RoleRegistry) {
         return if (executor != null) {
             executor.execute(session, action, accumulatedState)
         } else {
+            println("RoleActionExecutor: No executor found for ${action.actionDefinitionId}")
             accumulatedState
         }
     }

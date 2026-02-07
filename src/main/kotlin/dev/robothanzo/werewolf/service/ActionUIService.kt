@@ -2,8 +2,8 @@ package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.ActionData
-import dev.robothanzo.werewolf.game.model.GroupActionState
+import dev.robothanzo.werewolf.game.model.RoleActionInstance
+import dev.robothanzo.werewolf.game.model.WolvesActionState
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 
 interface ActionUIService {
@@ -18,7 +18,7 @@ interface ActionUIService {
         playerId: Int,
         availableActions: List<RoleAction>,
         timeoutSeconds: Int = 60
-    ): ActionData?
+    ): RoleActionInstance?
 
     /**
      * Send group action UI for wolves to discuss and vote on target
@@ -31,7 +31,7 @@ interface ActionUIService {
         actionId: String,
         participants: List<Int>, // These are playerIds
         durationSeconds: Int = 90
-    ): GroupActionState?
+    ): WolvesActionState?
 
     /**
      * Update an action prompt with selected action
@@ -41,7 +41,7 @@ interface ActionUIService {
         playerId: Int,
         actionId: String,
         session: Session
-    ): ActionData?
+    ): RoleActionInstance?
 
     /**
      * Record a target selection for an action prompt
@@ -53,7 +53,9 @@ interface ActionUIService {
         session: Session
     ): Boolean
 
-    fun getActionData(session: Session, playerId: Int): ActionData?
+    fun getActionData(session: Session, playerId: Int): RoleActionInstance?
+
+    fun updateTargetPromptId(session: Session, playerId: Int, promptId: Long)
 
     /**
      * Record a vote in a group action
@@ -67,17 +69,12 @@ interface ActionUIService {
     /**
      * Get the final target for a group action (majority vote or last vote)
      */
-    fun resolveGroupVote(session: Session, groupState: GroupActionState): Int?
+    fun resolveGroupVote(session: Session, groupState: WolvesActionState): Int?
 
     /**
      * Get a group action state by action ID
      */
-    fun getGroupState(session: Session, actionId: String): GroupActionState?
-
-    /**
-     * Clear a group action state after resolution
-     */
-    fun clearGroupState(session: Session, actionId: String)
+    fun getGroupState(session: Session, actionId: String): WolvesActionState?
 
     /**
      * Clean up expired action prompts and group states

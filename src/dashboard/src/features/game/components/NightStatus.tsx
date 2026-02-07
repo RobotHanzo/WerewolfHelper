@@ -1,25 +1,189 @@
 import React, {useEffect, useState} from 'react';
-import {useWebSocket} from '@/lib/websocket';
 import {ChevronRight, Clock, FastForward, MessageCircle, Skull, Users} from 'lucide-react';
-import {ActionSubmissionStatus, Player} from '@/types';
+import {ActionSubmissionStatus, GameState, Player} from '@/types';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
+import {useTranslation} from '@/lib/i18n';
+
+interface RoleActionsScreenProps {
+    statuses: Array<ActionSubmissionStatus & {
+        playerName: string,
+        avatarUrl?: string,
+        playerUserId?: string,
+        targetName: string | null,
+        targetAvatarUrl?: string,
+        targetUserId?: string
+    }>;
+    wolfTargetName: string;
+    wolfTargetUserId?: string;
+    wolfTargetId: number | null;
+    wolfVoteCount: number;
+    guildId?: string;
+}
+
+const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
+                                                                 statuses,
+                                                                 wolfTargetName,
+                                                                 wolfTargetUserId,
+                                                                 wolfTargetId,
+                                                                 wolfVoteCount,
+                                                                 guildId
+                                                             }) => {
+    const {t} = useTranslation();
+
+    // Deduplicate statuses by playerId to handle potential backend data issues
+    const uniqueStatuses = React.useMemo(() => {
+        const map = new Map();
+        statuses.forEach(s => map.set(s.playerId, s));
+        return Array.from(map.values());
+    }, [statuses]);
+
+    const getRoleBorderColor = (role: string): string => {
+        if (role.includes('狼')) return 'border-red-500/50 hover:border-red-500';
+        if (role.includes('女巫')) return 'border-purple-500/50 hover:border-purple-500';
+        if (role.includes('獵人')) return 'border-amber-500/50 hover:border-amber-500';
+        if (role.includes('預言家')) return 'border-blue-500/50 hover:border-blue-500';
+        if (role.includes('守衛')) return 'border-cyan-500/50 hover:border-cyan-500';
+        return 'border-slate-700 hover:border-slate-500';
+    };
+
+    const getStatusColor = (status: string): string => {
+        switch (status) {
+            case 'SUBMITTED':
+                return 'bg-green-500/20 text-green-300 border-green-500';
+            case 'SKIPPED':
+                return 'bg-amber-500/20 text-amber-300 border-amber-500';
+            case 'ACTING':
+                return 'bg-blue-500/20 text-blue-300 border-blue-500';
+            default:
+                return 'bg-slate-500/20 text-slate-300 border-slate-500';
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full">
+            {/* Wolf Kill Summary */}
+            <div
+                className="animate-slide-in mb-3 bg-red-900/20 border border-red-800/50 rounded-lg p-3 flex items-center justify-between flex-shrink-0"
+                style={{animationDelay: '50ms'}}
+            >
+                <div className="flex items-center gap-3">
+                    <div className="bg-red-600/20 p-2 rounded-full">
+                        <Skull className="w-5 h-5 text-red-500"/>
+                    </div>
+                    <div>
+                        <div className="text-xs text-red-300 font-bold uppercase tracking-wider">狼人擊殺目標</div>
+                        <div className="font-bold text-lg text-white flex items-center gap-2">
+                            {wolfTargetName}
+                            {wolfVoteCount > 0 && <span
+                                className="text-xs bg-red-600 px-1.5 py-0.5 rounded-full">{wolfVoteCount} 票</span>}
+                        </div>
+                    </div>
+                </div>
+                {wolfTargetId === -1 ? (
+                    <div
+                        className="w-10 h-10 rounded-full border-2 border-amber-500/50 bg-amber-500/20 flex items-center justify-center">
+                        <FastForward className="w-5 h-5 text-amber-500"/>
+                    </div>
+                ) : (
+                    <DiscordAvatar userId={wolfTargetUserId} guildId={guildId}
+                                   avatarClassName="w-10 h-10 rounded-full border-2 border-red-600/50"/>
+                )}
+            </div>
+
+            {/* Grid of actions */}
+            <div className="grid grid-cols-2 gap-3 overflow-y-auto p-2 min-h-0">
+                {uniqueStatuses.length === 0 ? (
+                    <div className="col-span-2 flex items-center justify-center h-full text-slate-400">
+                        等待職業行動...
+                    </div>
+                ) : (
+                    uniqueStatuses.map((status, index) => (
+                        <div
+                            key={status.playerId}
+                            className={`animate-slide-in bg-slate-800/80 rounded-lg p-4 border-2 ${getRoleBorderColor(status.role)} transition-all duration-300 flex flex-col justify-between shadow-lg`}
+                            style={{animationDelay: `${100 + index * 75}ms`}}
+                        >
+                            <div className="flex items-start justify-between mb-3">
+                                <div className="min-w-0">
+                                    <h3 className="font-bold text-lg leading-tight truncate">
+                                        <DiscordName userId={status.playerUserId} guildId={guildId}
+                                                     fallbackName={status.playerName}/>
+                                    </h3>
+                                    <p className="text-xs opacity-70 mt-0.5">{status.role}</p>
+                                </div>
+                                <DiscordAvatar userId={status.playerUserId} guildId={guildId}
+                                               avatarClassName="w-10 h-10 rounded-full border border-slate-700 shadow-sm flex-shrink-0 ml-3"/>
+                            </div>
+
+                            <div className="space-y-2">
+                                {status.actionType && status.actionType !== "" && (
+                                    <div className="bg-white/5 rounded px-2 py-1">
+                                        <p className="text-xs opacity-60">行動</p>
+                                        <p className="font-semibold text-slate-200">
+                                            {t(`actions.labels.${status.actionType}`, {defaultValue: status.actionType})}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {status.targetName && status.targetId !== null && (
+                                    <div
+                                        className="bg-white/10 rounded px-2 py-1 flex items-center justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] opacity-60 uppercase font-bold tracking-tight">目標</p>
+                                            <p className="font-semibold text-sm truncate">
+                                                <DiscordName userId={status.targetUserId} guildId={guildId}
+                                                             fallbackName={status.targetName || ''}/>
+                                            </p>
+                                        </div>
+                                        {status.targetId === -1 ? (
+                                            <div
+                                                className="w-6 h-6 rounded-full border border-amber-500/50 bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                                                <FastForward className="w-3 h-3 text-amber-500"/>
+                                            </div>
+                                        ) : (
+                                            <DiscordAvatar userId={status.targetUserId} guildId={guildId}
+                                                           avatarClassName="w-6 h-6 rounded-full border border-slate-600 flex-shrink-0"/>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div
+                                    className={`border rounded px-2 py-1 text-xs font-semibold text-center ${getStatusColor(status.status)}`}>
+                                    {status.status === 'SUBMITTED'
+                                        ? '✓ 已提交'
+                                        : status.status === 'SKIPPED'
+                                            ? '⏭️ 已跳過'
+                                            : status.status === 'ACTING'
+                                                ? '⚡ 行動中...'
+                                                : '⏳ 待提交'}
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+};
 
 interface NightStatusProps {
     guildId?: string;
     players?: Player[];
+    gameState?: GameState;
 }
 
 interface WerewolfMessage {
     senderId: number;
-    senderName: string;
+    senderName?: string;
     avatarUrl?: string | null;
     content: string;
     timestamp: number;
+    senderUserId?: string;
 }
 
 interface WerewolfVote {
     voterId: number;
-    targetId: number | null;
+    targetId: number | string | null;
 }
 
 interface NightStatusData {
@@ -32,14 +196,60 @@ interface NightStatusData {
     actionStatuses: ActionSubmissionStatus[];
 }
 
-export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, players = []}) => {
-    const [nightStatus, setNightStatus] = useState<NightStatusData | null>(null);
+export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, players = [], gameState}) => {
     const [activeTab, setActiveTab] = useState<'werewolves' | 'actions'>('werewolves');
     const messageScrollContainerRef = React.useRef<HTMLDivElement>(null);
 
     // Get guildId from URL or props
     const pathParts = typeof window !== 'undefined' ? window.location.pathname.split('/') : [];
     const guildId = propGuildId || pathParts[2];
+
+    const nightStatus = React.useMemo<NightStatusData | null>(() => {
+        if (!gameState?.stateData) return null;
+
+        const stateData = gameState.stateData;
+        const phaseType = stateData.phaseType || 'WEREWOLF_VOTING';
+
+        // Map werewolf messages
+        const werewolfMessages = (stateData.werewolfMessages || []).map((msg: any) => {
+            const sender = players.find(p => p.id === msg.senderId);
+            return {
+                senderId: msg.senderId,
+                senderName: sender?.name,
+                avatarUrl: sender?.avatar,
+                senderUserId: sender?.userId, // Map userId for DiscordAvatar
+                content: msg.content,
+                timestamp: msg.timestamp
+            };
+        });
+
+        // Map werewolf votes
+        const wolfState = stateData.wolfStates?.['WEREWOLF_KILL'];
+        const werewolfVotes = (wolfState?.votes || []).map((vote: any) => ({
+            voterId: vote.voterId,
+            targetId: vote.targetId
+        }));
+
+        // Map action statuses
+        const actionStatuses = (stateData.submittedActions || []).map((action: any) => ({
+            playerId: action.actor,
+            role: action.actorRole,
+            status: action.status,
+            actionType: action.actionDefinitionId || null,
+            targetId: action.targets?.[0]?.toString() || null,
+            submittedAt: null // Not strictly needed
+        }));
+
+        return {
+            day: gameState.day,
+            phaseType,
+            startTime: stateData.phaseStartTime || Date.now(),
+            endTime: stateData.phaseEndTime || (Date.now() + 60000),
+            werewolfMessages,
+            werewolfVotes,
+            actionStatuses
+        };
+    }, [gameState, players]);
 
     // Calculate remaining time based on phase start time and phase type
     const getRemainingSeconds = (): number => {
@@ -61,48 +271,12 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
         }
     }, [nightStatus?.phaseType]);
 
-    // Subscribe to WebSocket updates
-    useWebSocket((message: any) => {
-        if (message.type === 'NIGHT_STATUS_UPDATED') {
-            if (message.data?.nightStatus) {
-                setNightStatus(message.data.nightStatus);
-            } else {
-                fetchNightStatus();
-            }
-        }
-    }, guildId);
-
-    const fetchNightStatus = async () => {
-        if (!guildId) return;
-
-        try {
-            const response = await fetch(`/api/sessions/${guildId}/night-status`, {
-                credentials: 'include',
-            });
-
-            if (!response.ok) return;
-
-            const data = await response.json();
-            if (data.success && data.data) {
-                setNightStatus(data.data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch night status:', error);
-        }
-    };
-
-    // Fetch initial night status on mount
-    useEffect(() => {
-        if (!guildId) return;
-        fetchNightStatus();
-    }, [guildId]);
-
     if (!nightStatus) {
         return null;
     }
 
     const enrichedMessages = nightStatus.werewolfMessages.map(msg => {
-        const sender = players.find(p => p.id === msg.senderId);
+        const sender = players.find(p => p.id === Number(msg.senderId));
         return {
             ...msg,
             senderName: msg.senderName || sender?.name || `玩家 ${msg.senderId}`,
@@ -112,7 +286,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
     });
 
     const enrichedVotes = nightStatus.werewolfVotes.map(vote => {
-        const voter = players.find(p => p.id === vote.voterId);
+        const voter = players.find(p => p.id === Number(vote.voterId));
         const rawTargetId = vote.targetId;
         const targetId = (rawTargetId !== null && rawTargetId !== undefined) ? Number(rawTargetId) : null;
         const target = (targetId !== null && targetId > 0) ? players.find(p => p.id === targetId) : null;
@@ -134,13 +308,13 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
             targetName,
             targetUserId: target?.userId || undefined,
         };
-    });
+    }).sort((a, b) => Number(a.voterId) - Number(b.voterId));
 
     // Filter out wolf actions from the main list
     const enrichedStatuses = (nightStatus.actionStatuses || [])
         .filter(status => !status.role.includes('狼'))
         .map(status => {
-            const player = players.find(p => p.id === status.playerId);
+            const player = players.find(p => p.id === Number(status.playerId));
             const rawTargetId = status.targetId;
             const targetId = (rawTargetId !== null && rawTargetId !== undefined) ? Number(rawTargetId) : null;
             const target = (targetId !== null && targetId > 0) ? players.find(p => p.id === targetId) : null;
@@ -172,8 +346,11 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
     const wolfVotes = nightStatus.werewolfVotes;
     const voteCounts: Record<number, number> = {};
     wolfVotes.forEach(v => {
-        if (v.targetId !== null) {
-            voteCounts[v.targetId] = (voteCounts[v.targetId] || 0) + 1;
+        if (v.targetId !== null && v.targetId !== undefined) {
+            const tid = Number(v.targetId);
+            if (!isNaN(tid) && tid !== 0) {
+                voteCounts[tid] = (voteCounts[tid] || 0) + 1;
+            }
         }
     });
 
@@ -189,7 +366,10 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
 
     const topTarget = (topTargetId !== null && topTargetId > 0) ? players.find(p => p.id === topTargetId) : null;
     let wolfTargetName = '未定';
-    if (topTargetId === -1) {
+
+    if (maxVotes === 0) {
+        wolfTargetName = '未定';
+    } else if (topTargetId === -1) {
         wolfTargetName = '跳過';
     } else if (topTarget) {
         wolfTargetName = topTarget.name;
@@ -450,153 +630,4 @@ const WerewolfVotingScreen: React.FC<WerewolfVotingScreenProps> = ({
     );
 };
 
-interface RoleActionsScreenProps {
-    statuses: Array<ActionSubmissionStatus & {
-        playerName: string,
-        avatarUrl?: string,
-        playerUserId?: string,
-        targetName: string | null,
-        targetAvatarUrl?: string,
-        targetUserId?: string
-    }>;
-    wolfTargetName: string;
-    wolfTargetUserId?: string;
-    wolfTargetId: number | null;
-    wolfVoteCount: number;
-    guildId?: string;
-}
 
-const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
-                                                                 statuses,
-                                                                 wolfTargetName,
-                                                                 wolfTargetUserId,
-                                                                 wolfTargetId,
-                                                                 wolfVoteCount,
-                                                                 guildId
-                                                             }) => {
-    const getRoleBorderColor = (role: string): string => {
-        if (role.includes('狼')) return 'border-red-500/50 hover:border-red-500';
-        if (role.includes('女巫')) return 'border-purple-500/50 hover:border-purple-500';
-        if (role.includes('獵人')) return 'border-amber-500/50 hover:border-amber-500';
-        if (role.includes('預言家')) return 'border-blue-500/50 hover:border-blue-500';
-        if (role.includes('守衛')) return 'border-cyan-500/50 hover:border-cyan-500';
-        return 'border-slate-700 hover:border-slate-500';
-    };
-
-    const getStatusColor = (status: string): string => {
-        switch (status) {
-            case 'SUBMITTED':
-                return 'bg-green-500/20 text-green-300 border-green-500';
-            case 'SKIPPED':
-                return 'bg-amber-500/20 text-amber-300 border-amber-500';
-            case 'ACTING':
-                return 'bg-blue-500/20 text-blue-300 border-blue-500';
-            default:
-                return 'bg-slate-500/20 text-slate-300 border-slate-500';
-        }
-    };
-
-    return (
-        <div className="flex flex-col h-full">
-            {/* Wolf Kill Summary */}
-            <div
-                className="animate-slide-in mb-3 bg-red-900/20 border border-red-800/50 rounded-lg p-3 flex items-center justify-between flex-shrink-0"
-                style={{animationDelay: '50ms'}}
-            >
-                <div className="flex items-center gap-3">
-                    <div className="bg-red-600/20 p-2 rounded-full">
-                        <Skull className="w-5 h-5 text-red-500"/>
-                    </div>
-                    <div>
-                        <div className="text-xs text-red-300 font-bold uppercase tracking-wider">狼人擊殺目標</div>
-                        <div className="font-bold text-lg text-white flex items-center gap-2">
-                            {wolfTargetName}
-                            {wolfVoteCount > 0 && <span
-                                className="text-xs bg-red-600 px-1.5 py-0.5 rounded-full">{wolfVoteCount} 票</span>}
-                        </div>
-                    </div>
-                </div>
-                {wolfTargetId === -1 ? (
-                    <div
-                        className="w-10 h-10 rounded-full border-2 border-amber-500/50 bg-amber-500/20 flex items-center justify-center">
-                        <FastForward className="w-5 h-5 text-amber-500"/>
-                    </div>
-                ) : (
-                    <DiscordAvatar userId={wolfTargetUserId} guildId={guildId}
-                                   avatarClassName="w-10 h-10 rounded-full border-2 border-red-600/50"/>
-                )}
-            </div>
-
-            {/* Grid of actions */}
-            <div className="grid grid-cols-2 gap-3 overflow-y-auto p-2 min-h-0">
-                {statuses.length === 0 ? (
-                    <div className="col-span-2 flex items-center justify-center h-full text-slate-400">
-                        等待職業行動...
-                    </div>
-                ) : (
-                    statuses.map((status, index) => (
-                        <div
-                            key={status.playerId}
-                            className={`animate-slide-in bg-slate-800/80 rounded-lg p-4 border-2 ${getRoleBorderColor(status.role)} transition-all duration-300 flex flex-col justify-between shadow-lg`}
-                            style={{animationDelay: `${100 + index * 75}ms`}}
-                        >
-                            <div className="flex items-start justify-between mb-3">
-                                <div className="min-w-0">
-                                    <h3 className="font-bold text-lg leading-tight truncate">
-                                        <DiscordName userId={status.playerUserId} guildId={guildId}
-                                                     fallbackName={status.playerName}/>
-                                    </h3>
-                                    <p className="text-xs opacity-70 mt-0.5">{status.role}</p>
-                                </div>
-                                <DiscordAvatar userId={status.playerUserId} guildId={guildId}
-                                               avatarClassName="w-10 h-10 rounded-full border border-slate-700 shadow-sm flex-shrink-0 ml-3"/>
-                            </div>
-
-                            <div className="space-y-2">
-                                {status.actionType && status.actionType !== "" && (
-                                    <div className="bg-white/5 rounded px-2 py-1">
-                                        <p className="text-xs opacity-60">行動</p>
-                                        <p className="font-semibold text-slate-200">{status.actionType}</p>
-                                    </div>
-                                )}
-
-                                {status.targetName && status.targetId !== null && (
-                                    <div
-                                        className="bg-white/10 rounded px-2 py-1 flex items-center justify-between gap-2">
-                                        <div className="min-w-0">
-                                            <p className="text-[10px] opacity-60 uppercase font-bold tracking-tight">目標</p>
-                                            <p className="font-semibold text-sm truncate">
-                                                <DiscordName userId={status.targetUserId} guildId={guildId}
-                                                             fallbackName={status.targetName || ''}/>
-                                            </p>
-                                        </div>
-                                        {status.targetId === -1 ? (
-                                            <div
-                                                className="w-6 h-6 rounded-full border border-amber-500/50 bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                                                <FastForward className="w-3 h-3 text-amber-500"/>
-                                            </div>
-                                        ) : (
-                                            <DiscordAvatar userId={status.targetUserId} guildId={guildId}
-                                                           avatarClassName="w-6 h-6 rounded-full border border-slate-600 flex-shrink-0"/>
-                                        )}
-                                    </div>
-                                )}
-
-                                <div
-                                    className={`border rounded px-2 py-1 text-xs font-semibold text-center ${getStatusColor(status.status)}`}>
-                                    {status.status === 'SUBMITTED'
-                                        ? '✓ 已提交'
-                                        : status.status === 'SKIPPED'
-                                            ? '⏭️ 已跳過'
-                                            : status.status === 'ACTING'
-                                                ? '⚡ 行動中...'
-                                                : '⏳ 待提交'}
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-        </div>
-    );
-};

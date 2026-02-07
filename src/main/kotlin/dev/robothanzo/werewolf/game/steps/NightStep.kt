@@ -3,9 +3,7 @@ package dev.robothanzo.werewolf.game.steps
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
-import dev.robothanzo.werewolf.game.model.ActionData
-import dev.robothanzo.werewolf.game.model.ActionStatus
-import dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID
+import dev.robothanzo.werewolf.game.model.*
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import dev.robothanzo.werewolf.service.*
 import kotlinx.coroutines.*
@@ -18,7 +16,6 @@ import kotlin.jvm.optionals.getOrNull
 
 @Component
 class NightStep(
-    private val gameActionService: GameActionService,
     private val speechService: SpeechService,
     private val roleActionService: RoleActionService,
     private val actionUIService: ActionUIService,
@@ -39,28 +36,16 @@ class NightStep(
             // Mute everyone
             speechService.setAllMute(guildId, true)
 
-            // Clear pending actions from previous night
-            session.stateData.pendingActions.clear()
-
-            // Reset actionSubmitted flag for all players
-            for (player in session.players.values) {
-                player.actionSubmitted = false
-            }
-
-            // Increment day count at the start of the night (assuming day starts at 0 or 1 and increments here)
-            // Note: session.day is now incremented during the transition to DEATH_ANNOUNCEMENT (sunrise).
-            // So for the very first night, session.day is 0.
-            // For the second night, session.day is 1 (following Day 1).
-
-            // Log night start
-            session.addLog(LogType.SYSTEM, "夜晚開始，各職業請準備行動")
+            // Reset night data
+            session.stateData.submittedActions.clear()
+            session.stateData.wolfStates.clear()
+            session.stateData.werewolfMessages.clear()
 
             // Initialize night status tracking
-            session.stateData.phaseType = "WEREWOLF_VOTING"
+            session.stateData.phaseType = NightPhase.WEREWOLF_VOTING
             val now = System.currentTimeMillis()
             session.stateData.phaseStartTime = now
             session.stateData.phaseEndTime = now + 90_000 // Wolf phase lasts 90s
-            session.stateData.werewolfMessages.clear()
 
             for (p in session.alivePlayers().values) {
                 if (p.wolf) {
@@ -71,18 +56,18 @@ class NightStep(
                     }
                 } else {
                     val actions = roleActionService.getAvailableActionsForPlayer(session, p.id)
+                    p.actionSubmitted = false
                     if (actions.isNotEmpty()) {
-                        val actionData = session.stateData.actionData.getOrPut(p.id.toString()) {
-                            ActionData(playerId = p.id)
-                        }
-                        actionData.status = ActionStatus.PENDING
-                        actionData.role = (p.roles?.firstOrNull() ?: "未知")
-                        actionData.submittedAt = null
-                        actionData.availableActions = emptyList()
-                        actionData.selectedAction = null
-                        actionData.selectedTargets = emptyList()
-                        actionData.expiresAt = null
-                        actionData.targetPromptId = null
+                        session.stateData.submittedActions.add(
+                            RoleActionInstance(
+                                actor = p.id,
+                                actorRole = (p.roles?.firstOrNull() ?: "未知"),
+                                actionDefinitionId = "", // Not chosen yet
+                                targets = arrayListOf(),
+                                submittedBy = ActionSubmissionSource.PLAYER,
+                                status = ActionStatus.PENDING
+                            )
+                        )
                     }
                 }
             }
@@ -107,7 +92,7 @@ class NightStep(
                     "狼兄"
                 ) == true
             })
-        }.map { it.id }
+        }.map { it.id }.sorted()
 
         if (werewolves.isNotEmpty()) {
             gameSessionService.withLockedSession(guildId) { lockedSession ->
@@ -122,7 +107,6 @@ class NightStep(
 
                 // Ensure phase info is synced
                 lockedSession.stateData.phaseEndTime = System.currentTimeMillis() + 90_000
-                nightManager.broadcastNightStatus(lockedSession)
 
                 nightScope.launch {
                     delay(60_000)
@@ -142,11 +126,11 @@ class NightStep(
 
         // 2. Role Actions Phase
         gameSessionService.withLockedSession(guildId) { lockedSession ->
-            lockedSession.stateData.phaseType = "ROLE_ACTIONS"
+            lockedSession.stateData.phaseType = NightPhase.ROLE_ACTIONS
             val roleStartTime = System.currentTimeMillis()
             lockedSession.stateData.phaseStartTime = roleStartTime
             lockedSession.stateData.phaseEndTime = roleStartTime + 60_000 // Role phase lasts 60s
-            nightManager.broadcastNightStatus(lockedSession)
+            gameSessionService.broadcastSessionUpdate(lockedSession)
 
             val actors = mutableListOf<Int>()
             for (player in lockedSession.players.values) {
@@ -200,7 +184,7 @@ class NightStep(
                 .firstOrNull {
                     // Update dashboard status for group inside lock
                     gameSessionService.withLockedSession(guildId) { lockedSession ->
-                        nightManager.broadcastNightStatus(lockedSession)
+                        gameSessionService.broadcastSessionUpdate(lockedSession)
                     }
                     allWolvesVoted(guildId)
                 }
@@ -227,31 +211,31 @@ class NightStep(
     private fun allWolvesVoted(guildId: Long): Boolean {
         val session = gameSessionService.getSession(guildId).orElse(null) ?: return true
         val groupState = actionUIService.getGroupState(session, PredefinedRoles.WEREWOLF_KILL) ?: return true
-        return groupState.votes.filter { it.targetId != null }.size >= groupState.participants.size
+        return groupState.votes.filter { it.targetId != null }.size >= groupState.electorates.size
     }
 
     private fun allActorsSubmitted(guildId: Long): Boolean {
         val session = gameSessionService.getSession(guildId).orElse(null) ?: return true
-        val actionDataMap = session.stateData.actionData
-        return actionDataMap.values.all { it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.SKIPPED || it.status == ActionStatus.PENDING && it.availableActions.isEmpty() }
+        return session.stateData.submittedActions.filter { it.actorRole != "狼人" }.all {
+            it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.SKIPPED
+        }
     }
 
     private fun finalizeWerewolfPhase(guildId: Long) {
         gameSessionService.withLockedSession(guildId) { session ->
-            val groupState =
-                actionUIService.getGroupState(session, PredefinedRoles.WEREWOLF_KILL) ?: return@withLockedSession
+            val groupState = session.stateData.wolfStates[PredefinedRoles.WEREWOLF_KILL]
+                ?: return@withLockedSession
 
             // Timeout handling: default missing votes to skip
-            groupState.participants.forEach { pid ->
+            val electorates = groupState.electorates
+            electorates.forEach { pid ->
                 if (groupState.votes.none { it.voterId == pid }) {
-                    groupState.votes.add(
-                        dev.robothanzo.werewolf.game.model.GroupVote(
-                            voterId = pid,
-                            targetId = SKIP_TARGET_ID
-                        )
-                    )
+                    // Add skip vote directly to mutable list
+                    groupState.votes.add(WolfVote(voterId = pid, targetId = SKIP_TARGET_ID))
                 }
             }
+            // Sync is automatic as we modified the mutable object inside session
+
 
             val chosenTarget = actionUIService.resolveGroupVote(session, groupState)
             val resultText = if (chosenTarget == null || chosenTarget == SKIP_TARGET_ID) {
@@ -270,22 +254,21 @@ class NightStep(
             session.judgeTextChannel?.sendMessage(resultText)?.queue()
             session.addLog(LogType.SYSTEM, resultText.replace("**", "").replace("✓ ", "").replace("：", " → "))
 
-            // Record wolf kill for Witch to see in UI (this current night)
-            session.stateData.nightWolfKillTargetId =
-                if (chosenTarget != null && chosenTarget != SKIP_TARGET_ID) chosenTarget else null
-
             if (chosenTarget != null) {
                 // Warning: submitAction has its own lock, but it's reentrant.
+                // Find a valid alive wolf to be the actor
+                val actorId = groupState.electorates.firstOrNull { pid ->
+                    session.alivePlayers().containsKey(pid.toString())
+                } ?: groupState.electorates.firstOrNull() ?: 0
+
                 roleActionService.submitAction(
                     guildId,
                     PredefinedRoles.WEREWOLF_KILL,
-                    groupState.participants.firstOrNull() ?: 0,
-                    listOf(chosenTarget),
-                    "GROUP"
+                    actorId,
+                    arrayListOf(chosenTarget),
+                    "SYSTEM"
                 )
             }
-
-            actionUIService.clearGroupState(session, PredefinedRoles.WEREWOLF_KILL)
         }
     }
 
@@ -297,11 +280,11 @@ class NightStep(
     }
 
     private fun updateStatusToActing(session: Session, pid: Int) {
-        val actionData = session.stateData.actionData[pid.toString()] ?: return
-        if (actionData.status == ActionStatus.PENDING) {
-            actionData.status = ActionStatus.ACTING
+        val actionInstance = session.stateData.submittedActions.find { it.actor == pid } ?: return
+        if (actionInstance.status == ActionStatus.PENDING) {
+            actionInstance.status = ActionStatus.ACTING
             gameSessionService.saveSession(session)
-            nightManager.broadcastNightStatus(session)
+            gameSessionService.broadcastSessionUpdate(session)
         }
     }
 
@@ -309,23 +292,13 @@ class NightStep(
         // Clean up expired prompts and send timeout notifications
         actionUIService.cleanupExpiredPrompts(session.guildId, session)
 
-        // Clear prompts from session state (Persistent state cleanup)
-        session.stateData.actionData.values.forEach {
-            it.availableActions = emptyList()
-            it.selectedAction = null
-            it.selectedTargets = emptyList()
-            it.expiresAt = null
-            it.targetPromptId = null
-            it.status = ActionStatus.PENDING
-        }
-        session.stateData.groupStates.clear()
-
-        // Clear night-specific data to save storage
-        session.stateData.werewolfMessages.clear()
+        // Clear prompts
+        // We do NOT clear submittedActions, wolfStates, or messages here to preserve them for review/dashboard
+        // They will be cleared at the start of the next NightStep
+        
         session.stateData.phaseType = null
         session.stateData.phaseStartTime = 0
         session.stateData.phaseEndTime = 0
-        session.stateData.nightWolfKillTargetId = null
         gameSessionService.saveSession(session)
     }
 

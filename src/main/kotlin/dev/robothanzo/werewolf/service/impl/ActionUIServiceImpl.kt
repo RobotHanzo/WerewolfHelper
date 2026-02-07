@@ -4,6 +4,7 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.*
+import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 import dev.robothanzo.werewolf.service.ActionUIService
 import dev.robothanzo.werewolf.service.NightManager
@@ -15,8 +16,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class ActionUIServiceImpl(
-    private val nightManager: NightManager,
-    private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry
+    private val nightManager: NightManager
 ) : ActionUIService {
     private val log = LoggerFactory.getLogger(ActionUIServiceImpl::class.java)
 
@@ -26,7 +26,7 @@ class ActionUIServiceImpl(
         playerId: Int,
         availableActions: List<RoleAction>,
         timeoutSeconds: Int
-    ): ActionData? {
+    ): RoleActionInstance? {
         if (availableActions.isEmpty()) return null
 
         return try {
@@ -53,17 +53,34 @@ class ActionUIServiceImpl(
                 dev.robothanzo.werewolf.utils.MsgUtils.spreadButtonsAcrossActionRows(actionButtons)
             )?.complete()
 
-            // Create/Update action data
-            val expiresAt = System.currentTimeMillis() + (timeoutSeconds * 1000L)
-            val actionData = session.stateData.actionData.getOrPut(playerId.toString()) {
-                ActionData(playerId = playerId, role = player.roles?.firstOrNull() ?: "未知")
+            // Create/Update action data in unified submittedActions list
+            val actorRole = player.roles?.firstOrNull() ?: "未知"
+
+            // Only look for non-finalized actions to reuse
+            var actionInstance = session.stateData.submittedActions.find {
+                it.actor == playerId && it.status != ActionStatus.SUBMITTED 
             }
 
-            actionData.availableActions =
-                availableActions.map { ActionInfo(it.actionId, it.actionName, it.timing) }
-            actionData.expiresAt = expiresAt
-            actionData.targetPromptId = message?.idLong
-            actionData.status = ActionStatus.ACTING
+            if (actionInstance != null) {
+                actionInstance.status = ActionStatus.ACTING
+                actionInstance.targetPromptId = message?.idLong
+            } else {
+                // Ensure no conflicting pending/acting actions exist
+                session.stateData.submittedActions.removeIf {
+                    it.actor == playerId && it.status != ActionStatus.SUBMITTED
+                }
+
+                actionInstance = RoleActionInstance(
+                    actor = playerId,
+                    actorRole = actorRole,
+                    actionDefinitionId = "", // Not chosen yet
+                    targets = mutableListOf(),
+                    submittedBy = ActionSubmissionSource.PLAYER,
+                    status = ActionStatus.ACTING,
+                    targetPromptId = message?.idLong
+                )
+                session.stateData.submittedActions.add(actionInstance)
+            }
 
             WerewolfApplication.gameSessionService.saveSession(session)
 
@@ -77,7 +94,7 @@ class ActionUIServiceImpl(
                 session = session
             )
 
-            actionData
+            actionInstance
         } catch (e: Exception) {
             log.error("Error prompting player $playerId for action", e)
             null
@@ -90,20 +107,19 @@ class ActionUIServiceImpl(
         actionId: String,
         participants: List<Int>,
         durationSeconds: Int
-    ): GroupActionState? {
+    ): WolvesActionState? {
         return try {
             val targetPlayers = session.alivePlayers().values
             if (targetPlayers.isEmpty()) return null
 
-            val expiresAt = System.currentTimeMillis() + (durationSeconds * 1000L)
-            val groupState = GroupActionState(
+            val groupState = WolvesActionState(
                 actionId = actionId,
-                participants = participants,
-                expiresAt = expiresAt
+                electorates = participants,
+                finished = false
             )
 
             // Store in session
-            session.stateData.groupStates[actionId] = groupState
+            session.stateData.wolfStates[actionId] = groupState
 
             val selectMenu = StringSelectMenu.create("group_target_$actionId")
                 .setPlaceholder("選擇擊殺目標")
@@ -129,7 +145,7 @@ class ActionUIServiceImpl(
             // Initialize empty votes for all participants so dashboard shows them as "Not Voted"
             participants.forEach { pid ->
                 if (groupState.votes.none { it.voterId == pid }) {
-                    groupState.votes.add(GroupVote(voterId = pid, targetId = null))
+                    groupState.votes.add(WolfVote(voterId = pid, targetId = null))
                 }
             }
 
@@ -147,13 +163,16 @@ class ActionUIServiceImpl(
         playerId: Int,
         actionId: String,
         session: Session
-    ): ActionData? {
+    ): RoleActionInstance? {
         // Redundant with submitAction's lock but safe as a standalone update if called elsewhere
         return WerewolfApplication.gameSessionService.withLockedSession(guildId) { lockedSession ->
-            val actionData = lockedSession.stateData.actionData[playerId.toString()] ?: return@withLockedSession null
-            val action = actionData.availableActions.find { it.actionId == actionId } ?: return@withLockedSession null
+            // Only update actions that are currently ACTING or PENDING. Do not touch SUBMITTED actions.
+            val actionInstance = lockedSession.stateData.submittedActions.find {
+                it.actor == playerId && it.status != ActionStatus.SUBMITTED
+            } ?: return@withLockedSession null
 
-            actionData.selectedAction = action
+            actionInstance.actionDefinitionId = actionId
+            actionInstance.status = ActionStatus.ACTING
 
             // Update dashboard status to show selected action
             WerewolfApplication.roleActionService.updateActionStatus(
@@ -165,7 +184,7 @@ class ActionUIServiceImpl(
                 session = lockedSession
             )
 
-            actionData
+            actionInstance
         }
     }
 
@@ -176,21 +195,25 @@ class ActionUIServiceImpl(
         session: Session
     ): Boolean {
         return WerewolfApplication.gameSessionService.withLockedSession(guildId) { lockedSession ->
-            val actionData = lockedSession.stateData.actionData[playerId.toString()] ?: return@withLockedSession false
-            if (actionData.selectedAction == null) return@withLockedSession false
+            // Only submit if we are in ACTING state.
+            val actionInstance = lockedSession.stateData.submittedActions.find {
+                it.actor == playerId && it.status == ActionStatus.ACTING
+            } ?: return@withLockedSession false
 
-            actionData.selectedTargets = listOf(targetPlayerId)
+            if (actionInstance.actionDefinitionId.isEmpty()) return@withLockedSession false
+
+            actionInstance.targets.clear()
+            actionInstance.targets.add(targetPlayerId)
+            actionInstance.status = ActionStatus.SUBMITTED
 
             // Notify NightManager of activity
             nightManager.notifyPhaseUpdate(guildId)
-            nightManager.broadcastNightStatus(lockedSession)
-
             true
         }
     }
 
-    override fun getActionData(session: Session, playerId: Int): ActionData? {
-        return session.stateData.actionData[playerId.toString()]
+    override fun getActionData(session: Session, playerId: Int): RoleActionInstance? {
+        return session.stateData.submittedActions.find { it.actor == playerId }
     }
 
     override fun submitGroupVote(
@@ -201,28 +224,29 @@ class ActionUIServiceImpl(
         val guildId = player.session?.guildId ?: return false
 
         return WerewolfApplication.gameSessionService.withLockedSession(guildId) { lockedSession ->
-            val groupState = lockedSession.stateData.groupStates[groupStateId] ?: return@withLockedSession false
+            val groupState = lockedSession.stateData.wolfStates[groupStateId] ?: return@withLockedSession false
 
-            if (System.currentTimeMillis() > groupState.expiresAt) return@withLockedSession false
+            // Check if phase is still active via session end time
+            if (System.currentTimeMillis() > lockedSession.stateData.phaseEndTime) return@withLockedSession false
 
             val playerId = player.id
-            if (playerId !in groupState.participants) return@withLockedSession false
+            if (playerId !in groupState.electorates) return@withLockedSession false
 
             groupState.votes.removeIf { it.voterId == playerId }
-            groupState.votes.add(GroupVote(voterId = playerId, targetId = targetPlayerId))
+            groupState.votes.add(WolfVote(voterId = playerId, targetId = targetPlayerId))
 
             // Explicitly re-put into the map to ensure persistence detection
-            lockedSession.stateData.groupStates[groupStateId] = groupState
+            lockedSession.stateData.wolfStates[groupStateId] = groupState
 
             log.info("Vote recorded: Player $playerId -> Target $targetPlayerId in group action $groupStateId")
 
             nightManager.notifyPhaseUpdate(guildId)
-            nightManager.broadcastNightStatus(lockedSession)
+            WerewolfApplication.gameSessionService.broadcastSessionUpdate(lockedSession)
             true
         }
     }
 
-    override fun resolveGroupVote(session: Session, groupState: GroupActionState): Int? {
+    override fun resolveGroupVote(session: Session, groupState: WolvesActionState): Int? {
         if (groupState.votes.isEmpty()) return null
 
         val voteCounts = groupState.votes
@@ -237,125 +261,127 @@ class ActionUIServiceImpl(
         return topTargets.random()
     }
 
-    override fun getGroupState(session: Session, actionId: String): GroupActionState? {
-        return session.stateData.groupStates[actionId]
-    }
-
-    override fun clearGroupState(session: Session, actionId: String) {
-        session.stateData.groupStates.remove(actionId)
-        WerewolfApplication.gameSessionService.saveSession(session)
+    override fun getGroupState(session: Session, actionId: String): WolvesActionState? {
+        return session.stateData.wolfStates[actionId]
     }
 
     override fun cleanupExpiredPrompts(guildId: Long, session: Session?) {
         if (session == null) return
         val now = System.currentTimeMillis()
 
-        val actionDataMap = session.stateData.actionData
-        val expiredIds = mutableListOf<String>()
+        // Check if the current phase has expired
+        if (session.stateData.phaseEndTime > 0 && session.stateData.phaseEndTime <= now + 500) {
+            val pendingActions =
+                session.stateData.submittedActions.filter { it.status == ActionStatus.PENDING || it.status == ActionStatus.ACTING }
 
-        actionDataMap.forEach { (playerIdStr, data) ->
-            if (data.expiresAt != null && data.expiresAt!! <= now + 500) {
-                expiredIds.add(playerIdStr)
-                session.getPlayer(playerIdStr)?.channel?.sendMessage("⏱️ **時間到！** 你的行動選擇已超時，視為放棄")
-                    ?.queue()
-            }
-        }
+            if (pendingActions.isNotEmpty()) {
+                pendingActions.forEach { action ->
+                    val playerId = action.actor
+                    val player = session.getPlayer(playerId)
 
-        val groupStates = session.stateData.groupStates
-        val expiredGroupIds = mutableListOf<String>()
-        groupStates.forEach { (actionId, state) ->
-            if (state.expiresAt < now) {
-                expiredGroupIds.add(actionId)
-            }
-        }
+                    // Re-fetch available actions to determine if mandatory
+                    val availableActions =
+                        WerewolfApplication.roleActionService.getAvailableActionsForPlayer(session, playerId)
 
-        if (expiredIds.isNotEmpty() || expiredGroupIds.isNotEmpty()) {
-            expiredIds.forEach { playerIdStr ->
-                val data = actionDataMap[playerIdStr] ?: return@forEach
-
-                // If there's a mandatory action, pick a random target and submit
-                val mandatoryActionId = data.availableActions.find {
-                    roleRegistry.getAction(it.actionId)?.isOptional == false
-                }?.actionId
-
-                if (mandatoryActionId != null) {
-                    val action = roleRegistry.getAction(mandatoryActionId)!!
-                    val eligible = action.eligibleTargets(
-                        session,
-                        data.playerId,
-                        session.alivePlayers().values.map { it.id }
-                    )
-                    val target = eligible.randomOrNull()
-                    if (target != null) {
-                        log.info("Auto-submitting mandatory action $mandatoryActionId for player $playerIdStr due to timeout")
-                        WerewolfApplication.roleActionService.submitAction(
-                            guildId,
-                            mandatoryActionId,
-                            data.playerId,
-                            listOf(target),
-                            "SYSTEM"
+                    // Handle mandatory actions
+                    val mandatoryAction = availableActions.find { !it.isOptional }
+                    if (mandatoryAction != null) {
+                        val eligible = mandatoryAction.eligibleTargets(
+                            session,
+                            playerId,
+                            session.alivePlayers().values.map { it.id }
                         )
-                        return@forEach
+                        val target = eligible.randomOrNull()
+                        if (target != null) {
+                            session.getPlayer(playerId)?.channel?.sendMessage("⏱️ **時間到！** 已為你隨機選擇目標。")
+                                ?.queue()
+                            log.info("Auto-submitting mandatory action ${mandatoryAction.actionId} for player $playerId due to timeout")
+                            WerewolfApplication.roleActionService.submitAction(
+                                guildId,
+                                mandatoryAction.actionId,
+                                playerId,
+                                arrayListOf(target),
+                                "SYSTEM"
+                            )
+                            return@forEach
+                        }
+                    }
+
+                    // Default skip behavior for optional actions or if no valid target found
+                    session.getPlayer(playerId)?.channel?.sendMessage("⏱️ **時間到！** 你的行動選擇已超時，視為放棄")
+                        ?.queue()
+                    session.stateData.submittedActions.filter {
+                        it.actor == playerId &&
+                                it.actionDefinitionId == action.actionDefinitionId &&
+                                (it.status == ActionStatus.PENDING || it.status == ActionStatus.ACTING)
+                    }.forEach {
+                        it.status = ActionStatus.SKIPPED
+                        it.targets.clear()
+                        it.targets.add(SKIP_TARGET_ID)
+                        it.targetPromptId = null
+                    }
+
+                    if (player != null) {
+                        player.actionSubmitted = true
+                        WerewolfApplication.roleActionService.updateActionStatus(
+                            guildId,
+                            player.id,
+                            ActionStatus.SKIPPED,
+                            targetPlayerIds = listOf(SKIP_TARGET_ID),
+                            session = session
+                        )
                     }
                 }
 
-                // Default skip behavior for optional actions
-                data.let {
-                    it.availableActions = emptyList()
-                    it.selectedAction = null
-                    it.selectedTargets = emptyList()
-                    it.expiresAt = null
-                    it.targetPromptId = null
-                    it.status = ActionStatus.SKIPPED
-                }
-
-                // Update player marked status
-                val player = session.getPlayer(playerIdStr)
-                if (player != null) {
-                    player.actionSubmitted = true
-                    WerewolfApplication.roleActionService.updateActionStatus(
-                        guildId,
-                        player.id,
-                        ActionStatus.SKIPPED,
-                        targetPlayerIds = listOf(SKIP_TARGET_ID),
-                        session = session
-                    )
-                }
+                WerewolfApplication.gameSessionService.saveSession(session)
+                log.debug("Cleaned up ${pendingActions.size} expired action prompts (Safe Mode Active)")
             }
-            expiredGroupIds.forEach { groupStates.remove(it) }
-            WerewolfApplication.gameSessionService.saveSession(session)
-            log.debug("Cleaned up ${expiredIds.size} action prompts and ${expiredGroupIds.size} group states")
         }
     }
 
     override fun sendReminders(guildId: Long, session: Session) {
         val now = System.currentTimeMillis()
-        val thirtySecondsMs = 30_000L
+        val expiry = session.stateData.phaseEndTime
+        if (expiry == 0L) return
 
-        val actionDataMap = session.stateData.actionData
+        val timeUntilExpiry = expiry - now
+        if (timeUntilExpiry in 29000..31000) {
+            val pendingActions =
+                session.stateData.submittedActions.filter { it.status == ActionStatus.PENDING || it.status == ActionStatus.ACTING }
+            pendingActions.forEach { action ->
+                val availableActions =
+                    WerewolfApplication.roleActionService.getAvailableActionsForPlayer(session, action.actor)
+                val isWolfBrotherAction =
+                    availableActions.any { it.actionId == PredefinedRoles.WOLF_YOUNGER_BROTHER_EXTRA_KILL }
 
-        actionDataMap.forEach { (playerIdStr, data) ->
-            val expiry = data.expiresAt ?: return@forEach
-            val timeUntilExpiry = expiry - now
+                val msg = if (isWolfBrotherAction) {
+                    "⚠️ **提醒**: 還剩 **30秒**！若未發動攻擊，你將會 **自殺**！"
+                } else {
+                    "⚠️ **提醒**: 還剩 **30秒** 需要選擇行動或跳過，否則將視為放棄"
+                }
 
-            if (timeUntilExpiry in (thirtySecondsMs - 1000)..thirtySecondsMs) {
-                session.getPlayer(playerIdStr)?.channel?.sendMessage("⚠️ **提醒**: 還剩 **30秒** 需要選擇行動或跳過，否則將視為放棄")
-                    ?.queue()
-                log.info("Sent 30-second reminder to player in guild $guildId")
+                session.getPlayer(action.actor)?.channel?.sendMessage(msg)?.queue()
             }
+            log.info("Sent 30-second reminders to ${pendingActions.size} players in guild $guildId")
         }
     }
 
     override fun clearPrompt(session: Session, playerId: Int) {
-        val data = session.stateData.actionData[playerId.toString()]
-        data?.let {
-            it.availableActions = emptyList()
-            it.selectedAction = null
-            it.selectedTargets = emptyList()
-            it.expiresAt = null
-            it.targetPromptId = null
+        val actionInstance =
+            session.stateData.submittedActions.find { it.actor == playerId && it.status != ActionStatus.SUBMITTED }
+        if (actionInstance != null) {
+            actionInstance.targetPromptId = null
+            actionInstance.status = ActionStatus.SUBMITTED // Assuming cleared means settled or handled
+            WerewolfApplication.gameSessionService.saveSession(session)
         }
-        WerewolfApplication.gameSessionService.saveSession(session)
     }
 
+    override fun updateTargetPromptId(session: Session, playerId: Int, promptId: Long) {
+        val actionInstance =
+            session.stateData.submittedActions.find { it.actor == playerId && it.status != ActionStatus.SUBMITTED }
+                ?: return
+        actionInstance.targetPromptId = promptId
+        // Explicitly save the session as this modifies state
+        WerewolfApplication.gameSessionService.saveSession(session)
+    }
 }

@@ -20,6 +20,7 @@ object PredefinedRoles {
     const val GUARD_PROTECT = "GUARD_PROTECT"
     const val HUNTER_REVENGE = "HUNTER_REVENGE"
     const val WOLF_KING_REVENGE = "WOLF_KING_REVENGE"
+    const val DARK_MERCHANT_TRADE_PREFIX = "DARK_MERCHANT_TRADE_"
     const val DARK_MERCHANT_TRADE_SEER = "DARK_MERCHANT_TRADE_SEER"
     const val DARK_MERCHANT_TRADE_POISON = "DARK_MERCHANT_TRADE_POISON"
     const val DARK_MERCHANT_TRADE_GUN = "DARK_MERCHANT_TRADE_GUN"
@@ -30,4 +31,7 @@ object PredefinedRoles {
 
     // Special death causes (legacy)
     const val DOUBLE_PROTECTION = "DOUBLE_PROTECTION"
+
+    // System Actions
+    const val DEATH_RESOLUTION = "DEATH_RESOLUTION"
 }

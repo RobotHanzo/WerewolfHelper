@@ -1,7 +1,6 @@
 package dev.robothanzo.werewolf.game.roles.actions
 
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.ActionData
 import dev.robothanzo.werewolf.game.model.ActionTiming
 import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.game.model.RoleActionInstance
@@ -10,10 +9,10 @@ import dev.robothanzo.werewolf.game.model.RoleActionInstance
  * Represents the result of executing a role action
  */
 data class ActionExecutionResult(
-    val deaths: Map<DeathCause, List<Int>> = emptyMap(), // cause -> list of player IDs (Int)
-    val saved: List<Int> = emptyList(), // player IDs (Int)
-    val protectedPlayers: Set<Int> = emptySet(), // player IDs (Int)
-    val metadata: Map<String, Any> = emptyMap() // For storing additional action-specific data like seer checks
+    var deaths: MutableMap<DeathCause, MutableList<Int>> = mutableMapOf(), // cause -> list of player IDs (Int)
+    var saved: MutableList<Int> = mutableListOf(), // player IDs (Int)
+    var protectedPlayers: MutableSet<Int> = mutableSetOf(), // player IDs (Int)
+    var metadata: MutableMap<String, Any> = mutableMapOf()
 )
 
 /**
@@ -82,7 +81,9 @@ interface RoleAction {
         get() = true
 
     fun getUsageCount(session: Session, actor: Int): Int {
-        return session.stateData.actionData[actor.toString()]?.usage?.get(actionId) ?: 0
+        val executedCount = session.stateData.executedActions.values.flatten()
+            .count { it.actor == actor && it.actionDefinitionId == actionId }
+        return executedCount
     }
 
     /**
@@ -101,7 +102,7 @@ interface RoleAction {
     fun validate(session: Session, actor: Int, targets: List<Int>): String? {
         // Basic actor check
         val actorPlayer = session.getPlayer(actor.toString()) ?: return "Actor not found"
-        if (!actorPlayer.alive) return "Actor not alive"
+        if (!actorPlayer.alive) return "你已死亡，無法執行此動作"
 
         // Usage limit check
         if (!isAvailable(session, actor)) return "已達到使用限制"
@@ -118,17 +119,8 @@ interface RoleAction {
         return null
     }
 
-    /**
-     * Hook called when an action is successfully submitted.
-     */
     fun onSubmitted(session: Session, actor: Int, targets: List<Int>) {
-        // Default: update usage count
-        val data = session.stateData.actionData.getOrPut(actor.toString()) {
-            val player = session.getPlayer(actor.toString())
-            ActionData(playerId = actor, role = player?.roles?.firstOrNull() ?: "未知")
-        }
-        val currentCount = data.usage.getOrDefault(actionId, 0)
-        data.usage[actionId] = currentCount + 1
+        // Usage count is now derived from history, no explicit increment needed
     }
 
     /**
@@ -180,24 +172,3 @@ abstract class BaseRoleAction(
     override val allowMultiplePerPhase: Boolean = false,
     override val isOptional: Boolean = true
 ) : RoleAction
-
-/**
- * A generic implementation of RoleAction for custom or dynamically defined actions.
- */
-data class GenericRoleAction(
-    override val actionId: String,
-    override val actionName: String,
-    override val priority: Int,
-    override val timing: ActionTiming,
-    override val targetCount: Int,
-    override val usageLimit: Int,
-    override val requiresAliveTarget: Boolean = true,
-    override val isImmediate: Boolean = false,
-    override val allowMultiplePerPhase: Boolean = false
-) : RoleAction {
-    override fun execute(
-        session: Session,
-        action: RoleActionInstance,
-        accumulatedState: ActionExecutionResult
-    ): ActionExecutionResult = accumulatedState
-}

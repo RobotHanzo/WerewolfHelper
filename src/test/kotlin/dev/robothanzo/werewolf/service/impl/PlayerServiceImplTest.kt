@@ -38,32 +38,6 @@ class PlayerServiceImplTest {
         dev.robothanzo.werewolf.WerewolfApplication.jda = mockJda
     }
 
-    @Test
-    fun testGetPlayersJSONSuccess() {
-        val guildId = 123L
-        val session = Session(guildId = guildId)
-        val mockPlayersList = listOf(
-            mapOf("id" to "1", "nickname" to "玩家1"),
-            mapOf("id" to "2", "nickname" to "玩家2")
-        )
-
-        whenever(gameSessionService.playersToJSON(session)).thenReturn(mockPlayersList)
-
-        val result = playerService.getPlayersJSON(session)
-
-        assertEquals(2, result.size)
-        verify(gameSessionService).playersToJSON(session)
-    }
-
-    @Test
-    fun testGetPlayersJSONWithEmptySession() {
-        val session = Session(guildId = 123L)
-        whenever(gameSessionService.playersToJSON(session)).thenReturn(emptyList())
-
-        val result = playerService.getPlayersJSON(session)
-
-        assertTrue(result.isEmpty())
-    }
 
     @Test
     fun testSetPlayerCountWithoutJdaThrows() {

@@ -160,7 +160,7 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
             case 'NIGHT_PHASE':
                 return (
                     <div className="animate-in fade-in duration-300 h-full overflow-hidden">
-                        <NightStatus guildId={guildId} players={gameState.players}/>
+                        <NightStatus guildId={guildId} players={gameState.players} gameState={gameState}/>
                     </div>
                 );
 
@@ -202,7 +202,7 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
                 const deadPlayers = (gameState.stateData?.deadPlayers || []).map((id: number) =>
                     gameState.players.find(p => p.id === id)
                 ).filter((p: any) => p !== undefined);
-                
+
                 const lastWordsSpeaker = gameState.speech?.currentSpeakerId
                     ? gameState.players.find(p => p.id === gameState.speech?.currentSpeakerId)
                     : undefined;

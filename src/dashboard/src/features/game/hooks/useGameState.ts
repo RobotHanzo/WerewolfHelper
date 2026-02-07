@@ -6,6 +6,7 @@ import {GameState, Player, User} from '@/types';
 import {INITIAL_PLAYERS} from '@/utils/mockData';
 import {usePlayerContext} from '@/features/players/contexts/PlayerContext';
 
+
 export interface OverlayState {
     visible: boolean;
     title: string;
@@ -15,9 +16,12 @@ export interface OverlayState {
     progress?: number;
 }
 
+const sessionCache: Record<string, any | undefined> = {};
+const ongoingFetches: Record<string, Promise<any> | undefined> = {};
+
 export const useGameState = (guildId: string | undefined, user: User | null) => {
     const {t} = useTranslation();
-    const {userInfoCache, fetchUserInfo} = usePlayerContext();
+    const {userInfoCache, fetchUserInfo, updateSinglePlayerCache} = usePlayerContext();
     const [gameState, setGameState] = useState<GameState>({
         phase: 'LOBBY',
         day: 0,
@@ -70,7 +74,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
                     ...(player.jinBaoBao ? ['jinBaoBao'] : []),
                 ] as any,
             };
-        });
+        }).sort((a: Player, b: Player) => a.id - b.id);
     };
 
     // WebSocket connection
@@ -114,8 +118,20 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
             }
         }
 
+        // Check for player updates
+        if (type === 'PLAYER_UPDATE') {
+            if (data && data.userId && data.name && data.avatar) {
+                updateSinglePlayerCache(data.userId, {name: data.name, avatar: data.avatar});
+            }
+        }
+
         // Check if the update is for the current guild
         if (type === 'UPDATE' && data && data.guildId && data.guildId.toString() === guildId) {
+            // Update cache
+            if (guildId) {
+                sessionCache[guildId] = data;
+            }
+
             const players = mapSessionToPlayers(data);
             setGameState(prev => ({
                 ...prev,
@@ -168,10 +184,7 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
         }
 
         const loadGameState = async () => {
-            try {
-                const sessionData: any = await api.getSession(guildId);
-                console.log('Session data:', sessionData);
-
+            const updateState = (sessionData: any) => {
                 const players = mapSessionToPlayers(sessionData);
 
                 setGameState(prev => ({
@@ -198,8 +211,39 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
                         return 'DAY';
                     })()
                 }));
+            };
+
+            // Use cache if available
+            if (sessionCache[guildId]) {
+                updateState(sessionCache[guildId]);
+                return;
+            }
+
+            // Prevent duplicate fetches
+            if (ongoingFetches[guildId]) {
+                try {
+                    const data = await ongoingFetches[guildId];
+                    updateState(data);
+                } catch (error) {
+                    console.error('Failed to load session data (from ongoing fetch):', error);
+                }
+                return;
+            }
+
+            try {
+                const fetchPromise = api.getSession(guildId);
+                ongoingFetches[guildId] = fetchPromise;
+
+                const sessionData: any = await fetchPromise;
+                console.log('Session data:', sessionData);
+
+                sessionCache[guildId] = sessionData;
+                delete ongoingFetches[guildId];
+
+                updateState(sessionData);
             } catch (error) {
                 console.error('Failed to load session data:', error);
+                delete ongoingFetches[guildId];
             }
         };
 

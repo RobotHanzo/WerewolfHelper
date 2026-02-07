@@ -51,7 +51,6 @@ class GameSessionServiceImplTest {
         MockitoAnnotations.openMocks(this)
         gameSessionService = GameSessionServiceImpl(
             sessionRepository,
-            discordService,
             webSocketHandler,
             speechService,
             roleRegistry,

@@ -4,6 +4,7 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.ActionStatus
 import dev.robothanzo.werewolf.game.model.ActionTiming
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
@@ -285,12 +286,14 @@ class RoleActionServiceImplTest {
     fun testGetPendingActions() {
         val session = Session(guildId = 123L)
 
-        session.stateData.pendingActions.add(
+        session.stateData.submittedActions.add(
             dev.robothanzo.werewolf.game.model.RoleActionInstance(
                 actor = 1,
+                actorRole = "狼人",
                 actionDefinitionId = "WEREWOLF_KILL",
                 targets = listOf(2),
-                submittedBy = dev.robothanzo.werewolf.game.model.ActionSubmissionSource.PLAYER
+                submittedBy = dev.robothanzo.werewolf.game.model.ActionSubmissionSource.PLAYER,
+                status = ActionStatus.SUBMITTED
             )
         )
 

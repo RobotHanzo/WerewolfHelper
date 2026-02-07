@@ -4,6 +4,7 @@ import club.minnced.discord.webhook.WebhookClient
 import club.minnced.discord.webhook.send.WebhookMessageBuilder
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.WolfMessage
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.NightManager
 import dev.robothanzo.werewolf.utils.CmdUtils
@@ -85,19 +86,12 @@ class MessageListener : ListenerAdapter() {
                         gameSessionService.withLockedSession(session.guildId) { lockedSession ->
                             // Record if it's from the judge channel or the werewolf's own channel
                             val messagesList = lockedSession.stateData.werewolfMessages
-
                             val senderId =
                                 if (isJudgeChannel) 0 else lockedSession.getPlayer(event.author.idLong)?.id ?: 0
-                            val displayName = event.member?.effectiveName ?: event.author.effectiveName
-                            val senderName = if (isJudgeChannel) "法官頻道 (${displayName})" else displayName
 
-                            // We should probably filter who sees these in the dashboard too, but for simplicity we'll keep all for now
-                            // but mark them if possible.
                             messagesList.add(
-                                dev.robothanzo.werewolf.game.model.WerewolfMessage(
+                                WolfMessage(
                                     senderId = senderId,
-                                    senderName = senderName,
-                                    avatarUrl = event.author.effectiveAvatarUrl,
                                     content = event.message.contentRaw,
                                     timestamp = System.currentTimeMillis()
                                 )
@@ -109,7 +103,7 @@ class MessageListener : ListenerAdapter() {
 
                             // Notify NightManager and broadcast updated status inside lock to ensure data consistency
                             nightManager.notifyPhaseUpdate(lockedSession.guildId)
-                            nightManager.broadcastNightStatus(lockedSession)
+                            gameSessionService.broadcastSessionUpdate(lockedSession)
                         }
                     }
 
