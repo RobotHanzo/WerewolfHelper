@@ -3,7 +3,6 @@ package dev.robothanzo.werewolf.service.impl
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
-import dev.robothanzo.werewolf.game.model.GameStateData
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.GameStateService
 import org.springframework.stereotype.Service
@@ -54,14 +53,7 @@ class GameStateServiceImpl(
 
         val nextStep = steps[stepId] ?: throw IllegalArgumentException("Unknown step: $stepId")
 
-        val oldState = session.stateData
         session.currentState = stepId
-
-        // Reset state data for new step while preserving persistent fields
-        session.stateData = GameStateData(
-            playerOwnedActions = oldState.playerOwnedActions,
-            deathTriggerAvailableMap = oldState.deathTriggerAvailableMap,
-        )
 
         // Timer Logic
         val duration = nextStep.getDurationSeconds(session)

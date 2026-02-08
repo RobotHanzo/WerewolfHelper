@@ -3,6 +3,7 @@ package dev.robothanzo.werewolf
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers
+import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import dev.robothanzo.werewolf.service.*
 import jakarta.annotation.PostConstruct
@@ -57,7 +58,6 @@ class WerewolfApplication {
         lateinit var gameSessionService: GameSessionService
         lateinit var gameStateService: GameStateService
         lateinit var roleService: RoleService
-        lateinit var roleActionService: RoleActionService
         lateinit var gameActionService: GameActionService
         lateinit var policeService: PoliceService
         lateinit var expelService: ExpelService
@@ -65,6 +65,7 @@ class WerewolfApplication {
         lateinit var speechService: SpeechService
         lateinit var actionUIService: ActionUIService
         lateinit var roleActionExecutor: RoleActionExecutor
+        lateinit var roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry
         lateinit var roleEventService: RoleEventService
         val playerManager: AudioPlayerManager = DefaultAudioPlayerManager()
 
@@ -120,7 +121,6 @@ class WerewolfApplication {
         private val gameSessionServiceBean: GameSessionService,
         private val discordServiceBean: DiscordService,
         private val roleServiceBean: RoleService,
-        private val roleActionServiceBean: RoleActionService,
         private val gameActionServiceBean: GameActionService,
         private val policeServiceBean: PoliceService,
         private val expelServiceBean: ExpelService,
@@ -128,6 +128,7 @@ class WerewolfApplication {
         private val speechServiceBean: SpeechService,
         private val actionUIServiceBean: ActionUIService,
         private val roleActionExecutorBean: RoleActionExecutor,
+        private val roleRegistryBean: RoleRegistry,
         private val roleEventServiceBean: RoleEventService,
         private val gameStateServiceBean: GameStateService
     ) {
@@ -138,7 +139,7 @@ class WerewolfApplication {
             log.info("Initializing Static Bridge...")
             gameSessionService = gameSessionServiceBean
             roleService = roleServiceBean
-            roleActionService = roleActionServiceBean
+            roleService = roleServiceBean
             gameActionService = gameActionServiceBean
             policeService = policeServiceBean
             expelService = expelServiceBean
@@ -146,6 +147,7 @@ class WerewolfApplication {
             speechService = speechServiceBean
             actionUIService = actionUIServiceBean
             roleActionExecutor = roleActionExecutorBean
+            roleRegistry = roleRegistryBean
             roleEventService = roleEventServiceBean
             gameStateService = gameStateServiceBean
             jda = discordServiceBean.jda

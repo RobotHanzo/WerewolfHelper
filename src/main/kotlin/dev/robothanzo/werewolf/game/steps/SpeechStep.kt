@@ -3,14 +3,12 @@ package dev.robothanzo.werewolf.game.steps
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.service.GameStateService
-import dev.robothanzo.werewolf.service.RoleActionService
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 
 @Component
 class SpeechStep(
-    @param:Lazy private val speechService: dev.robothanzo.werewolf.service.SpeechService,
-    private val roleActionService: RoleActionService
+    @param:Lazy private val speechService: dev.robothanzo.werewolf.service.SpeechService
 ) : GameStep {
     override val id = "SPEECH_PHASE"
     override val name = "發言流程"

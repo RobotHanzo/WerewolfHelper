@@ -81,7 +81,7 @@ class RoleActionExecutor(private val roleRegistry: RoleRegistry) {
         return if (executor != null) {
             executor.execute(session, action, accumulatedState)
         } else {
-            println("RoleActionExecutor: No executor found for ${action.actionDefinitionId}")
+            println("RoleActionExecutor: CRITICAL - No executor found for actionId '${action.actionDefinitionId}'")
             accumulatedState
         }
     }

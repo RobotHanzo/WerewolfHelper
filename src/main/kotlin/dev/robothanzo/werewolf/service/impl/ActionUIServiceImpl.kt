@@ -8,6 +8,7 @@ import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 import dev.robothanzo.werewolf.service.ActionUIService
 import dev.robothanzo.werewolf.service.NightManager
+import dev.robothanzo.werewolf.utils.MsgUtils
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.components.selections.StringSelectMenu
@@ -16,7 +17,9 @@ import org.springframework.stereotype.Service
 
 @Service
 class ActionUIServiceImpl(
-    private val nightManager: NightManager
+    private val nightManager: NightManager,
+    private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry,
+    private val roleActionExecutor: dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 ) : ActionUIService {
     private val log = LoggerFactory.getLogger(ActionUIServiceImpl::class.java)
 
@@ -50,7 +53,7 @@ class ActionUIServiceImpl(
             }
 
             val message = player.channel?.sendMessage(actionText)?.setComponents(
-                dev.robothanzo.werewolf.utils.MsgUtils.spreadButtonsAcrossActionRows(actionButtons)
+                MsgUtils.spreadButtonsAcrossActionRows(actionButtons)
             )?.complete()
 
             // Create/Update action data in unified submittedActions list
@@ -85,13 +88,11 @@ class ActionUIServiceImpl(
             WerewolfApplication.gameSessionService.saveSession(session)
 
             // Update dashboard status to ACTING
-            WerewolfApplication.roleActionService.updateActionStatus(
-                guildId,
+            session.updateActionStatus(
                 playerId,
                 ActionStatus.ACTING,
                 actionId = null,
-                targetPlayerIds = emptyList(),
-                session = session
+                targetPlayerIds = emptyList()
             )
 
             actionInstance
@@ -175,13 +176,11 @@ class ActionUIServiceImpl(
             actionInstance.status = ActionStatus.ACTING
 
             // Update dashboard status to show selected action
-            WerewolfApplication.roleActionService.updateActionStatus(
-                guildId,
+            lockedSession.updateActionStatus(
                 playerId,
                 ActionStatus.ACTING,
                 actionId = actionId,
-                targetPlayerIds = emptyList(),
-                session = lockedSession
+                targetPlayerIds = emptyList()
             )
 
             actionInstance
@@ -280,8 +279,7 @@ class ActionUIServiceImpl(
                     val player = session.getPlayer(playerId)
 
                     // Re-fetch available actions to determine if mandatory
-                    val availableActions =
-                        WerewolfApplication.roleActionService.getAvailableActionsForPlayer(session, playerId)
+                    val availableActions = session.getAvailableActionsForPlayer(playerId, roleRegistry)
 
                     // Handle mandatory actions
                     val mandatoryAction = availableActions.find { !it.isOptional }
@@ -296,12 +294,13 @@ class ActionUIServiceImpl(
                             session.getPlayer(playerId)?.channel?.sendMessage("⏱️ **時間到！** 已為你隨機選擇目標。")
                                 ?.queue()
                             log.info("Auto-submitting mandatory action ${mandatoryAction.actionId} for player $playerId due to timeout")
-                            WerewolfApplication.roleActionService.submitAction(
-                                guildId,
+                            session.validateAndSubmitAction(
                                 mandatoryAction.actionId,
                                 playerId,
                                 arrayListOf(target),
-                                "SYSTEM"
+                                "SYSTEM",
+                                roleRegistry,
+                                roleActionExecutor
                             )
                             return@forEach
                         }
@@ -323,12 +322,10 @@ class ActionUIServiceImpl(
 
                     if (player != null) {
                         player.actionSubmitted = true
-                        WerewolfApplication.roleActionService.updateActionStatus(
-                            guildId,
+                        session.updateActionStatus(
                             player.id,
                             ActionStatus.SKIPPED,
-                            targetPlayerIds = listOf(SKIP_TARGET_ID),
-                            session = session
+                            targetPlayerIds = listOf(SKIP_TARGET_ID)
                         )
                     }
                 }
@@ -349,8 +346,7 @@ class ActionUIServiceImpl(
             val pendingActions =
                 session.stateData.submittedActions.filter { it.status == ActionStatus.PENDING || it.status == ActionStatus.ACTING }
             pendingActions.forEach { action ->
-                val availableActions =
-                    WerewolfApplication.roleActionService.getAvailableActionsForPlayer(session, action.actor)
+                val availableActions = session.getAvailableActionsForPlayer(action.actor, roleRegistry)
                 val isWolfBrotherAction =
                     availableActions.any { it.actionId == PredefinedRoles.WOLF_YOUNGER_BROTHER_EXTRA_KILL }
 

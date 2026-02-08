@@ -20,13 +20,19 @@ class WerewolfKillAction : BaseRoleAction(
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
         println("WerewolfKillAction: Inputs - Targets=${action.targets}")
-        if (action.targets.isEmpty() || action.targets.first() == dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID) {
-            println("WerewolfKillAction: Skipped due to empty or skip target")
+        if (action.targets.isEmpty()) {
+            println("WerewolfKillAction: Skipped due to empty targets")
             return accumulatedState
         }
 
-        accumulatedState.deaths.getOrPut(DeathCause.WEREWOLF) { mutableListOf() }.add(action.targets[0])
-        println("WerewolfKillAction: Added kill ${action.targets[0]}. New Wolf deaths: ${accumulatedState.deaths[DeathCause.WEREWOLF]}")
+        val targetId = action.targets.firstOrNull() ?: return accumulatedState
+        if (targetId == dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID) {
+            println("WerewolfKillAction: Skipped due to skip target")
+            return accumulatedState
+        }
+
+        accumulatedState.deaths.getOrPut(DeathCause.WEREWOLF) { mutableListOf() }.add(targetId)
+        println("WerewolfKillAction: Added kill $targetId. New Wolf deaths: ${accumulatedState.deaths[DeathCause.WEREWOLF]}")
         return accumulatedState
     }
 }
@@ -298,8 +304,6 @@ class DeathResolutionAction : BaseRoleAction(
         deaths.entries.removeIf { it.value.isEmpty() }
         println("DeathResolution: Final deaths map: $deaths")
 
-        if (doubleProtected.isNotEmpty()) accumulatedState.metadata["doubleProtectedPlayers"] = doubleProtected
-
         return accumulatedState
     }
 }
@@ -324,20 +328,18 @@ abstract class DarkMerchantTradeAction(
         val target = session.getPlayer(targetId) ?: return accumulatedState
 
         val isWolf = target.wolf
-        val actorPlayer = session.getPlayer(action.actor)
         if (isWolf) {
             // Merchant dies
-            accumulatedState.deaths.getOrPut(DeathCause.UNKNOWN) { mutableListOf() }.add(action.actor)
+            accumulatedState.deaths.getOrPut(DeathCause.TRADED_WITH_WOLF) { mutableListOf() }.add(action.actor)
             session.addLog(dev.robothanzo.werewolf.database.documents.LogType.SYSTEM, "黑市商人與狼人交易，不幸出局")
-            actorPlayer?.channel?.sendMessage("🌙 **交易失敗**：你交易的對象是狼人，你不幸出局...")?.queue()
             return accumulatedState
         } else {
             // Trade success, recipient gets a skill next night
+
             session.addLog(
                 dev.robothanzo.werewolf.database.documents.LogType.SYSTEM,
                 "黑市商人交易成功，將技能 $skillType 贈予了玩家 $targetId"
             )
-            actorPlayer?.channel?.sendMessage("🌙 **交易成功**：你已成功贈予技能！")?.queue()
         }
         return accumulatedState
     }

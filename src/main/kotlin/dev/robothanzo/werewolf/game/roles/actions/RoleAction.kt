@@ -11,8 +11,7 @@ import dev.robothanzo.werewolf.game.model.RoleActionInstance
 data class ActionExecutionResult(
     var deaths: MutableMap<DeathCause, MutableList<Int>> = mutableMapOf(), // cause -> list of player IDs (Int)
     var saved: MutableList<Int> = mutableListOf(), // player IDs (Int)
-    var protectedPlayers: MutableSet<Int> = mutableSetOf(), // player IDs (Int)
-    var metadata: MutableMap<String, Any> = mutableMapOf()
+    var protectedPlayers: MutableSet<Int> = mutableSetOf() // player IDs (Int)
 )
 
 /**

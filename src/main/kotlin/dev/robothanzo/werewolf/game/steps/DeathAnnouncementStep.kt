@@ -3,10 +3,10 @@ package dev.robothanzo.werewolf.game.steps
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
+import dev.robothanzo.werewolf.game.model.resolveNightActions
 import dev.robothanzo.werewolf.service.GameActionService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.GameStateService
-import dev.robothanzo.werewolf.service.RoleActionService
 import kotlinx.coroutines.launch
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component
 @Component
 class DeathAnnouncementStep(
     private val gameActionService: GameActionService,
-    private val roleActionService: RoleActionService,
+    private val roleActionExecutor: dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor,
     @param:Lazy
     private val gameSessionService: GameSessionService
 ) : GameStep {
@@ -29,7 +29,7 @@ class DeathAnnouncementStep(
 
         gameSessionService.withLockedSession(guildId) { lockedSession ->
             // Resolve all pending night actions and get deaths
-            val resolutionResult = roleActionService.resolveNightActions(lockedSession)
+            val resolutionResult = lockedSession.resolveNightActions(roleActionExecutor)
 
             // Process deaths - mark players as dead based on resolution result
             val allDeaths = mutableSetOf<Int>()

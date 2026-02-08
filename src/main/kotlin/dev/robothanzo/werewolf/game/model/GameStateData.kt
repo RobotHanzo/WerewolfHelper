@@ -165,3 +165,11 @@ data class GameStateData(
     // For frontend display after death announcement
     var deadPlayers: List<Int> = emptyList()
 }
+
+/**
+ * Result of night action resolution
+ */
+data class NightResolutionResult(
+    val deaths: Map<DeathCause, List<Int>>, // cause -> list of player IDs (Int)
+    val saved: List<Int>, // player IDs (Int)
+)

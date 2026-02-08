@@ -6,6 +6,8 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.ActionStatus
 import dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID
+import dev.robothanzo.werewolf.game.model.updateActionStatus
+import dev.robothanzo.werewolf.game.model.validateAndSubmitAction
 import dev.robothanzo.werewolf.model.Candidate
 import dev.robothanzo.werewolf.utils.CmdUtils
 import dev.robothanzo.werewolf.utils.isAdmin
@@ -132,23 +134,23 @@ class ButtonListener : ListenerAdapter() {
 
                         WerewolfApplication.actionUIService.updateTargetPromptId(session, player.id, message.idLong)
 
-                        // RoleActionService.updateActionStatus already uses Persistent Session calls internally
-                        WerewolfApplication.roleActionService.updateActionStatus(
-                            event.guild!!.idLong,
+                        // Update status manually using extension
+                        session.updateActionStatus(
                             player.id,
                             ActionStatus.ACTING,
-                            actionId,
-                            session = session
+                            actionId
                         )
                     } else {
                         // No targets required - submit immediately
                         WerewolfApplication.actionUIService.clearPrompt(session, player.id)
-                        WerewolfApplication.roleActionService.submitAction(
-                            event.guild!!.idLong,
+
+                        session.validateAndSubmitAction(
                             actionId,
                             player.id,
                             arrayListOf(),
-                            if (isJudge) "JUDGE" else "PLAYER"
+                            if (isJudge) "JUDGE" else "PLAYER",
+                            WerewolfApplication.roleRegistry,
+                            actionExecutor
                         )
                         event.hook.editOriginal(":white_check_mark: 已執行行動").queue()
                     }
@@ -164,12 +166,11 @@ class ButtonListener : ListenerAdapter() {
                     // Mark action as submitted but without actual action
                     player.actionSubmitted = true
                     // Update UI status to SKIPPED so the night can resolve early
-                    WerewolfApplication.roleActionService.updateActionStatus(
-                        event.guild!!.idLong,
+                    // Update UI status to SKIPPED so the night can resolve early
+                    session.updateActionStatus(
                         player.id,
                         ActionStatus.SKIPPED,
-                        targetPlayerIds = listOf(SKIP_TARGET_ID),
-                        session = session
+                        targetPlayerIds = listOf(SKIP_TARGET_ID)
                     )
                     // Clear the action prompt to cancel reminder
                     WerewolfApplication.actionUIService.clearPrompt(session, player.id)
@@ -203,12 +204,14 @@ class ButtonListener : ListenerAdapter() {
 
                     if (targetId == SKIP_TARGET_ID.toString()) {
                         // Handle Skip
-                        WerewolfApplication.roleActionService.submitAction(
-                            guildId,
+                        // Handle Skip
+                        session.validateAndSubmitAction(
                             actionId,
                             player.id,
                             arrayListOf(SKIP_TARGET_ID),
-                            if (isJudge) "JUDGE" else "PLAYER"
+                            if (isJudge) "JUDGE" else "PLAYER",
+                            WerewolfApplication.roleRegistry,
+                            WerewolfApplication.roleActionExecutor
                         )
 
                         WerewolfApplication.actionUIService.clearPrompt(session, player.id)
@@ -236,12 +239,13 @@ class ButtonListener : ListenerAdapter() {
                         session
                     )
 
-                    val result = WerewolfApplication.roleActionService.submitAction(
-                        guildId,
+                    val result = session.validateAndSubmitAction(
                         actionId,
                         player.id,
                         arrayListOf(target.id),
-                        if (isJudge) "JUDGE" else "PLAYER"
+                        if (isJudge) "JUDGE" else "PLAYER",
+                        WerewolfApplication.roleRegistry,
+                        WerewolfApplication.roleActionExecutor
                     )
 
                     if (result["success"] == true) {

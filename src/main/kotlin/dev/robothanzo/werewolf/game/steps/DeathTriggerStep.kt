@@ -3,10 +3,11 @@ package dev.robothanzo.werewolf.game.steps
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
+import dev.robothanzo.werewolf.game.model.executeDeathTriggers
+import dev.robothanzo.werewolf.game.model.hasDeathTriggerAvailable
 import dev.robothanzo.werewolf.service.GameActionService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.GameStateService
-import dev.robothanzo.werewolf.service.RoleActionService
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 
@@ -17,7 +18,8 @@ import org.springframework.stereotype.Component
  */
 @Component
 class DeathTriggerStep(
-    private val roleActionService: RoleActionService,
+    private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry,
+    private val roleActionExecutor: dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor,
     private val gameActionService: GameActionService,
     @param:Lazy
     private val gameSessionService: GameSessionService
@@ -31,7 +33,7 @@ class DeathTriggerStep(
         gameSessionService.withLockedSession(guildId) { lockedSession ->
             // Check if any players have death triggers available
             val playersWithTriggers = lockedSession.players.values
-                .filter { roleActionService.hasDeathTriggerAvailable(lockedSession, it.id) }
+                .filter { lockedSession.hasDeathTriggerAvailable(it.id, roleRegistry) }
 
             if (playersWithTriggers.isEmpty()) {
                 // No death triggers available
@@ -65,7 +67,7 @@ class DeathTriggerStep(
 
         gameSessionService.withLockedSession(guildId) { lockedSession ->
             // Execute all pending death trigger actions
-            val killedByTriggers = roleActionService.executeDeathTriggers(lockedSession)
+            val killedByTriggers = lockedSession.executeDeathTriggers(roleRegistry, roleActionExecutor)
 
             if (killedByTriggers.isNotEmpty()) {
                 // Mark triggered deaths

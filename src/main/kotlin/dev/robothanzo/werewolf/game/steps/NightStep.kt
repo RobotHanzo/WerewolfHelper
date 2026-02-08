@@ -17,9 +17,10 @@ import kotlin.jvm.optionals.getOrNull
 @Component
 class NightStep(
     private val speechService: SpeechService,
-    private val roleActionService: RoleActionService,
     private val actionUIService: ActionUIService,
     private val nightManager: NightManager,
+    private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry,
+    private val roleActionExecutor: dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor,
     @param:Lazy
     private val gameSessionService: GameSessionService
 ) : GameStep {
@@ -55,7 +56,7 @@ class NightStep(
                         continue
                     }
                 } else {
-                    val actions = roleActionService.getAvailableActionsForPlayer(session, p.id)
+                    val actions = session.getAvailableActionsForPlayer(p.id, roleRegistry)
                     p.actionSubmitted = false
                     if (actions.isNotEmpty()) {
                         session.stateData.submittedActions.add(
@@ -136,7 +137,7 @@ class NightStep(
             for (player in lockedSession.players.values) {
                 if (!player.alive) continue
                 val pid = player.id
-                var actions = roleActionService.getAvailableActionsForPlayer(lockedSession, pid)
+                var actions = lockedSession.getAvailableActionsForPlayer(pid, roleRegistry)
 
                 // Filter out standard werewolf kill as it's handled in the group phase
                 if (player.wolf) {
@@ -215,9 +216,10 @@ class NightStep(
     }
 
     private fun allActorsSubmitted(guildId: Long): Boolean {
-        val session = gameSessionService.getSession(guildId).orElse(null) ?: return true
-        return session.stateData.submittedActions.filter { it.actorRole != "狼人" }.all {
-            it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.SKIPPED
+        return gameSessionService.withLockedSession(guildId) { session ->
+            session.stateData.submittedActions.filter { it.actorRole != "狼人" }.all {
+                it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.SKIPPED
+            }
         }
     }
 
@@ -261,12 +263,13 @@ class NightStep(
                     session.alivePlayers().containsKey(pid.toString())
                 } ?: groupState.electorates.firstOrNull() ?: 0
 
-                roleActionService.submitAction(
-                    guildId,
+                session.validateAndSubmitAction(
                     PredefinedRoles.WEREWOLF_KILL,
                     actorId,
                     arrayListOf(chosenTarget),
-                    "SYSTEM"
+                    "SYSTEM",
+                    roleRegistry,
+                    roleActionExecutor
                 )
             }
         }
