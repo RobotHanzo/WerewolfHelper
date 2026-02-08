@@ -84,18 +84,18 @@ class GameStateServiceImpl(
         var nextIdx = (idx + 1) % gameFlow.size
         var nextId = gameFlow[nextIdx]
 
-        // Handle cycles (Day increment at sunrise)
-        if (nextId == "DEATH_ANNOUNCEMENT") {
-            session.day += 1
-            sessionService.saveSession(session)
-            session.addLog(LogType.SYSTEM, "進入第 ${session.day} 天")
-        }
-
         // Conditional Skips
         if (nextId == "SHERIFF_ELECTION" && session.day != 0) {
             // Skip sheriff election after night 1 (which has day 0)
             nextIdx = (nextIdx + 1) % gameFlow.size
             nextId = gameFlow[nextIdx]
+        }
+
+        // Handle cycles (Day increment at sunrise)
+        if (nextId == "DEATH_ANNOUNCEMENT") {
+            session.day += 1
+            sessionService.saveSession(session)
+            session.addLog(LogType.SYSTEM, "進入第 ${session.day} 天")
         }
 
         startStep(session, nextId)

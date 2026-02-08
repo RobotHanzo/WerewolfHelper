@@ -6,6 +6,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
     kotlin("jvm") version "2.3.0"
     kotlin("plugin.spring") version "2.3.0"
+    jacoco
 }
 
 group = "dev.robothanzo.werewolf"
@@ -80,6 +81,15 @@ tasks {
 
     test {
         useJUnitPlatform()
+        finalizedBy("jacocoTestReport")
+    }
+
+    jacocoTestReport {
+        dependsOn(test)
+        reports {
+            xml.required.set(true)
+            html.required.set(true)
+        }
     }
 
     bootJar {
