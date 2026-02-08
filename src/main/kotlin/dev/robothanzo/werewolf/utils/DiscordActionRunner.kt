@@ -66,18 +66,3 @@ private fun handleTaskCompletion(
         allDone.complete(null)
     }
 }
-
-object DiscordActionRunner {
-    // Compatibility method for Java or legacy calls
-    @JvmStatic
-    fun runActions(
-        tasks: List<ActionTask>,
-        statusLogger: ((String) -> Unit)?,
-        progressCallback: ((Int) -> Unit)?,
-        startPercent: Int,
-        endPercent: Int,
-        timeoutSeconds: Int
-    ) {
-        tasks.runActions(statusLogger, progressCallback, startPercent, endPercent, timeoutSeconds)
-    }
-}

@@ -3,15 +3,12 @@ package dev.robothanzo.werewolf.listeners
 import dev.robothanzo.werewolf.WerewolfApplication
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
 class MemberJoinListener(
     private val gameSessionService: dev.robothanzo.werewolf.service.GameSessionService
 ) : ListenerAdapter() {
-    private val log = LoggerFactory.getLogger(MemberJoinListener::class.java)
-
     override fun onGuildMemberJoin(event: GuildMemberJoinEvent) {
         val session = gameSessionService.getSession(event.guild.idLong).orElse(null)
         if (WerewolfApplication.SERVER_CREATORS.contains(event.member.idLong)) {

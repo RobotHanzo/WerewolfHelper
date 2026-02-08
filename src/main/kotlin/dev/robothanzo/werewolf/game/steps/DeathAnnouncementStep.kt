@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component
 
 @Component
 class DeathAnnouncementStep(
+    private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry,
     private val gameActionService: GameActionService,
     private val roleActionExecutor: dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor,
     @param:Lazy
@@ -29,7 +30,7 @@ class DeathAnnouncementStep(
 
         gameSessionService.withLockedSession(guildId) { lockedSession ->
             // Resolve all pending night actions and get deaths
-            val resolutionResult = lockedSession.resolveNightActions(roleActionExecutor)
+            val resolutionResult = lockedSession.resolveNightActions(roleActionExecutor, roleRegistry)
 
             // Process deaths - mark players as dead based on resolution result
             val allDeaths = mutableSetOf<Int>()

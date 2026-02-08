@@ -99,8 +99,6 @@ class GameActionServiceImpl(
 
         progressCallback(100)
         statusCallback("操作完成。")
-
-        gameSessionService.broadcastUpdate(guildId)
     }
 
     override fun markPlayerDead(

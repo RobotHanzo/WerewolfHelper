@@ -103,18 +103,6 @@ class RoleServiceImpl(
                 val member = pending[player.id - 1]
                 player.updateUserId(member.idLong)
 
-                // 1. Prepare Discord Role Task
-                val playerRole = guild.getRoleById(player.role?.idLong ?: 0)
-                if (playerRole != null) {
-                    priorityTasks.add(
-                        ActionTask(
-                            guild.addRoleToMember(member, playerRole),
-                            "已套用身分組: " + playerRole.name + " 給 " + member.effectiveName
-                        )
-                    )
-                }
-
-                // 2. Logic for role selection (JinBaoBao, etc.)
                 var rs = mutableListOf(roles.removeFirst())
                 var isJinBaoBao = false
 
@@ -164,11 +152,7 @@ class RoleServiceImpl(
                 player.jinBaoBao = isJinBaoBao && session.doubleIdentities
                 player.roles = rs
                 player.deadRoles = mutableListOf()
-                // Setter is private in Player, use reflection or create public setter if needed
-                // userId is now private, will be set during player creation
-                // player.userId is now set at initialization
 
-                // 3. Prepare Nickname Task
                 val newNickname = player.nickname
                 if (member.effectiveName != newNickname) {
                     if (guild.selfMember.canInteract(member)) {
@@ -181,6 +165,18 @@ class RoleServiceImpl(
                     } else {
                         statusCallback("  - [警告] 無法更新 ${member.effectiveName} 的暱稱 (權限不足)")
                     }
+                }
+
+                player.role?.let {
+                    priorityTasks.add(
+                        ActionTask(
+                            guild.modifyMemberRoles(
+                                member,
+                                it
+                            ), // Discord wants us to use this or there will be race conditions: https://github.com/discord/discord-api-docs/issues/6289
+                            "已套用身分組: " + it.name + " 給 " + member.effectiveName
+                        )
+                    )
                 }
 
                 statusCallback("  - 已分配身分: " + rs.joinToString(", ") + if (player.jinBaoBao) " (金寶寶)" else "")

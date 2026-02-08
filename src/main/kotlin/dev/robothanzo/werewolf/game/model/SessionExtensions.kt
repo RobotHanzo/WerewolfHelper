@@ -182,11 +182,12 @@ fun Session.updateActionStatus(
         }
         actionInstance.status = status
     }
-
-    // Caller is responsible for saving and notifying
 }
 
-fun Session.resolveNightActions(roleActionExecutor: RoleActionExecutor): NightResolutionResult {
+fun Session.resolveNightActions(
+    roleActionExecutor: RoleActionExecutor,
+    roleRegistry: RoleRegistry
+): NightResolutionResult {
     val actionsToProcess = stateData.submittedActions
         .filter { it.status == ActionStatus.SUBMITTED }
         .toMutableList()
@@ -234,7 +235,13 @@ fun Session.resolveNightActions(roleActionExecutor: RoleActionExecutor): NightRe
     }
 
     // Execute all actions using the new action executor
-    val executionResult = roleActionExecutor.executeActions(this, actionsToProcess)
+    // Filter out immediate actions (like Seer) that have already been executed upon submission
+    val actionsToExecute = actionsToProcess.filter {
+        val actionDef = roleRegistry.getAction(it.actionDefinitionId)
+        actionDef?.isImmediate != true
+    }
+
+    val executionResult = roleActionExecutor.executeActions(this, actionsToExecute)
     log.info(
         "NightResolution: ExecutionResult - Deaths={}, Saved={}, Protected={}",
         executionResult.deaths, executionResult.saved, executionResult.protectedPlayers

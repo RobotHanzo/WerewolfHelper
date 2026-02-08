@@ -1,7 +1,10 @@
 package dev.robothanzo.werewolf.game.roles.actions
 
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.*
+import dev.robothanzo.werewolf.game.model.ActionTiming
+import dev.robothanzo.werewolf.game.model.Camp
+import dev.robothanzo.werewolf.game.model.DeathCause
+import dev.robothanzo.werewolf.game.model.RoleActionInstance
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import org.springframework.context.annotation.Lazy
 import org.springframework.data.annotation.Transient
@@ -101,12 +104,10 @@ class SeerCheckAction(
             } ?: false
         }
 
-        if (action.status != ActionStatus.PROCESSED) {
-            val seerPlayer = session.getPlayer(action.actor)
-            val resultText = if (isWolf) "狼人" else "好人"
-            seerPlayer?.channel?.sendMessage("🔮 **查驗結果**：${target.nickname} 是 **$resultText**")?.queue()
-            action.status = ActionStatus.PROCESSED
-        }
+        val seerPlayer = session.getPlayer(action.actor)
+        val resultText = if (isWolf) "狼人" else "好人"
+        seerPlayer?.channel?.sendMessage("🔮 **查驗結果**：${target.nickname} 是 **$resultText**")?.queue()
+
         return accumulatedState
     }
 }
@@ -383,13 +384,10 @@ class MerchantSeerCheckAction(
             (session.hydratedRoles[role] ?: roleRegistry.getRole(role))?.camp == Camp.WEREWOLF
         } ?: false
 
-        if (action.status != ActionStatus.PROCESSED) {
-            val actorPlayer = session.getPlayer(action.actor)
-            val resultText = if (isWolf) "狼人" else "好人"
-            actorPlayer?.channel?.sendMessage("🔮 **查驗結果 (商人贈予)**：${target.nickname} 是 **$resultText**")
-                ?.queue()
-            action.status = ActionStatus.PROCESSED
-        }
+        val seerPlayer = session.getPlayer(action.actor)
+        val resultText = if (isWolf) "狼人" else "好人"
+        seerPlayer?.channel?.sendMessage("🔮 **查驗結果**：${target.nickname} 是 **$resultText**")?.queue()
+
         return accumulatedState
     }
 }
