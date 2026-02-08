@@ -4,9 +4,10 @@ package dev.robothanzo.werewolf.game.model
 /**
  * Represents the sub-phases of the night.
  */
-enum class NightPhase {
-    WEREWOLF_VOTING,
-    ROLE_ACTIONS
+enum class NightPhase(val order: Int) {
+    WOLF_YB_ACTION(0),
+    WEREWOLF_VOTING(1),
+    ROLE_ACTIONS(2)
 }
 
 enum class ActionTiming {

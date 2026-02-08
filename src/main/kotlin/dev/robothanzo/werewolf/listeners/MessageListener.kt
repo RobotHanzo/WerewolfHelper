@@ -4,6 +4,7 @@ import club.minnced.discord.webhook.WebhookClient
 import club.minnced.discord.webhook.send.WebhookMessageBuilder
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.NightPhase
 import dev.robothanzo.werewolf.game.model.WolfMessage
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.NightManager
@@ -69,7 +70,8 @@ class MessageListener : ListenerAdapter() {
                 (roles.contains("狼弟") && !isCharacterAlive(
                     session,
                     "狼兄"
-                ) && (session.stateData.wolfBrotherDiedDay == null || session.stateData.wolfBrotherDiedDay!! < session.day))
+                ) && (session.stateData.wolfBrotherDiedDay == null || session.stateData.wolfBrotherDiedDay!! < session.day ||
+                        (session.stateData.phaseType?.let { it.order > NightPhase.WOLF_YB_ACTION.order } ?: false)))
     }
 
     override fun onMessageReceived(event: MessageReceivedEvent) {

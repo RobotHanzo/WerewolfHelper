@@ -81,7 +81,7 @@ interface ActionUIService {
      * Clean up expired action prompts and group states
      * Sends timeout notification to players whose prompts have expired
      */
-    fun cleanupExpiredPrompts(guildId: Long, session: Session? = null)
+    fun cleanupExpiredPrompts(session: Session)
 
     /**
      * Send 30-second reminders to players about upcoming timeout

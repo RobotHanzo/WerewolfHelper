@@ -159,7 +159,7 @@ class ActionUIServiceImplTest {
         )
 
         // Execute cleanup
-        actionUIService.cleanupExpiredPrompts(1L, session)
+        actionUIService.cleanupExpiredPrompts(session)
 
         // Verify that the action in session state was updated to SUBMITTED with random target
         // BUT wait, session.validateAndSubmitAction creates a NEW action instance or updates existing?
@@ -228,7 +228,7 @@ class ActionUIServiceImplTest {
         whenever(roleRegistry.getAction(ActionDefinitionId.SEER_CHECK)).thenReturn(mandatoryRoleAction)
 
         // Execute cleanup
-        actionUIService.cleanupExpiredPrompts(1L, session)
+        actionUIService.cleanupExpiredPrompts(session)
 
         // Verify action submitted
         val submittedAction = session.stateData.submittedActions.find {

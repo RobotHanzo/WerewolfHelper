@@ -90,18 +90,51 @@ class NightStep(
     }
 
     private suspend fun processNightPhases(guildId: Long, service: GameStateService) {
-        // 1. Werewolf Voting Phase
+        // 0. Wolf Younger Brother Phase (Solo Action before Wolf Phase)
+        val wolfYoungerBrotherPhase = gameSessionService.withLockedSession(guildId) { lockedSession ->
+            val wolfYoungerBrother = lockedSession.players.values.find {
+                it.roles?.contains("狼弟") == true && it.alive
+            }
+
+            if (wolfYoungerBrother != null) {
+                val actions = lockedSession.getAvailableActionsForPlayer(wolfYoungerBrother.id, roleRegistry)
+                val extraKillAction = actions.find { it.actionId == ActionDefinitionId.WOLF_YOUNGER_BROTHER_EXTRA_KILL }
+
+                if (extraKillAction != null) {
+                    lockedSession.stateData.phaseType = NightPhase.WOLF_YB_ACTION
+                    val startTime = System.currentTimeMillis()
+                    lockedSession.stateData.phaseStartTime = startTime
+                    lockedSession.stateData.phaseEndTime = startTime + 60_000 // 60s for extra kill
+
+                    // Prompt the player
+                    actionUIService.promptPlayerForAction(
+                        guildId,
+                        lockedSession,
+                        wolfYoungerBrother.id,
+                        listOf(extraKillAction),
+                        60
+                    )
+
+                    // Set status to ACTING
+                    updateStatusToActing(lockedSession, wolfYoungerBrother.id)
+                    return@withLockedSession true
+                }
+            }
+            false
+        }
+
         val session = gameSessionService.getSession(guildId).orElseThrow()
+        if (wolfYoungerBrotherPhase) waitForWolfYoungerBrotherPhase(session, 60)
+
+        // 1. Werewolf Voting Phase
         val werewolves = session.players.values.filter { p ->
             if (!p.alive || !p.wolf) return@filter false
 
-            // Wolf Younger Brother Exclusion Logic
             if (p.roles?.contains("狼弟") == true) {
                 val isBrotherAlive = session.alivePlayers().values.any { it.roles?.contains("狼兄") == true }
-                val wolfBrotherDiedDay = session.stateData.wolfBrotherDiedDay
-                val isAwakeningNight = wolfBrotherDiedDay != null && wolfBrotherDiedDay == session.day
-
-                if (isBrotherAlive || isAwakeningNight) return@filter false
+                // Only exclude if Wolf Brother is ALIVE. 
+                // If Wolf Brother is DEAD, YB joins the pack (including the awakening night).
+                if (isBrotherAlive) return@filter false
             }
 
             true
@@ -109,6 +142,8 @@ class NightStep(
 
         if (werewolves.isNotEmpty()) {
             gameSessionService.withLockedSession(guildId) { lockedSession ->
+                lockedSession.stateData.phaseType = NightPhase.WEREWOLF_VOTING
+                lockedSession.stateData.phaseStartTime = System.currentTimeMillis()
                 actionUIService.promptGroupForAction(
                     guildId,
                     lockedSession,
@@ -182,6 +217,40 @@ class NightStep(
         gameSessionService.withLockedSession(guildId) { lockedSession ->
             service.nextStep(lockedSession)
         }
+    }
+
+    private suspend fun waitForWolfYoungerBrotherPhase(session: Session, timeoutSeconds: Int) {
+        // Double check phase to avoid waiting if logic didn't trigger
+        if (session.stateData.phaseType != NightPhase.WOLF_YB_ACTION) return
+
+        val timeoutMs = timeoutSeconds * 1000L
+
+        withTimeoutOrNull(timeoutMs) {
+            if (isWolfYoungerBrotherFinished(session)) return@withTimeoutOrNull
+
+            nightManager.getUpdateFlow()
+                .filter { it == session.guildId }
+                .firstOrNull {
+                    isWolfYoungerBrotherFinished(session)
+                }
+        }
+
+        finalizeWolfYoungerBrotherPhase(session)
+    }
+
+    private fun isWolfYoungerBrotherFinished(session: Session): Boolean {
+
+        val ybAction = session.stateData.submittedActions.find {
+            it.actionDefinitionId == ActionDefinitionId.WOLF_YOUNGER_BROTHER_EXTRA_KILL
+        }
+        // If action doesn't exist, we are finished (or never started)
+        // If action exists, check status
+        return ybAction == null || ybAction.status == ActionStatus.SUBMITTED || ybAction.status == ActionStatus.SKIPPED
+    }
+
+    private fun finalizeWolfYoungerBrotherPhase(session: Session) {
+        actionUIService.cleanupExpiredPrompts(session)
+        session.addLog(LogType.SYSTEM, "狼弟行動階段結束")
     }
 
     private suspend fun waitForWerewolfPhase(guildId: Long, timeoutSeconds: Int) {
@@ -289,7 +358,7 @@ class NightStep(
 
     private fun finalizeRoleActionsPhase(guildId: Long) {
         gameSessionService.withLockedSession(guildId) { session ->
-            actionUIService.cleanupExpiredPrompts(guildId, session)
+            actionUIService.cleanupExpiredPrompts(session)
             session.addLog(LogType.SYSTEM, "角色行動階段結束，清理未完成的行動")
         }
     }
@@ -305,12 +374,12 @@ class NightStep(
 
     override fun onEnd(session: Session, service: GameStateService) {
         // Clean up expired prompts and send timeout notifications
-        actionUIService.cleanupExpiredPrompts(session.guildId, session)
+        actionUIService.cleanupExpiredPrompts(session)
 
         // Clear prompts
         // We do NOT clear submittedActions, wolfStates, or messages here to preserve them for review/dashboard
         // They will be cleared at the start of the next NightStep
-        
+
         session.stateData.phaseType = null
         session.stateData.phaseStartTime = 0
         session.stateData.phaseEndTime = 0

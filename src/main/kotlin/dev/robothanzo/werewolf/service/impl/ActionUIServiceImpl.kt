@@ -263,8 +263,7 @@ class ActionUIServiceImpl(
         return session.stateData.wolfStates[actionId]
     }
 
-    override fun cleanupExpiredPrompts(guildId: Long, session: Session?) {
-        if (session == null) return
+    override fun cleanupExpiredPrompts(session: Session) {
         val now = System.currentTimeMillis()
 
         // Check if the current phase has expired
