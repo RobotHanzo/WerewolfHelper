@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component
 @Component
 class WerewolfKillAction : BaseRoleAction(
     actionId = ActionDefinitionId.WEREWOLF_KILL,
-    actionName = "擊殺",
     priority = PredefinedRoles.WEREWOLF_PRIORITY,
     timing = ActionTiming.NIGHT
 ) {
@@ -42,7 +41,6 @@ class WerewolfKillAction : BaseRoleAction(
 @Component
 class WolfYoungerBrotherExtraKillAction : BaseRoleAction(
     actionId = ActionDefinitionId.WOLF_YOUNGER_BROTHER_EXTRA_KILL,
-    actionName = "狼弟復仇刀",
     priority = PredefinedRoles.WEREWOLF_PRIORITY + 1,
     timing = ActionTiming.NIGHT,
     isOptional = false
@@ -77,7 +75,6 @@ class SeerCheckAction(
     @Transient @param:Lazy private val roleRegistry: RoleRegistry
 ) : BaseRoleAction(
     actionId = ActionDefinitionId.SEER_CHECK,
-    actionName = "查驗",
     priority = PredefinedRoles.SEER_PRIORITY,
     timing = ActionTiming.NIGHT,
     isImmediate = true
@@ -115,7 +112,6 @@ class SeerCheckAction(
 @Component
 class WitchAntidoteAction : BaseRoleAction(
     actionId = ActionDefinitionId.WITCH_ANTIDOTE,
-    actionName = "解藥",
     priority = PredefinedRoles.WITCH_ANTIDOTE_PRIORITY,
     timing = ActionTiming.NIGHT,
     usageLimit = 1,
@@ -151,7 +147,6 @@ class WitchAntidoteAction : BaseRoleAction(
 @Component
 class WitchPoisonAction : BaseRoleAction(
     actionId = ActionDefinitionId.WITCH_POISON,
-    actionName = "毒藥",
     priority = PredefinedRoles.WITCH_POISON_PRIORITY,
     timing = ActionTiming.NIGHT,
     usageLimit = 1
@@ -170,7 +165,6 @@ class WitchPoisonAction : BaseRoleAction(
 @Component
 class GuardProtectAction : BaseRoleAction(
     actionId = ActionDefinitionId.GUARD_PROTECT,
-    actionName = "守護",
     priority = PredefinedRoles.GUARD_PRIORITY,
     timing = ActionTiming.NIGHT
 ) {
@@ -206,7 +200,6 @@ class GuardProtectAction : BaseRoleAction(
 @Component
 class HunterRevengeAction : BaseRoleAction(
     actionId = ActionDefinitionId.HUNTER_REVENGE,
-    actionName = "開槍",
     priority = PredefinedRoles.HUNTER_PRIORITY,
     timing = ActionTiming.DEATH_TRIGGER
 ) {
@@ -234,7 +227,6 @@ class HunterRevengeAction : BaseRoleAction(
 @Component
 class WolfKingRevengeAction : BaseRoleAction(
     actionId = ActionDefinitionId.WOLF_KING_REVENGE,
-    actionName = "復仇",
     priority = PredefinedRoles.HUNTER_PRIORITY,
     timing = ActionTiming.DEATH_TRIGGER
 ) {
@@ -262,7 +254,6 @@ class WolfKingRevengeAction : BaseRoleAction(
 @Component
 class DeathResolutionAction : BaseRoleAction(
     actionId = ActionDefinitionId.DEATH_RESOLUTION,
-    actionName = "結算",
     priority = 1000,
     timing = ActionTiming.NIGHT,
     targetCount = 0
@@ -352,11 +343,9 @@ class DeathResolutionAction : BaseRoleAction(
 
 abstract class DarkMerchantTradeAction(
     actionId: ActionDefinitionId,
-    actionName: String,
-    private val skillType: String
+    private val skillType: ActionDefinitionId
 ) : BaseRoleAction(
     actionId = actionId,
-    actionName = actionName,
     priority = PredefinedRoles.DARK_MERCHANT_PRIORITY,
     timing = ActionTiming.NIGHT,
     usageLimit = 1
@@ -371,33 +360,16 @@ abstract class DarkMerchantTradeAction(
 
         val isWolf = target.wolf
         if (isWolf) {
-            // Merchant dies
             accumulatedState.deaths.getOrPut(DeathCause.TRADED_WITH_WOLF) { mutableListOf() }.add(action.actor)
             session.addLog(LogType.SYSTEM, "黑市商人與狼人交易，不幸出局")
             return accumulatedState
         } else {
-            // Trade success, recipient gets a skill next night
-
-            val skillName = when (skillType) {
-                "SEER" -> "查驗"
-                "POISON" -> "毒藥"
-                "GUN" -> "獵槍"
-                else -> skillType
-            }
-
-            val giftedActionId = when (skillType) {
-                "SEER" -> ActionDefinitionId.MERCHANT_SEER_CHECK
-                "POISON" -> ActionDefinitionId.MERCHANT_POISON
-                "GUN" -> ActionDefinitionId.MERCHANT_GUN
-                else -> null
-            }
-
-            giftedActionId?.let { id ->
+            skillType.let { id ->
                 val playerActions = session.stateData.playerOwnedActions.getOrPut(targetId) { mutableMapOf() }
                 playerActions[id.toString()] = 1 // 1 use left
             }
 
-            target.channel?.sendMessage("🎁 **你收到了黑市商人的禮物**！\n你獲得了技能：**$skillName**\n你可以在**下一晚**開始使用它。")
+            target.channel?.sendMessage("🎁 **你收到了黑市商人的禮物**！\n你獲得了技能：**${skillType.actionName}**\n你可以在**下一晚**開始使用它。")
                 ?.queue()
 
             session.addLog(
@@ -411,17 +383,17 @@ abstract class DarkMerchantTradeAction(
 
 @Component
 class DarkMerchantTradeSeerAction : DarkMerchantTradeAction(
-    ActionDefinitionId.DARK_MERCHANT_TRADE_SEER, "交易 (預言家查驗)", "SEER"
+    ActionDefinitionId.DARK_MERCHANT_TRADE_SEER, ActionDefinitionId.MERCHANT_SEER_CHECK
 )
 
 @Component
 class DarkMerchantTradePoisonAction : DarkMerchantTradeAction(
-    ActionDefinitionId.DARK_MERCHANT_TRADE_POISON, "交易 (女巫毒藥)", "POISON"
+    ActionDefinitionId.DARK_MERCHANT_TRADE_POISON, ActionDefinitionId.MERCHANT_POISON
 )
 
 @Component
 class DarkMerchantTradeGunAction : DarkMerchantTradeAction(
-    ActionDefinitionId.DARK_MERCHANT_TRADE_GUN, "交易 (獵人獵槍)", "GUN"
+    ActionDefinitionId.DARK_MERCHANT_TRADE_GUN, ActionDefinitionId.MERCHANT_GUN
 )
 
 @Component
@@ -429,7 +401,6 @@ class MerchantSeerCheckAction(
     @Transient @param:Lazy private val roleRegistry: RoleRegistry
 ) : BaseRoleAction(
     actionId = ActionDefinitionId.MERCHANT_SEER_CHECK,
-    actionName = "查驗 (黑市商人版)",
     priority = PredefinedRoles.SEER_PRIORITY + 1,
     timing = ActionTiming.NIGHT,
     usageLimit = 1,
@@ -458,7 +429,6 @@ class MerchantSeerCheckAction(
 @Component
 class MerchantPoisonAction : BaseRoleAction(
     actionId = ActionDefinitionId.MERCHANT_POISON,
-    actionName = "毒藥 (黑市商人版)",
     priority = PredefinedRoles.WITCH_POISON_PRIORITY + 1,
     timing = ActionTiming.NIGHT,
     usageLimit = 1
@@ -477,7 +447,6 @@ class MerchantPoisonAction : BaseRoleAction(
 @Component
 class MerchantGunAction : BaseRoleAction(
     actionId = ActionDefinitionId.MERCHANT_GUN,
-    actionName = "獵槍 (黑市商人版)",
     priority = PredefinedRoles.HUNTER_PRIORITY + 1,
     timing = ActionTiming.NIGHT,
     usageLimit = 1

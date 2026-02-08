@@ -45,14 +45,12 @@ class ActionUIServiceImplTest {
     // Helper to create a mock RoleAction
     private fun createMockRoleAction(
         id: String,
-        name: String,
         optional: Boolean,
         targets: (Session, Int, List<Int>) -> List<Int>
     ): RoleAction {
         return object : RoleAction {
             override val actionId: ActionDefinitionId =
                 ActionDefinitionId.fromString(id) ?: ActionDefinitionId.WEREWOLF_KILL
-            override val actionName: String = name
             override val priority: Int = 100
             override val timing: ActionTiming = ActionTiming.NIGHT
             override val targetCount: Int = 1
@@ -148,7 +146,6 @@ class ActionUIServiceImplTest {
         // Mock role registry to return our action
         val mandatoryRoleAction = createMockRoleAction(
             id = "WOLF_YOUNGER_BROTHER_EXTRA_KILL",
-            name = "額外襲擊",
             optional = false,
             targets = { _, _, _ -> listOf(targetId) }
         )
@@ -221,7 +218,6 @@ class ActionUIServiceImplTest {
         // Mock role registry
         val mandatoryRoleAction = createMockRoleAction(
             id = "SEER_CHECK",
-            name = "查驗",
             optional = false,
             targets = { _, _, _ -> listOf(targetId) }
         )

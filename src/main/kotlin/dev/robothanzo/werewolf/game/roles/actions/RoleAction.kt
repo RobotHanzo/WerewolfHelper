@@ -29,6 +29,7 @@ interface RoleAction {
      * The display name of this action (e.g., "查驗", "擊殺", "毒殺")
      */
     val actionName: String
+        get() = actionId.actionName
 
     /**
      * The priority order for this action during resolution.
@@ -162,7 +163,6 @@ interface RoleAction {
  */
 abstract class BaseRoleAction(
     override val actionId: ActionDefinitionId,
-    override val actionName: String,
     override val priority: Int,
     override val timing: ActionTiming,
     override val targetCount: Int = 1,

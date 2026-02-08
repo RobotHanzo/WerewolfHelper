@@ -130,7 +130,7 @@ data class GameStateData(
             if (currentGuardAction != null) return currentGuardAction.targets.firstOrNull()
 
             // Sort days descending and look for the most recent guard action
-            val lastNightActions = executedActions.entries.sortedByDescending { it.key }.firstOrNull()?.value
+            val lastNightActions = executedActions.entries.maxByOrNull { it.key }?.value
             return lastNightActions?.find { it.actionDefinitionId == ActionDefinitionId.GUARD_PROTECT }?.targets?.firstOrNull()
         }
 

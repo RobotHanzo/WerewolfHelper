@@ -5,40 +5,40 @@ package dev.robothanzo.werewolf.game.model
  * Provides type safety and prevents typos in action ID references.
  * The enum name itself serves as the ID (via toString()).
  */
-enum class ActionDefinitionId {
+enum class ActionDefinitionId(val actionName: String) {
     // Werewolf Actions
-    WEREWOLF_KILL,
-    WOLF_YOUNGER_BROTHER_EXTRA_KILL,
+    WEREWOLF_KILL("擊殺"),
+    WOLF_YOUNGER_BROTHER_EXTRA_KILL("狼弟復仇刀"),
 
     // Witch Actions
-    WITCH_ANTIDOTE,
-    WITCH_POISON,
+    WITCH_ANTIDOTE("解藥"),
+    WITCH_POISON("毒藥"),
 
     // Seer Actions
-    SEER_CHECK,
+    SEER_CHECK("查驗"),
 
     // Guard Actions
-    GUARD_PROTECT,
+    GUARD_PROTECT("守護"),
 
     // Hunter Actions
-    HUNTER_REVENGE,
+    HUNTER_REVENGE("開槍"),
 
     // Wolf King Actions
-    WOLF_KING_REVENGE,
+    WOLF_KING_REVENGE("復仇"),
 
     // Dark Merchant Actions
-    DARK_MERCHANT_TRADE_SEER,
-    DARK_MERCHANT_TRADE_POISON,
-    DARK_MERCHANT_TRADE_GUN,
+    DARK_MERCHANT_TRADE_SEER("交易 (預言家查驗)"),
+    DARK_MERCHANT_TRADE_POISON("交易 (女巫毒藥)"),
+    DARK_MERCHANT_TRADE_GUN("交易 (獵人獵槍)"),
 
     // Merchant Gift Actions
-    MERCHANT_SEER_CHECK,
-    MERCHANT_POISON,
-    MERCHANT_GUN,
+    MERCHANT_SEER_CHECK("查驗 (黑市商人版)"),
+    MERCHANT_POISON("毒藥 (黑市商人版)"),
+    MERCHANT_GUN("獵槍 (黑市商人版)"),
 
     // System Actions
-    DEATH_RESOLUTION,
-    DEATH;
+    DEATH_RESOLUTION("結算"),
+    DEATH("死亡");
 
     companion object {
         /**
