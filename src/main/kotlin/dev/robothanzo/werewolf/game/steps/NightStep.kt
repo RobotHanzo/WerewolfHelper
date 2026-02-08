@@ -101,7 +101,7 @@ class NightStep(
                 val extraKillAction = actions.find { it.actionId == ActionDefinitionId.WOLF_YOUNGER_BROTHER_EXTRA_KILL }
 
                 if (extraKillAction != null) {
-                    lockedSession.stateData.phaseType = NightPhase.WOLF_YB_ACTION
+                    lockedSession.stateData.phaseType = NightPhase.WOLF_YOUNGER_BROTHER_ACTION
                     val startTime = System.currentTimeMillis()
                     lockedSession.stateData.phaseStartTime = startTime
                     lockedSession.stateData.phaseEndTime = startTime + 60_000 // 60s for extra kill
@@ -221,7 +221,7 @@ class NightStep(
 
     private suspend fun waitForWolfYoungerBrotherPhase(session: Session, timeoutSeconds: Int) {
         // Double check phase to avoid waiting if logic didn't trigger
-        if (session.stateData.phaseType != NightPhase.WOLF_YB_ACTION) return
+        if (session.stateData.phaseType != NightPhase.WOLF_YOUNGER_BROTHER_ACTION) return
 
         val timeoutMs = timeoutSeconds * 1000L
 

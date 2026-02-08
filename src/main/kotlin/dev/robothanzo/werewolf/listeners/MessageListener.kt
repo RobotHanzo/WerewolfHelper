@@ -71,7 +71,8 @@ class MessageListener : ListenerAdapter() {
                     session,
                     "狼兄"
                 ) && (session.stateData.wolfBrotherDiedDay == null || session.stateData.wolfBrotherDiedDay!! < session.day ||
-                        (session.stateData.phaseType?.let { it.order > NightPhase.WOLF_YB_ACTION.order } ?: false)))
+                        (session.stateData.phaseType?.let { it.order > NightPhase.WOLF_YOUNGER_BROTHER_ACTION.order }
+                            ?: false)))
     }
 
     override fun onMessageReceived(event: MessageReceivedEvent) {
