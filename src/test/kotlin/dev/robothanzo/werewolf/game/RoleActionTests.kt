@@ -454,13 +454,13 @@ class RoleActionTests {
 
         @BeforeEach
         fun setup() {
-            val wolfRole = mock<dev.robothanzo.werewolf.game.model.Role>()
+            val wolfRole = mock<Role>()
             whenever(wolfRole.camp).thenReturn(Camp.WEREWOLF)
 
-            val villagerRole = mock<dev.robothanzo.werewolf.game.model.Role>()
+            val villagerRole = mock<Role>()
             whenever(villagerRole.camp).thenReturn(Camp.VILLAGER)
 
-            val seerRole = mock<dev.robothanzo.werewolf.game.model.Role>()
+            val seerRole = mock<Role>()
             whenever(seerRole.camp).thenReturn(Camp.VILLAGER)
 
             val mockRoleRegistry = mock<dev.robothanzo.werewolf.game.roles.RoleRegistry>()
@@ -893,7 +893,7 @@ class RoleActionTests {
             testSession = Session(guildId = 1L)
 
             // Mock static bridge
-            dev.robothanzo.werewolf.WerewolfApplication.gameSessionService = mock()
+            WerewolfApplication.gameSessionService = mock()
         }
 
         @Test
@@ -923,7 +923,7 @@ class RoleActionTests {
         }
 
         @Test
-        @DisplayName("Dark Merchant trading with villager should succeed")
+        @DisplayName("Dark Merchant trading with villager should succeed and grant skill")
         fun testTradeWithVillager() {
             val merchantId = 1
             val villagerId = 2
@@ -944,8 +944,39 @@ class RoleActionTests {
 
             val result = tradeAction.execute(testSession, actionInstance, ActionExecutionResult())
 
-            // Assertions for roleFlags removed as they might not be set by execute directly in this version
             assertFalse(result.deaths.containsKey(DeathCause.TRADED_WITH_WOLF))
+
+            // Verify skill was granted in playerOwnedActions
+            val villagerActions = testSession.stateData.playerOwnedActions[villagerId]
+            assertNotNull(villagerActions)
+            assertEquals(1, villagerActions!![ActionDefinitionId.MERCHANT_SEER_CHECK.toString()])
+        }
+
+        @Test
+        @DisplayName("Gifted action should be available through getAvailableActionsForPlayer")
+        fun testGiftedActionAvailability() {
+            val villagerId = 2
+            val villager = createPlayer(villagerId, 102L, listOf("平民"))
+            testSession.players[villagerId.toString()] = villager
+            testSession.currentState = "NIGHT_PHASE"
+
+            // Grant a gift
+            testSession.stateData.playerOwnedActions[villagerId] = mutableMapOf(
+                ActionDefinitionId.MERCHANT_SEER_CHECK.toString() to 1
+            )
+
+            val roleRegistry = mock<dev.robothanzo.werewolf.game.roles.RoleRegistry>()
+            val seerGiftAction = mock<RoleAction>()
+            whenever(seerGiftAction.actionId).thenReturn(ActionDefinitionId.MERCHANT_SEER_CHECK)
+            whenever(seerGiftAction.timing).thenReturn(ActionTiming.NIGHT)
+            whenever(seerGiftAction.usageLimit).thenReturn(1)
+            whenever(seerGiftAction.getUsageCount(any(), any())).thenReturn(0)
+
+            whenever(roleRegistry.getAction(ActionDefinitionId.MERCHANT_SEER_CHECK)).thenReturn(seerGiftAction)
+
+            val availableActions = testSession.getAvailableActionsForPlayer(villagerId, roleRegistry)
+
+            assertTrue(availableActions.any { it.actionId == ActionDefinitionId.MERCHANT_SEER_CHECK })
         }
     }
 
@@ -962,7 +993,7 @@ class RoleActionTests {
         @BeforeEach
         fun setup() {
             val roleRegistry = mock<dev.robothanzo.werewolf.game.roles.RoleRegistry>()
-            val wolfRole = mock<dev.robothanzo.werewolf.game.model.Role>()
+            val wolfRole = mock<Role>()
             whenever(wolfRole.camp).thenReturn(Camp.WEREWOLF)
             whenever(roleRegistry.getRole("狼人")).thenReturn(wolfRole)
             whenever(roleRegistry.getRole("狼弟")).thenReturn(wolfRole)
@@ -984,7 +1015,7 @@ class RoleActionTests {
 
             val seer = createPlayer(seerId, 101L, listOf("預言家")).apply {
                 session = testSession
-                whenever(dev.robothanzo.werewolf.WerewolfApplication.jda.getTextChannelById(channelId)).thenReturn(
+                whenever(WerewolfApplication.jda.getTextChannelById(channelId)).thenReturn(
                     mockChannel
                 )
             }
@@ -1020,7 +1051,7 @@ class RoleActionTests {
 
             val seer = createPlayer(seerId, 101L, listOf("預言家")).apply {
                 this.session = testSession
-                whenever(dev.robothanzo.werewolf.WerewolfApplication.jda.getTextChannelById(channelId)).thenReturn(
+                whenever(WerewolfApplication.jda.getTextChannelById(channelId)).thenReturn(
                     mockChannel
                 )
             }

@@ -135,28 +135,6 @@ data class GameStateData(
         }
 
     /**
-     * Finds the recipient of the Dark Merchant's trade.
-     */
-    val darkMerchantTradeRecipientId: Int?
-        get() = submittedActions.find {
-            it.actionDefinitionId.toString().startsWith("DARK_MERCHANT_TRADE_") && it.status == ActionStatus.SUBMITTED
-        }?.targets?.firstOrNull()
-            ?: executedActions.values.flatten()
-                .find { it.actionDefinitionId.toString().startsWith("DARK_MERCHANT_TRADE_") }?.targets?.firstOrNull()
-
-    /**
-     * Finds the gifted skill from Dark Merchant.
-     */
-    val darkMerchantGiftedSkill: String?
-        get() = (submittedActions.find {
-            it.actionDefinitionId.toString().startsWith("DARK_MERCHANT_TRADE_") && it.status == ActionStatus.SUBMITTED
-        }
-            ?: executedActions.values.flatten()
-                .find {
-                    it.actionDefinitionId.toString().startsWith("DARK_MERCHANT_TRADE_")
-                })?.actionDefinitionId?.toString()
-
-    /**
      * Finds the day the Wolf Brother died.
      */
     val wolfBrotherDiedDay: Int?

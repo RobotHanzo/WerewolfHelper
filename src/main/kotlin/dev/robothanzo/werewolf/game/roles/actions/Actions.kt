@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.game.roles.actions
 
+import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.*
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
@@ -27,7 +28,7 @@ class WerewolfKillAction : BaseRoleAction(
         }
 
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
-        if (targetId == dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID) {
+        if (targetId == SKIP_TARGET_ID) {
             println("WerewolfKillAction: Skipped due to skip target")
             return accumulatedState
         }
@@ -73,7 +74,7 @@ class WolfYoungerBrotherExtraKillAction : BaseRoleAction(
 
 @Component
 class SeerCheckAction(
-    @Transient @param:Lazy private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry
+    @Transient @param:Lazy private val roleRegistry: RoleRegistry
 ) : BaseRoleAction(
     actionId = ActionDefinitionId.SEER_CHECK,
     actionName = "查驗",
@@ -312,7 +313,7 @@ class DeathResolutionAction : BaseRoleAction(
             val wolfTarget = wolfKillAction.targets.firstOrNull()
             val ybTarget = ybExtraKillAction.targets.firstOrNull()
 
-            if (wolfTarget != null && ybTarget != null && wolfTarget == ybTarget && wolfTarget != dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID) {
+            if (wolfTarget != null && ybTarget != null && wolfTarget == ybTarget && wolfTarget != SKIP_TARGET_ID) {
                 // Target matches, kill is unsaveable
                 println("DeathResolution: Wolf Brother Unsaveable Kill detected on player $wolfTarget")
 
@@ -372,13 +373,35 @@ abstract class DarkMerchantTradeAction(
         if (isWolf) {
             // Merchant dies
             accumulatedState.deaths.getOrPut(DeathCause.TRADED_WITH_WOLF) { mutableListOf() }.add(action.actor)
-            session.addLog(dev.robothanzo.werewolf.database.documents.LogType.SYSTEM, "黑市商人與狼人交易，不幸出局")
+            session.addLog(LogType.SYSTEM, "黑市商人與狼人交易，不幸出局")
             return accumulatedState
         } else {
             // Trade success, recipient gets a skill next night
 
+            val skillName = when (skillType) {
+                "SEER" -> "查驗"
+                "POISON" -> "毒藥"
+                "GUN" -> "獵槍"
+                else -> skillType
+            }
+
+            val giftedActionId = when (skillType) {
+                "SEER" -> ActionDefinitionId.MERCHANT_SEER_CHECK
+                "POISON" -> ActionDefinitionId.MERCHANT_POISON
+                "GUN" -> ActionDefinitionId.MERCHANT_GUN
+                else -> null
+            }
+
+            giftedActionId?.let { id ->
+                val playerActions = session.stateData.playerOwnedActions.getOrPut(targetId) { mutableMapOf() }
+                playerActions[id.toString()] = 1 // 1 use left
+            }
+
+            target.channel?.sendMessage("🎁 **你收到了黑市商人的禮物**！\n你獲得了技能：**$skillName**\n你可以在**下一晚**開始使用它。")
+                ?.queue()
+
             session.addLog(
-                dev.robothanzo.werewolf.database.documents.LogType.SYSTEM,
+                LogType.SYSTEM,
                 "黑市商人交易成功，將技能 $skillType 贈予了玩家 $targetId"
             )
         }

@@ -31,18 +31,15 @@ fun Session.getAvailableActionsForPlayer(playerId: Int, roleRegistry: RoleRegist
         }
     }
 
-    // Gifted actions for DarkMerchantTradeRecipient
-    if (stateData.darkMerchantTradeRecipientId == playerId) {
-        val skillType = stateData.darkMerchantGiftedSkill
-        val giftedActionId = when (skillType) {
-            "SEER" -> ActionDefinitionId.MERCHANT_SEER_CHECK
-            "POISON" -> ActionDefinitionId.MERCHANT_POISON
-            "GUN" -> ActionDefinitionId.MERCHANT_GUN
-            else -> null
-        }
-        giftedActionId?.let { id ->
-            if (isActionAvailable(playerId, id, roleRegistry)) {
-                roleRegistry.getAction(id)?.let { actions.add(it) }
+    // Gifted actions from playerOwnedActions (e.g., from Dark Merchant)
+    stateData.playerOwnedActions[playerId]?.forEach { (actionIdStr, usesLeft) ->
+        if (usesLeft > 0) {
+            val actionId = ActionDefinitionId.fromString(actionIdStr)
+            if (actionId != null) {
+                val action = roleRegistry.getAction(actionId)
+                if (action != null && isActionAvailable(playerId, actionId, roleRegistry)) {
+                    actions.add(action)
+                }
             }
         }
     }
@@ -56,6 +53,18 @@ fun Session.isActionAvailable(
     roleRegistry: RoleRegistry
 ): Boolean {
     val action = roleRegistry.getAction(actionDefinitionId) ?: return false
+    val player = getPlayer(playerId) ?: return false
+
+    // Ownership check: must have the action from role OR from playerOwnedActions
+    val hasFromRole = player.roles?.any { roleName ->
+        (hydratedRoles[roleName] ?: roleRegistry.getRole(roleName))?.getActions()
+            ?.any { it.actionId == actionDefinitionId } == true
+    } == true
+
+    val hasGifted =
+        stateData.playerOwnedActions[playerId]?.containsKey(actionDefinitionId.toString()) == true && !player.wolf
+
+    if (!hasFromRole && !hasGifted) return false
 
     // Check if current game state allows this action's timing
     val isNightPhase = currentState.contains("NIGHT", ignoreCase = true)
