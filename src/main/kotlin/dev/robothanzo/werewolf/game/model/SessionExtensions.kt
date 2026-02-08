@@ -35,9 +35,9 @@ fun Session.getAvailableActionsForPlayer(playerId: Int, roleRegistry: RoleRegist
     if (stateData.darkMerchantTradeRecipientId == playerId) {
         val skillType = stateData.darkMerchantGiftedSkill
         val giftedActionId = when (skillType) {
-            "SEER" -> PredefinedRoles.MERCHANT_SEER_CHECK
-            "POISON" -> PredefinedRoles.MERCHANT_POISON
-            "GUN" -> PredefinedRoles.MERCHANT_GUN
+            "SEER" -> ActionDefinitionId.MERCHANT_SEER_CHECK
+            "POISON" -> ActionDefinitionId.MERCHANT_POISON
+            "GUN" -> ActionDefinitionId.MERCHANT_GUN
             else -> null
         }
         giftedActionId?.let { id ->
@@ -50,7 +50,11 @@ fun Session.getAvailableActionsForPlayer(playerId: Int, roleRegistry: RoleRegist
     return actions
 }
 
-fun Session.isActionAvailable(playerId: Int, actionDefinitionId: String, roleRegistry: RoleRegistry): Boolean {
+fun Session.isActionAvailable(
+    playerId: Int,
+    actionDefinitionId: ActionDefinitionId,
+    roleRegistry: RoleRegistry
+): Boolean {
     val action = roleRegistry.getAction(actionDefinitionId) ?: return false
 
     // Check if current game state allows this action's timing
@@ -77,12 +81,12 @@ fun Session.isActionAvailable(playerId: Int, actionDefinitionId: String, roleReg
 
     // Wolf Younger Brother extra kill logic
     val currentPlayer = getPlayer(playerId)
-    if (actionDefinitionId == PredefinedRoles.WOLF_YOUNGER_BROTHER_EXTRA_KILL) {
+    if (actionDefinitionId == ActionDefinitionId.WOLF_YOUNGER_BROTHER_EXTRA_KILL) {
         // Delegate to action's isAvailable method which now contains the logic
         return action.isAvailable(this, playerId)
     }
 
-    if (actionDefinitionId == PredefinedRoles.WEREWOLF_KILL && currentPlayer?.roles?.contains("狼弟") == true) {
+    if (actionDefinitionId == ActionDefinitionId.WEREWOLF_KILL && currentPlayer?.roles?.contains("狼弟") == true) {
         val isWolfBrotherAlive = alivePlayers().values.any { it.roles?.contains("狼兄") == true }
         // Younger Brother only gets to kill if Brother is dead
         if (isWolfBrotherAlive) return false
@@ -91,7 +95,11 @@ fun Session.isActionAvailable(playerId: Int, actionDefinitionId: String, roleReg
     return true
 }
 
-fun Session.getActionUsageCount(playerId: Int, actionDefinitionId: String, roleRegistry: RoleRegistry): Int {
+fun Session.getActionUsageCount(
+    playerId: Int,
+    actionDefinitionId: ActionDefinitionId,
+    roleRegistry: RoleRegistry
+): Int {
     val action = roleRegistry.getAction(actionDefinitionId) ?: return 0
     return action.getUsageCount(this, playerId)
 }
@@ -118,7 +126,7 @@ fun Session.executeDeathTriggers(roleRegistry: RoleRegistry, roleActionExecutor:
     // Execute all pending death trigger actions
     val pendingActions = stateData.submittedActions.filter { it.status == ActionStatus.SUBMITTED }
         .filter {
-            val action = roleRegistry.getAction(it.actionDefinitionId)
+            val action = it.actionDefinitionId?.let { actionId -> roleRegistry.getAction(actionId) }
             action?.timing == ActionTiming.DEATH_TRIGGER
         }
 
@@ -136,7 +144,7 @@ fun Session.executeDeathTriggers(roleRegistry: RoleRegistry, roleActionExecutor:
 
     // Clear pending death trigger actions from submittedActions
     stateData.submittedActions.removeIf {
-        val action = roleRegistry.getAction(it.actionDefinitionId)
+        val action = it.actionDefinitionId?.let { actionId -> roleRegistry.getAction(actionId) }
         action?.timing == ActionTiming.DEATH_TRIGGER && it.status == ActionStatus.SUBMITTED
     }
     // Caller is responsible for saving session
@@ -151,7 +159,7 @@ fun Session.executeDeathTriggers(roleRegistry: RoleRegistry, roleActionExecutor:
 fun Session.updateActionStatus(
     actorPlayerId: Int,
     status: ActionStatus,
-    actionId: String? = null,
+    actionId: ActionDefinitionId? = null,
     targetPlayerIds: List<Int> = emptyList()
 ) {
     val actorPlayer = getPlayer(actorPlayerId) ?: return
@@ -167,7 +175,7 @@ fun Session.updateActionStatus(
         val newInstance = RoleActionInstance(
             actor = actorPlayerId,
             actorRole = actorRole,
-            actionDefinitionId = actionId ?: "",
+            actionDefinitionId = actionId,
             targets = if (targetPlayerIds.isNotEmpty()) targetPlayerIds.toMutableList() else mutableListOf(),
             submittedBy = ActionSubmissionSource.PLAYER,
             status = status
@@ -175,7 +183,6 @@ fun Session.updateActionStatus(
         stateData.submittedActions.add(newInstance)
     } else {
         // Mutate existing
-        if (actionId != null) actionInstance.actionDefinitionId = actionId
         if (targetPlayerIds.isNotEmpty()) {
             actionInstance.targets.clear()
             actionInstance.targets.addAll(targetPlayerIds)
@@ -197,7 +204,7 @@ fun Session.resolveNightActions(
         actionsToProcess.map { "${it.actionDefinitionId} by ${it.actor}" })
 
     // Self-Healing: Check if WEREWOLF_KILL is missing but valid votes exist
-    val wolfKillAction = actionsToProcess.find { it.actionDefinitionId == PredefinedRoles.WEREWOLF_KILL }
+    val wolfKillAction = actionsToProcess.find { it.actionDefinitionId == ActionDefinitionId.WEREWOLF_KILL }
     if (wolfKillAction == null) {
         val wolfState = stateData.wolfStates[PredefinedRoles.WEREWOLF_KILL]
         if (wolfState != null && wolfState.votes.any { it.targetId != null && it.targetId != SKIP_TARGET_ID }) {
@@ -217,7 +224,7 @@ fun Session.resolveNightActions(
                     val reconstructedAction = RoleActionInstance(
                         actor = wolfState.electorates.firstOrNull() ?: 0,
                         actorRole = "WEREWOLF",
-                        actionDefinitionId = PredefinedRoles.WEREWOLF_KILL,
+                        actionDefinitionId = ActionDefinitionId.WEREWOLF_KILL,
                         targets = arrayListOf(chosenTarget),
                         submittedBy = ActionSubmissionSource.SYSTEM,
                         status = ActionStatus.SUBMITTED
@@ -237,7 +244,7 @@ fun Session.resolveNightActions(
     // Execute all actions using the new action executor
     // Filter out immediate actions (like Seer) that have already been executed upon submission
     val actionsToExecute = actionsToProcess.filter {
-        val actionDef = roleRegistry.getAction(it.actionDefinitionId)
+        val actionDef = it.actionDefinitionId?.let { actionId -> roleRegistry.getAction(actionId) }
         actionDef?.isImmediate != true
     }
 
@@ -264,7 +271,7 @@ fun Session.resolveNightActions(
 }
 
 fun Session.validateAndSubmitAction(
-    actionDefinitionId: String,
+    actionDefinitionId: ActionDefinitionId,
     actorPlayerId: Int,
     targetPlayerIds: MutableList<Int>,
     submittedBy: String,

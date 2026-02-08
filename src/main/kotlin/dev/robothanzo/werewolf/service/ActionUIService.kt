@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.ActionDefinitionId
 import dev.robothanzo.werewolf.game.model.RoleActionInstance
 import dev.robothanzo.werewolf.game.model.WolvesActionState
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
@@ -39,7 +40,7 @@ interface ActionUIService {
     fun updateActionSelection(
         guildId: Long,
         playerId: Int,
-        actionId: String,
+        actionId: ActionDefinitionId,
         session: Session
     ): RoleActionInstance?
 

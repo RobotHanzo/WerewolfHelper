@@ -4,10 +4,7 @@ import dev.robothanzo.jda.interactions.annotations.Button
 import dev.robothanzo.jda.interactions.annotations.select.StringSelectMenu
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.ActionStatus
-import dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID
-import dev.robothanzo.werewolf.game.model.updateActionStatus
-import dev.robothanzo.werewolf.game.model.validateAndSubmitAction
+import dev.robothanzo.werewolf.game.model.*
 import dev.robothanzo.werewolf.model.Candidate
 import dev.robothanzo.werewolf.utils.CmdUtils
 import dev.robothanzo.werewolf.utils.isAdmin
@@ -59,7 +56,7 @@ class ButtonListener : ListenerAdapter() {
 
             "selectAction" -> {
                 event.deferReply().queue()
-                val actionId = if (id.size > 1) id[1] else return
+                val actionId = if (id.size > 1) ActionDefinitionId.fromString(id[1]) ?: return else return
 
                 // Use withLockedSession to ensure we are working with the latest session state
                 WerewolfApplication.gameSessionService.withLockedSession(event.guild!!.idLong) { session ->
@@ -71,13 +68,13 @@ class ButtonListener : ListenerAdapter() {
                     }
                     // Get the action instance to check if there's already a pending selection, if so, delete
                     val actionInstance = WerewolfApplication.actionUIService.getActionData(session, player.id)
-                    if (actionInstance != null && actionInstance.actionDefinitionId.isNotEmpty() && actionInstance.targets.isEmpty()) {
+                    if (actionInstance?.actionDefinitionId != null && actionInstance.targets.isEmpty()) {
                         actionInstance.targetPromptId?.let { event.messageChannel.deleteMessageById(it).queue() }
                     }
 
                     // Get the action definition
                     val actionExecutor = WerewolfApplication.roleActionExecutor
-                    val action = actionExecutor.getActionById(actionId)
+                    val action = actionExecutor.getAction(actionId)
 
                     if (action != null && action.targetCount > 0) {
                         // Update selection in a persistent state
@@ -196,14 +193,13 @@ class ButtonListener : ListenerAdapter() {
                         session,
                         player.id
                     )
-                    val actionId = actionInstance?.actionDefinitionId?.takeIf { it.isNotEmpty() }
+                    val actionId = actionInstance?.actionDefinitionId
                     if (actionId == null) {
                         event.hook.editOriginal(":x: 沒有待選的行動").queue()
                         return@withLockedSession
                     }
 
                     if (targetId == SKIP_TARGET_ID.toString()) {
-                        // Handle Skip
                         // Handle Skip
                         session.validateAndSubmitAction(
                             actionId,

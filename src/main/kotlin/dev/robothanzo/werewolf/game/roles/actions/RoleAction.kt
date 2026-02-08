@@ -1,6 +1,7 @@
 package dev.robothanzo.werewolf.game.roles.actions
 
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.ActionDefinitionId
 import dev.robothanzo.werewolf.game.model.ActionTiming
 import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.game.model.RoleActionInstance
@@ -22,7 +23,7 @@ interface RoleAction {
     /**
      * The unique identifier of this action
      */
-    val actionId: String
+    val actionId: ActionDefinitionId
 
     /**
      * The display name of this action (e.g., "查驗", "擊殺", "毒殺")
@@ -160,7 +161,7 @@ interface RoleAction {
  * Abstract base class for role actions providing common functionality.
  */
 abstract class BaseRoleAction(
-    override val actionId: String,
+    override val actionId: ActionDefinitionId,
     override val actionName: String,
     override val priority: Int,
     override val timing: ActionTiming,

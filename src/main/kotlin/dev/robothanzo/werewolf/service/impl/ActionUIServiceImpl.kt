@@ -4,7 +4,6 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.*
-import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 import dev.robothanzo.werewolf.service.ActionUIService
 import dev.robothanzo.werewolf.service.NightManager
@@ -61,7 +60,7 @@ class ActionUIServiceImpl(
 
             // Only look for non-finalized actions to reuse
             var actionInstance = session.stateData.submittedActions.find {
-                it.actor == playerId && it.status != ActionStatus.SUBMITTED 
+                it.actor == playerId && it.status != ActionStatus.SUBMITTED
             }
 
             if (actionInstance != null) {
@@ -76,7 +75,7 @@ class ActionUIServiceImpl(
                 actionInstance = RoleActionInstance(
                     actor = playerId,
                     actorRole = actorRole,
-                    actionDefinitionId = "", // Not chosen yet
+                    actionDefinitionId = null, // Not chosen yet
                     targets = mutableListOf(),
                     submittedBy = ActionSubmissionSource.PLAYER,
                     status = ActionStatus.ACTING,
@@ -132,7 +131,7 @@ class ActionUIServiceImpl(
             val actionText = buildString {
                 appendLine("🐺 **狼人投票**")
                 appendLine("請選擇要擊殺的目標：")
-                appendLine("⏱️ ${durationSeconds} 秒內完成投票")
+                appendLine("⏱️ $durationSeconds 秒內完成投票")
             }
 
             session.players.values
@@ -162,7 +161,7 @@ class ActionUIServiceImpl(
     override fun updateActionSelection(
         guildId: Long,
         playerId: Int,
-        actionId: String,
+        actionId: ActionDefinitionId,
         session: Session
     ): RoleActionInstance? {
         // Redundant with submitAction's lock but safe as a standalone update if called elsewhere
@@ -199,7 +198,7 @@ class ActionUIServiceImpl(
                 it.actor == playerId && it.status == ActionStatus.ACTING
             } ?: return@withLockedSession false
 
-            if (actionInstance.actionDefinitionId.isEmpty()) return@withLockedSession false
+            if (actionInstance.actionDefinitionId == null) return@withLockedSession false
 
             actionInstance.targets.clear()
             actionInstance.targets.add(targetPlayerId)
@@ -348,7 +347,7 @@ class ActionUIServiceImpl(
             pendingActions.forEach { action ->
                 val availableActions = session.getAvailableActionsForPlayer(action.actor, roleRegistry)
                 val isWolfBrotherAction =
-                    availableActions.any { it.actionId == PredefinedRoles.WOLF_YOUNGER_BROTHER_EXTRA_KILL }
+                    availableActions.any { it.actionId == ActionDefinitionId.WOLF_YOUNGER_BROTHER_EXTRA_KILL }
 
                 val msg = if (isWolfBrotherAction) {
                     "⚠️ **提醒**: 還剩 **30秒**！若未發動攻擊，你將會 **自殺**！"

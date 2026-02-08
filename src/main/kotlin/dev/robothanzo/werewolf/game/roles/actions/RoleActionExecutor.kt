@@ -1,9 +1,9 @@
 package dev.robothanzo.werewolf.game.roles.actions
 
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.ActionDefinitionId
 import dev.robothanzo.werewolf.game.model.ActionSubmissionSource
 import dev.robothanzo.werewolf.game.model.RoleActionInstance
-import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import org.springframework.stereotype.Component
 
@@ -49,7 +49,7 @@ class RoleActionExecutor(private val roleRegistry: RoleRegistry) {
         }
 
         // Execute death resolution as final step
-        val deathResolution = roleRegistry.getAction(PredefinedRoles.DEATH_RESOLUTION)
+        val deathResolution = roleRegistry.getAction(ActionDefinitionId.DEATH_RESOLUTION)
         if (deathResolution == null) {
             println("RoleActionExecutor: CRITICAL WARNING - DEATH_RESOLUTION action not found! Returning raw accumulated state.")
             return result
@@ -58,7 +58,7 @@ class RoleActionExecutor(private val roleRegistry: RoleRegistry) {
         val dummyAction = RoleActionInstance(
             actor = 0,
             actorRole = "SYSTEM",
-            actionDefinitionId = PredefinedRoles.DEATH_RESOLUTION,
+            actionDefinitionId = ActionDefinitionId.DEATH_RESOLUTION,
             targets = arrayListOf(),
             submittedBy = ActionSubmissionSource.JUDGE,
             status = dev.robothanzo.werewolf.game.model.ActionStatus.SUBMITTED
@@ -89,10 +89,5 @@ class RoleActionExecutor(private val roleRegistry: RoleRegistry) {
     /**
      * Get a registered action executor
      */
-    fun getAction(actionId: String): RoleAction? = roleRegistry.getAction(actionId)
-
-    /**
-     * Get an action by ID (alias for getAction)
-     */
-    fun getActionById(actionId: String): RoleAction? = roleRegistry.getAction(actionId)
+    fun getAction(actionId: ActionDefinitionId): RoleAction? = roleRegistry.getAction(actionId)
 }

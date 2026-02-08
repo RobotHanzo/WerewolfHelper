@@ -68,7 +68,7 @@ class NightStep(
                             RoleActionInstance(
                                 actor = p.id,
                                 actorRole = (p.roles?.firstOrNull() ?: "未知"),
-                                actionDefinitionId = "", // Not chosen yet
+                                actionDefinitionId = null, // Not chosen yet
                                 targets = arrayListOf(),
                                 submittedBy = ActionSubmissionSource.PLAYER,
                                 status = ActionStatus.PENDING
@@ -153,7 +153,7 @@ class NightStep(
 
                 // Filter out standard werewolf kill as it's handled in the group phase
                 if (player.wolf) {
-                    actions = actions.filter { it.actionId != PredefinedRoles.WEREWOLF_KILL }
+                    actions = actions.filter { it.actionId != ActionDefinitionId.WEREWOLF_KILL }
                 }
 
                 if (actions.isNotEmpty()) {
@@ -276,7 +276,7 @@ class NightStep(
                 } ?: groupState.electorates.firstOrNull() ?: 0
 
                 session.validateAndSubmitAction(
-                    PredefinedRoles.WEREWOLF_KILL,
+                    ActionDefinitionId.WEREWOLF_KILL,
                     actorId,
                     arrayListOf(chosenTarget),
                     "SYSTEM",

@@ -3,10 +3,7 @@ package dev.robothanzo.werewolf.service.impl
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.ActionStatus
-import dev.robothanzo.werewolf.game.model.ActionSubmissionSource
-import dev.robothanzo.werewolf.game.model.ActionTiming
-import dev.robothanzo.werewolf.game.model.RoleActionInstance
+import dev.robothanzo.werewolf.game.model.*
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.roles.actions.ActionExecutionResult
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
@@ -53,7 +50,8 @@ class ActionUIServiceImplTest {
         targets: (Session, Int, List<Int>) -> List<Int>
     ): RoleAction {
         return object : RoleAction {
-            override val actionId: String = id
+            override val actionId: ActionDefinitionId =
+                ActionDefinitionId.fromString(id) ?: ActionDefinitionId.WEREWOLF_KILL
             override val actionName: String = name
             override val priority: Int = 100
             override val timing: ActionTiming = ActionTiming.NIGHT
@@ -126,7 +124,7 @@ class ActionUIServiceImplTest {
         val pendingAction = RoleActionInstance(
             actor = wbId,
             actorRole = "狼弟",
-            actionDefinitionId = "WOLF_YOUNGER_BROTHER_EXTRA_KILL",
+            actionDefinitionId = ActionDefinitionId.WOLF_YOUNGER_BROTHER_EXTRA_KILL,
             targets = mutableListOf(), // Empty initially
             submittedBy = ActionSubmissionSource.SYSTEM,
             status = ActionStatus.ACTING
@@ -159,7 +157,9 @@ class ActionUIServiceImplTest {
         val mockRole = mock<dev.robothanzo.werewolf.game.model.Role>()
         whenever(mockRole.getActions()).thenReturn(listOf(mandatoryRoleAction))
         whenever(roleRegistry.getRole("狼弟")).thenReturn(mockRole)
-        whenever(roleRegistry.getAction("WOLF_YOUNGER_BROTHER_EXTRA_KILL")).thenReturn(mandatoryRoleAction)
+        whenever(roleRegistry.getAction(ActionDefinitionId.WOLF_YOUNGER_BROTHER_EXTRA_KILL)).thenReturn(
+            mandatoryRoleAction
+        )
 
         // Execute cleanup
         actionUIService.cleanupExpiredPrompts(1L, session)
@@ -169,14 +169,14 @@ class ActionUIServiceImplTest {
         // It updates `session.stateData.submittedActions` by removing old and adding new.
 
         val submittedAction = session.stateData.submittedActions.find {
-            it.actor == wbId && it.actionDefinitionId == "WOLF_YOUNGER_BROTHER_EXTRA_KILL"
+            it.actor == wbId && it.actionDefinitionId == ActionDefinitionId.WOLF_YOUNGER_BROTHER_EXTRA_KILL
         }
 
         assertNotNull(submittedAction)
         assertEquals(ActionStatus.SUBMITTED, submittedAction?.status)
         assertEquals(ActionSubmissionSource.SYSTEM, submittedAction?.submittedBy)
         assertTrue(submittedAction?.targets?.contains(targetId) == true)
-        
+
         // Verify notification
         val messageCaptor = argumentCaptor<String>()
         verify(mockChannel).sendMessage(messageCaptor.capture())
@@ -189,7 +189,7 @@ class ActionUIServiceImplTest {
         val session = Session(guildId = 1L)
         session.currentState = "NIGHT"
         session.stateData.phaseEndTime = System.currentTimeMillis() - 1000
-        
+
         val seerId = 1
         val targetId = 2
 
@@ -197,7 +197,7 @@ class ActionUIServiceImplTest {
         val pendingAction = RoleActionInstance(
             actor = seerId,
             actorRole = "預言家",
-            actionDefinitionId = "SEER_CHECK",
+            actionDefinitionId = ActionDefinitionId.SEER_CHECK,
             targets = mutableListOf(),
             submittedBy = ActionSubmissionSource.SYSTEM,
             status = ActionStatus.ACTING
@@ -229,14 +229,14 @@ class ActionUIServiceImplTest {
         val mockRole = mock<dev.robothanzo.werewolf.game.model.Role>()
         whenever(mockRole.getActions()).thenReturn(listOf(mandatoryRoleAction))
         whenever(roleRegistry.getRole("預言家")).thenReturn(mockRole)
-        whenever(roleRegistry.getAction("SEER_CHECK")).thenReturn(mandatoryRoleAction)
+        whenever(roleRegistry.getAction(ActionDefinitionId.SEER_CHECK)).thenReturn(mandatoryRoleAction)
 
         // Execute cleanup
         actionUIService.cleanupExpiredPrompts(1L, session)
 
         // Verify action submitted
         val submittedAction = session.stateData.submittedActions.find {
-            it.actor == seerId && it.actionDefinitionId == "SEER_CHECK"
+            it.actor == seerId && it.actionDefinitionId == ActionDefinitionId.SEER_CHECK
         }
 
         assertNotNull(submittedAction)

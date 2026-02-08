@@ -1,7 +1,5 @@
 package dev.robothanzo.werewolf.game.model
 
-import dev.robothanzo.werewolf.game.roles.PredefinedRoles
-
 
 /**
  * Represents the sub-phases of the night.
@@ -40,7 +38,7 @@ const val SKIP_TARGET_ID = -1
 data class RoleActionInstance(
     val actor: Int,
     val actorRole: String, // Role name of the actor at the time of action
-    var actionDefinitionId: String,
+    var actionDefinitionId: ActionDefinitionId?, // Null if not yet chosen
     val targets: MutableList<Int>,
     var submittedBy: ActionSubmissionSource,
     var status: ActionStatus, // PENDING, ACTING, SUBMITTED, SKIPPED
@@ -104,7 +102,7 @@ data class GameStateData(
     var phaseEndTime: Long = 0,
     // RoleDefinition shall have defined them, copy them here to track the usage and process when extra action are granted
     var playerOwnedActions: MutableMap<Int, MutableMap<String, Int>> = mutableMapOf(), // playerId -> (actionId -> usesLeft)
-    var deathTriggerAvailableMap: MutableMap<String, Int> = mutableMapOf(), // actionId -> playerId
+    var deathTriggerAvailableMap: MutableMap<ActionDefinitionId, Int> = mutableMapOf(), // actionId -> playerId
     var submittedActions: MutableList<RoleActionInstance> = mutableListOf(), // Actions yet to be processed, executed at death announcement
     var executedActions: MutableMap<Int, MutableList<RoleActionInstance>> = mutableMapOf(), // day -> List of executed actions
 
@@ -119,7 +117,7 @@ data class GameStateData(
      * Finds the target ID of the last successful werewolf kill in the current phase.
      */
     val nightWolfKillTargetId: Int?
-        get() = submittedActions.find { it.actionDefinitionId == PredefinedRoles.WEREWOLF_KILL && it.status == ActionStatus.SUBMITTED }?.targets?.firstOrNull()
+        get() = submittedActions.find { it.actionDefinitionId == ActionDefinitionId.WEREWOLF_KILL && it.status == ActionStatus.SUBMITTED }?.targets?.firstOrNull()
 
     /**
      * Finds the target ID protected by the guard in the previous night.
@@ -128,29 +126,35 @@ data class GameStateData(
         get() {
             // Find in current submitted actions (if it was the previous phase) or latest executed actions
             val currentGuardAction =
-                submittedActions.find { it.actionDefinitionId == PredefinedRoles.GUARD_PROTECT && it.status == ActionStatus.SUBMITTED }
+                submittedActions.find { it.actionDefinitionId == ActionDefinitionId.GUARD_PROTECT && it.status == ActionStatus.SUBMITTED }
             if (currentGuardAction != null) return currentGuardAction.targets.firstOrNull()
 
             // Sort days descending and look for the most recent guard action
             val lastNightActions = executedActions.entries.sortedByDescending { it.key }.firstOrNull()?.value
-            return lastNightActions?.find { it.actionDefinitionId == PredefinedRoles.GUARD_PROTECT }?.targets?.firstOrNull()
+            return lastNightActions?.find { it.actionDefinitionId == ActionDefinitionId.GUARD_PROTECT }?.targets?.firstOrNull()
         }
 
     /**
      * Finds the recipient of the Dark Merchant's trade.
      */
     val darkMerchantTradeRecipientId: Int?
-        get() = submittedActions.find { it.actionDefinitionId.startsWith(PredefinedRoles.DARK_MERCHANT_TRADE_PREFIX) && it.status == ActionStatus.SUBMITTED }?.targets?.firstOrNull()
+        get() = submittedActions.find {
+            it.actionDefinitionId.toString().startsWith("DARK_MERCHANT_TRADE_") && it.status == ActionStatus.SUBMITTED
+        }?.targets?.firstOrNull()
             ?: executedActions.values.flatten()
-                .find { it.actionDefinitionId.startsWith(PredefinedRoles.DARK_MERCHANT_TRADE_PREFIX) }?.targets?.firstOrNull()
+                .find { it.actionDefinitionId.toString().startsWith("DARK_MERCHANT_TRADE_") }?.targets?.firstOrNull()
 
     /**
      * Finds the gifted skill from Dark Merchant.
      */
     val darkMerchantGiftedSkill: String?
-        get() = (submittedActions.find { it.actionDefinitionId.startsWith(PredefinedRoles.DARK_MERCHANT_TRADE_PREFIX) && it.status == ActionStatus.SUBMITTED }
+        get() = (submittedActions.find {
+            it.actionDefinitionId.toString().startsWith("DARK_MERCHANT_TRADE_") && it.status == ActionStatus.SUBMITTED
+        }
             ?: executedActions.values.flatten()
-                .find { it.actionDefinitionId.startsWith(PredefinedRoles.DARK_MERCHANT_TRADE_PREFIX) })?.actionDefinitionId
+                .find {
+                    it.actionDefinitionId.toString().startsWith("DARK_MERCHANT_TRADE_")
+                })?.actionDefinitionId?.toString()
 
     /**
      * Finds the day the Wolf Brother died.
@@ -158,7 +162,7 @@ data class GameStateData(
     val wolfBrotherDiedDay: Int?
         get() {
             return executedActions.entries.find { (_, actions) ->
-                actions.any { it.actionDefinitionId == "DEATH" && it.actorRole == "狼兄" }
+                actions.any { it.actionDefinitionId == ActionDefinitionId.DEATH && it.actorRole == "狼兄" }
             }?.key
         }
 

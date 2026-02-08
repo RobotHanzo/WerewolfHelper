@@ -58,7 +58,7 @@ class WolfBrother(@Transient private val killAction: WerewolfKillAction) : BaseR
         val deathAction = RoleActionInstance(
             actor = context.actorPlayerId,
             actorRole = "狼兄",
-            actionDefinitionId = "DEATH",
+            actionDefinitionId = ActionDefinitionId.DEATH,
             targets = arrayListOf(),
             submittedBy = ActionSubmissionSource.SYSTEM,
             status = ActionStatus.PROCESSED

@@ -74,7 +74,7 @@ class RoleActionTests {
             val action = RoleActionInstance(
                 actor = 1,
                 actorRole = "狼人",
-                actionDefinitionId = "WEREWOLF_KILL",
+                actionDefinitionId = ActionDefinitionId.WEREWOLF_KILL,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -92,7 +92,7 @@ class RoleActionTests {
             val action = RoleActionInstance(
                 actor = 1,
                 actorRole = "狼人",
-                actionDefinitionId = "WEREWOLF_KILL",
+                actionDefinitionId = ActionDefinitionId.WEREWOLF_KILL,
                 targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -110,7 +110,7 @@ class RoleActionTests {
             val action1 = RoleActionInstance(
                 actor = 1,
                 actorRole = "狼人",
-                actionDefinitionId = "WEREWOLF_KILL",
+                actionDefinitionId = ActionDefinitionId.WEREWOLF_KILL,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -118,7 +118,7 @@ class RoleActionTests {
             val action2 = RoleActionInstance(
                 actor = 3,
                 actorRole = "狼人",
-                actionDefinitionId = "WEREWOLF_KILL",
+                actionDefinitionId = ActionDefinitionId.WEREWOLF_KILL,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -130,7 +130,7 @@ class RoleActionTests {
             // Target should be in death list (may appear multiple times)
             val deaths = result.deaths[DeathCause.WEREWOLF] ?: emptyList()
             assertTrue(deaths.contains(targetId))
-            assertTrue(deaths.size >= 1)
+            assertTrue(deaths.isNotEmpty())
         }
     }
 
@@ -151,7 +151,7 @@ class RoleActionTests {
             val wolfKillAction = RoleActionInstance(
                 actor = 1,
                 actorRole = "狼人",
-                actionDefinitionId = "WEREWOLF_KILL",
+                actionDefinitionId = ActionDefinitionId.WEREWOLF_KILL,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -159,7 +159,7 @@ class RoleActionTests {
             val witchAntidoteAction = RoleActionInstance(
                 actor = 5,
                 actorRole = "女巫",
-                actionDefinitionId = "WITCH_ANTIDOTE",
+                actionDefinitionId = ActionDefinitionId.WITCH_ANTIDOTE,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -180,7 +180,7 @@ class RoleActionTests {
             val wolfKillAction = RoleActionInstance(
                 actor = 1,
                 actorRole = "狼人",
-                actionDefinitionId = "WEREWOLF_KILL",
+                actionDefinitionId = ActionDefinitionId.WEREWOLF_KILL,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -188,7 +188,7 @@ class RoleActionTests {
             val witchAntidoteAction = RoleActionInstance(
                 actor = 5,
                 actorRole = "女巫",
-                actionDefinitionId = "WITCH_ANTIDOTE",
+                actionDefinitionId = ActionDefinitionId.WITCH_ANTIDOTE,
                 targets = mutableListOf(saveTargetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -212,7 +212,7 @@ class RoleActionTests {
             val wolfKillAction = RoleActionInstance(
                 actor = 1,
                 actorRole = "狼人",
-                actionDefinitionId = "WEREWOLF_KILL",
+                actionDefinitionId = ActionDefinitionId.WEREWOLF_KILL,
                 targets = mutableListOf(witchId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -220,7 +220,7 @@ class RoleActionTests {
             val witchAntidoteAction = RoleActionInstance(
                 actor = witchId,
                 actorRole = "女巫",
-                actionDefinitionId = "WITCH_ANTIDOTE",
+                actionDefinitionId = ActionDefinitionId.WITCH_ANTIDOTE,
                 targets = mutableListOf(witchId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -241,7 +241,7 @@ class RoleActionTests {
             val wolfKillAction = RoleActionInstance(
                 actor = 1,
                 actorRole = "狼人",
-                actionDefinitionId = "WEREWOLF_KILL",
+                actionDefinitionId = ActionDefinitionId.WEREWOLF_KILL,
                 targets = mutableListOf(witchId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -249,7 +249,7 @@ class RoleActionTests {
             val witchAntidoteAction = RoleActionInstance(
                 actor = witchId,
                 actorRole = "女巫",
-                actionDefinitionId = "WITCH_ANTIDOTE",
+                actionDefinitionId = ActionDefinitionId.WITCH_ANTIDOTE,
                 targets = mutableListOf(witchId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -262,6 +262,7 @@ class RoleActionTests {
             assertFalse(result.saved.contains(witchId))
         }
     }
+
     @Nested
     @DisplayName("Guard Protect Action Tests")
     inner class GuardProtectActionTests {
@@ -277,7 +278,7 @@ class RoleActionTests {
             val guardAction = RoleActionInstance(
                 actor = 4,
                 actorRole = "守衛",
-                actionDefinitionId = "GUARD_PROTECT",
+                actionDefinitionId = ActionDefinitionId.GUARD_PROTECT,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -292,7 +293,7 @@ class RoleActionTests {
             val guardAction = RoleActionInstance(
                 actor = 4,
                 actorRole = "守衛",
-                actionDefinitionId = "GUARD_PROTECT",
+                actionDefinitionId = ActionDefinitionId.GUARD_PROTECT,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -314,7 +315,7 @@ class RoleActionTests {
             val guardAction = RoleActionInstance(
                 actor = 4,
                 actorRole = "守衛",
-                actionDefinitionId = "GUARD_PROTECT",
+                actionDefinitionId = ActionDefinitionId.GUARD_PROTECT,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -338,7 +339,7 @@ class RoleActionTests {
             val guardAction = RoleActionInstance(
                 actor = 4,
                 actorRole = "守衛",
-                actionDefinitionId = "GUARD_PROTECT",
+                actionDefinitionId = ActionDefinitionId.GUARD_PROTECT,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -364,7 +365,7 @@ class RoleActionTests {
             val guardAction = RoleActionInstance(
                 actor = 4,
                 actorRole = "守衛",
-                actionDefinitionId = "GUARD_PROTECT",
+                actionDefinitionId = ActionDefinitionId.GUARD_PROTECT,
                 targets = mutableListOf(newTargetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -395,7 +396,7 @@ class RoleActionTests {
             val poisonAction = RoleActionInstance(
                 actor = 5,
                 actorRole = "女巫",
-                actionDefinitionId = "WITCH_POISON",
+                actionDefinitionId = ActionDefinitionId.WITCH_POISON,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -416,7 +417,7 @@ class RoleActionTests {
             val guardAction = RoleActionInstance(
                 actor = 4,
                 actorRole = "守衛",
-                actionDefinitionId = "GUARD_PROTECT",
+                actionDefinitionId = ActionDefinitionId.GUARD_PROTECT,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -428,7 +429,7 @@ class RoleActionTests {
             val poisonAction = RoleActionInstance(
                 actor = 5,
                 actorRole = "女巫",
-                actionDefinitionId = "WITCH_POISON",
+                actionDefinitionId = ActionDefinitionId.WITCH_POISON,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -489,7 +490,7 @@ class RoleActionTests {
             val checkAction = RoleActionInstance(
                 actor = 3,
                 actorRole = "預言家",
-                actionDefinitionId = "SEER_CHECK",
+                actionDefinitionId = ActionDefinitionId.SEER_CHECK,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -508,7 +509,7 @@ class RoleActionTests {
             val checkAction = RoleActionInstance(
                 actor = 3,
                 actorRole = "預言家",
-                actionDefinitionId = "SEER_CHECK",
+                actionDefinitionId = ActionDefinitionId.SEER_CHECK,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -543,7 +544,7 @@ class RoleActionTests {
             val dummyAction = RoleActionInstance(
                 actor = 0,
                 actorRole = "SYSTEM",
-                actionDefinitionId = "DEATH_RESOLUTION",
+                actionDefinitionId = ActionDefinitionId.DEATH_RESOLUTION,
                 targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
@@ -572,7 +573,7 @@ class RoleActionTests {
             val dummyAction = RoleActionInstance(
                 actor = 0,
                 actorRole = "SYSTEM",
-                actionDefinitionId = "DEATH_RESOLUTION",
+                actionDefinitionId = ActionDefinitionId.DEATH_RESOLUTION,
                 targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
@@ -600,7 +601,7 @@ class RoleActionTests {
             val dummyAction = RoleActionInstance(
                 actor = 0,
                 actorRole = "SYSTEM",
-                actionDefinitionId = "DEATH_RESOLUTION",
+                actionDefinitionId = ActionDefinitionId.DEATH_RESOLUTION,
                 targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
@@ -630,7 +631,7 @@ class RoleActionTests {
             val dummyAction = RoleActionInstance(
                 actor = 0,
                 actorRole = "SYSTEM",
-                actionDefinitionId = "DEATH_RESOLUTION",
+                actionDefinitionId = ActionDefinitionId.DEATH_RESOLUTION,
                 targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
@@ -658,7 +659,7 @@ class RoleActionTests {
             val dummyAction = RoleActionInstance(
                 actor = 0,
                 actorRole = "SYSTEM",
-                actionDefinitionId = "DEATH_RESOLUTION",
+                actionDefinitionId = ActionDefinitionId.DEATH_RESOLUTION,
                 targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
@@ -688,7 +689,7 @@ class RoleActionTests {
             val dummyAction = RoleActionInstance(
                 actor = 0,
                 actorRole = "SYSTEM",
-                actionDefinitionId = "DEATH_RESOLUTION",
+                actionDefinitionId = ActionDefinitionId.DEATH_RESOLUTION,
                 targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
@@ -715,7 +716,7 @@ class RoleActionTests {
             val dummyAction = RoleActionInstance(
                 actor = 0,
                 actorRole = "SYSTEM",
-                actionDefinitionId = "DEATH_RESOLUTION",
+                actionDefinitionId = ActionDefinitionId.DEATH_RESOLUTION,
                 targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
@@ -744,7 +745,7 @@ class RoleActionTests {
             val wolfKillAction = RoleActionInstance(
                 actor = werewolfId,
                 actorRole = "狼人",
-                actionDefinitionId = "WEREWOLF_KILL",
+                actionDefinitionId = ActionDefinitionId.WEREWOLF_KILL,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -757,7 +758,7 @@ class RoleActionTests {
             val witchSaveAction = RoleActionInstance(
                 actor = witchId,
                 actorRole = "女巫",
-                actionDefinitionId = "WITCH_ANTIDOTE",
+                actionDefinitionId = ActionDefinitionId.WITCH_ANTIDOTE,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -770,7 +771,7 @@ class RoleActionTests {
             val guardProtectAction = RoleActionInstance(
                 actor = guardId,
                 actorRole = "守衛",
-                actionDefinitionId = "GUARD_PROTECT",
+                actionDefinitionId = ActionDefinitionId.GUARD_PROTECT,
                 targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -784,7 +785,7 @@ class RoleActionTests {
             val deathResolutionAction = RoleActionInstance(
                 actor = 0,
                 actorRole = "SYSTEM",
-                actionDefinitionId = "DEATH_RESOLUTION",
+                actionDefinitionId = ActionDefinitionId.DEATH_RESOLUTION,
                 targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
@@ -813,7 +814,7 @@ class RoleActionTests {
             val wolfKill1 = RoleActionInstance(
                 actor = wolf1,
                 actorRole = "狼人",
-                actionDefinitionId = "WEREWOLF_KILL",
+                actionDefinitionId = ActionDefinitionId.WEREWOLF_KILL,
                 targets = mutableListOf(target1),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -824,7 +825,7 @@ class RoleActionTests {
             val wolfKill2 = RoleActionInstance(
                 actor = wolf2,
                 actorRole = "狼人",
-                actionDefinitionId = "WEREWOLF_KILL",
+                actionDefinitionId = ActionDefinitionId.WEREWOLF_KILL,
                 targets = mutableListOf(target2),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -837,7 +838,7 @@ class RoleActionTests {
             val witchSave = RoleActionInstance(
                 actor = witchId,
                 actorRole = "女巫",
-                actionDefinitionId = "WITCH_ANTIDOTE",
+                actionDefinitionId = ActionDefinitionId.WITCH_ANTIDOTE,
                 targets = mutableListOf(target1),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -849,7 +850,7 @@ class RoleActionTests {
             val guardProtect = RoleActionInstance(
                 actor = guardId,
                 actorRole = "守衛",
-                actionDefinitionId = "GUARD_PROTECT",
+                actionDefinitionId = ActionDefinitionId.GUARD_PROTECT,
                 targets = mutableListOf(target2),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -862,7 +863,7 @@ class RoleActionTests {
             val deathResolution = RoleActionInstance(
                 actor = 0,
                 actorRole = "SYSTEM",
-                actionDefinitionId = "DEATH_RESOLUTION",
+                actionDefinitionId = ActionDefinitionId.DEATH_RESOLUTION,
                 targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
@@ -909,7 +910,7 @@ class RoleActionTests {
             val actionInstance = RoleActionInstance(
                 actor = merchantId,
                 actorRole = "黑市商人",
-                actionDefinitionId = dev.robothanzo.werewolf.game.roles.PredefinedRoles.DARK_MERCHANT_TRADE_SEER,
+                actionDefinitionId = ActionDefinitionId.DARK_MERCHANT_TRADE_SEER,
                 targets = mutableListOf(wolfId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -935,7 +936,7 @@ class RoleActionTests {
             val actionInstance = RoleActionInstance(
                 actor = merchantId,
                 actorRole = "黑市商人",
-                actionDefinitionId = dev.robothanzo.werewolf.game.roles.PredefinedRoles.DARK_MERCHANT_TRADE_SEER,
+                actionDefinitionId = ActionDefinitionId.DARK_MERCHANT_TRADE_SEER,
                 targets = mutableListOf(villagerId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -997,7 +998,7 @@ class RoleActionTests {
             val actionInstance = RoleActionInstance(
                 actor = seerId,
                 actorRole = "預言家",
-                actionDefinitionId = dev.robothanzo.werewolf.game.roles.PredefinedRoles.SEER_CHECK,
+                actionDefinitionId = ActionDefinitionId.SEER_CHECK,
                 targets = mutableListOf(youngerBrotherId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
@@ -1035,7 +1036,7 @@ class RoleActionTests {
             val actionInstance = RoleActionInstance(
                 actor = seerId,
                 actorRole = "預言家",
-                actionDefinitionId = dev.robothanzo.werewolf.game.roles.PredefinedRoles.SEER_CHECK,
+                actionDefinitionId = ActionDefinitionId.SEER_CHECK,
                 targets = mutableListOf(youngerBrotherId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED

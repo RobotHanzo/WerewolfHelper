@@ -3,7 +3,6 @@ package dev.robothanzo.werewolf.game.roles.actions
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.*
-import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -71,7 +70,7 @@ class WolfBrotherTest {
             RoleActionInstance(
                 actor = 1,
                 actorRole = "狼兄",
-                actionDefinitionId = "DEATH",
+                actionDefinitionId = ActionDefinitionId.DEATH,
                 targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.SYSTEM,
                 status = ActionStatus.PROCESSED
@@ -95,7 +94,7 @@ class WolfBrotherTest {
             RoleActionInstance(
                 actor = 1,
                 actorRole = "狼兄",
-                actionDefinitionId = "DEATH",
+                actionDefinitionId = ActionDefinitionId.DEATH,
                 targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.SYSTEM,
                 status = ActionStatus.PROCESSED
@@ -111,7 +110,7 @@ class WolfBrotherTest {
         val action = RoleActionInstance(
             actor = 2,
             actorRole = "狼弟",
-            actionDefinitionId = PredefinedRoles.WOLF_YOUNGER_BROTHER_EXTRA_KILL,
+            actionDefinitionId = ActionDefinitionId.WOLF_YOUNGER_BROTHER_EXTRA_KILL,
             targets = arrayListOf(3),
             submittedBy = ActionSubmissionSource.PLAYER,
             status = ActionStatus.SUBMITTED

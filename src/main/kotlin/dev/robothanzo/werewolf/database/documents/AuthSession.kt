@@ -32,3 +32,25 @@ data class AuthSession(
     val isPending: Boolean
         get() = role == UserRole.PENDING || role == null
 }
+
+enum class UserRole {
+    JUDGE,
+    SPECTATOR,
+    PENDING,
+    BLOCKED;
+
+    fun isPrivileged(): Boolean {
+        return this == JUDGE || this == SPECTATOR
+    }
+
+    companion object {
+        fun fromString(role: String?): UserRole {
+            if (role == null) return PENDING
+            return try {
+                valueOf(role.uppercase())
+            } catch (e: IllegalArgumentException) {
+                PENDING
+            }
+        }
+    }
+}
