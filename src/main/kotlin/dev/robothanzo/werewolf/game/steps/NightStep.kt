@@ -50,9 +50,14 @@ class NightStep(
 
             for (p in session.alivePlayers().values) {
                 if (p.wolf) {
-                    // Wolf Younger Brother (狼弟) only joins discussion if Brother is dead
+                    // Wolf Younger Brother (狼弟) only joins discussion if Brother is dead AND it's not the awakening night
                     val isBrotherAlive = session.alivePlayers().values.any { it.roles?.contains("狼兄") == true }
-                    if (p.roles?.contains("狼弟") == true && isBrotherAlive) {
+                    // Wolf Brother Awakening Night: The night immediately following the day Wolf Brother died
+                    // wolfBrotherDiedDay is set on the day the Wolf Brother dies. The following night is still that same day index.
+                    val wolfBrotherDiedDay = session.stateData.wolfBrotherDiedDay
+                    val isAwakeningNight = wolfBrotherDiedDay != null && wolfBrotherDiedDay == session.day
+
+                    if (p.roles?.contains("狼弟") == true && (isBrotherAlive || isAwakeningNight)) {
                         continue
                     }
                 } else {
@@ -88,11 +93,18 @@ class NightStep(
         // 1. Werewolf Voting Phase
         val session = gameSessionService.getSession(guildId).orElseThrow()
         val werewolves = session.players.values.filter { p ->
-            p.alive && p.wolf && (p.roles?.contains("狼弟") != true || session.alivePlayers().values.none {
-                it.roles?.contains(
-                    "狼兄"
-                ) == true
-            })
+            if (!p.alive || !p.wolf) return@filter false
+
+            // Wolf Younger Brother Exclusion Logic
+            if (p.roles?.contains("狼弟") == true) {
+                val isBrotherAlive = session.alivePlayers().values.any { it.roles?.contains("狼兄") == true }
+                val wolfBrotherDiedDay = session.stateData.wolfBrotherDiedDay
+                val isAwakeningNight = wolfBrotherDiedDay != null && wolfBrotherDiedDay == session.day
+
+                if (isBrotherAlive || isAwakeningNight) return@filter false
+            }
+
+            true
         }.map { it.id }.sorted()
 
         if (werewolves.isNotEmpty()) {

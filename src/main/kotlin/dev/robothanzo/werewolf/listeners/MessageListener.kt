@@ -66,7 +66,10 @@ class MessageListener : ListenerAdapter() {
                 firstRole.contains("血月使者") ||
                 firstRole.contains("惡靈騎士") ||
                 firstRole.contains("夢魘") ||
-                (roles.contains("狼弟") && !isCharacterAlive(session, "狼兄"))
+                (roles.contains("狼弟") && !isCharacterAlive(
+                    session,
+                    "狼兄"
+                ) && (session.stateData.wolfBrotherDiedDay == null || session.stateData.wolfBrotherDiedDay!! < session.day))
     }
 
     override fun onMessageReceived(event: MessageReceivedEvent) {

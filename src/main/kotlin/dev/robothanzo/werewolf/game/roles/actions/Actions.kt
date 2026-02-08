@@ -302,6 +302,47 @@ class DeathResolutionAction : BaseRoleAction(
             println("DeathResolution: Adding DOUBLE_PROTECTION death for $doubleProtected")
         }
 
+        // Wolf Younger Brother Unsaveable Kill Logic
+        // If YB Extra Kill target == Wolf Pack Kill target, the target cannot be saved by Witch or Guard.
+        val wolfKillAction =
+            session.stateData.submittedActions.find { it.actionDefinitionId == PredefinedRoles.WEREWOLF_KILL }
+        val ybExtraKillAction =
+            session.stateData.submittedActions.find { it.actionDefinitionId == PredefinedRoles.WOLF_YOUNGER_BROTHER_EXTRA_KILL }
+
+        if (wolfKillAction != null && ybExtraKillAction != null) {
+            val wolfTarget = wolfKillAction.targets.firstOrNull()
+            val ybTarget = ybExtraKillAction.targets.firstOrNull()
+
+            if (wolfTarget != null && ybTarget != null && wolfTarget == ybTarget && wolfTarget != dev.robothanzo.werewolf.game.model.SKIP_TARGET_ID) {
+                // Target matches, kill is unsaveable
+                println("DeathResolution: Wolf Brother Unsaveable Kill detected on player $wolfTarget")
+
+                if (accumulatedState.saved.contains(wolfTarget)) {
+                    accumulatedState.saved.remove(wolfTarget)
+                    println("DeathResolution: Removed Witch save for $wolfTarget (Unsaveable)")
+                    // Ensure they are in the death list (Witch might have prevented them from being added to death list effectively, 
+                    // or we need to ensure they are re-added if they were removed? 
+                    // Actually, execute() of WitchAntidote adds to `saved`, it doesn't remove from `deaths` yet. 
+                    // `DeathResolutionAction` lines 285-290 remove from `deaths`.
+                    // So removing from `saved` BEFORE that block is key.
+                    // WAIT: The block lines 285-290 ALREADY ran above. I need to move this logic UP.
+                }
+
+                if (accumulatedState.protectedPlayers.contains(wolfTarget)) {
+                    accumulatedState.protectedPlayers.remove(wolfTarget)
+                    println("DeathResolution: Removed Guard protection for $wolfTarget (Unsaveable)")
+                    // Similarly, Guard logic lines 291-298 ran above. 
+                }
+
+                // Constructive fix: I need to re-add the death if it was removed, or run this logic earlier.
+                // It is safer to re-add to deaths map if missing, as the previous logic might have cleared it.
+                if (deaths[DeathCause.WEREWOLF]?.contains(wolfTarget) != true) {
+                    deaths.getOrPut(DeathCause.WEREWOLF) { mutableListOf() }.add(wolfTarget)
+                    println("DeathResolution: Re-added death for $wolfTarget (Unsaveable)")
+                }
+            }
+        }
+
         deaths.entries.removeIf { it.value.isEmpty() }
         println("DeathResolution: Final deaths map: $deaths")
 
