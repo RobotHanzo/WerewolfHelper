@@ -1,11 +1,9 @@
 package dev.robothanzo.werewolf.game.roles.actions
 
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.ActionTiming
-import dev.robothanzo.werewolf.game.model.Camp
-import dev.robothanzo.werewolf.game.model.DeathCause
-import dev.robothanzo.werewolf.game.model.RoleActionInstance
+import dev.robothanzo.werewolf.game.model.*
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
+import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import org.springframework.context.annotation.Lazy
 import org.springframework.data.annotation.Transient
 import org.springframework.stereotype.Component
@@ -108,6 +106,7 @@ class SeerCheckAction(
         val resultText = if (isWolf) "狼人" else "好人"
         seerPlayer?.channel?.sendMessage("🔮 **查驗結果**：${target.nickname} 是 **$resultText**")?.queue()
 
+        action.status = ActionStatus.PROCESSED
         return accumulatedState
     }
 }
@@ -233,7 +232,7 @@ class HunterRevengeAction : BaseRoleAction(
 
 @Component
 class WolfKingRevengeAction : BaseRoleAction(
-    actionId = "WOLF_KING_REVENGE",
+    actionId = PredefinedRoles.WOLF_KING_REVENGE,
     actionName = "復仇",
     priority = PredefinedRoles.HUNTER_PRIORITY,
     timing = ActionTiming.DEATH_TRIGGER
@@ -389,25 +388,25 @@ abstract class DarkMerchantTradeAction(
 
 @Component
 class DarkMerchantTradeSeerAction : DarkMerchantTradeAction(
-    PredefinedRoles.DARK_MERCHANT_TRADE_SEER, "交易 (預言家)", "SEER"
+    PredefinedRoles.DARK_MERCHANT_TRADE_SEER, "交易 (預言家查驗)", "SEER"
 )
 
 @Component
 class DarkMerchantTradePoisonAction : DarkMerchantTradeAction(
-    PredefinedRoles.DARK_MERCHANT_TRADE_POISON, "交易 (女巫)", "POISON"
+    PredefinedRoles.DARK_MERCHANT_TRADE_POISON, "交易 (女巫毒藥)", "POISON"
 )
 
 @Component
 class DarkMerchantTradeGunAction : DarkMerchantTradeAction(
-    PredefinedRoles.DARK_MERCHANT_TRADE_GUN, "交易 (獵人)", "GUN"
+    PredefinedRoles.DARK_MERCHANT_TRADE_GUN, "交易 (獵人獵槍)", "GUN"
 )
 
 @Component
 class MerchantSeerCheckAction(
-    @Transient @param:Lazy private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry
+    @Transient @param:Lazy private val roleRegistry: RoleRegistry
 ) : BaseRoleAction(
     actionId = PredefinedRoles.MERCHANT_SEER_CHECK,
-    actionName = "查驗",
+    actionName = "查驗 (黑市商人版)",
     priority = PredefinedRoles.SEER_PRIORITY + 1,
     timing = ActionTiming.NIGHT,
     usageLimit = 1,
@@ -436,7 +435,7 @@ class MerchantSeerCheckAction(
 @Component
 class MerchantPoisonAction : BaseRoleAction(
     actionId = PredefinedRoles.MERCHANT_POISON,
-    actionName = "毒藥",
+    actionName = "毒藥 (黑市商人版)",
     priority = PredefinedRoles.WITCH_POISON_PRIORITY + 1,
     timing = ActionTiming.NIGHT,
     usageLimit = 1
@@ -455,7 +454,7 @@ class MerchantPoisonAction : BaseRoleAction(
 @Component
 class MerchantGunAction : BaseRoleAction(
     actionId = PredefinedRoles.MERCHANT_GUN,
-    actionName = "獵槍",
+    actionName = "獵槍 (黑市商人版)",
     priority = PredefinedRoles.HUNTER_PRIORITY + 1,
     timing = ActionTiming.NIGHT,
     usageLimit = 1

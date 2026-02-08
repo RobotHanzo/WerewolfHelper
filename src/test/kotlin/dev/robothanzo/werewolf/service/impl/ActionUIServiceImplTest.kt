@@ -4,16 +4,19 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.ActionStatus
+import dev.robothanzo.werewolf.game.model.ActionSubmissionSource
 import dev.robothanzo.werewolf.game.model.ActionTiming
 import dev.robothanzo.werewolf.game.model.RoleActionInstance
+import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.roles.actions.ActionExecutionResult
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
+import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.NightManager
-import dev.robothanzo.werewolf.service.RoleActionService
+import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -29,10 +32,16 @@ class ActionUIServiceImplTest {
     private lateinit var gameSessionService: GameSessionService
 
     @Mock
-    private lateinit var roleActionService: RoleActionService
+    private lateinit var roleRegistry: RoleRegistry
+
+    @Mock
+    private lateinit var roleActionExecutor: RoleActionExecutor
 
     @Mock
     private lateinit var mockChannel: TextChannel
+
+    @Mock
+    private lateinit var mockMessageAction: MessageCreateAction
 
     private lateinit var actionUIService: ActionUIServiceImpl
 
@@ -68,23 +77,46 @@ class ActionUIServiceImplTest {
             ): List<Int> {
                 return targets(session, actor, alivePlayers)
             }
+
+            override fun validate(
+                session: Session,
+                actor: Int,
+                targets: List<Int>
+            ): String? {
+                return null
+            }
+
+            override fun onSubmitted(
+                session: Session,
+                actor: Int,
+                targets: List<Int>
+            ) {
+                // No-op
+            }
         }
     }
 
     @BeforeEach
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        actionUIService = ActionUIServiceImpl(nightManager)
 
-        // Mock static service access
+        // Setup JDA mocks for message sending
+        val mockJda = mock<JDA>()
+        whenever(mockJda.getTextChannelById(any<Long>())).thenReturn(mockChannel)
+        whenever(mockChannel.sendMessage(any<String>())).thenReturn(mockMessageAction)
+        WerewolfApplication.jda = mockJda
+
+        // Setup static service access
         WerewolfApplication.gameSessionService = gameSessionService
-        WerewolfApplication.roleActionService = roleActionService
+
+        actionUIService = ActionUIServiceImpl(nightManager, roleRegistry, roleActionExecutor)
     }
 
     @Test
     @DisplayName("Wolf Younger Brother picks random target on timeout")
     fun testWolfBrotherRandomTarget() {
         val session = Session(guildId = 1L)
+        session.currentState = "NIGHT"
         session.stateData.phaseEndTime = System.currentTimeMillis() - 1000 // Ensure phase expired
 
         val wbId = 1
@@ -95,13 +127,13 @@ class ActionUIServiceImplTest {
             actor = wbId,
             actorRole = "狼弟",
             actionDefinitionId = "WOLF_YOUNGER_BROTHER_EXTRA_KILL",
-            targets = emptyList(),
-            submittedBy = dev.robothanzo.werewolf.game.model.ActionSubmissionSource.SYSTEM,
+            targets = mutableListOf(), // Empty initially
+            submittedBy = ActionSubmissionSource.SYSTEM,
             status = ActionStatus.ACTING
         )
         session.stateData.submittedActions.add(pendingAction)
 
-        // Mock player and channel
+        // Mock player setup
         val player = Player(id = wbId, roleId = 100L, channelId = 200L)
         player.roles = mutableListOf("狼弟")
         player.session = session
@@ -110,23 +142,12 @@ class ActionUIServiceImplTest {
         villager.roles = mutableListOf("平民")
         villager.session = session
 
-        // Mock JDA to return channel for player
-        val mockJda = mock<net.dv8tion.jda.api.JDA>()
-        whenever(mockJda.getTextChannelById(200L)).thenReturn(mockChannel)
-        whenever(mockJda.getTextChannelById(201L)).thenReturn(mockChannel)
-        WerewolfApplication.jda = mockJda
-
-        val playerMap = mutableMapOf(
+        session.players = mutableMapOf(
             wbId.toString() to player,
             targetId.toString() to villager
         )
 
-        // Reflection to set players map since it's cleaner than heavy mocking of Session
-        val playersField = Session::class.java.getDeclaredField("players")
-        playersField.isAccessible = true
-        playersField.set(session, playerMap)
-
-        // Mock roleActionService responses using the helper
+        // Mock role registry to return our action
         val mandatoryRoleAction = createMockRoleAction(
             id = "WOLF_YOUNGER_BROTHER_EXTRA_KILL",
             name = "額外襲擊",
@@ -134,32 +155,28 @@ class ActionUIServiceImplTest {
             targets = { _, _, _ -> listOf(targetId) }
         )
 
-        whenever(roleActionService.getAvailableActionsForPlayer(any(), eq(wbId)))
-            .thenReturn(listOf(mandatoryRoleAction))
+        // Mock role to return actions
+        val mockRole = mock<dev.robothanzo.werewolf.game.model.Role>()
+        whenever(mockRole.getActions()).thenReturn(listOf(mandatoryRoleAction))
+        whenever(roleRegistry.getRole("狼弟")).thenReturn(mockRole)
+        whenever(roleRegistry.getAction("WOLF_YOUNGER_BROTHER_EXTRA_KILL")).thenReturn(mandatoryRoleAction)
 
+        // Execute cleanup
         actionUIService.cleanupExpiredPrompts(1L, session)
 
-        // Verify that submitAction was called with the random target (targetId)
-        val guildIdCaptor = argumentCaptor<Long>()
-        val actionIdCaptor = argumentCaptor<String>()
-        val actorIdCaptor = argumentCaptor<Int>()
-        val targetsCaptor = argumentCaptor<List<Int>>()
-        val sourceCaptor = argumentCaptor<String>()
+        // Verify that the action in session state was updated to SUBMITTED with random target
+        // BUT wait, session.validateAndSubmitAction creates a NEW action instance or updates existing?
+        // It updates `session.stateData.submittedActions` by removing old and adding new.
 
-        verify(roleActionService).submitAction(
-            guildIdCaptor.capture(),
-            actionIdCaptor.capture(),
-            actorIdCaptor.capture(),
-            targetsCaptor.capture(),
-            sourceCaptor.capture()
-        )
+        val submittedAction = session.stateData.submittedActions.find {
+            it.actor == wbId && it.actionDefinitionId == "WOLF_YOUNGER_BROTHER_EXTRA_KILL"
+        }
 
-        assertEquals(1L, guildIdCaptor.firstValue)
-        assertEquals("WOLF_YOUNGER_BROTHER_EXTRA_KILL", actionIdCaptor.firstValue)
-        assertEquals(wbId, actorIdCaptor.firstValue)
-        assertTrue(targetsCaptor.firstValue.contains(targetId))
-        assertEquals("SYSTEM", sourceCaptor.firstValue)
-
+        assertNotNull(submittedAction)
+        assertEquals(ActionStatus.SUBMITTED, submittedAction?.status)
+        assertEquals(ActionSubmissionSource.SYSTEM, submittedAction?.submittedBy)
+        assertTrue(submittedAction?.targets?.contains(targetId) == true)
+        
         // Verify notification
         val messageCaptor = argumentCaptor<String>()
         verify(mockChannel).sendMessage(messageCaptor.capture())
@@ -170,6 +187,9 @@ class ActionUIServiceImplTest {
     @DisplayName("Mandatory action uses random target on timeout")
     fun testMandatoryActionRandomTarget() {
         val session = Session(guildId = 1L)
+        session.currentState = "NIGHT"
+        session.stateData.phaseEndTime = System.currentTimeMillis() - 1000
+        
         val seerId = 1
         val targetId = 2
 
@@ -178,13 +198,13 @@ class ActionUIServiceImplTest {
             actor = seerId,
             actorRole = "預言家",
             actionDefinitionId = "SEER_CHECK",
-            targets = emptyList(),
-            submittedBy = dev.robothanzo.werewolf.game.model.ActionSubmissionSource.SYSTEM,
+            targets = mutableListOf(),
+            submittedBy = ActionSubmissionSource.SYSTEM,
             status = ActionStatus.ACTING
         )
         session.stateData.submittedActions.add(pendingAction)
 
-        // Setup players: Seer and one eligible target
+        // Setup players
         val seer = Player(id = seerId, roleId = 101L, channelId = 201L)
         seer.roles = mutableListOf("預言家")
         seer.session = session
@@ -193,22 +213,12 @@ class ActionUIServiceImplTest {
         villager.roles = mutableListOf("平民")
         villager.session = session
 
-        // Mock JDA for Seer's channel
-        val mockJda = mock<net.dv8tion.jda.api.JDA>()
-        whenever(mockJda.getTextChannelById(201L)).thenReturn(mockChannel)
-        WerewolfApplication.jda = mockJda
-
-        val playerMap = mutableMapOf(
+        session.players = mutableMapOf(
             seerId.toString() to seer,
             targetId.toString() to villager
         )
 
-        // Reflection to set players map since it's cleaner than heavy mocking of Session
-        val playersField = Session::class.java.getDeclaredField("players")
-        playersField.isAccessible = true
-        playersField.set(session, playerMap)
-
-        // Mock roleActionService availability using the helper
+        // Mock role registry
         val mandatoryRoleAction = createMockRoleAction(
             id = "SEER_CHECK",
             name = "查驗",
@@ -216,31 +226,23 @@ class ActionUIServiceImplTest {
             targets = { _, _, _ -> listOf(targetId) }
         )
 
-        whenever(roleActionService.getAvailableActionsForPlayer(any(), eq(seerId)))
-            .thenReturn(listOf(mandatoryRoleAction))
+        val mockRole = mock<dev.robothanzo.werewolf.game.model.Role>()
+        whenever(mockRole.getActions()).thenReturn(listOf(mandatoryRoleAction))
+        whenever(roleRegistry.getRole("預言家")).thenReturn(mockRole)
+        whenever(roleRegistry.getAction("SEER_CHECK")).thenReturn(mandatoryRoleAction)
 
+        // Execute cleanup
         actionUIService.cleanupExpiredPrompts(1L, session)
 
-        // Verify usage of roleActionService.submitAction instead of direct manipulation
-        val guildIdCaptor = argumentCaptor<Long>()
-        val actionIdCaptor = argumentCaptor<String>()
-        val actorIdCaptor = argumentCaptor<Int>()
-        val targetsCaptor = argumentCaptor<List<Int>>()
-        val sourceCaptor = argumentCaptor<String>()
+        // Verify action submitted
+        val submittedAction = session.stateData.submittedActions.find {
+            it.actor == seerId && it.actionDefinitionId == "SEER_CHECK"
+        }
 
-        verify(roleActionService).submitAction(
-            guildIdCaptor.capture(),
-            actionIdCaptor.capture(),
-            actorIdCaptor.capture(),
-            targetsCaptor.capture(),
-            sourceCaptor.capture()
-        )
-
-        assertEquals(1L, guildIdCaptor.firstValue)
-        assertEquals("SEER_CHECK", actionIdCaptor.firstValue)
-        assertEquals(seerId, actorIdCaptor.firstValue)
-        assertTrue(targetsCaptor.firstValue.contains(targetId))
-        assertEquals("SYSTEM", sourceCaptor.firstValue)
+        assertNotNull(submittedAction)
+        assertEquals(ActionStatus.SUBMITTED, submittedAction?.status)
+        assertEquals(ActionSubmissionSource.SYSTEM, submittedAction?.submittedBy)
+        assertTrue(submittedAction?.targets?.contains(targetId) == true)
 
         val messageCaptor = argumentCaptor<String>()
         verify(mockChannel).sendMessage(messageCaptor.capture())

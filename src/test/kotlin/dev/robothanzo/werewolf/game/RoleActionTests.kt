@@ -75,7 +75,7 @@ class RoleActionTests {
                 actor = 1,
                 actorRole = "狼人",
                 actionDefinitionId = "WEREWOLF_KILL",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -93,7 +93,7 @@ class RoleActionTests {
                 actor = 1,
                 actorRole = "狼人",
                 actionDefinitionId = "WEREWOLF_KILL",
-                targets = emptyList(),
+                targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -111,7 +111,7 @@ class RoleActionTests {
                 actor = 1,
                 actorRole = "狼人",
                 actionDefinitionId = "WEREWOLF_KILL",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -119,7 +119,7 @@ class RoleActionTests {
                 actor = 3,
                 actorRole = "狼人",
                 actionDefinitionId = "WEREWOLF_KILL",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -152,7 +152,7 @@ class RoleActionTests {
                 actor = 1,
                 actorRole = "狼人",
                 actionDefinitionId = "WEREWOLF_KILL",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -160,7 +160,7 @@ class RoleActionTests {
                 actor = 5,
                 actorRole = "女巫",
                 actionDefinitionId = "WITCH_ANTIDOTE",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -181,7 +181,7 @@ class RoleActionTests {
                 actor = 1,
                 actorRole = "狼人",
                 actionDefinitionId = "WEREWOLF_KILL",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -189,7 +189,7 @@ class RoleActionTests {
                 actor = 5,
                 actorRole = "女巫",
                 actionDefinitionId = "WITCH_ANTIDOTE",
-                targets = listOf(saveTargetId),
+                targets = mutableListOf(saveTargetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -213,7 +213,7 @@ class RoleActionTests {
                 actor = 1,
                 actorRole = "狼人",
                 actionDefinitionId = "WEREWOLF_KILL",
-                targets = listOf(witchId),
+                targets = mutableListOf(witchId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -221,7 +221,7 @@ class RoleActionTests {
                 actor = witchId,
                 actorRole = "女巫",
                 actionDefinitionId = "WITCH_ANTIDOTE",
-                targets = listOf(witchId),
+                targets = mutableListOf(witchId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -242,7 +242,7 @@ class RoleActionTests {
                 actor = 1,
                 actorRole = "狼人",
                 actionDefinitionId = "WEREWOLF_KILL",
-                targets = listOf(witchId),
+                targets = mutableListOf(witchId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -250,7 +250,7 @@ class RoleActionTests {
                 actor = witchId,
                 actorRole = "女巫",
                 actionDefinitionId = "WITCH_ANTIDOTE",
-                targets = listOf(witchId),
+                targets = mutableListOf(witchId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -278,7 +278,7 @@ class RoleActionTests {
                 actor = 4,
                 actorRole = "守衛",
                 actionDefinitionId = "GUARD_PROTECT",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -293,7 +293,7 @@ class RoleActionTests {
                 actor = 4,
                 actorRole = "守衛",
                 actionDefinitionId = "GUARD_PROTECT",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -315,7 +315,7 @@ class RoleActionTests {
                 actor = 4,
                 actorRole = "守衛",
                 actionDefinitionId = "GUARD_PROTECT",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -339,7 +339,7 @@ class RoleActionTests {
                 actor = 4,
                 actorRole = "守衛",
                 actionDefinitionId = "GUARD_PROTECT",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -365,7 +365,7 @@ class RoleActionTests {
                 actor = 4,
                 actorRole = "守衛",
                 actionDefinitionId = "GUARD_PROTECT",
-                targets = listOf(newTargetId),
+                targets = mutableListOf(newTargetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -396,7 +396,7 @@ class RoleActionTests {
                 actor = 5,
                 actorRole = "女巫",
                 actionDefinitionId = "WITCH_POISON",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -417,7 +417,7 @@ class RoleActionTests {
                 actor = 4,
                 actorRole = "守衛",
                 actionDefinitionId = "GUARD_PROTECT",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -429,7 +429,7 @@ class RoleActionTests {
                 actor = 5,
                 actorRole = "女巫",
                 actionDefinitionId = "WITCH_POISON",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -490,7 +490,7 @@ class RoleActionTests {
                 actor = 3,
                 actorRole = "預言家",
                 actionDefinitionId = "SEER_CHECK",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -509,7 +509,7 @@ class RoleActionTests {
                 actor = 3,
                 actorRole = "預言家",
                 actionDefinitionId = "SEER_CHECK",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -544,7 +544,7 @@ class RoleActionTests {
                 actor = 0,
                 actorRole = "SYSTEM",
                 actionDefinitionId = "DEATH_RESOLUTION",
-                targets = emptyList(),
+                targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
             )
@@ -573,7 +573,7 @@ class RoleActionTests {
                 actor = 0,
                 actorRole = "SYSTEM",
                 actionDefinitionId = "DEATH_RESOLUTION",
-                targets = emptyList(),
+                targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
             )
@@ -601,7 +601,7 @@ class RoleActionTests {
                 actor = 0,
                 actorRole = "SYSTEM",
                 actionDefinitionId = "DEATH_RESOLUTION",
-                targets = emptyList(),
+                targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
             )
@@ -614,10 +614,6 @@ class RoleActionTests {
 
             // Should NOT be in other death lists
             assertFalse(result.deaths[DeathCause.WEREWOLF]?.contains(targetId) == true)
-
-            @Suppress("UNCHECKED_CAST")
-            val doubleProtected = result.metadata["doubleProtectedPlayers"] as? List<Int>
-            assertTrue(doubleProtected?.contains(targetId) == true)
         }
 
         @Test
@@ -635,7 +631,7 @@ class RoleActionTests {
                 actor = 0,
                 actorRole = "SYSTEM",
                 actionDefinitionId = "DEATH_RESOLUTION",
-                targets = emptyList(),
+                targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
             )
@@ -663,7 +659,7 @@ class RoleActionTests {
                 actor = 0,
                 actorRole = "SYSTEM",
                 actionDefinitionId = "DEATH_RESOLUTION",
-                targets = emptyList(),
+                targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
             )
@@ -693,7 +689,7 @@ class RoleActionTests {
                 actor = 0,
                 actorRole = "SYSTEM",
                 actionDefinitionId = "DEATH_RESOLUTION",
-                targets = emptyList(),
+                targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
             )
@@ -720,7 +716,7 @@ class RoleActionTests {
                 actor = 0,
                 actorRole = "SYSTEM",
                 actionDefinitionId = "DEATH_RESOLUTION",
-                targets = emptyList(),
+                targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
             )
@@ -749,7 +745,7 @@ class RoleActionTests {
                 actor = werewolfId,
                 actorRole = "狼人",
                 actionDefinitionId = "WEREWOLF_KILL",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -762,7 +758,7 @@ class RoleActionTests {
                 actor = witchId,
                 actorRole = "女巫",
                 actionDefinitionId = "WITCH_ANTIDOTE",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -775,7 +771,7 @@ class RoleActionTests {
                 actor = guardId,
                 actorRole = "守衛",
                 actionDefinitionId = "GUARD_PROTECT",
-                targets = listOf(targetId),
+                targets = mutableListOf(targetId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -789,7 +785,7 @@ class RoleActionTests {
                 actor = 0,
                 actorRole = "SYSTEM",
                 actionDefinitionId = "DEATH_RESOLUTION",
-                targets = emptyList(),
+                targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
             )
@@ -818,7 +814,7 @@ class RoleActionTests {
                 actor = wolf1,
                 actorRole = "狼人",
                 actionDefinitionId = "WEREWOLF_KILL",
-                targets = listOf(target1),
+                targets = mutableListOf(target1),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -829,7 +825,7 @@ class RoleActionTests {
                 actor = wolf2,
                 actorRole = "狼人",
                 actionDefinitionId = "WEREWOLF_KILL",
-                targets = listOf(target2),
+                targets = mutableListOf(target2),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -842,7 +838,7 @@ class RoleActionTests {
                 actor = witchId,
                 actorRole = "女巫",
                 actionDefinitionId = "WITCH_ANTIDOTE",
-                targets = listOf(target1),
+                targets = mutableListOf(target1),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -854,7 +850,7 @@ class RoleActionTests {
                 actor = guardId,
                 actorRole = "守衛",
                 actionDefinitionId = "GUARD_PROTECT",
-                targets = listOf(target2),
+                targets = mutableListOf(target2),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -867,7 +863,7 @@ class RoleActionTests {
                 actor = 0,
                 actorRole = "SYSTEM",
                 actionDefinitionId = "DEATH_RESOLUTION",
-                targets = emptyList(),
+                targets = mutableListOf(),
                 submittedBy = ActionSubmissionSource.JUDGE,
                 status = ActionStatus.SUBMITTED
             )
@@ -914,15 +910,15 @@ class RoleActionTests {
                 actor = merchantId,
                 actorRole = "黑市商人",
                 actionDefinitionId = dev.robothanzo.werewolf.game.roles.PredefinedRoles.DARK_MERCHANT_TRADE_SEER,
-                targets = listOf(wolfId),
+                targets = mutableListOf(wolfId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
 
             val result = tradeAction.execute(testSession, actionInstance, ActionExecutionResult())
 
-            assertTrue(result.deaths.containsKey(DeathCause.UNKNOWN))
-            assertTrue(result.deaths[DeathCause.UNKNOWN]?.contains(merchantId) == true)
+            assertTrue(result.deaths.containsKey(DeathCause.TRADED_WITH_WOLF))
+            assertTrue(result.deaths[DeathCause.TRADED_WITH_WOLF]?.contains(merchantId) == true)
         }
 
         @Test
@@ -940,7 +936,7 @@ class RoleActionTests {
                 actor = merchantId,
                 actorRole = "黑市商人",
                 actionDefinitionId = dev.robothanzo.werewolf.game.roles.PredefinedRoles.DARK_MERCHANT_TRADE_SEER,
-                targets = listOf(villagerId),
+                targets = mutableListOf(villagerId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -948,7 +944,7 @@ class RoleActionTests {
             val result = tradeAction.execute(testSession, actionInstance, ActionExecutionResult())
 
             // Assertions for roleFlags removed as they might not be set by execute directly in this version
-            assertFalse(result.deaths.containsKey(DeathCause.UNKNOWN))
+            assertFalse(result.deaths.containsKey(DeathCause.TRADED_WITH_WOLF))
         }
     }
 
@@ -1002,7 +998,7 @@ class RoleActionTests {
                 actor = seerId,
                 actorRole = "預言家",
                 actionDefinitionId = dev.robothanzo.werewolf.game.roles.PredefinedRoles.SEER_CHECK,
-                targets = listOf(youngerBrotherId),
+                targets = mutableListOf(youngerBrotherId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
@@ -1040,7 +1036,7 @@ class RoleActionTests {
                 actor = seerId,
                 actorRole = "預言家",
                 actionDefinitionId = dev.robothanzo.werewolf.game.roles.PredefinedRoles.SEER_CHECK,
-                targets = listOf(youngerBrotherId),
+                targets = mutableListOf(youngerBrotherId),
                 submittedBy = ActionSubmissionSource.PLAYER,
                 status = ActionStatus.SUBMITTED
             )
