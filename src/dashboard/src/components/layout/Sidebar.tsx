@@ -1,4 +1,4 @@
-import {Activity, LayoutGrid, LogOut, Moon, Settings} from 'lucide-react';
+import {Activity, LayoutGrid, LogOut, Mic, Moon, Settings, Users} from 'lucide-react';
 import {useTranslation} from '@/lib/i18n';
 import {ThemeToggle} from '@/components/ui/ThemeToggle';
 import {useAuth} from '@/features/auth/contexts/AuthContext';
@@ -72,7 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 border-transparent'
                             }`}
                         >
-                            <Activity className="w-5 h-5"/>
+                            <Users className="w-5 h-5"/>
                             <span className="font-medium">{t('sidebar.playersManagement')}</span>
                         </button>
                         <button
@@ -107,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 border-transparent'
                             }`}
                         >
-                            <Activity className="w-5 h-5"/>
+                            <Mic className="w-5 h-5"/>
                             <span className="font-medium">{t('sidebar.speechManager')}</span>
                         </button>
                     </>
