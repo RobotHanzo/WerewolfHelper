@@ -1,5 +1,7 @@
 package dev.robothanzo.werewolf.game.model
 
+import io.swagger.v3.oas.annotations.media.Schema
+
 
 /**
  * Represents the sub-phases of the night.
@@ -102,13 +104,23 @@ data class GameStateData(
     var phaseStartTime: Long = 0,
     var phaseEndTime: Long = 0,
     // RoleDefinition shall have defined them, copy them here to track the usage and process when extra action are granted
+    @Schema(example = "{\"1\": {\"WEREWOLF_KILL\": 1}}")
     var playerOwnedActions: MutableMap<Int, MutableMap<String, Int>> = mutableMapOf(), // playerId -> (actionId -> usesLeft)
+
+    @Schema(example = "{\"HUNTER_REVENGE\": 1}")
     var deathTriggerAvailableMap: MutableMap<ActionDefinitionId, Int> = mutableMapOf(), // actionId -> playerId
+
+    @Schema(description = "List of actions submitted in the current phase but not yet executed")
     var submittedActions: MutableList<RoleActionInstance> = mutableListOf(), // Actions yet to be processed, executed at death announcement
+
+    @Schema(example = "{\"1\": [{\"actor\": 1, \"actionDefinitionId\": \"WEREWOLF_KILL\", \"targets\": [2]}]}")
     var executedActions: MutableMap<Int, MutableList<RoleActionInstance>> = mutableMapOf(), // day -> List of executed actions
 
     // Wolf features, these are rotated daily (in game day, as the final wolf kill is applied at death announcement and stored into executedActions)
+    @Schema(example = "{\"WEREWOLF_KILL\": {\"actionId\": \"WEREWOLF_KILL\", \"finished\": false}}")
     var wolfStates: MutableMap<String, WolvesActionState> = mutableMapOf(), // actionId -> state
+
+    @Schema(description = "List of messages sent by wolves")
     var werewolfMessages: MutableList<WolfMessage> = mutableListOf(),
 ) {
 

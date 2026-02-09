@@ -27,6 +27,7 @@ dependencies {
 //    implementation("org.springframework.boot:spring-boot-devtools")
 //    implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.mongodb:mongodb-spring-session:4.0.0-rc1")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
 
     // Kotlin
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")

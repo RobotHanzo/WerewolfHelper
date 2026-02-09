@@ -82,9 +82,8 @@ class PlayerServiceImpl(
                     .setColor(MsgUtils.randomColor)
                     .setHoisted(true)
                     .setName(name),
-                "創建身分組: $name",
-                { obj: Any? -> newRolesMap[i] = obj as Role }
-            )
+                "創建身分組: $name"
+            ) { obj: Any? -> newRolesMap[i] = obj as Role }
             createRoleTasks.add(task)
         }
 
@@ -120,16 +119,15 @@ class PlayerServiceImpl(
                             Permission.MESSAGE_SEND
                         )
                     ),
-                "創建頻道: $name",
-                { obj: Any? ->
-                    val channel = obj as TextChannel
-                    players[playerId.toString()] = Player(
-                        id = playerId,
-                        roleId = role.idLong,
-                        channelId = channel.idLong
-                    )
-                }
-            )
+                "創建頻道: $name"
+            ) { obj: Any? ->
+                val channel = obj as TextChannel
+                players[playerId.toString()] = Player(
+                    id = playerId,
+                    roleId = role.idLong,
+                    channelId = channel.idLong
+                )
+            }
             createChannelTasks.add(task)
         }
 

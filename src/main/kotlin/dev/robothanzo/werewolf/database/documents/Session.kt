@@ -1,8 +1,11 @@
 package dev.robothanzo.werewolf.database.documents
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import dev.robothanzo.werewolf.WerewolfApplication
+import dev.robothanzo.werewolf.controller.dto.SessionSummary
 import dev.robothanzo.werewolf.game.model.GameSettings
 import dev.robothanzo.werewolf.game.model.GameStateData
+import io.swagger.v3.oas.annotations.media.Schema
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
@@ -34,8 +37,11 @@ data class DiscordIDs(
 data class Session(
     @Id
     @param:BsonId
+    @JsonIgnore
+    @Schema(hidden = true)
     var _id: ObjectId? = null,
     @Version
+    @JsonIgnore
     var version: Long? = null,
     @Indexed(unique = true)
     var guildId: Long = 0,
@@ -67,18 +73,32 @@ data class Session(
 
     override fun getId(): ObjectId? = _id
     override fun isNew(): Boolean = _id == null
+
+    @get:JsonIgnore
     val guild: Guild?
         get() = WerewolfApplication.jda.getGuildById(guildId)
+
+    @get:JsonIgnore
     val spectatorRole: Role?
         get() = guild?.getRoleById(spectatorRoleId)
+
+    @get:JsonIgnore
     val judgeRole: Role?
         get() = guild?.getRoleById(judgeRoleId)
+
+    @get:JsonIgnore
     val courtTextChannel: TextChannel?
         get() = guild?.getTextChannelById(courtTextChannelId)
+
+    @get:JsonIgnore
     val courtVoiceChannel: VoiceChannel?
         get() = guild?.getVoiceChannelById(courtVoiceChannelId)
+
+    @get:JsonIgnore
     val spectatorTextChannel: TextChannel?
         get() = guild?.getTextChannelById(spectatorTextChannelId)
+
+    @get:JsonIgnore
     val judgeTextChannel: TextChannel?
         get() = guild?.getTextChannelById(judgeTextChannelId)
 
@@ -111,6 +131,7 @@ data class Session(
         return players.filter { it.value.alive }
     }
 
+    @get:JsonIgnore
     val police: Player?
         get() {
             for (player in players.values) {
@@ -225,5 +246,14 @@ data class Session(
                 )
             )
         }
+    }
+
+    fun generateSummary(): SessionSummary {
+        return SessionSummary(
+            guildId = this.guildId,
+            guildName = this.guild?.name ?: "Unknown Guild",
+            guildIcon = this.guild?.iconUrl ?: "",
+            playerCount = this.players.size
+        )
     }
 }

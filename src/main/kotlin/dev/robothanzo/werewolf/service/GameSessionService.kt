@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.service
 
+import dev.robothanzo.werewolf.controller.dto.GuildMemberDto
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.database.documents.UserRole
 import java.util.*
@@ -81,11 +82,11 @@ interface GameSessionService {
      * Retrieves all members of a guild for management purposes.
      *
      * @param session the session
-     * @return a list of member maps containing user details and roles
+     * @return a list of GuildMemberDto containing user details and roles
      * @throws Exception if an error occurs during retrieval
      */
     @Throws(Exception::class)
-    fun getGuildMembers(session: Session): List<Map<String, Any>>
+    fun getGuildMembers(session: Session): List<GuildMemberDto>
 
     /**
      * Updates the custom role for a user within a guild.

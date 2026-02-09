@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate-api": "openapi-ts"
   },
   "dependencies": {
     "lucide-react": "^0.344.0",
@@ -15,6 +16,7 @@
     "react-router-dom": "^7.13.0"
   },
   "devDependencies": {
+    "@hey-api/openapi-ts": "0.92.3",
     "@types/node": "^25.2.0",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",

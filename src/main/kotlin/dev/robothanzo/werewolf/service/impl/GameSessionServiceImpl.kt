@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.service.impl
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.robothanzo.werewolf.WerewolfApplication
+import dev.robothanzo.werewolf.controller.dto.GuildMemberDto
 import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.database.documents.UserRole
@@ -11,7 +12,6 @@ import dev.robothanzo.werewolf.security.GlobalWebSocketHandler
 import dev.robothanzo.werewolf.service.ExpelService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.SpeechService
-import dev.robothanzo.werewolf.utils.player
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Lazy
@@ -100,7 +100,7 @@ class GameSessionServiceImpl(
                     currentSessions[session.guildId] = saved
                 }
             }
-            
+
             // Sync version back to the input object to prevent stale version errors 
             // if the caller continues to use the old reference.
             session.version = saved.version
@@ -323,43 +323,32 @@ class GameSessionServiceImpl(
 
         val pCount = session.players.size
         summary["playerCount"] = pCount
-        log.info(
-            "Summary for guild {}: name='{}', players={}",
-            session.guildId,
-            guildName,
-            pCount
-        )
-
         return summary
     }
 
+
     @Throws(Exception::class)
-    override fun getGuildMembers(session: Session): List<Map<String, Any>> {
+    override fun getGuildMembers(session: Session): List<GuildMemberDto> {
         val guild = session.guild ?: throw Exception("Guild not found")
 
-        val membersJson = mutableListOf<Map<String, Any>>()
+        val membersJson = mutableListOf<GuildMemberDto>()
 
         for (member in guild.members) {
             if (member.user.isBot)
                 continue
 
-            val memberMap = mutableMapOf<String, Any>()
-            memberMap["userId"] = member.id
             val isJudge = member.roles.stream()
                 .anyMatch { r -> r == session.judgeRole }
-            memberMap["isJudge"] = isJudge
-            memberMap["isPlayer"] = member.player() != null
+            val memberDto = GuildMemberDto(
+                id = member.id,
+                name = member.effectiveName,
+                avatar = member.effectiveAvatarUrl,
+                display = member.effectiveName // Assuming display maps to effectiveName, or add logic if needed
+            )
+            membersJson.add(memberDto)
+        }
+        membersJson.sortBy { it.name }
 
-            membersJson.add(memberMap)
-        }
-        membersJson.sortWith { a, b ->
-            val judgeA = a["isJudge"] as Boolean
-            val judgeB = b["isJudge"] as Boolean
-            if (judgeA != judgeB)
-                if (judgeB) 1 else -1
-            else
-                0
-        }
         return membersJson
     }
 

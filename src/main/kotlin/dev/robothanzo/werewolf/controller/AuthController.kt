@@ -1,12 +1,21 @@
 package dev.robothanzo.werewolf.controller
 
 import dev.robothanzo.werewolf.WerewolfApplication
+import dev.robothanzo.werewolf.controller.dto.ApiResponse
+import dev.robothanzo.werewolf.controller.dto.AuthData
+import dev.robothanzo.werewolf.controller.dto.AuthResponse
 import dev.robothanzo.werewolf.database.documents.AuthSession
 import dev.robothanzo.werewolf.database.documents.UserRole
 import dev.robothanzo.werewolf.utils.isAdmin
 import io.mokulu.discord.oauth.DiscordAPI
 import io.mokulu.discord.oauth.DiscordOAuth
 import io.mokulu.discord.oauth.model.User
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.servlet.http.HttpSession
@@ -15,9 +24,11 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.io.IOException
+import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Authentication", description = "Endpoints for user authentication and session management")
 class AuthController {
     private val log = LoggerFactory.getLogger(AuthController::class.java)
 
@@ -35,9 +46,14 @@ class AuthController {
         arrayOf("identify", "guilds", "guilds.members.read")
     )
 
+    @Operation(
+        summary = "Initiate Discord OAuth login",
+        description = "Redirects the user to Discord for authentication."
+    )
     @GetMapping("/login")
     @Throws(IOException::class)
     fun login(
+        @Parameter(description = "Optional Guild ID to redirect back to after login")
         @RequestParam(name = "guild_id", required = false) guildId: String?,
         response: HttpServletResponse
     ) {
@@ -45,6 +61,10 @@ class AuthController {
         response.sendRedirect(discordOAuth.getAuthorizationURL(state))
     }
 
+    @Operation(
+        summary = "Discord OAuth callback",
+        description = "Handles the callback from Discord, exchanges code for tokens, and creates a user session."
+    )
     @GetMapping("/callback")
     @Throws(IOException::class)
     fun callback(
@@ -112,19 +132,35 @@ class AuthController {
         }
     }
 
+    @Operation(summary = "Select Guild", description = "Updates the user session with the selected guild ID.")
+    @ApiResponses(
+        value = [
+            SwaggerApiResponse(
+                responseCode = "200", description = "Guild selected successfully",
+                content = [Content(schema = Schema(implementation = AuthResponse::class))]
+            ),
+            SwaggerApiResponse(responseCode = "400", description = "Invalid Guild ID or Guild not found"),
+            SwaggerApiResponse(responseCode = "401", description = "User not authenticated"),
+            SwaggerApiResponse(responseCode = "403", description = "User is not a member of the guild")
+        ]
+    )
     @PostMapping("/select-guild/{guildId}")
-    fun selectGuild(@PathVariable guildId: String, session: HttpSession): ResponseEntity<*> {
+    fun selectGuild(
+        @Parameter(description = "ID of the guild to select")
+        @PathVariable guildId: String,
+        session: HttpSession
+    ): ResponseEntity<ApiResponse> {
         val user = session.getAttribute("user") as? AuthSession
-            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build<Any>()
+            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Not authenticated"))
 
         return try {
             val gid = guildId.toLong()
             WerewolfApplication.jda.getGuildById(gid)
-                ?: return ResponseEntity.badRequest().body(mapOf("success" to false, "error" to "Guild not found"))
+                ?: return ResponseEntity.badRequest().body(ApiResponse.error("Guild not found"))
 
             val member = user.userId?.let { WerewolfApplication.jda.getGuildById(gid)?.getMemberById(it) }
                 ?: return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(mapOf("success" to false, "error" to "Not a member"))
+                    .body(ApiResponse.error("Not a member"))
 
             // Determine role
             val role = if (member.isAdmin()) UserRole.JUDGE else UserRole.SPECTATOR
@@ -132,34 +168,56 @@ class AuthController {
             user.role = role
             session.setAttribute("user", user)
 
-            ResponseEntity.ok(mapOf("success" to true, "user" to user))
+            ResponseEntity.ok(AuthResponse(AuthData(user = user)))
         } catch (e: NumberFormatException) {
-            ResponseEntity.badRequest().body(mapOf("success" to false, "error" to "Invalid guild ID"))
+            ResponseEntity.badRequest().body(ApiResponse.error("Invalid guild ID"))
         } catch (e: Exception) {
             log.error("Failed to select guild", e)
-            ResponseEntity.internalServerError().body(mapOf("success" to false, "error" to "Internal error"))
+            ResponseEntity.internalServerError().body(ApiResponse.error("Internal error"))
         }
     }
 
+    @Operation(
+        summary = "Get current user info",
+        description = "Returns the currently authenticated user's session information."
+    )
+    @ApiResponses(
+        value = [
+            SwaggerApiResponse(
+                responseCode = "200", description = "User info returned",
+                content = [Content(schema = Schema(implementation = AuthResponse::class))]
+            ),
+            SwaggerApiResponse(responseCode = "401", description = "User not authenticated")
+        ]
+    )
     @GetMapping("/me")
-    fun me(session: HttpSession): ResponseEntity<*> {
+    fun me(session: HttpSession): ResponseEntity<ApiResponse> {
         val user = session.getAttribute("user") as? AuthSession
             ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(mapOf("success" to false, "error" to "Not authenticated"))
+                .body(ApiResponse.error("Not authenticated"))
 
-        val response = mutableMapOf<String, Any?>()
-        response["success"] = true
-        response["user"] = user
         val discordUser = user.userId?.let { WerewolfApplication.jda.getUserById(it) }
-        response["username"] = discordUser?.name
-        response["avatar"] = discordUser?.effectiveAvatarUrl
 
-        return ResponseEntity.ok(response)
+        return ResponseEntity.ok(
+            AuthResponse(
+                AuthData(
+                    user = user,
+                    username = discordUser?.name,
+                    avatar = discordUser?.effectiveAvatarUrl
+                )
+            )
+        )
     }
 
+    @Operation(summary = "Logout", description = "Invalidates the current user session.")
+    @ApiResponses(
+        value = [
+            SwaggerApiResponse(responseCode = "200", description = "Logged out successfully")
+        ]
+    )
     @PostMapping("/logout")
-    fun logout(session: HttpSession): ResponseEntity<*> {
+    fun logout(session: HttpSession): ResponseEntity<ApiResponse> {
         session.invalidate()
-        return ResponseEntity.ok(mapOf("success" to true))
+        return ResponseEntity.ok(ApiResponse.ok(message = "Logged out successfully"))
     }
 }

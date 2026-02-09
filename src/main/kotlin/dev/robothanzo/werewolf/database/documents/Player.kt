@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.database.documents
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.game.model.RoleEventContext
@@ -30,21 +31,26 @@ data class Player(
 ) : Comparable<Player> {
     @Transient
     @BsonIgnore
+    @JsonIgnore
     var session: Session? = null // Reference to the session this player belongs to
 
+    @get:JsonIgnore
     val user: User?
         get() = userId?.let {
             WerewolfApplication.jda.getUserById(it) ?: WerewolfApplication.jda.retrieveUserById(it).complete()
         }
 
+    @get:JsonIgnore
     val member: Member?
         get() = userId?.let {
             session?.guild?.getMemberById(it) ?: session?.guild?.retrieveMemberById(user!!.idLong)?.complete()
         }
 
+    @get:JsonIgnore
     val role: Role?
         get() = roleId.let { session?.guild?.getRoleById(it) }
 
+    @get:JsonIgnore
     val channel: TextChannel?
         get() = WerewolfApplication.jda.getTextChannelById(channelId)
 
@@ -196,11 +202,10 @@ data class Player(
                 WerewolfApplication.speechService.startLastWordsSpeech(
                     guild,
                     session.courtTextChannel?.idLong ?: 0,
-                    this,
-                    {
-                        transferPolice()
-                    }
-                )
+                    this
+                ) {
+                    transferPolice()
+                }
             } else {
                 transferPolice()
             }
