@@ -36,8 +36,8 @@ class SecurityConfig {
                 authorize("/actuator/**", permitAll)
                 authorize("/error", permitAll)
                 // Swagger UI & OpenAPI access
-                authorize("/swagger-ui.html", permitAll)
-                authorize("/swagger-ui/**", permitAll)
+                authorize("/scalar", permitAll)
+                authorize("/scalar/**", permitAll)
                 authorize("/v3/api-docs/**", permitAll)
                 authorize(anyRequest, authenticated)
             }

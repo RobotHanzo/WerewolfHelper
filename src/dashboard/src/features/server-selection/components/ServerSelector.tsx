@@ -1,7 +1,8 @@
 import {useEffect, useState} from 'react';
 import {Loader2, Server, Users} from 'lucide-react';
 import {useTranslation} from '@/lib/i18n';
-import {api} from '@/lib/api';
+import {useQuery} from '@tanstack/react-query';
+import {getAllSessionsOptions} from '@/api/@tanstack/react-query.gen';
 
 interface Session {
     guildId: string;
@@ -19,30 +20,25 @@ interface ServerSelectorProps {
 export const ServerSelector: React.FC<ServerSelectorProps> = ({onSelectServer, onBack}) => {
     const {t} = useTranslation();
     const [sessions, setSessions] = useState<Session[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+
+    const {data, isLoading: loading, error: queryError, refetch} = useQuery(getAllSessionsOptions());
 
     useEffect(() => {
-        loadSessions();
-    }, []);
-
-    const loadSessions = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const response: any = await api.getSessions();
-            console.log('API Response:', response);
-            // Response is the array directly, not wrapped in {data: [...]}
-            const sessionsArray = Array.isArray(response) ? response : (response.data || []);
+        if (data) {
+            console.log('API Response:', data);
+            // Response is wrapped in {data: [...], success: boolean}
+            // guildId is now sent as string from backend, no conversion needed
+            const sessionsArray = Array.isArray(data.data) ? data.data : [];
             console.log('Sessions array:', sessionsArray);
             console.log('Sessions length:', sessionsArray.length);
             setSessions(sessionsArray);
-        } catch (err: any) {
-            console.error('Failed to load sessions:', err);
-            setError(err.message || t('serverSelector.loadError'));
-        } finally {
-            setLoading(false);
         }
+    }, [data]);
+
+    const error = queryError ? (queryError as any).message || t('serverSelector.loadError') : null;
+
+    const loadSessions = async () => {
+        refetch();
     };
 
     return (

@@ -1,6 +1,9 @@
 package dev.robothanzo.werewolf.security
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.robothanzo.werewolf.database.documents.AuthSession
+import dev.robothanzo.werewolf.websocket.WebSocketEnvelope
+import dev.robothanzo.werewolf.websocket.WebSocketEventData
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.socket.CloseStatus
@@ -22,13 +25,12 @@ class GlobalWebSocketHandler : TextWebSocketHandler() {
 
     @Throws(Exception::class)
     override fun afterConnectionEstablished(session: WebSocketSession) {
-        val userObj = session.attributes["user"]
-        if (userObj !is AuthSession) {
+        val user = session.attributes["user"] as? AuthSession
+        if (user == null) {
             log.warn("Rejected WS connection: No user in session")
             session.close(CloseStatus.POLICY_VIOLATION)
             return
         }
-        val user = userObj
 
         // Only allow connection if the user is a spectator or judge
         if (!user.isPrivileged) {
@@ -89,13 +91,30 @@ class GlobalWebSocketHandler : TextWebSocketHandler() {
         log.info("WebSocket connection closed: " + session.id)
     }
 
-    fun broadcastToGuild(guildId: String, message: String) {
+    override fun handleTextMessage(session: WebSocketSession, message: TextMessage) {
+        val payload = message.payload
+
+        try {
+            val messageData = mapper.readValue(payload, Map::class.java)
+            if (messageData["type"] == "PING") {
+                val pongResponse = mapper.writeValueAsString(mapOf("type" to "PONG"))
+                session.sendMessage(TextMessage(pongResponse))
+                log.debug("Responded to PING from session: {}", session.id)
+            } else {
+                log.warn("Received message from client with unknown type: {}", messageData["type"])
+            }
+        } catch (e: Exception) {
+            log.debug("Received non-JSON or invalid message from client: {}", payload)
+        }
+    }
+
+    fun broadcastToGuild(guildId: String, data: WebSocketEventData) {
         val sessions = guildSessions[guildId] ?: return
         for (session in sessions) {
             if (session.isOpen) {
                 synchronized(session) {
                     try {
-                        session.sendMessage(TextMessage(message))
+                        session.sendMessage(TextMessage(WebSocketEnvelope(data).toJson()))
                     } catch (e: IOException) {
                         log.error("Failed to send message to session " + session.id, e)
                     }
@@ -106,5 +125,6 @@ class GlobalWebSocketHandler : TextWebSocketHandler() {
 
     companion object {
         private val log = LoggerFactory.getLogger(GlobalWebSocketHandler::class.java)
+        val mapper = jacksonObjectMapper()
     }
 }

@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.listeners
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.robothanzo.werewolf.security.GlobalWebSocketHandler
+import dev.robothanzo.werewolf.websocket.WebSocketEventData
 import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateAvatarEvent
 import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateNicknameEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
@@ -20,21 +21,12 @@ class MemberUpdateListener(
     }
 
     private fun broadcastUpdate(guildId: String, userId: String, name: String, avatar: String) {
-        val data = mapOf(
-            "userId" to userId,
-            "name" to name,
-            "avatar" to avatar
+        val eventData = WebSocketEventData.PlayerUpdate(
+            userId = userId,
+            name = name,
+            avatar = avatar
         )
 
-        val message = mapOf(
-            "type" to "PLAYER_UPDATE",
-            "data" to data
-        )
-
-        webSocketHandler.broadcastToGuild(guildId, message.json())
-    }
-
-    private fun Map<*, *>.json(): String {
-        return jacksonObjectMapper().writeValueAsString(this)
+        webSocketHandler.broadcastToGuild(guildId, eventData)
     }
 }

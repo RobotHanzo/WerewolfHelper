@@ -60,18 +60,6 @@ class RoleServiceImplTest {
     }
 
     @Test
-    fun testGetRolesSuccess() {
-        val session = Session(guildId = 123L)
-        session.roles = mutableListOf("狼人", "狼人", "平民")
-
-        val roles = roleService.getRoles(session)
-
-        assertEquals(3, roles.size)
-        assertEquals(2, roles.count { it == "狼人" })
-        assertEquals(1, roles.count { it == "平民" })
-    }
-
-    @Test
     fun testAddMultipleRoles() {
         val session = Session(guildId = 123L)
         session.roles = mutableListOf()

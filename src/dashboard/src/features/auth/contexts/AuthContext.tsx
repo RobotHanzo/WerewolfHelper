@@ -1,5 +1,6 @@
 import React, {createContext, ReactNode, useContext, useEffect, useState} from 'react';
-import {User} from '@/types';
+import {AuthData as User} from '@/api/types.gen';
+import {me, logout as apiLogout} from '@/api/sdk.gen';
 
 interface AuthContextType {
     user: User | null;
@@ -29,26 +30,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
 
     const checkAuth = async () => {
         try {
-            const response = await fetch('/api/auth/me', {
-                credentials: 'include'
-            });
-
-            // Check if the response is JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                // Backend is not running or returned HTML
-                console.warn('Backend not responding with JSON, user not authenticated');
-                setUser(null);
-                return;
-            }
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    setUser(data.user);
-                } else {
-                    setUser(null);
-                }
+            const response = await me();
+            if (response.data && response.data.success) {
+                setUser(response.data.data as User);
             } else {
                 setUser(null);
             }
@@ -66,10 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
 
     const logout = async () => {
         try {
-            await fetch('/api/auth/logout', {
-                method: 'POST',
-                credentials: 'include'
-            });
+            await apiLogout();
             setUser(null);
         } catch (error) {
             console.error('Logout failed:', error);

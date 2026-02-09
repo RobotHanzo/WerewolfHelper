@@ -1,6 +1,7 @@
 import {useEffect, useRef} from 'react';
 import {useNavigate} from 'react-router-dom';
-import {Player, User} from '@/types';
+import {Player, AuthData as User} from '@/api/types.gen';
+import {selectGuild} from '@/api/sdk.gen';
 
 export const useDashboardAuth = (
     guildId: string | undefined,
@@ -22,23 +23,19 @@ export const useDashboardAuth = (
         }
 
         // PENDING users haven't selected a server yet, skip initial check
-        if (user.role === 'PENDING') {
+        if (user.user.role === 'PENDING') {
             // If they're trying to access a specific server, update their role
             if (guildId && !isSelectingGuild.current) {
                 isSelectingGuild.current = true;
-                const selectGuild = async () => {
+                const selectGuildAsync = async () => {
                     try {
-                        const response = await fetch(`/api/auth/select-guild/${guildId}`, {
-                            method: 'POST',
-                            credentials: 'include',
+                        const response = await selectGuild({
+                            path: {guildId}
                         });
 
-                        if (response.ok) {
-                            const data = await response.json();
-                            if (data.success) {
-                                // Refresh auth state to get updated role
-                                await checkAuth();
-                            }
+                        if (response.data?.success) {
+                            // Refresh auth state to get updated role
+                            await checkAuth();
                         }
                     } catch (error) {
                         console.error('Failed to select guild:', error);
@@ -46,28 +43,25 @@ export const useDashboardAuth = (
                         isSelectingGuild.current = false;
                     }
                 };
-                selectGuild();
+                selectGuildAsync();
             }
             return;
         }
 
         // For non-PENDING users, check if they're accessing a different guild
-        if (guildId && user.guildId && user.guildId.toString() !== guildId.toString() && !isSelectingGuild.current) {
+        const currentGuildId = user.user.guildId;
+        if (guildId && currentGuildId && currentGuildId !== guildId && !isSelectingGuild.current) {
             // Allow switching guilds by calling select-guild
             isSelectingGuild.current = true;
             const switchGuild = async () => {
                 try {
-                    const response = await fetch(`/api/auth/select-guild/${guildId}`, {
-                        method: 'POST',
-                        credentials: 'include',
+                    const response = await selectGuild({
+                        path: {guildId}
                     });
 
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.success) {
-                            // Refresh auth state to get updated role for new guild
-                            await checkAuth();
-                        }
+                    if (response.data?.success) {
+                        // Refresh auth state to get updated role for new guild
+                        await checkAuth();
                     }
                 } catch (error) {
                     console.error('Failed to switch guild:', error);
@@ -81,7 +75,7 @@ export const useDashboardAuth = (
         }
 
         // After ensuring we are on the correct guild, check if the user is BLOCKED
-        if (user.role === 'BLOCKED') {
+        if (user.user.role === 'BLOCKED') {
             if (!window.location.pathname.includes('/access-denied')) {
                 navigate('/access-denied');
             }
@@ -89,7 +83,7 @@ export const useDashboardAuth = (
         }
 
         // Role-based route redirection for already authorized users
-        if (user.role === 'SPECTATOR') {
+        if (user.user.role === 'SPECTATOR') {
             const path = window.location.pathname;
             const baseUrl = `/server/${guildId}`;
             if (path === baseUrl || path === `${baseUrl}/` || path.includes('/settings')) {
@@ -103,10 +97,10 @@ export const useDashboardAuth = (
         if (!user || loading) return;
 
         // Privileged roles are exempt
-        if (user.role === 'JUDGE' || user.role === 'SPECTATOR') return;
+        if (user.user.role === 'JUDGE' || user.user.role === 'SPECTATOR') return;
 
         // Check if current user has any in-game roles
-        const currentPlayer = gameStatePlayers.find(p => p.userId === user.userId);
+        const currentPlayer = gameStatePlayers.find(p => p.userId === user.user.userId);
 
         // If player exists and has roles assigned, lock them out
         if (currentPlayer && currentPlayer.roles && currentPlayer.roles.length > 0) {
@@ -115,5 +109,5 @@ export const useDashboardAuth = (
     }, [user, loading, gameStatePlayers, navigate]);
 
     // Return if the guild is ready (user matches guild)
-    return user && user.guildId && user.guildId.toString() === guildId;
+    return !!(user && user.user.guildId && user.user.guildId === guildId);
 };

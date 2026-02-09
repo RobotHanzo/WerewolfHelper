@@ -1,36 +1,49 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {Mic, Play, Shuffle, SkipForward, Skull, StepForward, Sun, Users} from 'lucide-react';
 import {useTranslation} from '@/lib/i18n';
-import {api} from '@/lib/api';
-import {GameState, User} from '@/types';
+import {useMutation} from '@tanstack/react-query';
+import {
+    setStateMutation,
+    nextStateMutation,
+    startGameMutation,
+    assignRolesMutation
+} from '@/api/@tanstack/react-query.gen';
+import {Session, Player} from '@/api/types.gen';
 import {SpeechManager} from '@/features/speech/components/SpeechManager';
 import {VoteStatus} from './VoteStatus';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 import {NightStatus} from './NightStatus';
+import {GAME_STEPS} from '../constants';
 
 interface MainDashboardProps {
     guildId: string;
-    gameState: GameState;
+    gameState: Session;
     readonly?: boolean;
-    user?: User | null;
+    players: Player[];
 }
 
-export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashboardProps) => {
+export const MainDashboard = ({
+                                  guildId,
+                                  gameState,
+                                  readonly = false,
+                                  players,
+                              }: MainDashboardProps) => {
     const {t} = useTranslation();
     const [isWorking, setIsWorking] = useState(false);
     const [transitionClass, setTransitionClass] = useState('stage-enter-forward');
     const [isStageAnimating, setIsStageAnimating] = useState(false);
     const [lastWordsTimeLeft, setLastWordsTimeLeft] = useState(0);
 
-    const steps = useMemo(() => ([
-        {id: 'SETUP', name: t('steps.setup')},
-        {id: 'NIGHT_PHASE', name: t('steps.night')},
-        {id: 'DAY_PHASE', name: t('steps.day')},
-        {id: 'SHERIFF_ELECTION', name: t('steps.sheriffElection')},
-        {id: 'DEATH_ANNOUNCEMENT', name: t('steps.deathAnnouncement')},
-        {id: 'SPEECH_PHASE', name: t('steps.speech')},
-        {id: 'VOTING_PHASE', name: t('steps.voting')}
-    ]), [t]);
+    // Mutations
+    const setState = useMutation(setStateMutation());
+    const nextState = useMutation(nextStateMutation());
+    const startGame = useMutation(startGameMutation());
+    const assignRoles = useMutation(assignRolesMutation());
+
+    const steps = useMemo(() => GAME_STEPS.map(step => ({
+        id: step.id,
+        name: t(step.key)
+    })), [t]);
 
     const currentId = gameState.currentState || 'SETUP';
     const currentIndex = useMemo(() => steps.findIndex(step => step.id === currentId), [steps, currentId]);
@@ -63,25 +76,28 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
         };
     }, [currentId]);
 
+    const speech = (gameState.stateData as any)?.speech;
+    const speechEndTime = speech?.endTime ? Number(speech.endTime) : 0;
+
     useEffect(() => {
-        if (!gameState.speech?.endTime || currentId !== 'DEATH_ANNOUNCEMENT') {
+        if (!speechEndTime || currentId !== 'DEATH_ANNOUNCEMENT') {
             setLastWordsTimeLeft(0);
             return;
         }
 
         const interval = window.setInterval(() => {
-            const remaining = Math.max(0, Math.ceil((gameState.speech!.endTime - Date.now()) / 1000));
+            const remaining = Math.max(0, Math.ceil((speechEndTime - Date.now()) / 1000));
             setLastWordsTimeLeft(remaining);
         }, 100);
 
         return () => window.clearInterval(interval);
-    }, [gameState.speech?.endTime, currentId]);
+    }, [speechEndTime, currentId]);
 
     const handleSetStep = async (stepId: string) => {
         if (readonly || isWorking) return;
         setIsWorking(true);
         try {
-            await api.setState(guildId, stepId);
+            await setState.mutateAsync({path: {guildId: guildId}, body: {stepId}});
         } finally {
             setIsWorking(false);
         }
@@ -91,7 +107,7 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
         if (readonly || isWorking) return;
         setIsWorking(true);
         try {
-            await api.nextState(guildId);
+            await nextState.mutateAsync({path: {guildId: guildId}});
         } finally {
             setIsWorking(false);
         }
@@ -101,7 +117,7 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
         if (readonly || isWorking) return;
         setIsWorking(true);
         try {
-            await api.startGame(guildId);
+            await startGame.mutateAsync({path: {guildId: guildId}});
         } finally {
             setIsWorking(false);
         }
@@ -111,7 +127,7 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
         if (readonly || isWorking) return;
         setIsWorking(true);
         try {
-            await api.assignRoles(guildId);
+            await assignRoles.mutateAsync({path: {guildId: guildId}});
         } finally {
             setIsWorking(false);
         }
@@ -160,7 +176,7 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
             case 'NIGHT_PHASE':
                 return (
                     <div className="animate-in fade-in duration-300 h-full overflow-hidden">
-                        <NightStatus guildId={guildId} players={gameState.players} gameState={gameState}/>
+                        <NightStatus guildId={guildId} players={players} gameState={gameState}/>
                     </div>
                 );
 
@@ -184,14 +200,16 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
 
             case 'SHERIFF_ELECTION':
             case 'SPEECH_PHASE':
+                const currentSpeech = (gameState.stateData as any)?.speech;
+                const currentPolice = (gameState.stateData as any)?.police;
                 return (
                     <div className="animate-in fade-in duration-300 h-full">
-                        {gameState.speech && gameState.players && (
+                        {currentSpeech && players && (
                             <SpeechManager
                                 guildId={guildId}
-                                speech={gameState.speech}
-                                police={gameState.police}
-                                players={gameState.players}
+                                speech={currentSpeech as any}
+                                police={currentPolice as any}
+                                players={players}
                                 readonly={readonly}
                             />
                         )}
@@ -200,14 +218,14 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
 
             case 'DEATH_ANNOUNCEMENT':
                 const deadPlayers = (gameState.stateData?.deadPlayers || []).map((id: number) =>
-                    gameState.players.find(p => p.id === id)
+                    players.find(p => p.id === id)
                 ).filter((p: any) => p !== undefined);
 
-                const lastWordsSpeaker = gameState.speech?.currentSpeakerId
-                    ? gameState.players.find(p => p.id === gameState.speech?.currentSpeakerId)
+                const lastWordsSpeaker = speech?.currentSpeakerId
+                    ? players.find(p => p.id === speech.currentSpeakerId)
                     : undefined;
-                const lastWordsTotal = gameState.speech?.totalTime || 0;
-                const lastWordsRemainingMs = gameState.speech?.endTime ? Math.max(0, gameState.speech.endTime - Date.now()) : 0;
+                const lastWordsTotal = speech?.totalTime || 0;
+                const lastWordsRemainingMs = speechEndTime ? Math.max(0, speechEndTime - Date.now()) : 0;
                 const lastWordsProgress = lastWordsTotal > 0 ? Math.max(0, Math.min(100, (lastWordsRemainingMs / lastWordsTotal) * 100)) : 0;
                 return (
                     <div className="animate-in fade-in duration-300">
@@ -220,7 +238,7 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
                                 </h3>
                             </div>
 
-                            {gameState.speech?.endTime && lastWordsTimeLeft > 0 && (
+                            {speechEndTime > 0 && lastWordsTimeLeft > 0 && (
                                 <div
                                     className="mb-6 p-4 rounded-xl border border-indigo-200 dark:border-indigo-800/60 bg-white/70 dark:bg-slate-900/60">
                                     <div className="flex items-center gap-3">
@@ -234,7 +252,7 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
                                             </div>
                                             {lastWordsSpeaker && (
                                                 <div className="text-xs text-slate-600 dark:text-slate-400 truncate">
-                                                    {lastWordsSpeaker.name}
+                                                    {lastWordsSpeaker.nickname}
                                                 </div>
                                             )}
                                         </div>
@@ -285,7 +303,7 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
                                                     <div
                                                         className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                                                         <DiscordName userId={player.userId} guildId={guildId}
-                                                                     fallbackName={player.name}/>
+                                                                     fallbackName={player.nickname}/>
                                                     </div>
                                                     <div className="text-xs text-slate-500 dark:text-slate-400">
                                                         {t('dashboard.eliminated', 'Eliminated')}
@@ -302,13 +320,14 @@ export const MainDashboard = ({guildId, gameState, readonly = false}: MainDashbo
                 );
 
             case 'VOTING_PHASE':
+                const currentExpel = (gameState.stateData as any)?.expel;
                 return (
                     <div className="animate-in fade-in duration-300 h-full">
-                        {gameState.expel && (
+                        {currentExpel && (
                             <VoteStatus
-                                candidates={gameState.expel.candidates || []}
-                                endTime={gameState.expel.endTime}
-                                players={gameState.players || []}
+                                candidates={currentExpel.candidates || []}
+                                endTime={currentExpel.endTime as any}
+                                players={players || []}
                                 title={t('steps.voting')}
                                 guildId={guildId}
                             />

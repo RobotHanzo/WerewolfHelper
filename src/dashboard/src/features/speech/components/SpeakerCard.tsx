@@ -1,5 +1,5 @@
 import {Clock, Mic, SkipForward, Square} from 'lucide-react';
-import {Player} from '@/types';
+import {Player} from '@/api/types.gen';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 
 interface SpeakerCardProps {
@@ -28,7 +28,7 @@ export const SpeakerCard = ({player, timeLeft, t, readonly, onSkip, onInterrupt}
 
                 <div>
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                        <DiscordName userId={player.userId} fallbackName={player.name}/>
+                        <DiscordName userId={player.userId} fallbackName={player.nickname}/>
                     </h2>
                     <span className="text-indigo-500 font-medium">{t('speechManager.speaking')}</span>
                 </div>

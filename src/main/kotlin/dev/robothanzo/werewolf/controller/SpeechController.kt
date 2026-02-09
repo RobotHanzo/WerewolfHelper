@@ -34,19 +34,19 @@ class SpeechController(
     )
     @PostMapping("/auto")
     @CanManageGuild
-    fun startAutoSpeech(@PathVariable guildId: Long): ResponseEntity<ApiResponse> {
-        val sessionOpt = gameSessionService.getSession(guildId)
+    fun startAutoSpeech(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
+        val sessionOpt = gameSessionService.getSession(guildId.toLong())
         if (sessionOpt.isEmpty)
             return ResponseEntity.notFound().build()
         val session = sessionOpt.get()
 
-        WerewolfApplication.jda.getGuildById(guildId) ?: return ResponseEntity.notFound().build()
+        WerewolfApplication.jda.getGuildById(guildId.toLong()) ?: return ResponseEntity.notFound().build()
         val channel = session.courtTextChannel
 
         if (channel != null) {
             speechService.startAutoSpeechFlow(session, channel.idLong)
         }
-        gameSessionService.broadcastUpdate(guildId)
+        gameSessionService.broadcastUpdate(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok(message = "Auto speech started"))
     }
 
@@ -59,9 +59,9 @@ class SpeechController(
     )
     @PostMapping("/skip")
     @CanManageGuild
-    fun skipSpeech(@PathVariable guildId: Long): ResponseEntity<ApiResponse> {
-        speechService.skipToNext(guildId)
-        gameSessionService.broadcastUpdate(guildId)
+    fun skipSpeech(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
+        speechService.skipToNext(guildId.toLong())
+        gameSessionService.broadcastUpdate(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok(message = "Skipped current speaker"))
     }
 
@@ -74,9 +74,9 @@ class SpeechController(
     )
     @PostMapping("/interrupt")
     @CanManageGuild
-    fun interruptSpeech(@PathVariable guildId: Long): ResponseEntity<ApiResponse> {
-        speechService.interruptSession(guildId)
-        gameSessionService.broadcastUpdate(guildId)
+    fun interruptSpeech(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
+        speechService.interruptSession(guildId.toLong())
+        gameSessionService.broadcastUpdate(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok(message = "Speech interrupted"))
     }
 
@@ -93,19 +93,19 @@ class SpeechController(
     )
     @PostMapping("/police-enroll")
     @CanManageGuild
-    fun startPoliceEnroll(@PathVariable guildId: Long): ResponseEntity<ApiResponse> {
-        val sessionOpt = gameSessionService.getSession(guildId)
+    fun startPoliceEnroll(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
+        val sessionOpt = gameSessionService.getSession(guildId.toLong())
         if (sessionOpt.isEmpty)
             return ResponseEntity.notFound().build()
         val session = sessionOpt.get()
 
-        WerewolfApplication.jda.getGuildById(guildId) ?: return ResponseEntity.notFound().build()
+        WerewolfApplication.jda.getGuildById(guildId.toLong()) ?: return ResponseEntity.notFound().build()
         val channel = session.courtTextChannel
 
         if (channel != null) {
             policeService.startEnrollment(session, channel, null) // Injected access
         }
-        gameSessionService.broadcastUpdate(guildId)
+        gameSessionService.broadcastUpdate(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok(message = "Police enrollment started"))
     }
 
@@ -123,7 +123,7 @@ class SpeechController(
     @PostMapping("/order")
     @CanManageGuild
     fun setSpeechOrder(
-        @PathVariable guildId: Long,
+        @PathVariable guildId: String,
         @RequestBody body: GameRequests.SpeechOrderRequest
     ): ResponseEntity<ApiResponse> {
         val direction = body.direction
@@ -133,21 +133,21 @@ class SpeechController(
             return ResponseEntity.badRequest().body(ApiResponse.error("Invalid speech order: $direction"))
         }
 
-        val session = gameSessionService.getSession(guildId)
+        val session = gameSessionService.getSession(guildId.toLong())
             .orElseThrow { Exception("Session not found") }
 
         speechService.setSpeechOrder(session, order)
         speechService.confirmSpeechOrder(session)
 
-        gameSessionService.broadcastUpdate(guildId)
+        gameSessionService.broadcastUpdate(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok(message = "Speech order set to $order"))
     }
 
     @Operation(summary = "Confirm Speech Order", description = "Confirms the set speech order and proceeds.")
     @PostMapping("/confirm")
     @CanManageGuild
-    fun confirmSpeech(@PathVariable guildId: Long): ResponseEntity<ApiResponse> {
-        val session = gameSessionService.getSession(guildId)
+    fun confirmSpeech(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
+        val session = gameSessionService.getSession(guildId.toLong())
             .orElseThrow { Exception("Session not found") }
         speechService.confirmSpeechOrder(session)
         return ResponseEntity.ok(ApiResponse.ok(message = "Speech order confirmed"))
@@ -157,23 +157,23 @@ class SpeechController(
     @PostMapping("/manual-start")
     @CanManageGuild
     fun manualStartTimer(
-        @PathVariable guildId: Long,
+        @PathVariable guildId: String,
         @RequestBody body: GameRequests.ManualTimerRequest
     ): ResponseEntity<ApiResponse> {
         val duration = body.duration
 
-        val sessionOpt = gameSessionService.getSession(guildId)
+        val sessionOpt = gameSessionService.getSession(guildId.toLong())
         if (sessionOpt.isEmpty)
             return ResponseEntity.notFound().build()
         val session = sessionOpt.get()
 
-        WerewolfApplication.jda.getGuildById(guildId) ?: return ResponseEntity.notFound().build()
+        WerewolfApplication.jda.getGuildById(guildId.toLong()) ?: return ResponseEntity.notFound().build()
         val channel = session.courtTextChannel
         val voiceChannel = session.courtVoiceChannel
 
         if (channel != null) {
             speechService.startTimer(
-                guildId, channel.idLong,
+                guildId.toLong(), channel.idLong,
                 voiceChannel?.idLong ?: 0,
                 duration
             )
@@ -184,18 +184,18 @@ class SpeechController(
     @Operation(summary = "Mute All", description = "Mutes all players in the voice channel.")
     @PostMapping("/mute-all")
     @CanManageGuild
-    fun muteAll(@PathVariable guildId: Long): ResponseEntity<ApiResponse> {
-        speechService.setAllMute(guildId, true)
-        gameSessionService.broadcastUpdate(guildId)
+    fun muteAll(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
+        speechService.setAllMute(guildId.toLong(), true)
+        gameSessionService.broadcastUpdate(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok(message = "All players muted"))
     }
 
     @Operation(summary = "Unmute All", description = "Unmutes all players in the voice channel.")
     @PostMapping("/unmute-all")
     @CanManageGuild
-    fun unmuteAll(@PathVariable guildId: Long): ResponseEntity<ApiResponse> {
-        speechService.setAllMute(guildId, false)
-        gameSessionService.broadcastUpdate(guildId)
+    fun unmuteAll(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
+        speechService.setAllMute(guildId.toLong(), false)
+        gameSessionService.broadcastUpdate(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok(message = "All players unmuted"))
     }
 }

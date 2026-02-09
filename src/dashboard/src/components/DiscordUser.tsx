@@ -3,8 +3,8 @@ import {usePlayerContext} from '@/features/players/contexts/PlayerContext';
 import {useAuth} from '@/features/auth/contexts/AuthContext';
 
 export interface DiscordUserBaseProps {
-    userId?: string | null;
-    guildId?: string;
+    userId?: string | number | bigint | null;
+    guildId?: string | number | bigint | null;
 }
 
 export interface DiscordNameBaseProps extends DiscordUserBaseProps {
@@ -23,19 +23,20 @@ export interface DiscordNameProps extends DiscordNameBaseProps {
     nameClassName?: string;
 }
 
-const resolveAvatarUrl = (userId?: string | null, avatar?: string | null) => {
+const resolveAvatarUrl = (userId?: string | number | bigint | null, avatar?: string | null) => {
     if (!avatar) return null;
     if (avatar.startsWith('http')) return avatar;
     if (!userId) return null;
-    return `https://cdn.discordapp.com/avatars/${userId}/${avatar}.png?size=128`;
+    return `https://cdn.discordapp.com/avatars/${String(userId)}/${avatar}.png?size=128`;
 };
 
-const useDiscordUserData = ({userId, guildId: propGuildId, fallbackName}: DiscordNameBaseProps) => {
+const useDiscordUserData = ({userId: rawUserId, guildId: rawGuildId, fallbackName}: DiscordNameBaseProps) => {
     const {user} = useAuth();
     const {userInfoCache, fetchUserInfo} = usePlayerContext();
     const [isLoading, setIsLoading] = useState(false);
 
-    const guildId = propGuildId || user?.guildId;
+    const userId = rawUserId ? String(rawUserId) : null;
+    const guildId = rawGuildId ? String(rawGuildId) : (user?.user?.guildId ? String(user.user.guildId) : null);
     const cachedUser = userId ? userInfoCache[userId] : null;
 
     useEffect(() => {
@@ -55,7 +56,8 @@ const useDiscordUserData = ({userId, guildId: propGuildId, fallbackName}: Discor
     }, [userId, guildId, cachedUser, fetchUserInfo]);
 
     const name = useMemo(() => {
-        return cachedUser?.name || fallbackName || (userId ? `玩家 ${userId}` : 'Unknown');
+        const idStr = userId ? String(userId) : '';
+        return cachedUser?.name || fallbackName || (idStr ? `玩家 ${idStr}` : 'Unknown');
     }, [cachedUser?.name, fallbackName, userId]);
 
     const avatarUrl = useMemo(() => {

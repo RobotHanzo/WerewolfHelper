@@ -51,8 +51,8 @@ class SessionPlayerTest {
     @Test
     fun testPlayerRoles() {
         player.roles = mutableListOf("狼人", "平民")
-        assertEquals(2, player.roles!!.size)
-        assertEquals("狼人", player.roles!![0])
+        assertEquals(2, player.roles.size)
+        assertEquals("狼人", player.roles[0])
         assertEquals("平民", player.roles!![1])
     }
 
@@ -60,8 +60,8 @@ class SessionPlayerTest {
     fun testPlayerDeadRoles() {
         player.roles = mutableListOf("狼人", "平民")
         player.deadRoles = mutableListOf("狼人")
-        assertEquals(1, player.deadRoles!!.size)
-        assertEquals("狼人", player.deadRoles!![0])
+        assertEquals(1, player.deadRoles.size)
+        assertEquals(/* expected = */ "狼人", /* actual = */ player.deadRoles!![0])
     }
 
     @Test
@@ -154,22 +154,18 @@ class SessionPlayerTest {
 
     @Test
     fun testPlayerIsAlive() {
-        // Test 1: Player with no roles is dead
-        player.roles = null
-        assertFalse(player.alive, "Player with null roles should be dead")
-
         // Test 2: Player with empty roles is dead
         player.roles = mutableListOf()
         assertFalse(player.alive, "Player with empty roles should be dead")
 
         // Test 3: Player with roles but no deadRoles is alive
         player.roles = mutableListOf("狼人")
-        player.deadRoles = null
+        player.deadRoles = mutableListOf()
         assertTrue(player.alive, "Player with roles and null deadRoles should be alive")
 
         // Test 4: Player with 1 role and no deadRoles is alive
         player.roles = mutableListOf("狼人", "平民")
-        player.deadRoles = null
+        player.deadRoles = mutableListOf()
         assertTrue(player.alive, "Player with multiple roles and null deadRoles should be alive")
 
         // Test 5: Player with 1 role and 1 deadRole is dead

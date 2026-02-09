@@ -1,7 +1,7 @@
 import {Route, Routes} from 'react-router-dom';
 import {Users} from 'lucide-react';
 import {useTranslation} from '@/lib/i18n';
-import {GameState, User} from '@/types';
+import {Session, Player} from '@/api/types.gen';
 import {PlayerCard} from '@/features/players/components/PlayerCard';
 import {SpectatorView} from '@/features/spectator/components/SpectatorView';
 import {SpeechManager} from '@/features/speech/components/SpeechManager';
@@ -10,13 +10,19 @@ import {MainDashboard} from './MainDashboard';
 
 interface GameRoutesProps {
     guildId: string;
-    gameState: GameState;
+    gameState: Session;
     readonly?: boolean;
     onPlayerAction: (playerId: number, actionType: string) => void;
-    user?: User | null;
+    players: Player[];
 }
 
-export const GameRoutes = ({guildId, gameState, readonly = false, onPlayerAction, user}: GameRoutesProps) => {
+export const GameRoutes = ({
+                               guildId,
+                               gameState,
+                               readonly = false,
+                               onPlayerAction,
+                               players,
+                           }: GameRoutesProps) => {
     const {t} = useTranslation();
 
     return (
@@ -26,7 +32,7 @@ export const GameRoutes = ({guildId, gameState, readonly = false, onPlayerAction
                     guildId={guildId}
                     gameState={gameState}
                     readonly={readonly}
-                    user={user}
+                    players={players}
                 />
             }/>
             <Route path="/players" element={
@@ -36,12 +42,12 @@ export const GameRoutes = ({guildId, gameState, readonly = false, onPlayerAction
                             <Users className="w-5 h-5 text-slate-500 dark:text-slate-400"/>
                             {t('players.management')} <span
                             className="text-slate-500 dark:text-slate-500 text-sm font-normal">
-                                ({gameState.players.filter(p => p.isAlive).length} {t('players.alive')})
+                                ({players.filter(p => p.alive).length} {t('players.alive')})
                             </span>
                         </h2>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {gameState.players.map(player => (
+                        {players.map(player => (
                             <PlayerCard
                                 key={player.id}
                                 player={player}
@@ -54,15 +60,15 @@ export const GameRoutes = ({guildId, gameState, readonly = false, onPlayerAction
             }/>
             <Route path="/spectator" element={
                 <SpectatorView
-                    players={gameState.players}
+                    players={players}
                     doubleIdentities={gameState.doubleIdentities ?? false}
                 />
             }/>
             <Route path="/speech" element={
                 <SpeechManager
-                    speech={gameState.speech}
-                    police={gameState.police}
-                    players={gameState.players}
+                    speech={(gameState.stateData as any)?.speech}
+                    police={(gameState.stateData as any)?.police}
+                    players={players}
                     guildId={guildId}
                     readonly={readonly}
                 />

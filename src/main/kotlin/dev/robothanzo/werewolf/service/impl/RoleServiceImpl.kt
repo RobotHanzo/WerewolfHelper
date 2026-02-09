@@ -42,10 +42,6 @@ class RoleServiceImpl(
         }
     }
 
-    override fun getRoles(session: Session): List<String> {
-        return session.roles
-    }
-
     override fun assignRoles(session: Session, statusCallback: (String) -> Unit, progressCallback: (Int) -> Unit) {
         try {
             val guildId = session.guildId

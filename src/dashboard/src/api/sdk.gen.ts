@@ -2,13 +2,6 @@
 
 import type {Client, Options as Options2, TDataShape} from './client';
 import {client} from './client.gen';
-import {
-    getAllSessionsResponseTransformer,
-    getGameStateResponseTransformer,
-    getSessionResponseTransformer,
-    meResponseTransformer,
-    selectGuildResponseTransformer
-} from './transformers.gen';
 import type {
     AddRoleData,
     AddRoleErrors,
@@ -29,9 +22,6 @@ import type {
     GetMembersData,
     GetMembersErrors,
     GetMembersResponses,
-    GetRolesData,
-    GetRolesErrors,
-    GetRolesResponses,
     GetSessionData,
     GetSessionErrors,
     GetSessionResponses,
@@ -375,11 +365,7 @@ export const setPlayerCount = <ThrowOnError extends boolean = false>(options: Op
  *
  * Updates the user session with the selected guild ID.
  */
-export const selectGuild = <ThrowOnError extends boolean = false>(options: Options<SelectGuildData, ThrowOnError>) => (options.client ?? client).post<SelectGuildResponses, SelectGuildErrors, ThrowOnError>({
-    responseTransformer: selectGuildResponseTransformer,
-    url: '/api/auth/select-guild/{guildId}',
-    ...options
-});
+export const selectGuild = <ThrowOnError extends boolean = false>(options: Options<SelectGuildData, ThrowOnError>) => (options.client ?? client).post<SelectGuildResponses, SelectGuildErrors, ThrowOnError>({url: '/api/auth/select-guild/{guildId}', ...options});
 
 /**
  * Logout
@@ -400,40 +386,21 @@ export const getUser = <ThrowOnError extends boolean = false>(options: Options<G
  *
  * Retrieves a summary of all game sessions the user has access to.
  */
-export const getAllSessions = <ThrowOnError extends boolean = false>(options?: Options<GetAllSessionsData, ThrowOnError>) => (options?.client ?? client).get<GetAllSessionsResponses, GetAllSessionsErrors, ThrowOnError>({
-    responseTransformer: getAllSessionsResponseTransformer,
-    url: '/api/sessions',
-    ...options
-});
+export const getAllSessions = <ThrowOnError extends boolean = false>(options?: Options<GetAllSessionsData, ThrowOnError>) => (options?.client ?? client).get<GetAllSessionsResponses, GetAllSessionsErrors, ThrowOnError>({url: '/api/sessions', ...options});
 
 /**
  * Get Session Details
  *
  * Retrieves detailed information about a specific game session.
  */
-export const getSession = <ThrowOnError extends boolean = false>(options: Options<GetSessionData, ThrowOnError>) => (options.client ?? client).get<GetSessionResponses, GetSessionErrors, ThrowOnError>({
-    responseTransformer: getSessionResponseTransformer,
-    url: '/api/sessions/{guildId}',
-    ...options
-});
+export const getSession = <ThrowOnError extends boolean = false>(options: Options<GetSessionData, ThrowOnError>) => (options.client ?? client).get<GetSessionResponses, GetSessionErrors, ThrowOnError>({url: '/api/sessions/{guildId}', ...options});
 
 /**
  * Get Game State
  *
  * Retrieves the current state of the game session.
  */
-export const getGameState = <ThrowOnError extends boolean = false>(options: Options<GetGameStateData, ThrowOnError>) => (options.client ?? client).get<GetGameStateResponses, GetGameStateErrors, ThrowOnError>({
-    responseTransformer: getGameStateResponseTransformer,
-    url: '/api/sessions/{guildId}/state',
-    ...options
-});
-
-/**
- * Get Roles
- *
- * Retrieves the list of configured roles for the game.
- */
-export const getRoles = <ThrowOnError extends boolean = false>(options: Options<GetRolesData, ThrowOnError>) => (options.client ?? client).get<GetRolesResponses, GetRolesErrors, ThrowOnError>({url: '/api/sessions/{guildId}/roles', ...options});
+export const getGameState = <ThrowOnError extends boolean = false>(options: Options<GetGameStateData, ThrowOnError>) => (options.client ?? client).get<GetGameStateResponses, GetGameStateErrors, ThrowOnError>({url: '/api/sessions/{guildId}/state', ...options});
 
 /**
  * Get Guild Members
@@ -447,11 +414,7 @@ export const getMembers = <ThrowOnError extends boolean = false>(options: Option
  *
  * Returns the currently authenticated user's session information.
  */
-export const me = <ThrowOnError extends boolean = false>(options?: Options<MeData, ThrowOnError>) => (options?.client ?? client).get<MeResponses, MeErrors, ThrowOnError>({
-    responseTransformer: meResponseTransformer,
-    url: '/api/auth/me',
-    ...options
-});
+export const me = <ThrowOnError extends boolean = false>(options?: Options<MeData, ThrowOnError>) => (options?.client ?? client).get<MeResponses, MeErrors, ThrowOnError>({url: '/api/auth/me', ...options});
 
 /**
  * Initiate Discord OAuth login

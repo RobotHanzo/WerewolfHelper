@@ -12,7 +12,6 @@ import {
     getAllSessions,
     getGameState,
     getMembers,
-    getRoles,
     getSession,
     getUser,
     interruptSpeech,
@@ -64,9 +63,6 @@ import type {
     GetMembersData,
     GetMembersError,
     GetMembersResponse,
-    GetRolesData,
-    GetRolesError,
-    GetRolesResponse,
     GetSessionData,
     GetSessionError,
     GetSessionResponse,
@@ -796,26 +792,6 @@ export const getGameStateOptions = (options: Options<GetGameStateData>) => query
         return data;
     },
     queryKey: getGameStateQueryKey(options)
-});
-
-export const getRolesQueryKey = (options: Options<GetRolesData>) => createQueryKey('getRoles', options);
-
-/**
- * Get Roles
- *
- * Retrieves the list of configured roles for the game.
- */
-export const getRolesOptions = (options: Options<GetRolesData>) => queryOptions<GetRolesResponse, AxiosError<GetRolesError>, GetRolesResponse, ReturnType<typeof getRolesQueryKey>>({
-    queryFn: async ({queryKey, signal}) => {
-        const {data} = await getRoles({
-            ...options,
-            ...queryKey[0],
-            signal,
-            throwOnError: true
-        });
-        return data;
-    },
-    queryKey: getRolesQueryKey(options)
 });
 
 export const getMembersQueryKey = (options: Options<GetMembersData>) => createQueryKey('getMembers', options);

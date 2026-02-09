@@ -2,15 +2,24 @@ import React, {useEffect, useRef, useState} from 'react';
 import {AlertCircle, Check, Dices, Loader2, Minus, Plus, Users} from 'lucide-react';
 import {useParams} from 'react-router-dom';
 import {useTranslation} from '@/lib/i18n';
-import {api} from '@/lib/api';
+import {useMutation} from '@tanstack/react-query';
+import {
+    updateSettingsMutation,
+    addRoleMutation,
+    removeRoleMutation,
+    assignRolesMutation,
+    setPlayerCountMutation
+} from '@/api/@tanstack/react-query.gen';
 import {Toggle} from '@/components/ui/Toggle';
 import {Counter} from '@/components/ui/Counter';
+import {useAuth} from '@/features/auth/contexts/AuthContext';
+import {useGameState} from '@/features/game/hooks/useGameState';
 
 export const GameSettingsPage: React.FC = () => {
     const {guildId} = useParams<{ guildId: string }>();
     const {t} = useTranslation();
+    const {user} = useAuth();
 
-    const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [justSaved, setJustSaved] = useState(false);
     const [muteAfterSpeech, setMuteAfterSpeech] = useState(true);
@@ -32,6 +41,16 @@ export const GameSettingsPage: React.FC = () => {
     const [pendingFields, setPendingFields] = useState<Record<string, boolean>>({});
     const [error, setError] = useState<string | null>(null);
 
+    const {gameState} = useGameState(guildId, user);
+    const loading = !gameState;
+
+    // Mutations
+    const updateSettingsMut = useMutation(updateSettingsMutation());
+    const addRoleMut = useMutation(addRoleMutation());
+    const removeRoleMut = useMutation(removeRoleMutation());
+    const assignRolesMut = useMutation(assignRolesMutation());
+    const setPlayerCountMut = useMutation(setPlayerCountMutation());
+
     const AVAILABLE_ROLES = [
         "平民", "狼人", "女巫", "預言家", "獵人",
         "守衛", "白痴", "騎士", "守墓人", "攝夢人", "魔術師",
@@ -51,12 +70,15 @@ export const GameSettingsPage: React.FC = () => {
             if (!guildId) return;
             setSaving(true);
             try {
-                await api.updateSettings(guildId, {
-                    muteAfterSpeech,
-                    doubleIdentities,
-                    witchCanSaveSelf,
-                    allowWolfSelfKill,
-                    hiddenRoleOnDeath
+                await updateSettingsMut.mutateAsync({
+                    path: {guildId},
+                    body: {
+                        muteAfterSpeech,
+                        doubleIdentities,
+                        witchCanSaveSelf,
+                        allowWolfSelfKill,
+                        hiddenRoleOnDeath
+                    } as any
                 });
                 setJustSaved(true);
                 setTimeout(() => setJustSaved(false), 2000);
@@ -70,48 +92,42 @@ export const GameSettingsPage: React.FC = () => {
         saveSettings();
     }, [muteAfterSpeech, doubleIdentities, witchCanSaveSelf, allowWolfSelfKill, hiddenRoleOnDeath, guildId]);
 
-    const loadSettings = async () => {
-        if (!guildId) return;
-        setLoading(true);
-        isFirstLoad.current = true;
-        try {
-            const [sessionData, rolesData]: [any, any] = await Promise.all([
-                api.getSession(guildId),
-                api.getRoles(guildId)
-            ]);
-
-            setMuteAfterSpeech(sessionData.muteAfterSpeech);
-            setDoubleIdentities(sessionData.doubleIdentities);
-
-            // Load special settings from sessionData.settings if available, or defaults
-            if (sessionData.settings) {
-                setWitchCanSaveSelf(sessionData.settings.witchCanSaveSelf ?? true);
-                setAllowWolfSelfKill(sessionData.settings.allowWolfSelfKill ?? true);
-                setHiddenRoleOnDeath(sessionData.settings.hiddenRoleOnDeath ?? false);
-            }
-
-            // Set player count from current players length
-            if (Array.isArray(sessionData.players)) {
-                setPlayerCount(sessionData.players.length);
-                setInitialPlayerCount(sessionData.players.length);
-            }
-
-            setRoles(rolesData.filter((r: unknown): r is string => typeof r === 'string') || []);
-        } catch (e) {
-            console.error("Failed to load settings", e);
-        } finally {
-            setLoading(false);
-            setTimeout(() => {
-                isFirstLoad.current = false;
-            }, 100);
-        }
-    };
-
+    // Load settings from queries
     useEffect(() => {
-        if (guildId) {
-            loadSettings();
+        if (!gameState) return;
+        isFirstLoad.current = true;
+
+        // Access data from wrapped response
+        const session = gameState;
+        const rolesArray = session?.roles;
+
+        if (!session || !rolesArray) return;
+
+        setMuteAfterSpeech(session.muteAfterSpeech);
+        setDoubleIdentities(session.doubleIdentities);
+
+        // Load special settings from session.settings if available, or defaults
+        if (session.settings) {
+            setWitchCanSaveSelf(session.settings.witchCanSaveSelf ?? true);
+            setAllowWolfSelfKill(session.settings.allowWolfSelfKill ?? true);
+            setHiddenRoleOnDeath(session.settings.hiddenRoleOnDeath ?? false);
         }
-    }, [guildId]);
+
+        // Set player count from current players length
+        if (session.players) {
+            const count = Array.isArray(session.players)
+                ? session.players.length
+                : Object.keys(session.players).length;
+            setPlayerCount(count);
+            setInitialPlayerCount(count);
+        }
+
+        setRoles(Array.isArray(rolesArray) ? rolesArray.filter((r: unknown): r is string => typeof r === 'string') : []);
+
+        setTimeout(() => {
+            isFirstLoad.current = false;
+        }, 100);
+    }, [gameState]);
 
     useEffect(() => {
         const counts: Record<string, number> = {};
@@ -125,9 +141,10 @@ export const GameSettingsPage: React.FC = () => {
         if (!guildId || updatingRoles || !role.trim()) return;
         setUpdatingRoles(true);
         try {
-            await api.addRole(guildId, role.trim(), 1);
-            const newRoles = await api.getRoles(guildId) as string[];
-            setRoles(newRoles.filter((r: unknown): r is string => typeof r === 'string') || []);
+            await addRoleMut.mutateAsync({
+                path: {guildId},
+                query: {role: role.trim(), amount: 1}
+            });
             setSelectedRole('');
         } catch (e) {
             console.error("Failed to add role", e);
@@ -140,9 +157,10 @@ export const GameSettingsPage: React.FC = () => {
         if (!guildId || updatingRoles) return;
         setUpdatingRoles(true);
         try {
-            await api.removeRole(guildId, role, 1);
-            const newRoles = await api.getRoles(guildId) as string[];
-            setRoles(newRoles.filter((r: unknown): r is string => typeof r === 'string') || []);
+            await removeRoleMut.mutateAsync({
+                path: {guildId, role},
+                query: {amount: 1}
+            });
         } catch (e) {
             console.error("Failed to remove role", e);
         } finally {
@@ -155,7 +173,7 @@ export const GameSettingsPage: React.FC = () => {
         setError(null);
         setAssigningRoles(true);
         try {
-            await api.assignRoles(guildId);
+            await assignRolesMut.mutateAsync({path: {guildId}});
         } catch (error: any) {
             console.error("Assign failed", error);
             setError(error.message || t('errors.assignFailed'));
@@ -168,9 +186,11 @@ export const GameSettingsPage: React.FC = () => {
         if (!guildId || updatingPlayerCount) return;
         setUpdatingPlayerCount(true);
         try {
-            await api.setPlayerCount(guildId, playerCount);
+            await setPlayerCountMut.mutateAsync({
+                path: {guildId},
+                body: {count: playerCount}
+            });
             setInitialPlayerCount(playerCount);
-            // No need to loadSettings() here, as only initialPlayerCount needs to be updated
         } catch (error: any) {
             console.error("Update failed", error);
         } finally {

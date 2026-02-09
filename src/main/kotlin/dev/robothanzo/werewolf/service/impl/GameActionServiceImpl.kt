@@ -9,6 +9,7 @@ import dev.robothanzo.werewolf.service.GameActionService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.utils.ActionTask
 import dev.robothanzo.werewolf.utils.runActions
+import dev.robothanzo.werewolf.websocket.WebSocketEventData
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 
@@ -177,12 +178,11 @@ class GameActionServiceImpl(
     }
 
     override fun broadcastProgress(guildId: Long, message: String?, percent: Int?) {
-        val data = mutableMapOf<String, Any>()
-        data["guildId"] = guildId.toString()
-        if (message != null)
-            data["message"] = message
-        if (percent != null)
-            data["percent"] = percent
-        gameSessionService.broadcastEvent("PROGRESS", data)
+        val eventData = WebSocketEventData.ProgressUpdate(
+            guildId = guildId.toString(),
+            message = message,
+            percent = percent
+        )
+        gameSessionService.broadcastEvent(eventData)
     }
 }

@@ -3,6 +3,7 @@ package dev.robothanzo.werewolf.service
 import dev.robothanzo.werewolf.controller.dto.GuildMemberDto
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.database.documents.UserRole
+import dev.robothanzo.werewolf.websocket.WebSocketEventData
 import java.util.*
 
 /**
@@ -55,30 +56,6 @@ interface GameSessionService {
     fun deleteSession(guildId: Long)
 
     /**
-     * Serializes a game session to a JSON-compatible Map.
-     *
-     * @param session the session to serialize
-     * @return the serialized session map
-     */
-    fun sessionToJSON(session: Session): Map<String, Any>
-
-    /**
-     * Serializes a game session to a summary JSON-compatible Map.
-     *
-     * @param session the session to serialize
-     * @return the serialized session summary map
-     */
-    fun sessionToSummaryJSON(session: Session): Map<String, Any>
-
-    /**
-     * Serializes the players of a session to a JSON-compatible List of Maps.
-     *
-     * @param session the session containing the players
-     * @return a list of serialized player maps
-     */
-    fun playersToJSON(session: Session): List<Map<String, Any>>
-
-    /**
      * Retrieves all members of a guild for management purposes.
      *
      * @param session the session
@@ -116,9 +93,8 @@ interface GameSessionService {
     /**
      * Broadcasts a general event to all connected WebSocket clients.
      *
-     * @param type the type/name of the event
-     * @param data the data associated with the event
+     * @param eventData the typed event data to broadcast
      */
-    fun broadcastEvent(type: String, data: Map<String, Any>)
+    fun broadcastEvent(eventData: WebSocketEventData)
 
 }

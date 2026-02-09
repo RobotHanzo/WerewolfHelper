@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import {Check, Search, X} from 'lucide-react';
 import {useTranslation} from '@/lib/i18n';
-import {Player} from '@/types';
+import {Player} from '@/api/types.gen';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 
 interface PlayerSelectModalProps {
@@ -19,8 +19,8 @@ export const PlayerSelectModal: React.FC<PlayerSelectModalProps> = ({title, play
     const filteredPlayers = players
         .filter(p => filter ? filter(p) : true)
         .filter(p => {
-            const nameMatch = p.name?.toLowerCase().includes(search.toLowerCase());
-            const userIdMatch = p.userId?.toLowerCase().includes(search.toLowerCase());
+            const nameMatch = p.nickname.toLowerCase().includes(search.toLowerCase());
+            const userIdMatch = p.userId?.toString().toLowerCase().includes(search.toLowerCase());
             return nameMatch || userIdMatch;
         });
 
@@ -76,7 +76,7 @@ export const PlayerSelectModal: React.FC<PlayerSelectModalProps> = ({title, play
                                 <div className="flex-1 min-w-0">
                                     <div
                                         className="font-medium text-slate-900 dark:text-slate-200 truncate">
-                                        <DiscordName userId={p.userId} fallbackName={p.name}/>
+                                        <DiscordName userId={p.userId} fallbackName={p.nickname}/>
                                     </div>
                                     <div className="text-xs text-slate-500 truncate flex gap-1">
                                         {p.roles?.map(r => <span key={r}

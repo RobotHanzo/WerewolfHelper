@@ -1,16 +1,45 @@
 import {useState} from 'react';
 import {useTranslation} from '@/lib/i18n';
-import {api} from '@/lib/api';
-import {GamePhase, GameState} from '@/types';
+import {Session} from '@/api/types.gen';
 import {OverlayState} from './useGameState';
+import {useMutation} from '@tanstack/react-query';
+import {
+    assignRolesMutation,
+    manualStartTimerMutation,
+    muteAllMutation,
+    nextStateMutation,
+    resetGameMutation,
+    reviveMutation,
+    reviveRoleMutation,
+    setPoliceMutation,
+    startGameMutation,
+    switchRoleOrderMutation,
+    unmuteAllMutation,
+    updateUserRoleMutation
+} from '@/api/@tanstack/react-query.gen';
+import {getMembers} from '@/api/sdk.gen';
 
 export const useGameActions = (
     guildId: string | undefined,
-    gameState: GameState,
-    setGameState: React.Dispatch<React.SetStateAction<GameState>>,
+    gameState: Session | null,
+    setGameState: React.Dispatch<React.SetStateAction<Session | null>>,
     setOverlayState: React.Dispatch<React.SetStateAction<OverlayState>>
 ) => {
     const {t} = useTranslation();
+
+    // Mutations
+    const revivePlayer = useMutation(reviveMutation());
+    const reviveRole = useMutation(reviveRoleMutation());
+    const setPolice = useMutation(setPoliceMutation());
+    const switchRoleOrder = useMutation(switchRoleOrderMutation());
+    const assignRoles = useMutation(assignRolesMutation());
+    const startGame = useMutation(startGameMutation());
+    const nextState = useMutation(nextStateMutation());
+    const resetGame = useMutation(resetGameMutation());
+    const manualStartTimer = useMutation(manualStartTimerMutation());
+    const muteAll = useMutation(muteAllMutation());
+    const unmuteAll = useMutation(unmuteAllMutation());
+    const updateUserRole = useMutation(updateUserRoleMutation());
 
     // Modal States that are triggered by actions
     const [showTimerModal, setShowTimerModal] = useState(false);
@@ -22,13 +51,14 @@ export const useGameActions = (
         customPlayers?: any[];
     }>({visible: false, type: null});
 
-    // Removed addLog function
-
 
     const handleAction = async (playerId: number, actionType: string) => {
-        if (!guildId) return;
-        const player = gameState.players.find(p => p.id === playerId);
+        if (!guildId || !gameState?.players) return;
+        const playersArray = Object.values(gameState.players);
+        const player = playersArray.find(p => p.id === playerId);
         if (!player) return;
+
+        const gId = guildId;
 
         if (actionType === 'role') {
             setEditingPlayerId(playerId);
@@ -40,16 +70,16 @@ export const useGameActions = (
             if (actionType === 'kill') {
                 setDeathConfirmPlayerId(playerId);
             } else if (actionType === 'revive') {
-                await api.revivePlayer(guildId, player.id);
+                await revivePlayer.mutateAsync({path: {guildId: gId, playerId}});
             } else if (actionType.startsWith('revive_role:')) {
                 const role = actionType.split(':')[1];
-                await api.reviveRole(guildId, player.id, role);
+                await reviveRole.mutateAsync({path: {guildId: gId, playerId}, query: {role}});
             } else if (actionType === 'toggle-jin') {
                 // Toggle Jin Bao Bao logic
             } else if (actionType === 'sheriff') {
-                await api.setPolice(guildId, player.id);
+                await setPolice.mutateAsync({path: {guildId: gId, playerId}});
             } else if (actionType === 'switch_role_order') {
-                await api.switchRoleOrder(guildId, player.id);
+                await switchRoleOrder.mutateAsync({path: {guildId: gId, playerId}});
             }
 
         } catch (error) {
@@ -59,13 +89,13 @@ export const useGameActions = (
     };
 
     const handleGlobalAction = (action: string) => {
+        if (!guildId) return;
+        const gId = guildId;
 
         if (action === 'assign_roles') {
             const performAssign = async () => {
                 try {
-                    if (guildId) {
-                        await api.assignRoles(guildId);
-                    }
+                    await assignRoles.mutateAsync({path: {guildId: gId}});
                 } catch (error: any) {
                     console.error("Assign roles failed", error);
                 }
@@ -73,16 +103,19 @@ export const useGameActions = (
             performAssign();
 
         } else if (action === 'start_game') {
-            setGameState(prev => ({
-                ...prev, phase: 'NIGHT', dayCount: 1, timerSeconds: 30,
-                logs: [...prev.logs]
-            }));
+            setGameState(prev => {
+                if (!prev) return null;
+                return {
+                    ...prev,
+                    currentState: 'NIGHT_START', // Approximate
+                    day: 1,
+                    // logs: [...prev.logs] // logs is mutable in state?
+                };
+            });
             // Also call API to start game logic on backend
             const performStart = async () => {
                 try {
-                    if (guildId) {
-                        await api.startGame(guildId);
-                    }
+                    await startGame.mutateAsync({path: {guildId: gId}});
                 } catch (error: any) {
                     console.error("Start game failed", error);
                 }
@@ -92,24 +125,13 @@ export const useGameActions = (
         } else if (action === 'next_phase') {
             if (guildId) {
                 // Use new API if available
-                api.nextState(guildId).then(() => {
+                nextState.mutateAsync({path: {guildId: gId}}).then(() => {
 
                 }).catch(err => {
                     console.error("Next state failed", err);
-
                 });
             } else {
-                setGameState(prev => {
-                    const phases: GamePhase[] = ['NIGHT', 'DAY', 'VOTING'];
-                    const currentIdx = phases.indexOf(prev.phase as any);
-                    const nextPhase = currentIdx > -1 ? phases[(currentIdx + 1) % phases.length] : 'NIGHT';
-                    return {
-                        ...prev,
-                        phase: nextPhase,
-                        timerSeconds: nextPhase === 'NIGHT' ? 30 : 60,
-                        day: nextPhase === 'NIGHT' ? prev.day + 1 : prev.day
-                    };
-                });
+                // Fallback for demo/no-backend if needed, but we essentially require backend now
             }
         } else if (action === 'pause') {
 
@@ -125,11 +147,7 @@ export const useGameActions = (
                 });
 
                 try {
-                    if (guildId) {
-                        await api.resetSession(guildId);
-                    } else {
-                        throw new Error("Missing Guild ID");
-                    }
+                    await resetGame.mutateAsync({path: {guildId: gId}});
 
                     setOverlayState(prev => ({
                         ...prev,
@@ -168,11 +186,7 @@ export const useGameActions = (
                 });
 
                 try {
-                    if (guildId) {
-                        await api.assignRoles(guildId);
-                    } else {
-                        throw new Error("Missing Guild ID");
-                    }
+                    await assignRoles.mutateAsync({path: {guildId: gId}});
 
                     setOverlayState(prev => ({
                         ...prev,
@@ -201,39 +215,44 @@ export const useGameActions = (
         } else if (action === 'timer_start') {
             setShowTimerModal(true);
         } else if (action === 'mute_all') {
-            if (guildId) api.muteAll(guildId);
+            muteAll.mutate({path: {guildId: gId}});
         } else if (action === 'unmute_all') {
-            if (guildId) api.unmuteAll(guildId);
+            unmuteAll.mutate({path: {guildId: gId}});
         } else if (action === 'assign_judge' || action === 'demote_judge') {
-            if (guildId) {
-                api.getGuildMembers(guildId).then(members => {
-                    const mappedPlayers = members.map(m => ({
-                        id: m.userId,
-                        name: m.name,
-                        userId: m.userId,
-                        avatar: m.avatar,
-                        roles: [],
-                        isJudge: m.isJudge,
-                        // Defaults
-                        deadRoles: [],
-                        isAlive: true,
-                        isSheriff: false,
-                        isJinBaoBao: false,
-                        isProtected: false,
-                        isPoisoned: false,
-                        isSilenced: false,
-                        statuses: []
-                    }));
-                    setPlayerSelectModal({
-                        visible: true,
-                        type: action === 'assign_judge' ? 'ASSIGN_JUDGE' : 'DEMOTE_JUDGE',
-                        customPlayers: mappedPlayers
-                    });
-                }).catch(err => {
-                    console.error("Failed to fetch members", err);
+            getMembers({path: {guildId: gId}}).then(response => {
+                const members = response.data?.data;
+                if (!members || !Array.isArray(members)) {
+                    console.warn("No members returned from API or invalid format", response.data);
+                    return;
+                }
 
+                const mappedPlayers = members.map((m: any) => ({
+                    id: m.id,
+                    name: m.display || m.name,
+                    nickname: m.display || m.name,
+                    userId: m.id,
+                    avatar: m.avatar,
+                    roles: m.roles || [],
+                    isJudge: false,
+                    // Defaults
+                    deadRoles: [],
+                    isAlive: true,
+                    isSheriff: false,
+                    isJinBaoBao: false,
+                    isProtected: false,
+                    isPoisoned: false,
+                    isSilenced: false,
+                    statuses: []
+                }));
+                setPlayerSelectModal({
+                    visible: true,
+                    type: action === 'assign_judge' ? 'ASSIGN_JUDGE' : 'DEMOTE_JUDGE',
+                    customPlayers: mappedPlayers
                 });
-            }
+            }).catch(err => {
+                console.error("Failed to fetch members", err);
+
+            });
         } else if (action === 'force_police') {
             setPlayerSelectModal({visible: true, type: 'FORCE_POLICE'});
         }
@@ -241,20 +260,28 @@ export const useGameActions = (
 
     const handleTimerStart = (seconds: number) => {
         if (guildId) {
-            api.manualStartTimer(guildId, seconds);
+            manualStartTimer.mutate({path: {guildId}, body: {duration: seconds}});
         }
     };
 
     const handlePlayerSelect = async (playerId: number | string) => {
-        const player = (playerSelectModal.customPlayers || gameState.players).find(p => p.id == playerId);
+        const players = playerSelectModal.customPlayers || (gameState?.players ? Object.values(gameState.players) : []);
+        const player = players.find((p: any) => p.id == playerId);
         if (!player || !guildId) return;
+        const gId = guildId;
 
         if (playerSelectModal.type === 'ASSIGN_JUDGE' && player.userId) {
-            await api.updateUserRole(guildId, player.userId, 'JUDGE');
+            await updateUserRole.mutateAsync({
+                path: {guildId: gId, userId: player.userId.toString()},
+                body: {role: 'JUDGE'}
+            });
         } else if (playerSelectModal.type === 'DEMOTE_JUDGE' && player.userId) {
-            await api.updateUserRole(guildId, player.userId, 'SPECTATOR');
+            await updateUserRole.mutateAsync({
+                path: {guildId: gId, userId: player.userId.toString()},
+                body: {role: 'SPECTATOR'}
+            });
         } else if (playerSelectModal.type === 'FORCE_POLICE') {
-            await api.setPolice(guildId, player.id);
+            await setPolice.mutateAsync({path: {guildId: gId, playerId: Number(player.id)}});
         }
 
         // Close modal after action?

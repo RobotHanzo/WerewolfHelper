@@ -1,13 +1,13 @@
 import React, {createContext, ReactNode, useContext, useState} from 'react';
-import {api} from '@/lib/api';
+import {getUser} from '@/api/sdk.gen';
 
 interface PlayerContextType {
-    userInfoCache: Record<string, { name: string, avatar: string }>;
+    userInfoCache: Record<string, { name: string, avatar: string | null }>;
     fetchUserInfo: (userId: string, guildId: string, force?: boolean) => Promise<{
         name: string,
-        avatar: string
+        avatar: string | null
     } | null>;
-    updateSinglePlayerCache: (userId: string, data: { name: string, avatar: string }) => void;
+    updateSinglePlayerCache: (userId: string, data: { name: string, avatar: string | null }) => void;
     invalidateCache: () => void;
 }
 
@@ -26,17 +26,17 @@ interface PlayerProviderProps {
 }
 
 export const PlayerProvider: React.FC<PlayerProviderProps> = ({children}) => {
-    const [userInfoCache, setUserInfoCache] = useState<Record<string, { name: string, avatar: string }>>({});
+    const [userInfoCache, setUserInfoCache] = useState<Record<string, { name: string, avatar: string | null }>>({});
     const pendingRequests = React.useRef<Record<string, Promise<{
         name: string,
-        avatar: string
+        avatar: string | null
     } | null> | undefined>>({});
 
     const invalidateCache = () => {
         setUserInfoCache({});
     };
 
-    const updateSinglePlayerCache = (userId: string, data: { name: string, avatar: string }) => {
+    const updateSinglePlayerCache = (userId: string, data: { name: string, avatar: string | null }) => {
         setUserInfoCache(prev => {
             const current = prev[userId];
             if (!current || current.name !== data.name || current.avatar !== data.avatar) {
@@ -55,8 +55,14 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({children}) => {
 
         const promise = (async () => {
             try {
-                const data: any = await api.getUserInfo(guildId, userId);
-                const info = {name: data.name, avatar: data.avatar};
+                const response = await getUser({
+                    path: {guildId: guildId, userId: userId}
+                });
+                const data = response.data;
+                if (!data || !data.success || !data.data) return null;
+
+                const userData = data.data;
+                const info = {name: String(userData.name), avatar: userData.avatar ? String(userData.avatar) : null};
                 setUserInfoCache(prev => ({
                     ...prev,
                     [userId]: info

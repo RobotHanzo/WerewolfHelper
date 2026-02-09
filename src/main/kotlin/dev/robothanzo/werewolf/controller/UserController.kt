@@ -43,7 +43,7 @@ class UserController {
     @CanViewGuild
     fun getUser(
         @Parameter(description = "ID of the guild")
-        @PathVariable guildId: Long,
+        @PathVariable guildId: String,
         @Parameter(description = "ID of the user")
         @PathVariable userId: String
     ): ResponseEntity<ApiResponse> {

@@ -1,6 +1,8 @@
 package dev.robothanzo.werewolf.database.documents
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.controller.dto.SessionSummary
 import dev.robothanzo.werewolf.game.model.GameSettings
@@ -43,14 +45,30 @@ data class Session(
     @Version
     @JsonIgnore
     var version: Long? = null,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     @Indexed(unique = true)
     var guildId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var courtTextChannelId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var courtVoiceChannelId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var spectatorTextChannelId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var judgeTextChannelId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var judgeRoleId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var spectatorRoleId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var owner: Long = 0,
     var doubleIdentities: Boolean = false,
     var hasAssignedRoles: Boolean = false,
@@ -151,27 +169,25 @@ data class Session(
 
         for (player in players.values) {
             if (player.jinBaoBao) jinBaoBao++
-            if (player.roles != null) {
-                for (role in player.roles!!) {
-                    if (role == simulateRoleRemoval) {
-                        simulateRoleRemoval = null
-                        continue
-                    }
-                    // Skip dead roles
-                    if (player.deadRoles != null && player.deadRoles!!.contains(role)) {
-                        continue
-                    }
+            for (role in player.roles) {
+                if (role == simulateRoleRemoval) {
+                    simulateRoleRemoval = null
+                    continue
+                }
+                // Skip dead roles
+                if (player.deadRoles.contains(role)) {
+                    continue
+                }
 
-                    if (Player.isWolf(role)) {
-                        wolves++
-                        if (player.police) policeOnWolf = true
-                    } else if (Player.isGod(role) || (player.duplicated && player.roles!!.size > 1)) {
-                        gods++
-                        if (player.police) policeOnGood = true
-                    } else if (Player.isVillager(role)) {
-                        villagers++
-                        if (player.police) policeOnGood = true
-                    }
+                if (Player.isWolf(role)) {
+                    wolves++
+                    if (player.police) policeOnWolf = true
+                } else if (Player.isGod(role) || (player.duplicated && player.roles.size > 1)) {
+                    gods++
+                    if (player.police) policeOnGood = true
+                } else if (Player.isVillager(role)) {
+                    villagers++
+                    if (player.police) policeOnGood = true
                 }
             }
         }
@@ -250,7 +266,7 @@ data class Session(
 
     fun generateSummary(): SessionSummary {
         return SessionSummary(
-            guildId = this.guildId,
+            guildId = this.guildId.toString(),
             guildName = this.guild?.name ?: "Unknown Guild",
             guildIcon = this.guild?.iconUrl ?: "",
             playerCount = this.players.size

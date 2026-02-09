@@ -1,8 +1,9 @@
 import React, {useState} from 'react';
 import {useTranslation} from '@/lib/i18n';
-import {Player} from '@/types';
+import {Player} from '@/api/types.gen';
 import {Skull, X} from 'lucide-react';
-import {api} from '@/lib/api';
+import {useMutation} from '@tanstack/react-query';
+import {markDeadMutation} from '@/api/@tanstack/react-query.gen';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 
 interface DeathConfirmModalProps {
@@ -16,10 +17,15 @@ export const DeathConfirmModal: React.FC<DeathConfirmModalProps> = ({player, gui
     const [lastWords, setLastWords] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    const markDead = useMutation(markDeadMutation());
+
     const handleConfirm = async () => {
         setLoading(true);
         try {
-            await api.markPlayerDead(guildId, player.id, lastWords);
+            await markDead.mutateAsync({
+                path: {guildId, playerId: player.id},
+                query: {lastWords}
+            });
             onClose();
         } catch (error) {
             console.error('Failed to mark player as dead:', error);
@@ -51,7 +57,7 @@ export const DeathConfirmModal: React.FC<DeathConfirmModalProps> = ({player, gui
                         </div>
                         <div>
                             <p className="font-bold text-lg dark:text-slate-200">
-                                <DiscordName userId={player.userId} fallbackName={player.name}/>
+                                <DiscordName userId={player.userId} fallbackName={player.nickname}/>
                             </p>
                             <p className="text-sm text-slate-500 dark:text-slate-400">
                                 {player.roles.join(', ') || t('roles.unknown')}

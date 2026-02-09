@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {AlertTriangle, MessageSquare} from 'lucide-react';
-import {LogEntry} from '@/types';
+import {LogEntry} from '@/api/types.gen';
 import {useTranslation} from '@/lib/i18n';
 
 interface GameLogProps {
@@ -9,7 +9,7 @@ interface GameLogProps {
     readonly?: boolean;
     className?: string;
     hasAssignedRoles?: boolean;
-    phase?: string;
+    currentStep?: string;
 }
 
 export const GameLog: React.FC<GameLogProps> = ({
@@ -18,7 +18,7 @@ export const GameLog: React.FC<GameLogProps> = ({
                                                     readonly = false,
                                                     className = "",
                                                     hasAssignedRoles = false,
-                                                    phase = 'LOBBY'
+                                                    currentStep = 'SETUP'
                                                 }) => {
     const {t} = useTranslation();
     const [resetConfirming, setResetConfirming] = useState(false);
@@ -43,21 +43,33 @@ export const GameLog: React.FC<GameLogProps> = ({
             <div
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-400 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-slate-500 dark:[&::-webkit-scrollbar-thumb]:hover:bg-slate-500">
-                {logs.map(log => (
-                    <div key={log.id}
-                         className="text-sm flex gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <span
-                            className="text-slate-400 dark:text-slate-600 font-mono text-xs pt-0.5">{log.timestamp}</span>
-                        <div
-                            className={`flex-1 ${log.type === 'alert' ? 'text-yellow-600 dark:text-yellow-400 font-bold' :
-                                log.type === 'action' ? 'text-indigo-600 dark:text-indigo-300' :
-                                    'text-slate-700 dark:text-slate-300'
-                            }`}>
-                            {log.type === 'alert' && <AlertTriangle className="w-3 h-3 inline mr-1"/>}
-                            {log.message}
+                {logs.map(log => {
+                    const isAlert = log.type && ['PLAYER_DIED', 'WEREWOLF_ATTACK', 'WITCH_POISON', 'HUNTER_REVENGE', 'PLAYER_EXPELLED', 'VOTE_RESULT'].includes(log.type);
+                    const isAction = log.type && !isAlert && log.type !== 'SYSTEM' && log.type !== 'GAME_STARTED' && log.type !== 'GAME_ENDED' && log.type !== 'GAME_RESET';
+
+                    return (
+                        <div key={log.id}
+                             className="text-sm flex gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <span
+                                className="text-slate-400 dark:text-slate-600 font-mono text-xs pt-0.5">
+                                {log.timestamp ? new Date(log.timestamp).toLocaleTimeString('zh-TW', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit',
+                                    hour12: false
+                                }) : ''}
+                            </span>
+                            <div
+                                className={`flex-1 ${isAlert ? 'text-yellow-600 dark:text-yellow-400 font-bold' :
+                                    isAction ? 'text-indigo-600 dark:text-indigo-300' :
+                                        'text-slate-700 dark:text-slate-300'
+                                }`}>
+                                {isAlert && <AlertTriangle className="w-3 h-3 inline mr-1"/>}
+                                {log.message}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* Admin Actions */}
@@ -74,12 +86,12 @@ export const GameLog: React.FC<GameLogProps> = ({
                                             className="text-xs bg-green-100 dark:bg-green-900/20 hover:bg-green-200 dark:hover:bg-green-900/40 text-green-700 dark:text-green-300 px-2 py-2 rounded border border-green-300 dark:border-green-900/30 truncate disabled:opacity-50 disabled:cursor-not-allowed"
                                             title={t('globalCommands.randomAssign')}>{t('globalCommands.randomAssign')}</button>
                                 )}
-                                {hasAssignedRoles && phase === 'LOBBY' && (
+                                {hasAssignedRoles && (currentStep === 'SETUP' || !currentStep) && (
                                     <button onClick={() => onGlobalAction('start_game')}
                                             className="text-xs bg-blue-100 dark:bg-blue-900/20 hover:bg-blue-200 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-2 rounded border border-blue-300 dark:border-blue-900/30 truncate"
                                             title={t('globalCommands.startGame')}>{t('globalCommands.startGame')}</button>
                                 )}
-                                {phase !== 'LOBBY' && (
+                                {(currentStep !== 'SETUP' && !!currentStep) && (
                                     <button onClick={() => onGlobalAction('next_phase')}
                                             className="text-xs bg-indigo-100 dark:bg-indigo-900/20 hover:bg-indigo-200 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-2 rounded border border-indigo-300 dark:border-indigo-900/30 truncate"
                                             title={t('globalCommands.skipStage')}>{t('globalCommands.skipStage')}</button>

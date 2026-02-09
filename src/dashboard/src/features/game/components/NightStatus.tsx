@@ -1,23 +1,26 @@
 import React, {useEffect, useState} from 'react';
 import {ChevronRight, Clock, FastForward, MessageCircle, Skull, Users} from 'lucide-react';
-import {ActionSubmissionStatus, GameState, Player} from '@/types';
+import {GameStateDto as GameState, Player, RoleActionInstance} from '@/api/types.gen';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 import {useTranslation} from '@/lib/i18n';
 
+// Local types for enriched data display
+export type ActionStatusType = RoleActionInstance['status'];
+
+interface EnrichedActionStatus extends RoleActionInstance {
+    playerName: string;
+    playerUserId?: string | number | bigint;
+    targetName: string | null;
+    targetUserId?: string | number | bigint;
+}
+
 interface RoleActionsScreenProps {
-    statuses: Array<ActionSubmissionStatus & {
-        playerName: string,
-        avatarUrl?: string,
-        playerUserId?: string,
-        targetName: string | null,
-        targetAvatarUrl?: string,
-        targetUserId?: string
-    }>;
+    statuses: EnrichedActionStatus[];
     wolfTargetName: string;
-    wolfTargetUserId?: string;
+    wolfTargetUserId?: string | number | bigint;
     wolfTargetId: number | null;
     wolfVoteCount: number;
-    guildId?: string;
+    guildId?: string | number | bigint;
 }
 
 const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
@@ -30,10 +33,10 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                                                              }) => {
     const {t} = useTranslation();
 
-    // Deduplicate statuses by playerId to handle potential backend data issues
+    // Deduplicate statuses by actor to handle potential backend data issues
     const uniqueStatuses = React.useMemo(() => {
-        const map = new Map();
-        statuses.forEach(s => map.set(s.playerId, s));
+        const map = new Map<number, EnrichedActionStatus>();
+        statuses.forEach(s => map.set(s.actor, s));
         return Array.from(map.values());
     }, [statuses]);
 
@@ -46,7 +49,7 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
         return 'border-slate-700 hover:border-slate-500';
     };
 
-    const getStatusColor = (status: string): string => {
+    const getStatusColor = (status: ActionStatusType): string => {
         switch (status) {
             case 'SUBMITTED':
                 return 'bg-green-500/20 text-green-300 border-green-500';
@@ -54,6 +57,8 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                 return 'bg-amber-500/20 text-amber-300 border-amber-500';
             case 'ACTING':
                 return 'bg-blue-500/20 text-blue-300 border-blue-500';
+            case 'PROCESSED':
+                return 'bg-indigo-500/20 text-indigo-300 border-indigo-500';
             default:
                 return 'bg-slate-500/20 text-slate-300 border-slate-500';
         }
@@ -99,8 +104,8 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                 ) : (
                     uniqueStatuses.map((status, index) => (
                         <div
-                            key={status.playerId}
-                            className={`animate-slide-in bg-slate-800/80 rounded-lg p-4 border-2 ${getRoleBorderColor(status.role)} transition-all duration-300 flex flex-col justify-between shadow-lg`}
+                            key={status.actor}
+                            className={`animate-slide-in bg-slate-800/80 rounded-lg p-4 border-2 ${getRoleBorderColor(status.actorRole)} transition-all duration-300 flex flex-col justify-between shadow-lg`}
                             style={{animationDelay: `${100 + index * 75}ms`}}
                         >
                             <div className="flex items-start justify-between mb-3">
@@ -109,23 +114,23 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                                         <DiscordName userId={status.playerUserId} guildId={guildId}
                                                      fallbackName={status.playerName}/>
                                     </h3>
-                                    <p className="text-xs opacity-70 mt-0.5">{status.role}</p>
+                                    <p className="text-xs opacity-70 mt-0.5">{status.actorRole}</p>
                                 </div>
                                 <DiscordAvatar userId={status.playerUserId} guildId={guildId}
                                                avatarClassName="w-10 h-10 rounded-full border border-slate-700 shadow-sm flex-shrink-0 ml-3"/>
                             </div>
 
                             <div className="space-y-2">
-                                {status.actionType && status.actionType !== "" && (
+                                {status.actionDefinitionId && (
                                     <div className="bg-white/5 rounded px-2 py-1">
                                         <p className="text-xs opacity-60">行動</p>
                                         <p className="font-semibold text-slate-200">
-                                            {t(`actions.labels.${status.actionType}`, {defaultValue: status.actionType})}
+                                            {t(`actions.labels.${status.actionDefinitionId}`, {defaultValue: status.actionDefinitionId})}
                                         </p>
                                     </div>
                                 )}
 
-                                {status.targetName && status.targetId !== null && (
+                                {status.targetName && (
                                     <div
                                         className="bg-white/10 rounded px-2 py-1 flex items-center justify-between gap-2">
                                         <div className="min-w-0">
@@ -135,7 +140,7 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                                                              fallbackName={status.targetName || ''}/>
                                             </p>
                                         </div>
-                                        {status.targetId === -1 ? (
+                                        {status.targets?.[0] === -1 ? (
                                             <div
                                                 className="w-6 h-6 rounded-full border border-amber-500/50 bg-amber-500/20 flex items-center justify-center flex-shrink-0">
                                                 <FastForward className="w-3 h-3 text-amber-500"/>
@@ -155,7 +160,9 @@ const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
                                             ? '⏭️ 已跳過'
                                             : status.status === 'ACTING'
                                                 ? '⚡ 行動中...'
-                                                : '⏳ 待提交'}
+                                                : status.status === 'PROCESSED'
+                                                    ? '✨ 已處理'
+                                                    : '⏳ 待提交'}
                                 </div>
                             </div>
                         </div>
@@ -175,25 +182,28 @@ interface NightStatusProps {
 interface WerewolfMessage {
     senderId: number;
     senderName?: string;
-    avatarUrl?: string | null;
     content: string;
     timestamp: number;
-    senderUserId?: string;
+    senderUserId?: string | number | bigint;
 }
 
 interface WerewolfVote {
     voterId: number;
     targetId: number | string | null;
+    voterName?: string;
+    voterUserId?: string | number | bigint;
+    targetName?: string;
+    targetUserId?: string | number | bigint;
 }
 
 interface NightStatusData {
     day: number;
-    phaseType: 'WEREWOLF_VOTING' | 'ROLE_ACTIONS';
+    phaseType: 'WEREWOLF_VOTING' | 'ROLE_ACTIONS' | 'WOLF_YOUNGER_BROTHER_ACTION';
     startTime: number;
     endTime: number;
     werewolfMessages: WerewolfMessage[];
     werewolfVotes: WerewolfVote[];
-    actionStatuses: ActionSubmissionStatus[];
+    actionStatuses: RoleActionInstance[];
 }
 
 export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, players = [], gameState}) => {
@@ -207,7 +217,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
     const nightStatus = React.useMemo<NightStatusData | null>(() => {
         if (!gameState?.stateData) return null;
 
-        const stateData = gameState.stateData;
+        const stateData = gameState.stateData as any;
         const phaseType = stateData.phaseType || 'WEREWOLF_VOTING';
 
         // Map werewolf messages
@@ -215,9 +225,8 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
             const sender = players.find(p => p.id === msg.senderId);
             return {
                 senderId: msg.senderId,
-                senderName: sender?.name,
-                avatarUrl: sender?.avatar,
-                senderUserId: sender?.userId, // Map userId for DiscordAvatar
+                senderName: sender?.nickname,
+                senderUserId: sender?.userId,
                 content: msg.content,
                 timestamp: msg.timestamp
             };
@@ -231,17 +240,10 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
         }));
 
         // Map action statuses
-        const actionStatuses = (stateData.submittedActions || []).map((action: any) => ({
-            playerId: action.actor,
-            role: action.actorRole,
-            status: action.status,
-            actionType: action.actionDefinitionId || null,
-            targetId: action.targets?.[0]?.toString() || null,
-            submittedAt: null // Not strictly needed
-        }));
+        const actionStatuses = (stateData.submittedActions || []) as RoleActionInstance[];
 
         return {
-            day: gameState.day,
+            day: gameState.day || 0,
             phaseType,
             startTime: stateData.phaseStartTime || Date.now(),
             endTime: stateData.phaseEndTime || (Date.now() + 60000),
@@ -266,7 +268,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
 
     // Auto-switch tab when phase changes
     useEffect(() => {
-        if (nightStatus?.phaseType === 'ROLE_ACTIONS') {
+        if (nightStatus?.phaseType === 'ROLE_ACTIONS' || nightStatus?.phaseType === 'WOLF_YOUNGER_BROTHER_ACTION') {
             setActiveTab('actions');
         }
     }, [nightStatus?.phaseType]);
@@ -279,8 +281,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
         const sender = players.find(p => p.id === Number(msg.senderId));
         return {
             ...msg,
-            senderName: msg.senderName || sender?.name || `玩家 ${msg.senderId}`,
-            avatarUrl: msg.avatarUrl || sender?.avatar || undefined,
+            senderName: msg.senderName || sender?.nickname || `玩家 ${msg.senderId}`,
             senderUserId: sender?.userId || undefined,
         };
     });
@@ -295,7 +296,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
         if (targetId === -1) {
             targetName = '跳過';
         } else if (target) {
-            targetName = target.name;
+            targetName = target.nickname;
         } else if (targetId !== null && targetId > 0) {
             targetName = `玩家 ${targetId}`;
         }
@@ -303,7 +304,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
         return {
             ...vote,
             targetId,
-            voterName: voter?.name || `玩家 ${vote.voterId}`,
+            voterName: voter?.nickname || `玩家 ${vote.voterId}`,
             voterUserId: voter?.userId || undefined,
             targetName,
             targetUserId: target?.userId || undefined,
@@ -311,11 +312,11 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
     }).sort((a, b) => Number(a.voterId) - Number(b.voterId));
 
     // Filter out wolf actions from the main list
-    const enrichedStatuses = (nightStatus.actionStatuses || [])
-        .filter(status => !status.role.includes('狼'))
+    const enrichedStatuses: EnrichedActionStatus[] = (nightStatus.actionStatuses || [])
+        .filter(status => !status.actorRole.includes('狼'))
         .map(status => {
-            const player = players.find(p => p.id === Number(status.playerId));
-            const rawTargetId = status.targetId;
+            const player = players.find(p => p.id === Number(status.actor));
+            const rawTargetId = status.targets?.[0];
             const targetId = (rawTargetId !== null && rawTargetId !== undefined) ? Number(rawTargetId) : null;
             const target = (targetId !== null && targetId > 0) ? players.find(p => p.id === targetId) : null;
 
@@ -323,7 +324,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
             if (targetId === -1) {
                 targetName = '跳過';
             } else if (target) {
-                targetName = target.name;
+                targetName = target.nickname;
             } else if (targetId !== null && targetId > 0) {
                 targetName = `玩家 ${targetId}`;
             } else if (status.status === 'SUBMITTED') {
@@ -332,12 +333,9 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
 
             return {
                 ...status,
-                targetId,
-                playerName: player?.name || `玩家 ${status.playerId}`,
-                avatarUrl: player?.avatar,
+                playerName: player?.nickname || `玩家 ${status.actor}`,
                 playerUserId: player?.userId || undefined,
                 targetName,
-                targetAvatarUrl: target?.avatar,
                 targetUserId: target?.userId || undefined,
             };
         });
@@ -372,7 +370,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
     } else if (topTargetId === -1) {
         wolfTargetName = '跳過';
     } else if (topTarget) {
-        wolfTargetName = topTarget.name;
+        wolfTargetName = topTarget.nickname;
     } else if (topTargetId !== null && topTargetId > 0) {
         wolfTargetName = `玩家 ${topTargetId}`;
     }
@@ -380,58 +378,16 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
 
     return (
         <div className="w-full h-full bg-slate-900 text-white p-4 overflow-hidden flex flex-col">
-            {/* Header */}
             <style>
-                {`@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.animate-slide-in {
-  animation: slideIn 0.3s ease-out;
-  animation-fill-mode: backwards;
-}
-
-.message-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.5) transparent;
-}
-
-.message-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.message-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.message-scroll::-webkit-scrollbar-thumb {
-  background-color: rgba(100, 116, 139, 0.5);
-  border-radius: 3px;
-}
-
-.message-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(100, 116, 139, 0.7);
-}`}
+                {`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+                .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+                .animate-slide-in { animation: slideIn 0.3s ease-out; animation-fill-mode: backwards; }
+                .message-scroll { scrollbar-width: thin; scrollbar-color: rgba(100, 116, 139, 0.5) transparent; }
+                .message-scroll::-webkit-scrollbar { width: 6px; }
+                .message-scroll::-webkit-scrollbar-track { background: transparent; }
+                .message-scroll::-webkit-scrollbar-thumb { background-color: rgba(100, 116, 139, 0.5); border-radius: 3px; }
+                .message-scroll::-webkit-scrollbar-thumb:hover { background-color: rgba(100, 116, 139, 0.7); }`}
             </style>
             <div className="mb-4">
                 <div className="flex items-center justify-between mb-3">
@@ -445,7 +401,6 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
                     </div>
                 </div>
 
-                {/* Phase indicator */}
                 <div className="flex gap-2">
                     <button
                         onClick={() => setActiveTab('werewolves')}
@@ -470,7 +425,6 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
                 </div>
             </div>
 
-            {/* Content */}
             <div className="flex-1 overflow-hidden">
                 {activeTab === 'werewolves' ? (
                     <WerewolfVotingScreen
@@ -495,10 +449,10 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
 };
 
 interface WerewolfVotingScreenProps {
-    messages: Array<WerewolfMessage & { senderName: string, avatarUrl?: string, senderUserId?: string }>;
-    votes: Array<WerewolfVote & { voterName: string, voterUserId?: string, targetName: string, targetUserId?: string }>;
+    messages: Array<WerewolfMessage & { senderName: string }>;
+    votes: Array<WerewolfVote & { voterName: string, targetName: string }>;
     messageScrollContainerRef: React.RefObject<HTMLDivElement>;
-    guildId?: string;
+    guildId?: string | number | bigint;
 }
 
 const WerewolfVotingScreen: React.FC<WerewolfVotingScreenProps> = ({
@@ -509,81 +463,59 @@ const WerewolfVotingScreen: React.FC<WerewolfVotingScreenProps> = ({
                                                                    }) => {
     return (
         <div className="grid grid-cols-3 gap-4 h-full">
-            {/* Messages - 2 cols */}
             <div
                 className="col-span-2 flex flex-col bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700">
                 <div className="px-4 py-2 bg-slate-900 border-b border-slate-700">
                     <h2 className="font-semibold text-sm uppercase tracking-wider">狼人討論</h2>
                 </div>
-                <div
-                    ref={messageScrollContainerRef}
-                    className="flex-1 overflow-y-auto space-y-2 p-4 message-scroll"
-                >
+                <div ref={messageScrollContainerRef} className="flex-1 overflow-y-auto space-y-2 p-4 message-scroll">
                     {messages.length === 0 ? (
-                        <div className="flex items-center justify-center h-full text-slate-400">
-                            等待狼人發言...
-                        </div>
+                        <div className="flex items-center justify-center h-full text-slate-400">等待狼人發言...</div>
                     ) : (
                         (() => {
                             const reversed = [...messages].reverse();
                             return reversed.map((msg, idx) => {
                                 const newerMsg = reversed[idx - 1];
                                 const olderMsg = reversed[idx + 1];
-
-                                const isContinuation = newerMsg &&
-                                    newerMsg.senderId === msg.senderId &&
-                                    (newerMsg.timestamp - msg.timestamp) < 5 * 60 * 1000;
-
-                                const isPredecessor = olderMsg &&
-                                    olderMsg.senderId === msg.senderId &&
-                                    (msg.timestamp - olderMsg.timestamp) < 5 * 60 * 1000;
+                                const isContinuation = newerMsg && newerMsg.senderId === msg.senderId && (newerMsg.timestamp - msg.timestamp) < 5 * 60 * 1000;
+                                const isPredecessor = olderMsg && olderMsg.senderId === msg.senderId && (msg.timestamp - olderMsg.timestamp) < 5 * 60 * 1000;
 
                                 return (
-                                    <div
-                                        key={`${msg.senderId}-${msg.timestamp}`}
-                                        className={`animate-fade-in flex gap-3 px-3 transition-colors group ${isContinuation
-                                            ? (isPredecessor ? 'py-0 mt-0' : 'pb-2 pt-0 mt-0')
-                                            : (isPredecessor ? 'pt-2 pb-0 mt-4' : 'py-2 mt-4')
-                                        } hover:bg-slate-700/30 ${!isContinuation ? 'rounded-t-md' : ''} ${!isPredecessor ? 'rounded-b-md' : ''}`}
-                                    >
-                                        <>
-                                            <div className="flex-shrink-0 w-10">
-                                                {!isContinuation ? (
-                                                    <div className="mt-0.5">
-                                                        <DiscordAvatar userId={msg.senderUserId} guildId={guildId}
-                                                                       avatarClassName="w-10 h-10 rounded-full shadow-sm shadow-black/20"
-                                                                       useInitialsFallback={true}
-                                                                       avatarFallbackClassName="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center"
-                                                                       avatarFallbackTextClassName="text-xs font-bold text-slate-300"/>
-                                                    </div>
-                                                ) : (
-                                                    <div
-                                                        className="w-10 h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity min-h-[1.5rem]">
-                                                        <span className="text-[10px] text-slate-500 font-mono">
-                                                            •
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                {!isContinuation && (
-                                                    <div className="flex items-baseline gap-2 mb-0.5">
-                                                        <span className="font-semibold text-red-400 text-[15px]">
-                                                            <DiscordName userId={msg.senderUserId} guildId={guildId}
-                                                                         fallbackName={msg.senderName}/>
-                                                        </span>
-                                                        <span className="text-[10px] text-slate-500 font-medium">
-                                                            {new Date(msg.timestamp).toLocaleTimeString('zh-TW', {
-                                                                hour: '2-digit',
-                                                                minute: '2-digit'
-                                                            })}
-                                                        </span>
-                                                    </div>
-                                                )}
+                                    <div key={`${msg.senderId}-${msg.timestamp}`}
+                                         className={`animate-fade-in flex gap-3 px-3 transition-colors group ${isContinuation ? (isPredecessor ? 'py-0 mt-0' : 'pb-2 pt-0 mt-0') : (isPredecessor ? 'pt-2 pb-0 mt-4' : 'py-2 mt-4')} hover:bg-slate-700/30 ${!isContinuation ? 'rounded-t-md' : ''} ${!isPredecessor ? 'rounded-b-md' : ''}`}>
+                                        <div className="flex-shrink-0 w-10">
+                                            {!isContinuation ? (
+                                                <div className="mt-0.5">
+                                                    <DiscordAvatar userId={msg.senderUserId} guildId={guildId}
+                                                                   avatarClassName="w-10 h-10 rounded-full shadow-sm shadow-black/20"
+                                                                   useInitialsFallback={true}
+                                                                   avatarFallbackClassName="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center"
+                                                                   avatarFallbackTextClassName="text-xs font-bold text-slate-300"/>
+                                                </div>
+                                            ) : (
                                                 <div
-                                                    className="text-[15px] text-slate-200 leading-normal break-words">{msg.content}</div>
-                                            </div>
-                                        </>
+                                                    className="w-10 h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity min-h-[1.5rem]">
+                                                    <span className="text-[10px] text-slate-500 font-mono">•</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            {!isContinuation && (
+                                                <div className="flex items-baseline gap-2 mb-0.5">
+                                                    <span className="font-semibold text-red-400 text-[15px]">
+                                                        <DiscordName userId={msg.senderUserId} guildId={guildId}
+                                                                     fallbackName={msg.senderName}/>
+                                                    </span>
+                                                    <span
+                                                        className="text-[10px] text-slate-500 font-medium">{new Date(msg.timestamp).toLocaleTimeString('zh-TW', {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}</span>
+                                                </div>
+                                            )}
+                                            <div
+                                                className="text-[15px] text-slate-200 leading-normal break-words">{msg.content}</div>
+                                        </div>
                                     </div>
                                 );
                             });
@@ -592,23 +524,19 @@ const WerewolfVotingScreen: React.FC<WerewolfVotingScreenProps> = ({
                 </div>
             </div>
 
-            {/* Votes - 1 col */}
             <div className="flex flex-col bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700">
                 <div className="px-4 py-2 bg-slate-900 border-b border-slate-700">
                     <h2 className="font-semibold text-sm uppercase tracking-wider">投票結果</h2>
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-2 p-3">
                     {votes.length === 0 ? (
-                        <div className="flex items-center justify-center h-full text-slate-400 text-sm">
-                            投票進行中...
-                        </div>
+                        <div
+                            className="flex items-center justify-center h-full text-slate-400 text-sm">投票進行中...</div>
                     ) : (
                         votes.map((vote, idx) => (
-                            <div
-                                key={idx}
-                                className="animate-slide-in bg-slate-700/50 rounded px-2 py-2 hover:bg-slate-700 transition-colors text-xs"
-                                style={{animationDelay: `${idx * 50}ms`}}
-                            >
+                            <div key={idx}
+                                 className="animate-slide-in bg-slate-700/50 rounded px-2 py-2 hover:bg-slate-700 transition-colors text-xs"
+                                 style={{animationDelay: `${idx * 50}ms`}}>
                                 <div className="font-semibold text-cyan-400 mb-1">
                                     <DiscordName userId={vote.voterUserId} guildId={guildId}
                                                  fallbackName={vote.voterName}/>
@@ -629,5 +557,3 @@ const WerewolfVotingScreen: React.FC<WerewolfVotingScreenProps> = ({
         </div>
     );
 };
-
-

@@ -1,7 +1,10 @@
 package dev.robothanzo.werewolf.database.documents
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
 import dev.robothanzo.werewolf.WerewolfApplication
+import io.swagger.v3.oas.annotations.media.Schema
 import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.game.model.RoleEventContext
 import dev.robothanzo.werewolf.game.model.RoleEventType
@@ -17,7 +20,11 @@ import dev.robothanzo.werewolf.game.model.Role as GameRole
 
 data class Player(
     var id: Int = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var roleId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var channelId: Long = 0,
     var jinBaoBao: Boolean = false,
     var duplicated: Boolean = false,
@@ -25,9 +32,11 @@ data class Player(
     var police: Boolean = false,
     var rolePositionLocked: Boolean = false,
     var actionSubmitted: Boolean = false, // Track if player has submitted an action this phase
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var userId: Long? = null,
-    var roles: MutableList<String>? = LinkedList(), // stuff like wolf, villager...etc
-    var deadRoles: MutableList<String>? = LinkedList()
+    var roles: MutableList<String> = mutableListOf(), // stuff like wolf, villager...etc
+    var deadRoles: MutableList<String> = mutableListOf()
 ) : Comparable<Player> {
     @Transient
     @BsonIgnore
@@ -55,7 +64,7 @@ data class Player(
         get() = WerewolfApplication.jda.getTextChannelById(channelId)
 
     val wolf: Boolean
-        get() = roles?.any { isWolf(it) } ?: false
+        get() = roles.any { isWolf(it) }
 
     fun updateUserId(id: Long?) {
         userId = id
@@ -63,9 +72,8 @@ data class Player(
 
     val alive: Boolean
         get() {
-            if (roles == null || roles!!.isEmpty()) return false
-            if (deadRoles == null) return true
-            return deadRoles!!.size < roles!!.size
+            if (roles.isEmpty()) return false
+            return deadRoles.size < roles.size
         }
 
     val nickname: String
@@ -109,12 +117,8 @@ data class Player(
 
         if (!alive) return
 
-        val roles = roles ?: mutableListOf()
-        var deadRoles = deadRoles
-        if (deadRoles == null) {
-            deadRoles = mutableListOf()
-            this.deadRoles = deadRoles
-        }
+        val roles = roles
+        val deadRoles = deadRoles
 
         var killedRole: String? = null
         for (role in roles) {

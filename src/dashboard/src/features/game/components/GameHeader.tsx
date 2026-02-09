@@ -1,14 +1,14 @@
 import {Link, useNavigate} from 'react-router-dom';
-import {Mic, Moon, Pause, Play, SkipForward, Sun} from 'lucide-react';
-import {GamePhase, Player, SpeechState} from '@/types';
+import {Mic, Moon, Pause, Play, Settings2, SkipForward, Sun} from 'lucide-react';
+import {Player} from '@/api/types.gen';
 import {useTranslation} from '@/lib/i18n';
+import {GAME_STEPS} from '../constants';
 
 interface GameHeaderProps {
-    phase: GamePhase;
     dayCount: number;
     timerSeconds: number;
     onGlobalAction: (action: string) => void;
-    speech?: SpeechState;
+    speech?: any;
     players?: Player[];
     readonly?: boolean;
     currentStep?: string;
@@ -19,7 +19,6 @@ interface GameHeaderProps {
 }
 
 export const GameHeader: React.FC<GameHeaderProps> = ({
-                                                          phase,
                                                           dayCount,
                                                           timerSeconds,
                                                           onGlobalAction,
@@ -42,21 +41,29 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
         ? players.find(p => p.id === speech.currentSpeakerId)
         : null;
 
-    // Ensure we show at least Day 1 if the game has started (not in LOBBY)
-    const displayDay = dayCount === 0 && phase !== 'LOBBY' ? 1 : dayCount;
+    // Ensure we show at least Day 1 if the game has started (not in LOBBY/SETUP)
+    const displayDay = dayCount === 0 && (currentState !== 'SETUP' && !!currentState) ? 1 : dayCount;
+
+    const isNight = currentState?.includes('NIGHT');
+    const isLobby = currentState === 'SETUP' || !currentState;
 
     return (
         <header
             className="h-16 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border-b border-slate-300 dark:border-slate-800 flex items-center justify-between px-6 z-10">
             <div className="flex items-center gap-6">
                 <div className="flex flex-col">
-                    <span
-                        className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">{t('gameHeader.currentPhase')}</span>
                     <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100">
-                        {phase === 'DAY' ? <Sun className="w-5 h-5 text-orange-500"/> :
-                            <Moon className="w-5 h-5 text-indigo-500 dark:text-indigo-400"/>}
+                        {isLobby ? (
+                            <Settings2 className="w-5 h-5 text-slate-500 dark:text-slate-400"/>
+                        ) : (
+                            isNight ? <Moon className="w-5 h-5 text-indigo-500 dark:text-indigo-400"/> :
+                                <Sun className="w-5 h-5 text-orange-500"/>
+                        )}
                         <span className="font-bold text-lg">
-                            {displayDay > 0 && `Day ${displayDay} - `}{currentStep ? currentStep : t(`phases.${phase}`)}
+                            {!isLobby && displayDay > 0 && `Day ${displayDay} - `}{(() => {
+                            const stepInfo = GAME_STEPS.find(s => s.id === currentStep);
+                            return stepInfo ? t(stepInfo.key) : (currentStep || 'LOBBY');
+                        })()}
                         </span>
                     </div>
                 </div>
@@ -71,7 +78,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                                 <Mic className="w-3 h-3 animate-pulse"/> {t('messages.speaking')}
                             </span>
                             <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-bold">
-                                <span>{currentSpeaker.name}</span>
+                                <span>{currentSpeaker.nickname}</span>
                                 {speech?.endTime && (
                                     <span
                                         className="text-sm font-mono text-slate-500 bg-slate-100 dark:bg-slate-800 px-1 rounded border border-slate-200 dark:border-slate-700">
@@ -104,7 +111,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
 
             <div className="flex items-center gap-3">
                 {!readonly && (
-                    phase === 'LOBBY' ? (
+                    (currentState === 'SETUP' || !currentState) ? (
                         <button
                             onClick={() => onGlobalAction('start_game')}
                             disabled={!hasAssignedRoles}

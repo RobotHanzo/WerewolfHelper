@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {Clock} from 'lucide-react';
-import {Player} from '@/types';
+import {Player} from '@/api/types.gen';
 import {useTranslation} from '@/lib/i18n';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 
@@ -97,7 +97,7 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                                         <DiscordName
                                             userId={player?.userId}
                                             guildId={guildId}
-                                            fallbackName={player?.name || `Candidate ${candidate.id}`}
+                                            fallbackName={player?.nickname || `Candidate ${candidate.id}`}
                                         />
                                     </h4>
                                     <span
@@ -114,10 +114,11 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                                         // Try to find voter by userId (assuming voterId is userId string) 
                                         // The backend sends userId as string for voters. 
                                         // Player.userId is key.
-                                        const voter = players.find(p => p.userId === voterId);
-                                        const resolvedUserId = voter?.userId || voterId;
+                                        const voter = players.find(p => p.userId?.toString() === voterId.toString());
+                                        const resolvedUserId = voter?.userId?.toString() || voterId.toString();
                                         return (
                                             <div
+                                                key={voterId}
                                                 className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2 py-1 rounded-md text-xs border border-slate-200 dark:border-slate-700 shadow-sm animate-in zoom-in-50">
                                                 <DiscordAvatar userId={resolvedUserId} guildId={guildId}
                                                                avatarClassName="w-4 h-4 rounded-full"/>
@@ -126,7 +127,7 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                                                     <DiscordName
                                                         userId={resolvedUserId}
                                                         guildId={guildId}
-                                                        fallbackName={voter?.name || voter?.userId || t('vote.unknown')}
+                                                        fallbackName={voter?.nickname || voter?.userId?.toString() || t('vote.unknown')}
                                                     />
                                                 </span>
                                             </div>

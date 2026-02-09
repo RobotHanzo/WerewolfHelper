@@ -8,6 +8,7 @@ import {useAuth} from '@/features/auth/contexts/AuthContext';
 import {useGameState} from '../hooks/useGameState';
 import {useGameActions} from '../hooks/useGameActions';
 import {useDashboardAuth} from '@/features/auth/hooks/useDashboardAuth';
+import {Player} from '@/api/types.gen';
 
 // Components
 import {Sidebar} from '@/components/layout/Sidebar';
@@ -20,7 +21,7 @@ import {ProgressOverlay} from '@/components/ui/ProgressOverlay';
 import {TimerControlModal} from './TimerControlModal';
 import {PlayerSelectModal} from '@/features/players/components/PlayerSelectModal';
 import {SessionExpiredModal} from '@/features/auth/components/SessionExpiredModal';
-import {SettingsModal} from './SettingsModal';
+
 import {ToastContainer, useToast} from '@/components/Toast';
 
 export const PlayerManager = () => {
@@ -31,7 +32,7 @@ export const PlayerManager = () => {
     const {toasts, removeToast} = useToast();
 
     // Local UI State
-    const [showSettings, setShowSettings] = useState(false);
+
     const [showLogs, setShowLogs] = useState(false);
     const [lastSeenLogCount, setLastSeenLogCount] = useState(0);
     const [isSpectatorSimulation, setIsSpectatorSimulation] = useState(false);
@@ -44,7 +45,8 @@ export const PlayerManager = () => {
         overlayState,
         setOverlayState,
         showSessionExpired,
-        setShowSessionExpired
+        setShowSessionExpired,
+        timerSeconds
     } = useGameState(guildId, user);
 
     const {
@@ -62,10 +64,54 @@ export const PlayerManager = () => {
         setPlayerSelectModal
     } = useGameActions(guildId, gameState, setGameState, setOverlayState);
 
-    const isGuildReady = useDashboardAuth(guildId, user, loading, checkAuth, gameState.players);
+    // Convert players map to array for components that expect it
+    const playersArray: Player[] = gameState?.players
+        ? Object.values(gameState.players).sort((a, b) => a.id - b.id)
+        : [];
+
+    const isGuildReady = useDashboardAuth(guildId, user, loading, checkAuth, playersArray);
+
+    // Update log count if logs change while open
+    useEffect(() => {
+        if (showLogs && gameState?.logs) {
+            setLastSeenLogCount(gameState.logs.length);
+        }
+    }, [gameState?.logs?.length, showLogs]);
+
+    if (user?.user?.role === 'PENDING') {
+        return (
+            <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-slate-900">
+                <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-lg max-w-md">
+                    <h2 className="text-2xl font-bold mb-4 text-slate-800 dark:text-slate-100">{t('login.title')}</h2>
+                    <p className="text-slate-600 dark:text-slate-300 mb-6">
+                        {t('accessDenied.message') || 'Please wait for a judge to approve your join request.'}
+                    </p>
+                    <button
+                        onClick={() => navigate('/')}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+                    >
+                        {t('accessDenied.back')}
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+
+    if (!gameState) {
+        return (
+            <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-slate-900">
+                <div className="flex flex-col items-center gap-4">
+                    <div
+                        className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-slate-500 font-medium">{t('messages.loading')}</p>
+                </div>
+            </div>
+        );
+    }
 
     // Editing player helper
-    const editingPlayer = gameState.players.find(p => p.id === editingPlayerId);
+    const editingPlayer = playersArray.find(p => p.id === editingPlayerId);
 
     const toggleSpectatorSimulation = () => {
         const newMode = !isSpectatorSimulation;
@@ -81,16 +127,9 @@ export const PlayerManager = () => {
         const newShowLogs = !showLogs;
         setShowLogs(newShowLogs);
         if (newShowLogs) {
-            setLastSeenLogCount(gameState.logs.length);
+            setLastSeenLogCount(gameState.logs?.length || 0);
         }
     };
-
-    // Update log count if logs change while open
-    useEffect(() => {
-        if (showLogs) {
-            setLastSeenLogCount(gameState.logs.length);
-        }
-    }, [gameState.logs.length, showLogs]);
 
     return (
         <div
@@ -109,17 +148,16 @@ export const PlayerManager = () => {
             />
             <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
                 <GameHeader
-                    phase={gameState.phase}
                     dayCount={gameState.day}
-                    timerSeconds={gameState.timerSeconds}
+                    timerSeconds={timerSeconds}
                     onGlobalAction={handleGlobalAction}
-                    speech={gameState.speech}
-                    players={gameState.players}
-                    readonly={user?.role === 'SPECTATOR' || isSpectatorSimulation}
-                    currentStep={gameState.currentStep}
+                    speech={(gameState as any).speech}
+                    players={playersArray}
+                    readonly={user?.user?.role === 'SPECTATOR' || isSpectatorSimulation}
+                    currentStep={gameState.currentState} // Assuming currentState for now, or use stateData if more specific
                     currentState={gameState.currentState}
                     guildId={guildId}
-                    isManualStep={gameState.isManualStep}
+                    isManualStep={false} // Derive this if possible, or omit if not in SDK
                     hasAssignedRoles={gameState.hasAssignedRoles}
                 />
                 <div
@@ -131,9 +169,9 @@ export const PlayerManager = () => {
                                     <GameRoutes
                                         guildId={guildId!}
                                         gameState={gameState}
-                                        readonly={user?.role === 'SPECTATOR' || isSpectatorSimulation}
+                                        readonly={user?.user?.role === 'SPECTATOR' || isSpectatorSimulation}
                                         onPlayerAction={handleAction}
-                                        user={user}
+                                        players={playersArray}
                                     />
                                 </>
                             ) : (
@@ -156,7 +194,7 @@ export const PlayerManager = () => {
                             className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-2xl transition-transform hover:scale-110 active:scale-95 group"
                         >
                             {showLogs ? <X className="w-6 h-6"/> : <MessageSquare className="w-6 h-6"/>}
-                            {!showLogs && gameState.logs.length > lastSeenLogCount && (
+                            {!showLogs && (gameState.logs?.length || 0) > lastSeenLogCount && (
                                 <span
                                     className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
                             )}
@@ -168,32 +206,32 @@ export const PlayerManager = () => {
                                 <GameLog
                                     logs={gameState.logs}
                                     onGlobalAction={handleGlobalAction}
-                                    readonly={user?.role !== 'JUDGE' || isSpectatorSimulation}
+                                    readonly={user?.user?.role !== 'JUDGE' || isSpectatorSimulation}
                                     className="h-full shadow-2xl border-2 border-indigo-500/20"
                                     hasAssignedRoles={gameState.hasAssignedRoles}
-                                    phase={gameState.phase}
+                                    currentStep={gameState.currentState}
                                 />
                             </div>
                         )}
                     </>
                 )}
 
-                {showSettings && <SettingsModal onClose={() => setShowSettings(false)}/>}
+
 
                 {editingPlayerId && editingPlayer && guildId && (
                     <PlayerEditModal
                         player={editingPlayer}
-                        allPlayers={gameState.players}
+                        allPlayers={playersArray}
                         guildId={guildId}
                         onClose={() => setEditingPlayerId(null)}
                         doubleIdentities={gameState.doubleIdentities}
-                        availableRoles={gameState.availableRoles || []}
+                        availableRoles={gameState.roles || []}
                     />
                 )}
 
                 {deathConfirmPlayerId && guildId && (
                     <DeathConfirmModal
-                        player={gameState.players.find(p => p.id === deathConfirmPlayerId)!}
+                        player={Object.values(gameState.players).find(p => p.id === deathConfirmPlayerId)!}
                         guildId={guildId}
                         onClose={() => setDeathConfirmPlayerId(null)}
                     />
@@ -236,7 +274,7 @@ export const PlayerManager = () => {
                                 playerSelectModal.type === 'DEMOTE_JUDGE' ? t('modal.demoteJudge') :
                                     playerSelectModal.type === 'FORCE_POLICE' ? t('modal.forcePolice') : ''
                         }
-                        players={playerSelectModal.customPlayers || gameState.players}
+                        players={playerSelectModal.customPlayers || playersArray}
                         onClose={() => setPlayerSelectModal({
                             ...playerSelectModal,
                             visible: false,
@@ -245,9 +283,10 @@ export const PlayerManager = () => {
                         onSelect={handlePlayerSelect}
                         filter={(p) => {
                             if (!p.userId) return false;
-                            if (playerSelectModal.type === 'ASSIGN_JUDGE') return !p.isJudge;
-                            if (playerSelectModal.type === 'DEMOTE_JUDGE') return !!p.isJudge;
-                            if (playerSelectModal.type === 'FORCE_POLICE') return p.isAlive;
+                            const isJudge = gameState?.judgeRoleId && p.roles.includes(gameState.judgeRoleId.toString());
+                            if (playerSelectModal.type === 'ASSIGN_JUDGE') return !isJudge;
+                            if (playerSelectModal.type === 'DEMOTE_JUDGE') return !!isJudge;
+                            if (playerSelectModal.type === 'FORCE_POLICE') return p.alive;
                             return true;
                         }}
                     />

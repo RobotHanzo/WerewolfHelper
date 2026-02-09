@@ -22,6 +22,8 @@ TypeScript/React frontend + JDA (Discord API) + MongoDB + WebSocket sync.
   state)
 - **Discord Integration**: `DiscordService` handles JDA operations, `Audio` class manages voice channel playback using
   LavaPlayer
+- **BigInt Serialization**: Discord IDs (guild, user, channel, role) are sent as native JSON numbers (not strings).
+  Frontend handles precision with `json-bigint` library.
 
 ### Frontend (React + TypeScript + Vite)
 
@@ -30,13 +32,17 @@ TypeScript/React frontend + JDA (Discord API) + MongoDB + WebSocket sync.
   see [vite.config.ts](src/dashboard/vite.config.ts))
 - **WebSocket**: Real-time updates via `/ws` endpoint for live game state synchronization
 - **Auth**: Discord OAuth2 flow - backend validates, dashboard receives session
+- **API Client**: Uses `json-bigint` with `useNativeBigInt: true` to handle Discord IDs without precision loss (
+  see [api-setup.ts](src/dashboard/src/api-setup.ts))
+- **Type Generation**: Run `yarn generate-api` after backend DTO changes to
+  regenerate [types.gen.ts](src/dashboard/src/api/types.gen.ts)
 
 ## Critical Patterns
 
 ### Data Model Hierarchy
 
 - **Session** (guild-scoped): Contains `players: Map<String, Player>`, `currentState`, `stateData`, game settings
-- **Player** (nested class in Session): `roles: List<String>`, `isAlive`, `police`, identity flags (`jinBaoBao`,
+- **Player** (nested class in Session): `roles: List<String>`, `alive: Boolean`, `police`, identity flags (`jinBaoBao`,
   `duplicated`)
 - **Game Steps**: State machine uses step IDs like "SETUP", "NIGHT", "SPEECH", "VOTING" - managed by `GameStateService`
 
@@ -46,11 +52,24 @@ TypeScript/React frontend + JDA (Discord API) + MongoDB + WebSocket sync.
 - Identity check: `IdentityUtils.canManage(guildId)` verifies Discord OAuth + guild permissions
 - Session storage: MongoDB-backed HTTP sessions with 7-day timeout
 
+### BigInt Handling (Discord IDs)
+
+**Backend**:
+
+- Discord IDs (guildId, userId, channelId, roleId) are `Long` type
+- **Do NOT use** `@JsonSerialize(using = ToStringSerializer::class)` - send as native JSON numbers
+- **Do NOT use** `@Schema(type = "string")` - let OpenAPI generate correct numeric types
+
+**Frontend**:
+
+- Configure API client with `json-bigint` in `api-setup.ts`
+- **CRITICAL**: Include `transformResponse` in initial `setConfig()` call, not as separate mutation
+- TypeScript types use `number` for Discord IDs (accepts both regular numbers and BigInt)
+
 ### Testing Strategy
 
 - JUnit 5 + Mockito Kotlin for unit tests in `src/test/kotlin/`
 - Mock pattern: `@Mock` dependencies, inject into service implementation in `@BeforeEach`
--
 
 Example: [GameSessionServiceImplTest.kt](src/test/kotlin/dev/robothanzo/werewolf/service/impl/GameSessionServiceImplTest.kt) -
 mocks `SessionRepository`, `DiscordService`, `WebSocketHandler`
@@ -86,6 +105,15 @@ yarn dev
 ./gradlew build         # Compile + test + create JAR
 ./gradlew bootJar       # Create executable JAR (main class auto-detected)
 ```
+
+### Frontend Type Generation
+
+```bash
+cd src/dashboard
+yarn generate-api       # Regenerate types from OpenAPI spec
+```
+
+**When to regenerate**: After any changes to backend DTOs, controllers, or API endpoints.
 
 ### Environment Variables
 
@@ -124,11 +152,22 @@ yarn dev
 - Production: Serve static files from `dist/` via web server or embed in Spring Boot
 - Development: Use Vite proxy to avoid CORS issues
 
+### React Best Practices
+
+- **Hooks Order**: All hooks must be called before any conditional returns (React Rules of Hooks)
+- **Null Safety**: Use optional chaining (`?.`) and fallbacks (`|| []`) for potentially undefined data
+- **Single Source of Truth**: Trust backend data - avoid recomputing state (e.g., use `player.alive` directly, don't
+  compute from `roles` and `deadRoles`)
+
 ## Common Pitfalls
 
 - **Test failures**: Check for missing mock setup - all external dependencies (Discord, MongoDB) must be mocked
 - **WebSocket not connecting**: Verify CORS origins in `WebSocketConfig` match dashboard URL
 - **Session not found**: Each guild needs a `Session` document - created via `GameSessionService.createSession(guildId)`
+- **BigInt precision loss**: Ensure `json-bigint` is configured in `api-setup.ts` and `transformResponse` is in initial
+  `setConfig()` call
+- **React Hooks errors**: Ensure all hooks are called before any conditional returns
+- **Type mismatches after backend changes**: Run `yarn generate-api` to regenerate TypeScript types
 
 ## Key Files Reference
 
@@ -138,3 +177,5 @@ yarn dev
 - API endpoints: [controller/GameController.kt](src/main/kotlin/dev/robothanzo/werewolf/controller/GameController.kt),
   SessionController, AuthController, SpeechController
 - Role assignment logic: `service/impl/RoleServiceImpl.kt` - handles double identities, special role rules
+- Frontend API setup: [api-setup.ts](src/dashboard/src/api-setup.ts) - BigInt handling configuration
+- Frontend types: [types.gen.ts](src/dashboard/src/api/types.gen.ts) - Auto-generated from OpenAPI spec

@@ -76,9 +76,9 @@ class SessionController(
     @CanViewGuild
     fun getSession(
         @Parameter(description = "ID of the guild/session")
-        @PathVariable guildId: Long
+        @PathVariable guildId: String
     ): ResponseEntity<ApiResponse> {
-        val sessionOpt = gameSessionService.getSession(guildId)
+        val sessionOpt = gameSessionService.getSession(guildId.toLong())
 
         return if (sessionOpt.isPresent) {
             val session = sessionOpt.get()

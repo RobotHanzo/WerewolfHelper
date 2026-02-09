@@ -1,5 +1,5 @@
+import {JSONbigNative} from '@/api-setup';
 import {useEffect, useRef, useState} from 'react';
-import {api} from './api';
 
 type MessageHandler = (data: any) => void;
 
@@ -19,14 +19,11 @@ export class WebSocketClient {
     }
 
     private getWebSocketUrl(): string {
-        const backendUrl = api.getConfiguredUrl();
         const query = this.guildId ? `?guildId=${this.guildId}` : '';
-        if (!backendUrl) {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const host = window.location.host;
-            return `${protocol}//${host}/ws${query}`;
-        }
-        return (backendUrl.replace(/^http/, 'ws') + '/ws').replace(/\/+$/, '') + query;
+        // Use relative WebSocket URL for proxying
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        return `${protocol}//${host}/ws${query}`;
     }
 
     public get isConnected(): boolean {
@@ -65,7 +62,7 @@ export class WebSocketClient {
 
             this.ws.onmessage = (event) => {
                 try {
-                    const data = JSON.parse(event.data);
+                    const data = JSONbigNative.parse(event.data);
                     if (data.type === 'PONG') return;
                     this.messageHandlers.forEach(handler => handler(data));
                 } catch (error) {
@@ -103,7 +100,7 @@ export class WebSocketClient {
                     // Don't reconnect for session rejections, let the handlers deal with it
                     return;
                 }
-                
+
                 this.reconnect();
             };
         } catch (error) {
@@ -159,7 +156,7 @@ export class WebSocketClient {
 
     send(data: any) {
         if (this.ws?.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify(data));
+            this.ws.send(JSONbigNative.stringify(data));
         } else {
             console.warn('Cannot send message: WebSocket is not open');
         }
@@ -170,7 +167,7 @@ export class WebSocketClient {
 export const wsClient = new WebSocketClient();
 
 // React hook for WebSocket using the singleton
-export function useWebSocket(onMessage: MessageHandler, guildId?: string, onSessionExpired?: () => void) {
+export function useWebSocket(onMessage: MessageHandler, guildId?: string | null, onSessionExpired?: () => void) {
     const [isConnected, setIsConnected] = useState(wsClient.isConnected);
     const onMessageRef = useRef(onMessage);
 
@@ -219,13 +216,15 @@ export function useWebSocket(onMessage: MessageHandler, guildId?: string, onSess
         });
 
         // Ensure we are connected
-        wsClient.connect(guildId);
+        if (guildId !== null) {
+            wsClient.connect(guildId);
+        }
 
         // Heartbeat interval
         const interval = setInterval(() => {
             if (wsClient.isConnected) {
                 wsClient.send({type: 'PING'});
-            } else {
+            } else if (guildId !== null) {
                 wsClient.connect(guildId); // Force check if somehow stuck
             }
         }, 15000);
@@ -235,7 +234,7 @@ export function useWebSocket(onMessage: MessageHandler, guildId?: string, onSess
             unsubscribeMsg();
             clearInterval(interval);
         };
-    }, []);
+    }, [guildId]);
 
     return {isConnected, ws: wsClient};
 }

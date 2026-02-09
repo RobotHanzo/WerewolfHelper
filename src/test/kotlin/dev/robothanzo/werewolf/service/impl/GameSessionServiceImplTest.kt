@@ -143,56 +143,6 @@ class GameSessionServiceImplTest {
     }
 
     @Test
-    fun testSessionToJSON() {
-        // Mock WerewolfApplication.policeService to avoid uninitialized property exception
-        val mockPoliceService = mock(PoliceServiceImpl::class.java)
-        try {
-            WerewolfApplication::class.java.getDeclaredField("policeService").let {
-                it.isAccessible = true
-                it.set(null, mockPoliceService)
-            }
-        } catch (e: Exception) {
-            // Skip if reflection fails
-        }
-
-        val session = Session(guildId = 123L)
-        session.doubleIdentities = true
-        session.day = 2
-        session.roles = mutableListOf("狼人", "平民")
-
-        val result = gameSessionService.sessionToJSON(session)
-
-        assertEquals("123", result["guildId"])
-        assertEquals(true, result["doubleIdentities"])
-        assertEquals(2, result["day"])
-        assertNotNull(result["players"])
-    }
-
-    @Test
-    fun testPlayersToJSON() {
-        val session = Session(guildId = 123L)
-        val player1 = Player(id = 1, roleId = 100L, channelId = 200L)
-        val player2 = Player(id = 2, roleId = 101L, channelId = 201L)
-        session.players["1"] = player1
-        session.players["2"] = player2
-
-        val result = gameSessionService.playersToJSON(session)
-
-        assertEquals(2, result.size)
-    }
-
-    @Test
-    fun testSessionToSummaryJSON() {
-        val session = Session(guildId = 123L)
-        session.day = 3
-
-        val result = gameSessionService.sessionToSummaryJSON(session)
-
-        assertNotNull(result)
-        assertEquals("123", result["guildId"])
-    }
-
-    @Test
     fun testGetGuildMembersGuildNotFound() {
         val session = Session(guildId = 123L)
 

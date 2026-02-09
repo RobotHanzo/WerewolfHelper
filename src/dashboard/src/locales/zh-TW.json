@@ -82,8 +82,8 @@
   },
   "accessDenied": {
     "title": "存取限制",
-    "message": "身為遊戲中的活躍玩家，為了確保遊戲公平性，您目前無法進入管理儀表板。",
-    "suggestion": "如果您是法官或上帝，請確保您的 Discord 帳號已擁有正確的身分組。",
+    "message": "身為遊戲中的玩家，為了確保遊戲公平性，您目前無法進入管理介面。",
+    "suggestion": "如果您是法官或旁觀者，請確保您的 Discord 帳號已擁有正確的身分組。",
     "back": "返回伺服器列表"
   },
   "common": {
@@ -97,7 +97,6 @@
   },
   "gameHeader": {
     "day": "天數",
-    "currentPhase": "目前階段",
     "timer": "剩餘時間",
     "startGame": "開始遊戲",
     "nextPhase": "下一階段",
@@ -132,13 +131,6 @@
     "deathAnnouncement": "宣布死訊",
     "speech": "發言流程",
     "voting": "放逐投票"
-  },
-  "phases": {
-    "LOBBY": "大廳",
-    "NIGHT": "夜晚",
-    "DAY": "白天",
-    "VOTING": "投票",
-    "GAME_OVER": "遊戲結束"
   },
   "players": {
     "title": "玩家",
@@ -381,6 +373,7 @@
   },
   "messages": {
     "unassigned": "未指派",
+    "loading": "載入中...",
     "player": "玩家",
     "speaking": "發言中",
     "saving": "儲存中...",

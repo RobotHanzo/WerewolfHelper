@@ -7,9 +7,13 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "generate-api": "openapi-ts"
+    "generate-api": "openapi-ts",
+    "docs": "typedoc --entryPointStrategy Expand src/api"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.20",
+    "axios": "^1.13.5",
+    "json-bigint": "^1.0.0",
     "lucide-react": "^0.344.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -17,6 +21,7 @@
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "0.92.3",
+    "@types/json-bigint": "^1.0.4",
     "@types/node": "^25.2.0",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
@@ -24,6 +29,7 @@
     "autoprefixer": "^10.4.18",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
+    "typedoc": "^0.28.16",
     "typescript": "^5.2.2",
     "vite": "^5.1.6"
   }

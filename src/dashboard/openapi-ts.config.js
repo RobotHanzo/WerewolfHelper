@@ -7,12 +7,7 @@ export default defineConfig({
         '@hey-api/typescript',
         '@hey-api/client-axios',
         {
-            bigint: true,
-            name: '@hey-api/transformers',
-        },
-        {
             name: '@hey-api/sdk',
-            transformer: true,
         },
         '@tanstack/react-query',
     ],

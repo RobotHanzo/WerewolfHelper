@@ -1,6 +1,8 @@
 package dev.robothanzo.werewolf.controller.dto
 
 import dev.robothanzo.werewolf.database.documents.AuthSession
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.GameStateData
 import io.swagger.v3.oas.annotations.media.Schema
@@ -32,7 +34,7 @@ data class SessionResponse(
 ) : ApiResponse(true, null, null)
 
 data class SessionSummary(
-    val guildId: Long,
+    val guildId: String,
     val guildName: String,
     val guildIcon: String,
     val playerCount: Int
@@ -65,7 +67,8 @@ data class GuildMemberDto(
     val id: String,
     val name: String,
     val avatar: String?,
-    val display: String
+    val display: String,
+    val roles: List<String> = emptyList()
 )
 
 data class GuildMembersResponse(
@@ -83,6 +86,8 @@ data class AuthResponse(
 ) : ApiResponse(true, null, null)
 
 data class BasicUserDto(
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     val id: String,
     val name: String,
     val avatar: String?

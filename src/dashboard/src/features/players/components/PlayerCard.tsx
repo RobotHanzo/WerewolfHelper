@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
-import {ArrowLeftRight, HeartPulse, Lock, MicOff, Settings, Shield, Skull, Unlock} from 'lucide-react';
-import {Player} from '@/types';
+import {ArrowLeftRight, HeartPulse, Lock, Settings, Shield, Skull, Unlock} from 'lucide-react';
+import {Player} from '@/api/types.gen';
 import {useTranslation} from '@/lib/i18n';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 
@@ -71,13 +71,13 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({player, onAction, readonl
     // handleKillClick removed, using onAction directly
 
     return (
-        <div className={`${cardStyle} ${!player.isAlive ? 'opacity-60 grayscale' : ''} flex flex-col`}>
+        <div className={`${cardStyle} ${!player.alive ? 'opacity-60 grayscale' : ''} flex flex-col`}>
             <div className="p-4 flex-1">
                 {/* Header */}
                 <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-3">
                         <div className="relative">
-                            {player.avatar || player.userId ? (
+                            {player.userId ? (
                                 <DiscordAvatar userId={player.userId}
                                                avatarClassName="w-12 h-12 rounded-full border-2 border-slate-400 dark:border-slate-600 bg-slate-300 dark:bg-slate-700 object-cover"/>
                             ) : (
@@ -86,14 +86,14 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({player, onAction, readonl
                                     <Settings className="w-6 h-6 text-slate-500 dark:text-slate-400"/>
                                 </div>
                             )}
-                            {player.isSheriff && (
+                            {player.police && (
                                 <div
                                     className="absolute -bottom-1 -right-1 bg-green-600 text-white rounded-full p-0.5 border-2 border-slate-200 dark:border-slate-800"
                                     title={t('status.sheriff')}>
                                     <Shield className="w-3 h-3"/>
                                 </div>
                             )}
-                            {player.isJinBaoBao && (
+                            {player.jinBaoBao && (
                                 <div
                                     className="absolute -top-1 -right-1 bg-pink-500 text-white rounded-full p-0.5 border-2 border-slate-200 dark:border-slate-800"
                                     title={t('status.jinBaoBao')}>
@@ -122,16 +122,13 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({player, onAction, readonl
                         <div>
                             <div>
                                 <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm md:text-base leading-tight">
-                                    <DiscordName userId={player.userId} fallbackName={player.name}/>
+                                    <DiscordName userId={player.userId} fallbackName={player.nickname}/>
                                 </h3>
-                                {player.username && (
-                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">@{player.username}</p>
-                                )}
                             </div>
                             <div className={`flex items-center gap-1.5 mt-1`}>
                                 <div
                                     className={`flex items-center gap-1.5 transition-all ${animate ? 'animate-flash' : ''}`}>
-                                    {!player.avatar && (
+                                    {!player.userId && (
                                         <span
                                             className="text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded border bg-slate-200 dark:bg-slate-700 border-slate-400 dark:border-slate-600 text-slate-600 dark:text-slate-400">
                                             {t('messages.unassigned')}
@@ -174,19 +171,12 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({player, onAction, readonl
                                         <ArrowLeftRight className="w-3 h-3"/>
                                     </button>
                                 )}
-                                {!player.isAlive && <span
+                                {!player.alive && <span
                                     className="text-[10px] text-red-600 dark:text-red-500 font-bold uppercase">{t('players.dead')}</span>}
                             </div>
                         </div>
                     </div>
-                    <div className="flex flex-col gap-1 items-end">
-                        {player.isProtected && <div title={t('status.protected')}><Shield
-                            className="w-4 h-4 text-blue-500 dark:text-blue-400"/></div>}
-                        {player.isPoisoned && <div title={t('status.poisoned')}><Skull
-                            className="w-4 h-4 text-green-500 dark:text-green-400"/></div>}
-                        {player.isSilenced && <div title={t('status.silenced')}><MicOff
-                            className="w-4 h-4 text-slate-500 dark:text-slate-400"/></div>}
-                    </div>
+
                 </div>
             </div>
 
@@ -194,7 +184,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({player, onAction, readonl
             {!readonly && (
                 <div
                     className="w-full p-2 grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
-                    {player.isAlive ? (
+                    {player.alive ? (
                         <button
                             onClick={() => onAction(player.id, 'kill')}
                             className="text-xs bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 text-red-700 dark:text-red-200 border-red-300 dark:border-red-900/50 py-1.5 rounded border flex items-center justify-center gap-1 transition-colors"

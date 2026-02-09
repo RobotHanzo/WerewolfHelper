@@ -26,14 +26,6 @@ interface RoleService {
     fun removeRole(session: Session, roleName: String, amount: Int)
 
     /**
-     * Retrieves the current role pool for a session.
-     *
-     * @param session the session
-     * @return a list of role names in the pool
-     */
-    fun getRoles(session: Session): List<String>
-
-    /**
      * Randomly assigns roles from the pool to the players in a game session.
      *
      * @param session          the session

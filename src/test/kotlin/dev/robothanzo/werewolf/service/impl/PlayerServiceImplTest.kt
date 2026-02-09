@@ -96,8 +96,8 @@ class PlayerServiceImplTest {
         playerService.switchRoleOrder(player)
 
         // Verify roles were swapped
-        assertEquals("平民", player.roles?.get(0))
-        assertEquals("狼人", player.roles?.get(1))
+        assertEquals("平民", player.roles.get(0))
+        assertEquals("狼人", player.roles.get(1))
         verify(gameSessionService).saveSession(session)
     }
 

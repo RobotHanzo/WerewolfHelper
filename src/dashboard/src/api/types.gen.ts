@@ -44,16 +44,12 @@ export type StateActionRequest = {
      * Additional data for the action
      */
     data?: {
-        [key: string]: {
-            [key: string]: unknown;
-        };
+        [key: string]: unknown;
     };
 };
 
 export type StateActionResponse = {
-    data?: {
-        [key: string]: unknown;
-    };
+    data?: unknown;
     success: boolean;
     message?: string;
     error?: string;
@@ -117,7 +113,7 @@ export type AuthSession = {
     userId?: string;
     guildId?: string;
     role?: 'JUDGE' | 'SPECTATOR' | 'PENDING' | 'BLOCKED';
-    createdAt?: Date;
+    createdAt?: string;
     isJudge: boolean;
     isPrivileged: boolean;
     isSpectator: boolean;
@@ -139,7 +135,7 @@ export type BasicUserResponse = {
 };
 
 export type SessionSummary = {
-    guildId: bigint;
+    guildId: string;
     guildName: string;
     guildIcon: string;
     playerCount: number;
@@ -160,8 +156,8 @@ export type GameSettings = {
 
 export type GameStateData = {
     phaseType?: 'WOLF_YOUNGER_BROTHER_ACTION' | 'WEREWOLF_VOTING' | 'ROLE_ACTIONS';
-    phaseStartTime: bigint;
-    phaseEndTime: bigint;
+    phaseStartTime: number;
+    phaseEndTime: number;
     playerOwnedActions: {
         [key: string]: {
             [key: string]: number;
@@ -185,44 +181,42 @@ export type GameStateData = {
      */
     werewolfMessages: Array<WolfMessage>;
     deadPlayers: Array<number>;
-    nightWolfKillTargetId?: number;
-    lastGuardProtectedId?: number;
     wolfBrotherDiedDay?: number;
+    lastGuardProtectedId?: number;
+    nightWolfKillTargetId?: number;
 };
 
 export type LogEntry = {
     id?: string;
-    timestamp: bigint;
+    timestamp: number;
     type?: 'PLAYER_DIED' | 'PLAYER_REVIVED' | 'ROLE_ASSIGNED' | 'POLICE_TRANSFERRED' | 'POLICE_DESTROYED' | 'POLICE_FORCED' | 'ACTION_SUBMITTED' | 'ACTION_RESOLVED' | 'WEREWOLF_ATTACK' | 'WITCH_ANTIDOTE' | 'WITCH_POISON' | 'SEER_CHECK' | 'HUNTER_REVENGE' | 'GUARD_PROTECT' | 'SPEECH_STARTED' | 'SPEECH_ENDED' | 'SPEAKER_CHANGED' | 'SPEECH_SKIPPED' | 'SPEECH_INTERRUPTED' | 'SPEECH_ORDER_SET' | 'POLICE_ENROLLMENT_STARTED' | 'POLICE_ENROLLED' | 'POLICE_UNENROLLED' | 'POLICE_VOTING_STARTED' | 'POLICE_ELECTED' | 'POLICE_BADGE_DESTROYED' | 'EXPEL_POLL_STARTED' | 'VOTE_CAST' | 'VOTE_RESULT' | 'PLAYER_EXPELLED' | 'GAME_STARTED' | 'GAME_ENDED' | 'GAME_RESET' | 'COMMAND_EXECUTED' | 'SYSTEM' | 'PLAYER_PROMOTED_JUDGE' | 'PLAYER_DEMOTED';
     message?: string;
     metadata?: {
-        [key: string]: {
-            [key: string]: unknown;
-        };
+        [key: string]: unknown;
     };
 };
 
 export type ObjectId = {
     timestamp?: number;
-    date?: Date;
+    date?: string;
 };
 
 export type Player = {
     id: number;
-    roleId: bigint;
-    channelId: bigint;
+    roleId: number;
+    channelId: number;
     jinBaoBao: boolean;
     duplicated: boolean;
     idiot: boolean;
     police: boolean;
     rolePositionLocked: boolean;
     actionSubmitted: boolean;
-    userId?: bigint;
-    roles?: Array<string>;
-    deadRoles?: Array<string>;
-    nickname: string;
+    userId?: number;
+    roles: Array<string>;
+    deadRoles: Array<string>;
     alive: boolean;
     wolf: boolean;
+    nickname: string;
 };
 
 export type Role = {
@@ -236,12 +230,12 @@ export type RoleAction = {
     isImmediate: boolean;
     isOptional: boolean;
     actionId: 'WEREWOLF_KILL' | 'WOLF_YOUNGER_BROTHER_EXTRA_KILL' | 'WITCH_ANTIDOTE' | 'WITCH_POISON' | 'SEER_CHECK' | 'GUARD_PROTECT' | 'HUNTER_REVENGE' | 'WOLF_KING_REVENGE' | 'DARK_MERCHANT_TRADE_SEER' | 'DARK_MERCHANT_TRADE_POISON' | 'DARK_MERCHANT_TRADE_GUN' | 'MERCHANT_SEER_CHECK' | 'MERCHANT_POISON' | 'MERCHANT_GUN' | 'DEATH_RESOLUTION' | 'DEATH';
-    requiresAliveTarget: boolean;
+    timing: 'NIGHT' | 'DAY' | 'ANYTIME' | 'DEATH_TRIGGER';
     actionName: string;
+    targetCount: number;
     usageLimit: number;
     allowMultiplePerPhase: boolean;
-    targetCount: number;
-    timing: 'NIGHT' | 'DAY' | 'ANYTIME' | 'DEATH_TRIGGER';
+    requiresAliveTarget: boolean;
 };
 
 export type RoleActionInstance = {
@@ -251,18 +245,18 @@ export type RoleActionInstance = {
     targets: Array<number>;
     submittedBy: 'PLAYER' | 'JUDGE' | 'SYSTEM';
     status: 'PENDING' | 'ACTING' | 'SUBMITTED' | 'SKIPPED' | 'PROCESSED';
-    targetPromptId?: bigint;
+    targetPromptId?: number;
 };
 
 export type Session = {
-    guildId: bigint;
-    courtTextChannelId: bigint;
-    courtVoiceChannelId: bigint;
-    spectatorTextChannelId: bigint;
-    judgeTextChannelId: bigint;
-    judgeRoleId: bigint;
-    spectatorRoleId: bigint;
-    owner: bigint;
+    guildId: number;
+    courtTextChannelId: number;
+    courtVoiceChannelId: number;
+    spectatorTextChannelId: number;
+    judgeTextChannelId: number;
+    judgeRoleId: number;
+    spectatorRoleId: number;
+    owner: number;
     doubleIdentities: boolean;
     hasAssignedRoles: boolean;
     muteAfterSpeech: boolean;
@@ -273,7 +267,7 @@ export type Session = {
     logs: Array<LogEntry>;
     currentState: string;
     stateData: GameStateData;
-    currentStepEndTime: bigint;
+    currentStepEndTime: number;
     day: number;
     settings: GameSettings;
     hydratedRoles: {
@@ -290,13 +284,10 @@ export type SessionResponse = {
     error?: string;
 };
 
-/**
- * List of messages sent by wolves
- */
 export type WolfMessage = {
     senderId: number;
     content: string;
-    timestamp: bigint;
+    timestamp: number;
 };
 
 export type WolfVote = {
@@ -308,7 +299,7 @@ export type WolvesActionState = {
     actionId: string;
     electorates: Array<number>;
     votes: Array<WolfVote>;
-    messageId?: bigint;
+    messageId?: number;
     finished: boolean;
 };
 
@@ -326,18 +317,12 @@ export type GameStateResponse = {
     error?: string;
 };
 
-export type RolesResponse = {
-    data: Array<string>;
-    success: boolean;
-    message?: string;
-    error?: string;
-};
-
 export type GuildMemberDto = {
     id: string;
     name: string;
     avatar?: string;
     display: string;
+    roles?: Array<string>;
 };
 
 export type GuildMembersResponse = {
@@ -349,12 +334,10 @@ export type GuildMembersResponse = {
 
 export type UpdateSettingsData = {
     body: {
-        [key: string]: {
-            [key: string]: unknown;
-        };
+        [key: string]: unknown;
     };
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/settings';
@@ -385,7 +368,7 @@ export type UpdateSettingsResponse = UpdateSettingsResponses[keyof UpdateSetting
 export type SetStateData = {
     body: StateSetRequest;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/state/set';
@@ -412,7 +395,7 @@ export type SetStateResponse = SetStateResponses[keyof SetStateResponses];
 export type NextStateData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/state/next';
@@ -439,7 +422,7 @@ export type NextStateResponse = NextStateResponses[keyof NextStateResponses];
 export type StateActionData = {
     body: StateActionRequest;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/state/action';
@@ -470,7 +453,7 @@ export type StateActionResponse2 = StateActionResponses[keyof StateActionRespons
 export type StartGameData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/start';
@@ -488,7 +471,7 @@ export type StartGameResponse = StartGameResponses[keyof StartGameResponses];
 export type UnmuteAllData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/speech/unmute-all';
@@ -506,7 +489,7 @@ export type UnmuteAllResponse = UnmuteAllResponses[keyof UnmuteAllResponses];
 export type SkipSpeechData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/speech/skip';
@@ -533,7 +516,7 @@ export type SkipSpeechResponse = SkipSpeechResponses[keyof SkipSpeechResponses];
 export type StartPoliceEnrollData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/speech/police-enroll';
@@ -564,7 +547,7 @@ export type StartPoliceEnrollResponse = StartPoliceEnrollResponses[keyof StartPo
 export type SetSpeechOrderData = {
     body: SpeechOrderRequest;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/speech/order';
@@ -595,7 +578,7 @@ export type SetSpeechOrderResponse = SetSpeechOrderResponses[keyof SetSpeechOrde
 export type MuteAllData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/speech/mute-all';
@@ -613,7 +596,7 @@ export type MuteAllResponse = MuteAllResponses[keyof MuteAllResponses];
 export type ManualStartTimerData = {
     body: ManualTimerRequest;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/speech/manual-start';
@@ -631,7 +614,7 @@ export type ManualStartTimerResponse = ManualStartTimerResponses[keyof ManualSta
 export type InterruptSpeechData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/speech/interrupt';
@@ -658,7 +641,7 @@ export type InterruptSpeechResponse = InterruptSpeechResponses[keyof InterruptSp
 export type ConfirmSpeechData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/speech/confirm';
@@ -676,7 +659,7 @@ export type ConfirmSpeechResponse = ConfirmSpeechResponses[keyof ConfirmSpeechRe
 export type StartAutoSpeechData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/speech/auto';
@@ -707,7 +690,7 @@ export type StartAutoSpeechResponse = StartAutoSpeechResponses[keyof StartAutoSp
 export type AddRoleData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query: {
         role: string;
@@ -741,7 +724,7 @@ export type AddRoleResponse = AddRoleResponses[keyof AddRoleResponses];
 export type ResetGameData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/reset';
@@ -759,8 +742,8 @@ export type ResetGameResponse = ResetGameResponses[keyof ResetGameResponses];
 export type UpdateUserRoleData = {
     body: PlayerRoleUpdateRequest;
     path: {
-        guildId: bigint;
-        userId: bigint;
+        guildId: string;
+        userId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/players/{userId}/role';
@@ -791,7 +774,7 @@ export type UpdateUserRoleResponse = UpdateUserRoleResponses[keyof UpdateUserRol
 export type SwitchRoleOrderData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
         playerId: number;
     };
     query?: never;
@@ -823,7 +806,7 @@ export type SwitchRoleOrderResponse = SwitchRoleOrderResponses[keyof SwitchRoleO
 export type UpdatePlayerRolesData = {
     body: Array<string>;
     path: {
-        guildId: bigint;
+        guildId: string;
         playerId: number;
     };
     query?: never;
@@ -855,7 +838,7 @@ export type UpdatePlayerRolesResponse = UpdatePlayerRolesResponses[keyof UpdateP
 export type SetRoleLockData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
         playerId: number;
     };
     query: {
@@ -889,7 +872,7 @@ export type SetRoleLockResponse = SetRoleLockResponses[keyof SetRoleLockResponse
 export type ReviveData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
         playerId: number;
     };
     query?: never;
@@ -921,7 +904,7 @@ export type ReviveResponse = ReviveResponses[keyof ReviveResponses];
 export type ReviveRoleData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
         playerId: number;
     };
     query: {
@@ -955,7 +938,7 @@ export type ReviveRoleResponse = ReviveRoleResponses[keyof ReviveRoleResponses];
 export type SetPoliceData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
         playerId: number;
     };
     query?: never;
@@ -987,7 +970,7 @@ export type SetPoliceResponse = SetPoliceResponses[keyof SetPoliceResponses];
 export type MarkDeadData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
         playerId: number;
     };
     query?: {
@@ -1024,7 +1007,7 @@ export type MarkDeadResponse = MarkDeadResponses[keyof MarkDeadResponses];
 export type AssignRolesData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/players/assign';
@@ -1055,7 +1038,7 @@ export type AssignRolesResponse = AssignRolesResponses[keyof AssignRolesResponse
 export type SetPlayerCountData = {
     body: PlayerCountRequest;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/player-count';
@@ -1130,7 +1113,7 @@ export type GetUserData = {
         /**
          * ID of the guild
          */
-        guildId: bigint;
+        guildId: string;
         /**
          * ID of the user
          */
@@ -1193,7 +1176,7 @@ export type GetSessionData = {
         /**
          * ID of the guild/session
          */
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}';
@@ -1224,7 +1207,7 @@ export type GetSessionResponse = GetSessionResponses[keyof GetSessionResponses];
 export type GetGameStateData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/state';
@@ -1252,41 +1235,10 @@ export type GetGameStateResponses = {
 
 export type GetGameStateResponse = GetGameStateResponses[keyof GetGameStateResponses];
 
-export type GetRolesData = {
-    body?: never;
-    path: {
-        guildId: bigint;
-    };
-    query?: never;
-    url: '/api/sessions/{guildId}/roles';
-};
-
-export type GetRolesErrors = {
-    /**
-     * User does not have permission to view this guild
-     */
-    403: ApiResponse;
-    /**
-     * Session not found
-     */
-    404: ApiResponse;
-};
-
-export type GetRolesError = GetRolesErrors[keyof GetRolesErrors];
-
-export type GetRolesResponses = {
-    /**
-     * Successfully retrieved roles
-     */
-    200: RolesResponse;
-};
-
-export type GetRolesResponse = GetRolesResponses[keyof GetRolesResponses];
-
 export type GetMembersData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
     };
     query?: never;
     url: '/api/sessions/{guildId}/members';
@@ -1378,7 +1330,7 @@ export type CallbackResponses = {
 export type RemoveRoleData = {
     body?: never;
     path: {
-        guildId: bigint;
+        guildId: string;
         role: string;
     };
     query?: {

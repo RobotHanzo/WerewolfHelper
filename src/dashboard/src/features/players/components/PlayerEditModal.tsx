@@ -1,8 +1,9 @@
 import React, {useState} from 'react';
 import {useTranslation} from '@/lib/i18n';
-import {Player} from '@/types';
+import {Player} from '@/api/types.gen';
 import {ChevronRight, Shield, Users, X} from 'lucide-react';
-import {api} from '@/lib/api';
+import {useMutation} from '@tanstack/react-query';
+import {updatePlayerRolesMutation, setRoleLockMutation, setPoliceMutation} from '@/api/@tanstack/react-query.gen';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 
 interface PlayerEditModalProps {
@@ -33,8 +34,13 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
     const [transferTarget, setTransferTarget] = useState<number | ''>('');
     const [loading, setLoading] = useState(false);
 
+    // Mutations
+    const updateRoles = useMutation(updatePlayerRolesMutation());
+    const setRoleLock = useMutation(setRoleLockMutation());
+    const setPolice = useMutation(setPoliceMutation());
+
     // Filter alive players excluding current player for transfer
-    const potentialSheriffs = allPlayers.filter(p => p.isAlive && p.id !== player.id);
+    const potentialSheriffs = allPlayers.filter(p => p.alive && p.id !== player.id);
 
     // Use passed availableRoles, filter out duplicates and sort
     const sortedRoles = Array.from(new Set(availableRoles)).sort();
@@ -51,11 +57,17 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
             const finalRoles = newRoles.filter(r => r);
 
             // Update roles
-            await api.updatePlayerRoles(guildId, player.id, finalRoles);
+            await updateRoles.mutateAsync({
+                path: {guildId, playerId: player.id},
+                body: finalRoles
+            });
 
             // Update lock status if double identity
             if (isDoubleIdentity) {
-                await api.setPlayerRoleLock(guildId, player.id, rolePositionLocked);
+                await setRoleLock.mutateAsync({
+                    path: {guildId, playerId: player.id},
+                    query: {locked: rolePositionLocked}
+                });
             }
 
             onClose();
@@ -70,7 +82,9 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
         if (transferTarget === '') return;
         setLoading(true);
         try {
-            await api.setPolice(guildId, transferTarget); // Set new sheriff
+            await setPolice.mutateAsync({
+                path: {guildId, playerId: transferTarget as number}
+            });
             onClose();
         } catch (error) {
             console.error('Failed to transfer police:', error);
@@ -90,7 +104,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                         <span className="text-xl">
                             <DiscordAvatar userId={player.userId} avatarClassName="w-6 h-6 rounded-full inline-block"/>
                         </span>
-                        {t('players.edit')} - <DiscordName userId={player.userId} fallbackName={player.name}/>
+                        {t('players.edit')} - <DiscordName userId={player.userId} fallbackName={player.nickname}/>
                     </h2>
                     <button onClick={onClose}
                             className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
@@ -173,7 +187,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                     </div>
 
                     {/* Police Badge Transfer Section */}
-                    {player.isSheriff ? (
+                    {player.police ? (
                         <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
                             <div
                                 className="flex items-center gap-2 text-green-600 dark:text-green-500 font-bold text-sm uppercase tracking-wider">
@@ -195,7 +209,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                                         <option value="">{t('players.selectTarget', 'Select Target...')}</option>
                                         {potentialSheriffs.map(p => (
                                             <option key={p.id} value={p.id}>
-                                                {p.name}
+                                                {p.nickname}
                                             </option>
                                         ))}
                                     </select>

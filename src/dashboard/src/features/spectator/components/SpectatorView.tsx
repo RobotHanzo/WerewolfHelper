@@ -1,6 +1,6 @@
 import React, {useMemo} from 'react';
 import {useTranslation} from '@/lib/i18n';
-import {Player} from '@/types';
+import {Player} from '@/api/types.gen';
 import {HeartPulse, Shield, Skull, Users, Zap} from 'lucide-react';
 import {PlayerCard} from '@/features/players/components/PlayerCard';
 
@@ -25,34 +25,21 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({players, doubleIden
         // Detailed Iteration
         players.forEach(player => {
             // JBB Logic
-            if (player.isJinBaoBao) {
+            if (player.jinBaoBao) {
                 jinBaoBaos++;
-                if (!player.isAlive) {
+                if (!player.alive) {
                     deadJinBaoBaos++;
                 }
             }
 
             // Roles Logic
             const pRoles = player.roles || [];
-            const pDeadRoles = player.deadRoles || [];
-
-            // We need to match dead roles to actual roles to calculate stats.
-            // We can just count totals.
-
-            let localDead = [...pDeadRoles];
+            const isDead = !player.alive;
 
             pRoles.forEach(role => {
                 const isWolf = role.includes('狼') || role === '石像鬼' || role === '血月使者' || role === '惡靈騎士' || role === '夢魘';
                 const isVillager = role === '平民';
                 const isGod = !isWolf && !isVillager;
-
-                // Check if this role is dead
-                let isDead = false;
-                const deadIdx = localDead.indexOf(role);
-                if (deadIdx !== -1) {
-                    isDead = true;
-                    localDead.splice(deadIdx, 1); // Remove matched dead role
-                }
 
                 if (isWolf) {
                     wolves++;
@@ -149,7 +136,7 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({players, doubleIden
                 <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                     <Users className="w-5 h-5 text-slate-500 dark:text-slate-400"/>
                     {t('players.title')} <span
-                    className="text-slate-500 dark:text-slate-500 text-sm font-normal">({players.filter(p => p.isAlive).length} {t('players.alive')})</span>
+                    className="text-slate-500 dark:text-slate-500 text-sm font-normal">({players.filter(p => p.alive).length} {t('players.alive')})</span>
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {players.map(player => (

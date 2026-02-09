@@ -34,7 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const {user} = useAuth();
     const location = useLocation();
 
-    const isDashboardActive = location.pathname.endsWith(user?.guildId ? `/server/${user.guildId}` : '/') && !location.pathname.includes('/settings') && !location.pathname.includes('/spectator') && !location.pathname.includes('/speech') && !location.pathname.includes('/players');
+    const isDashboardActive = location.pathname.endsWith(user?.user?.guildId ? `/server/${user.user.guildId}` : '/') && !location.pathname.includes('/settings') && !location.pathname.includes('/spectator') && !location.pathname.includes('/speech') && !location.pathname.includes('/players');
     const isPlayersActive = location.pathname.includes('/players');
     const isSettingsActive = location.pathname.includes('/settings');
     const isSpectatorActive = location.pathname.includes('/spectator');
@@ -53,7 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             <nav className="flex-1 p-4 space-y-1">
-                {user?.role === 'JUDGE' && !isSpectatorMode && (
+                {user?.user?.role === 'JUDGE' && !isSpectatorMode && (
                     <>
                         <button
                             onClick={onDashboardClick}
@@ -88,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </>
                 )}
 
-                {(user?.role === 'JUDGE' || user?.role === 'SPECTATOR') && (
+                {(user?.user?.role === 'JUDGE' || user?.user?.role === 'SPECTATOR') && (
                     <>
                         <button
                             onClick={onSpectatorClick}
@@ -120,13 +120,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {user && (
                     <div
                         className="flex items-center gap-3 px-2 py-2 bg-slate-200/50 dark:bg-slate-800/50 rounded-lg">
-                        <DiscordAvatar userId={user.userId} guildId={user.guildId}
+                        <DiscordAvatar userId={user.user.userId} guildId={user.user.guildId}
                                        avatarClassName="w-10 h-10 rounded-full ring-2 ring-indigo-200 dark:ring-indigo-900"/>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                                <DiscordName userId={user.userId} guildId={user.guildId} fallbackName={user.username}/>
+                                <DiscordName userId={user.user.userId} guildId={user.user.guildId}/>
                             </p>
-                            {user.role === 'JUDGE' ? (
+                            {user.user.role === 'JUDGE' ? (
                                 <button
                                     onClick={onToggleSpectatorMode}
                                     className={`inline-block px-2 py-0.5 text-xs font-medium rounded transition-colors cursor-pointer ${isSpectatorMode
@@ -139,11 +139,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 </button>
                             ) : (
                                 <span
-                                    className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${user.role === 'SPECTATOR'
+                                    className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${user.user.role === 'SPECTATOR'
                                         ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
                                         : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'
                                     }`}>
-                                    {t(`userRoles.${user.role}`) || user.role}
+                                    {t(`userRoles.${user.user.role}`) || user.user.role}
                                 </span>
                             )}
                         </div>
