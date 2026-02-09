@@ -35,10 +35,10 @@ dependencies {
 
     // JDA Audio supplements
     implementation("dev.arbjerg:lavaplayer:2.2.6")
-    implementation("club.minnced:jdave-api:0.1.5")
-    implementation("club.minnced:jdave-native-linux-x86-64:0.1.5")
-    implementation("club.minnced:jdave-native-linux-aarch64:0.1.5")
-    implementation("club.minnced:jdave-native-win-x86-64:0.1.5")
+    implementation("club.minnced:jdave-api:0.1.6")
+    implementation("club.minnced:jdave-native-linux-x86-64:0.1.6")
+    implementation("club.minnced:jdave-native-linux-aarch64:0.1.6")
+    implementation("club.minnced:jdave-native-win-x86-64:0.1.6")
 
     compileOnly("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")
