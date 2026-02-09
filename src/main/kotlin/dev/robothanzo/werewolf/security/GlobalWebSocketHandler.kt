@@ -99,7 +99,6 @@ class GlobalWebSocketHandler : TextWebSocketHandler() {
             if (messageData["type"] == "PING") {
                 val pongResponse = mapper.writeValueAsString(mapOf("type" to "PONG"))
                 session.sendMessage(TextMessage(pongResponse))
-                log.debug("Responded to PING from session: {}", session.id)
             } else {
                 log.warn("Received message from client with unknown type: {}", messageData["type"])
             }

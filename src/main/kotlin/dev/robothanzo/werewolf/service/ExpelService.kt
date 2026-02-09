@@ -1,6 +1,7 @@
 package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.ExpelStatus
 import dev.robothanzo.werewolf.model.Candidate
 import dev.robothanzo.werewolf.model.ExpelPoll
 import dev.robothanzo.werewolf.model.ExpelSession
@@ -29,4 +30,9 @@ interface ExpelService {
         durationMillis: Long = 30000L,
         callback: (() -> Unit)? = null
     )
+
+    /**
+     * Returns a UI-friendly ExpelStatus for the given guild, or null if no expel session/poll exists.
+     */
+    fun getExpelStatus(guildId: Long): ExpelStatus?
 }

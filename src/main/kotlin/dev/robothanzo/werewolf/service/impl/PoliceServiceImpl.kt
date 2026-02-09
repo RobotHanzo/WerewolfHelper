@@ -542,4 +542,21 @@ class PoliceServiceImpl(
             }
         }
     }
+
+    override fun getPoliceStatus(guildId: Long): dev.robothanzo.werewolf.game.model.PoliceStatus? {
+        val session = sessions[guildId] ?: return null
+        return dev.robothanzo.werewolf.game.model.PoliceStatus(
+            state = session.state.name,
+            stageEndTime = session.stageEndTime,
+            allowEnroll = session.state.canEnroll(),
+            allowUnEnroll = session.state.canQuit(),
+            candidates = session.candidates.values.map { candidate ->
+                dev.robothanzo.werewolf.game.model.PoliceCandidateDto(
+                    id = candidate.player.id,
+                    quit = candidate.quit,
+                    voters = candidate.electors.map { it.toString() }
+                )
+            }
+        )
+    }
 }

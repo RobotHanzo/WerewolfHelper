@@ -1,21 +1,16 @@
 package dev.robothanzo.werewolf.service.impl
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.controller.dto.GuildMemberDto
 import dev.robothanzo.werewolf.database.SessionRepository
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.database.documents.UserRole
-import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.game.model.GameSettings
 import dev.robothanzo.werewolf.security.GlobalWebSocketHandler
-import dev.robothanzo.werewolf.service.ExpelService
 import dev.robothanzo.werewolf.service.GameSessionService
-import dev.robothanzo.werewolf.service.SpeechService
 import dev.robothanzo.werewolf.websocket.WebSocketEventData
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
-import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -193,6 +188,11 @@ class GameSessionServiceImpl(
 
     override fun broadcastSessionUpdate(session: Session) {
         try {
+            // Populate transient UI state fields
+            session.stateData.speech = WerewolfApplication.speechService.getSpeechStatus(session.guildId)
+            session.stateData.police = WerewolfApplication.policeService.getPoliceStatus(session.guildId)
+            session.stateData.expel = WerewolfApplication.expelService.getExpelStatus(session.guildId)
+
             val eventData = WebSocketEventData.SessionUpdate(
                 guildId = session.guildId.toString(),
                 session = session

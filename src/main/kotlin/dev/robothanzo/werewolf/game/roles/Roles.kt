@@ -63,7 +63,14 @@ class WolfBrother(@Transient private val killAction: WerewolfKillAction) : BaseR
             submittedBy = ActionSubmissionSource.SYSTEM,
             status = ActionStatus.PROCESSED
         )
-        context.session.stateData.executedActions.getOrPut(context.session.day) { mutableListOf() }.add(deathAction)
+        context.session.stateData.executedActions.getOrPut(context.session.day) { mutableListOf() }
+            .add(deathAction)
+
+        // Set the awakened flag for the Younger Brother
+        val yb = context.session.players.values.find { it.roles.contains("狼弟") }
+        if (yb != null) {
+            context.session.stateData.wolfBrotherAwakenedPlayerId = yb.id
+        }
     }
 }
 

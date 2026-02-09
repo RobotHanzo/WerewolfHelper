@@ -76,6 +76,7 @@
 
 /* Animations Logic for Tailwind-Animate compatibility */
 .animate-in {
+    animation-name: enter;
     animation-duration: 0.5s;
     animation-fill-mode: forwards;
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
@@ -85,9 +86,23 @@
     --tw-enter-translate-y: initial;
 }
 
+.animate-out {
+    animation-name: exit;
+    animation-duration: 0.5s;
+    animation-fill-mode: forwards;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    --tw-exit-opacity: initial;
+    --tw-exit-scale: initial;
+    --tw-exit-translate-x: initial;
+    --tw-exit-translate-y: initial;
+}
+
 .fade-in {
     --tw-enter-opacity: 0;
-    animation-name: enter;
+}
+
+.fade-out {
+    --tw-exit-opacity: 0;
 }
 
 .zoom-in-95 {
@@ -98,6 +113,14 @@
     --tw-enter-scale: 0.75;
 }
 
+.zoom-in-50 {
+    --tw-enter-scale: 0.5;
+}
+
+.scale-in-95 {
+    --tw-enter-scale: 0.95;
+}
+
 .slide-in-from-bottom-2 {
     --tw-enter-translate-y: 0.5rem;
 }
@@ -106,14 +129,33 @@
     --tw-enter-translate-y: 1rem;
 }
 
+.slide-in-from-top-2 {
+    --tw-enter-translate-y: -0.5rem;
+}
+
+.slide-in-from-top-4 {
+    --tw-enter-translate-y: -1rem;
+}
+
 .slide-in-from-right {
     --tw-enter-translate-x: 100%;
+}
+
+.slide-out-from-top-4 {
+    --tw-exit-translate-y: -1rem;
 }
 
 @keyframes enter {
     from {
         opacity: var(--tw-enter-opacity, 1);
         transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0) scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), 1);
+    }
+}
+
+@keyframes exit {
+    to {
+        opacity: var(--tw-exit-opacity, 1);
+        transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0) scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), 1);
     }
 }
 

@@ -12,10 +12,10 @@ interface SpeakerCardProps {
 }
 
 export const SpeakerCard = ({player, timeLeft, t, readonly, onSkip, onInterrupt}: SpeakerCardProps) => (
-    <div className="relative">
+    <div className="relative w-full">
         <div className="absolute inset-0 bg-indigo-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
         <div
-            className="relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl border-2 border-indigo-500 flex flex-col items-center gap-4 text-center">
+            className="relative w-full bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl border-2 border-indigo-500 flex flex-col items-center gap-4 text-center">
             <>
                 <div className="relative">
                     <DiscordAvatar userId={player.userId}

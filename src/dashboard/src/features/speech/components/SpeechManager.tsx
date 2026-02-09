@@ -1,14 +1,14 @@
 import {useEffect, useState} from 'react';
-import {Clock, Mic, Square, Play, ArrowUp, ArrowDown, UserPlus, UserMinus, Shield} from 'lucide-react';
+import {ArrowDown, ArrowUp, Clock, Mic, Play, Shield, Square, UserMinus, UserPlus} from 'lucide-react';
 import {useTranslation} from '@/lib/i18n';
 import {useMutation} from '@tanstack/react-query';
 import {
-    skipSpeechMutation,
-    interruptSpeechMutation,
     confirmSpeechMutation,
+    interruptSpeechMutation,
+    setSpeechOrderMutation,
+    skipSpeechMutation,
     startAutoSpeechMutation,
-    startPoliceEnrollMutation,
-    setSpeechOrderMutation
+    startPoliceEnrollMutation
 } from '@/api/@tanstack/react-query.gen';
 import {Player} from '@/api/types.gen';
 import {SpeakerCard} from './SpeakerCard';
@@ -330,14 +330,19 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
                     <>
                         <div className="relative w-full max-w-md min-h-[350px] flex flex-col items-center">
                             {currentSpeaker ? (
-                                <SpeakerCard
-                                    player={currentSpeaker}
-                                    timeLeft={timeLeft}
-                                    t={t}
-                                    readonly={readonly}
-                                    onSkip={handleSkip}
-                                    onInterrupt={handleInterrupt}
-                                />
+                                <div
+                                    key={currentSpeaker.id}
+                                    className="w-full animate-in fade-in slide-in-from-bottom-4 duration-300"
+                                >
+                                    <SpeakerCard
+                                        player={currentSpeaker}
+                                        timeLeft={timeLeft}
+                                        t={t}
+                                        readonly={readonly}
+                                        onSkip={handleSkip}
+                                        onInterrupt={handleInterrupt}
+                                    />
+                                </div>
                             ) : (
                                 <div className="text-slate-500 text-center mt-20">{t('speechManager.preparing')}</div>
                             )}

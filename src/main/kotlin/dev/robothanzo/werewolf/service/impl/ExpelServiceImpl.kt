@@ -1,6 +1,8 @@
 package dev.robothanzo.werewolf.service.impl
 
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.ExpelCandidateDto
+import dev.robothanzo.werewolf.game.model.ExpelStatus
 import dev.robothanzo.werewolf.model.Candidate
 import dev.robothanzo.werewolf.model.ExpelPoll
 import dev.robothanzo.werewolf.model.ExpelSession
@@ -120,5 +122,36 @@ class ExpelServiceImpl : ExpelService {
 
         poll.message = message
         poll.start(channel, allowPK)
+    }
+
+    override fun getExpelStatus(guildId: Long): ExpelStatus? {
+        val expelSession = sessions[guildId]
+        val expelPoll = polls[guildId]
+
+        val candidates: List<ExpelCandidateDto> = when {
+            expelPoll != null -> expelPoll.candidates.values.sortedWith(Candidate.getComparator()).map {
+                ExpelCandidateDto(
+                    id = it.player.id,
+                    quit = it.quit,
+                    voters = it.electors.map { e -> e.toString() }
+                )
+            }
+
+            expelSession != null -> expelSession.candidates.values.sortedWith(Candidate.getComparator()).map {
+                ExpelCandidateDto(
+                    id = it.player.id,
+                    quit = it.quit,
+                    voters = listOf()
+                )
+            }
+
+            else -> emptyList()
+        }
+
+        return if (expelPoll == null && expelSession == null) null else ExpelStatus(
+            voting = (expelSession != null),
+            endTime = expelSession?.endTime,
+            candidates = candidates
+        )
     }
 }

@@ -2,11 +2,13 @@ package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.PoliceStatus
 import dev.robothanzo.werewolf.model.PoliceSession
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
+
 
 /**
  * Service for managing police (sheriff) election processes,
@@ -99,6 +101,8 @@ interface PoliceService {
      * @param event the button interaction event
      */
     fun destroyPolice(event: ButtonInteractionEvent)
+
+    fun getPoliceStatus(guildId: Long): PoliceStatus?
 }
 
 data class TransferPoliceSession(

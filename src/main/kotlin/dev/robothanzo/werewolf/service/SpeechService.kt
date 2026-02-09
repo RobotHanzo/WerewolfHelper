@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.SpeechStatus
 import dev.robothanzo.werewolf.model.SpeechOrder
 import dev.robothanzo.werewolf.model.SpeechSession
 import net.dv8tion.jda.api.entities.Guild
@@ -99,4 +100,6 @@ interface SpeechService {
      * Mutes or unmutes all non-admin members in a guild.
      */
     fun setAllMute(guildId: Long, mute: Boolean)
+
+    fun getSpeechStatus(guildId: Long): SpeechStatus?
 }

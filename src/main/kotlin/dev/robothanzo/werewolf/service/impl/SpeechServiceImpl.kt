@@ -528,6 +528,18 @@ class SpeechServiceImpl(
         return if (isPolice) 210 else 180
     }
 
+    override fun getSpeechStatus(guildId: Long): dev.robothanzo.werewolf.game.model.SpeechStatus? {
+        val session = speechSessions[guildId] ?: return null
+        return dev.robothanzo.werewolf.game.model.SpeechStatus(
+            order = session.order.map { it.id },
+            currentSpeakerId = session.lastSpeaker,
+            endTime = session.currentSpeechEndTime,
+            totalTime = session.totalSpeechTime,
+            isPaused = session.shouldStopCurrentSpeaker, // Or another dedicated flag if available
+            interruptVotes = session.interruptVotes.toList()
+        )
+    }
+
     private fun getTotalQueueDuration(queue: List<Player>): Int {
         var duration = 0
         for (p in queue) {

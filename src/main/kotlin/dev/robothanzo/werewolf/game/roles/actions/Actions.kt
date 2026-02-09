@@ -20,20 +20,11 @@ class WerewolfKillAction : BaseRoleAction(
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
-        println("WerewolfKillAction: Inputs - Targets=${action.targets}")
-        if (action.targets.isEmpty()) {
-            println("WerewolfKillAction: Skipped due to empty targets")
-            return accumulatedState
-        }
-
+        if (action.targets.isEmpty()) return accumulatedState
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
-        if (targetId == SKIP_TARGET_ID) {
-            println("WerewolfKillAction: Skipped due to skip target")
-            return accumulatedState
-        }
+        if (targetId == SKIP_TARGET_ID) return accumulatedState
 
         accumulatedState.deaths.getOrPut(DeathCause.WEREWOLF) { mutableListOf() }.add(targetId)
-        println("WerewolfKillAction: Added kill $targetId. New Wolf deaths: ${accumulatedState.deaths[DeathCause.WEREWOLF]}")
         return accumulatedState
     }
 }
@@ -43,6 +34,7 @@ class WolfYoungerBrotherExtraKillAction : BaseRoleAction(
     actionId = ActionDefinitionId.WOLF_YOUNGER_BROTHER_EXTRA_KILL,
     priority = PredefinedRoles.WEREWOLF_PRIORITY + 1,
     timing = ActionTiming.NIGHT,
+    usageLimit = 1,
     isOptional = false
 ) {
     override fun execute(
@@ -53,20 +45,18 @@ class WolfYoungerBrotherExtraKillAction : BaseRoleAction(
         if (action.targets.isEmpty() || action.targets[0] == -1) return accumulatedState
 
         accumulatedState.deaths.getOrPut(DeathCause.WEREWOLF) { mutableListOf() }.add(action.targets[0])
+
+        // Clear flag after execution (though it will also be cleared at end of night)
+        session.stateData.wolfBrotherAwakenedPlayerId = null
+
         return accumulatedState
     }
 
     override fun isAvailable(session: Session, actor: Int): Boolean {
         if (!super.isAvailable(session, actor)) return false
 
-        // Check if Wolf Brother died in the previous day
-        val wolfBrotherDiedDay = session.stateData.wolfBrotherDiedDay ?: return false
-
-        // So if Wolf Brother died on Day X, we are now at Night X+1 (session.day == X).
-        // Since session.day is only incremented at the start of DEATH_ANNOUNCEMENT,
-        // it remains X during the following night.
-
-        return wolfBrotherDiedDay == session.day
+        // Available if this specific player was flagged for revenge after Wolf Brother's death
+        return session.stateData.wolfBrotherAwakenedPlayerId == actor
     }
 }
 
@@ -263,38 +253,26 @@ class DeathResolutionAction : BaseRoleAction(
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
-        println("DeathResolution: Starting. Deaths=${accumulatedState.deaths}, Saved=${accumulatedState.saved}, Protected=${accumulatedState.protectedPlayers}")
-
         val deaths = accumulatedState.deaths
         val werewolfTargets = deaths[DeathCause.WEREWOLF]?.toSet() ?: emptySet()
         val doubleProtected = werewolfTargets
             .filter { it in accumulatedState.saved }
             .filter { it in accumulatedState.protectedPlayers }
 
-        if (doubleProtected.isNotEmpty()) println("DeathResolution: Double protected players found: $doubleProtected")
-
         accumulatedState.saved.forEach { savedId ->
             if (deaths.values.any { it.contains(savedId) }) {
-                println("DeathResolution: Saving player $savedId from death")
                 deaths.values.forEach { it.removeIf { id -> id == savedId } }
             }
         }
         val protectedPlayers = accumulatedState.protectedPlayers
         if (protectedPlayers.isNotEmpty()) {
-            val killedProtected = deaths[DeathCause.WEREWOLF]?.filter { it in protectedPlayers }
-            if (killedProtected?.isNotEmpty() == true) {
-                println("DeathResolution: Guard protecting players $killedProtected from Wolf kill")
-                deaths[DeathCause.WEREWOLF]?.removeIf { it in protectedPlayers }
-            }
+            deaths[DeathCause.WEREWOLF]?.removeIf { it in protectedPlayers }
         }
 
         if (doubleProtected.isNotEmpty()) {
             deaths[DeathCause.DOUBLE_PROTECTION] = doubleProtected.toMutableList()
-            println("DeathResolution: Adding DOUBLE_PROTECTION death for $doubleProtected")
         }
 
-        // Wolf Younger Brother Unsaveable Kill Logic
-        // If YB Extra Kill target == Wolf Pack Kill target, the target cannot be saved by Witch or Guard.
         val wolfKillAction =
             session.stateData.submittedActions.find { it.actionDefinitionId == ActionDefinitionId.WEREWOLF_KILL }
         val ybExtraKillAction =
@@ -305,38 +283,13 @@ class DeathResolutionAction : BaseRoleAction(
             val ybTarget = ybExtraKillAction.targets.firstOrNull()
 
             if (wolfTarget != null && ybTarget != null && wolfTarget == ybTarget && wolfTarget != SKIP_TARGET_ID) {
-                // Target matches, kill is unsaveable
-                println("DeathResolution: Wolf Brother Unsaveable Kill detected on player $wolfTarget")
-
-                if (accumulatedState.saved.contains(wolfTarget)) {
-                    accumulatedState.saved.remove(wolfTarget)
-                    println("DeathResolution: Removed Witch save for $wolfTarget (Unsaveable)")
-                    // Ensure they are in the death list (Witch might have prevented them from being added to death list effectively, 
-                    // or we need to ensure they are re-added if they were removed? 
-                    // Actually, execute() of WitchAntidote adds to `saved`, it doesn't remove from `deaths` yet. 
-                    // `DeathResolutionAction` lines 285-290 remove from `deaths`.
-                    // So removing from `saved` BEFORE that block is key.
-                    // WAIT: The block lines 285-290 ALREADY ran above. I need to move this logic UP.
-                }
-
-                if (accumulatedState.protectedPlayers.contains(wolfTarget)) {
-                    accumulatedState.protectedPlayers.remove(wolfTarget)
-                    println("DeathResolution: Removed Guard protection for $wolfTarget (Unsaveable)")
-                    // Similarly, Guard logic lines 291-298 ran above. 
-                }
-
-                // Constructive fix: I need to re-add the death if it was removed, or run this logic earlier.
-                // It is safer to re-add to deaths map if missing, as the previous logic might have cleared it.
                 if (deaths[DeathCause.WEREWOLF]?.contains(wolfTarget) != true) {
                     deaths.getOrPut(DeathCause.WEREWOLF) { mutableListOf() }.add(wolfTarget)
-                    println("DeathResolution: Re-added death for $wolfTarget (Unsaveable)")
                 }
             }
         }
 
         deaths.entries.removeIf { it.value.isEmpty() }
-        println("DeathResolution: Final deaths map: $deaths")
-
         return accumulatedState
     }
 }
@@ -366,16 +319,13 @@ abstract class DarkMerchantTradeAction(
         } else {
             skillType.let { id ->
                 val playerActions = session.stateData.playerOwnedActions.getOrPut(targetId) { mutableMapOf() }
-                playerActions[id.toString()] = 1 // 1 use left
+                playerActions[id.toString()] = 1
             }
 
             target.channel?.sendMessage("🎁 **你收到了黑市商人的禮物**！\n你獲得了技能：**${skillType.actionName}**\n你可以在**下一晚**開始使用它。")
                 ?.queue()
 
-            session.addLog(
-                LogType.SYSTEM,
-                "黑市商人交易成功，將技能 $skillType 贈予了玩家 $targetId"
-            )
+            session.addLog(LogType.SYSTEM, "黑市商人交易成功，將技能 $skillType 贈予了玩家 $targetId")
         }
         return accumulatedState
     }

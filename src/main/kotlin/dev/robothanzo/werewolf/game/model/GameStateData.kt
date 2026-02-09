@@ -1,6 +1,8 @@
 package dev.robothanzo.werewolf.game.model
 
 import io.swagger.v3.oas.annotations.media.Schema
+import org.bson.codecs.pojo.annotations.BsonIgnore
+import org.springframework.data.annotation.Transient
 
 
 /**
@@ -79,21 +81,16 @@ data class WolfMessage(
     val timestamp: Long = System.currentTimeMillis()
 )
 
-/**
- * Complete night phase status for real-time spectator/judge viewing.
- */
-data class NightStatus(
-    val day: Int,
-    val phaseType: NightPhase?, // Enum for the current sub-phase
-    val startTime: Long,
-    val endTime: Long,
+data class ExpelCandidateDto(
+    val id: Int,
+    val quit: Boolean,
+    val voters: List<String>
+)
 
-    // Werewolf voting data (shown in first screen)
-    val werewolfMessages: List<WolfMessage> = emptyList(),
-    val werewolfVotes: List<WolfVote> = emptyList(),
-
-    // Role action statuses (shown in second screen)
-    val actionStatuses: List<ActionSubmissionStatus> = emptyList()
+data class ExpelStatus(
+    val voting: Boolean,
+    val endTime: Long?,
+    val candidates: List<ExpelCandidateDto>
 )
 
 /**
@@ -122,7 +119,25 @@ data class GameStateData(
 
     @Schema(description = "List of messages sent by wolves")
     var werewolfMessages: MutableList<WolfMessage> = mutableListOf(),
+
+    @Schema(description = "Player ID of the Wolf Younger Brother if he is awakened this night")
+    var wolfBrotherAwakenedPlayerId: Int? = null,
 ) {
+    // --- Transient fields for UI state synchronization ---
+    @Transient
+    @get:Schema(hidden = true)
+    @BsonIgnore
+    var speech: SpeechStatus? = null
+
+    @Transient
+    @get:Schema(hidden = true)
+    @BsonIgnore
+    var police: PoliceStatus? = null
+
+    @Transient
+    @get:Schema(hidden = true)
+    @BsonIgnore
+    var expel: ExpelStatus? = null
 
     // --- Computed Properties ---
 
@@ -130,7 +145,8 @@ data class GameStateData(
      * Finds the target ID of the last successful werewolf kill in the current phase.
      */
     val nightWolfKillTargetId: Int?
-        get() = submittedActions.find { it.actionDefinitionId == ActionDefinitionId.WEREWOLF_KILL && it.status == ActionStatus.SUBMITTED }?.targets?.firstOrNull()
+        get() =
+            submittedActions.find { it.actionDefinitionId == ActionDefinitionId.WEREWOLF_KILL && it.status == ActionStatus.SUBMITTED }?.targets?.firstOrNull()
 
     /**
      * Finds the target ID protected by the guard in the previous night.
@@ -167,4 +183,33 @@ data class GameStateData(
 data class NightResolutionResult(
     val deaths: Map<DeathCause, List<Int>>, // cause -> list of player IDs (Int)
     val saved: List<Int>, // player IDs (Int)
+)
+
+/**
+ * UI-friendly status of the speech session
+ */
+data class SpeechStatus(
+    val order: List<Int>,
+    val currentSpeakerId: Int?,
+    val endTime: Long,
+    val totalTime: Int,
+    val isPaused: Boolean = false,
+    val interruptVotes: List<Int> = emptyList()
+)
+
+/**
+ * UI-friendly status of the police election
+ */
+data class PoliceStatus(
+    val state: String,
+    val stageEndTime: Long?,
+    val allowEnroll: Boolean,
+    val allowUnEnroll: Boolean,
+    val candidates: List<PoliceCandidateDto>
+)
+
+data class PoliceCandidateDto(
+    val id: Int,
+    val quit: Boolean,
+    val voters: List<String>
 )

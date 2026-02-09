@@ -259,6 +259,36 @@ class RoleServiceImpl(
                 )
             }
 
+            // Notify Wolf Brother and Younger Brother of each other if both exist
+            val wolfBrother = playersList.find { p -> p.roles.any { it == "狼兄" } }
+            val youngerBrother = playersList.find { p -> p.roles.any { it == "狼弟" } }
+            if (wolfBrother != null && youngerBrother != null) {
+                statusCallback("正在通知狼兄與狼弟彼此身份...")
+
+                val wbMsg = "你的狼弟是 ${youngerBrother.nickname} (玩家 #${youngerBrother.id})"
+                val ybMsg = "你的狼兄是 ${wolfBrother.nickname} (玩家 #${wolfBrother.id})"
+
+                val wbAction = wolfBrother.channel?.sendMessage(wbMsg)
+                if (wbAction != null) {
+                    notificationTasks.add(
+                        ActionTask(
+                            wbAction,
+                            "已通知狼兄 ${wolfBrother.nickname} 其狼弟身份"
+                        )
+                    )
+                }
+
+                val ybAction = youngerBrother.channel?.sendMessage(ybMsg)
+                if (ybAction != null) {
+                    notificationTasks.add(
+                        ActionTask(
+                            ybAction,
+                            "已通知狼弟 ${youngerBrother.nickname} 其狼兄身份"
+                        )
+                    )
+                }
+            }
+
             if (priorityTasks.isNotEmpty()) {
                 statusCallback("正在執行 Discord 變更: 身分與暱稱 (共 " + priorityTasks.size + " 項)...")
                 priorityTasks.runActions(statusCallback, progressCallback, 10, 60, 60)

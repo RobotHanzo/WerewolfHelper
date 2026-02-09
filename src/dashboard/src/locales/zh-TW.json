@@ -260,6 +260,7 @@
     "noActiveSpeechJudge": "目前沒有正在進行的自動發言流程。身為法官，您可以隨時開始新的流程。",
     "activeSpeech": "發言進行中",
     "autoProcess": "自動流程",
+    "remainingOrder": "發言順序",
     "speaking": "正在發言",
     "waiting": "等待發言",
     "noMoreSpeakers": "沒有更多發言者",

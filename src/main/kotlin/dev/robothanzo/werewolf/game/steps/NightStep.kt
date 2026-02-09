@@ -50,14 +50,9 @@ class NightStep(
 
             for (p in session.alivePlayers().values) {
                 if (p.wolf) {
-                    // Wolf Younger Brother (狼弟) only joins discussion if Brother is dead AND it's not the awakening night
-                    val isBrotherAlive = session.alivePlayers().values.any { it.roles?.contains("狼兄") == true }
-                    // Wolf Brother Awakening Night: The night immediately following the day Wolf Brother died
-                    // wolfBrotherDiedDay is set on the day the Wolf Brother dies. The following night is still that same day index.
+                    // Wolf Younger Brother (狼弟) joins the pack ONLY IF the Brother has died.
                     val wolfBrotherDiedDay = session.stateData.wolfBrotherDiedDay
-                    val isAwakeningNight = wolfBrotherDiedDay != null && wolfBrotherDiedDay == session.day
-
-                    if (p.roles?.contains("狼弟") == true && (isBrotherAlive || isAwakeningNight)) {
+                    if (p.roles.contains("狼弟") && wolfBrotherDiedDay == null) {
                         continue
                     }
                 } else {
@@ -67,7 +62,7 @@ class NightStep(
                         session.stateData.submittedActions.add(
                             RoleActionInstance(
                                 actor = p.id,
-                                actorRole = (p.roles?.firstOrNull() ?: "未知"),
+                                actorRole = (p.roles.firstOrNull() ?: "未知"),
                                 actionDefinitionId = null, // Not chosen yet
                                 targets = arrayListOf(),
                                 submittedBy = ActionSubmissionSource.PLAYER,
@@ -93,7 +88,7 @@ class NightStep(
         // 0. Wolf Younger Brother Phase (Solo Action before Wolf Phase)
         val wolfYoungerBrotherPhase = gameSessionService.withLockedSession(guildId) { lockedSession ->
             val wolfYoungerBrother = lockedSession.players.values.find {
-                it.roles?.contains("狼弟") == true && it.alive
+                it.roles.contains("狼弟") && it.alive
             }
 
             if (wolfYoungerBrother != null) {
@@ -130,11 +125,9 @@ class NightStep(
         val werewolves = session.players.values.filter { p ->
             if (!p.alive || !p.wolf) return@filter false
 
-            if (p.roles?.contains("狼弟") == true) {
-                val isBrotherAlive = session.alivePlayers().values.any { it.roles?.contains("狼兄") == true }
-                // Only exclude if Wolf Brother is ALIVE. 
-                // If Wolf Brother is DEAD, YB joins the pack (including the awakening night).
-                if (isBrotherAlive) return@filter false
+            if (p.roles.contains("狼弟")) {
+                // Joins ONLY if Brother has died (at any point)
+                session.stateData.wolfBrotherDiedDay ?: return@filter false
             }
 
             true
@@ -333,7 +326,8 @@ class NightStep(
                 appendLine(resultText)
             }
 
-            session.players.values.filter { it.alive && it.wolf }.forEach { it.channel?.sendMessage(msg)?.queue() }
+            session.players.values.filter { electorates.contains(it.id) }
+                .forEach { it.channel?.sendMessage(msg)?.queue() }
             session.judgeTextChannel?.sendMessage(resultText)?.queue()
             session.addLog(LogType.SYSTEM, resultText.replace("**", "").replace("✓ ", "").replace("：", " → "))
 
@@ -383,6 +377,7 @@ class NightStep(
         session.stateData.phaseType = null
         session.stateData.phaseStartTime = 0
         session.stateData.phaseEndTime = 0
+        session.stateData.wolfBrotherAwakenedPlayerId = null
         gameSessionService.saveSession(session)
     }
 
