@@ -71,4 +71,57 @@ class ExpelServiceImplTest {
         assertNull(expelService.getPoll(guildId))
         assertNotNull(expelService.getExpelSession(guildId))
     }
+
+    @Test
+    fun `getExpelStatus returns null when no session or poll`() {
+        val status = expelService.getExpelStatus(999999L)
+        assertNull(status)
+    }
+
+    @Test
+    fun `getExpelStatus returns session-based status with empty voters`() {
+        val guildId = 222222L
+        val session = Session().apply { this.guildId = guildId }
+        // Create expel session record with candidates
+        val expelSession = dev.robothanzo.werewolf.model.ExpelSession(
+            guildId = guildId,
+            startTime = System.currentTimeMillis(),
+            endTime = System.currentTimeMillis() + 30000
+        )
+        expelSession.candidates[1] = Candidate(player = session.addedPlayerForTest(1))
+        expelSession.candidates[2] = Candidate(player = session.addedPlayerForTest(2))
+        expelService.sessions[guildId] = expelSession
+
+        val status = expelService.getExpelStatus(guildId)
+        assertNotNull(status)
+        assertTrue(status!!.voting)
+        assertNotNull(status.endTime)
+        assertEquals(2, status.candidates.size)
+        assertTrue(status.candidates.all { it.voters.isEmpty() })
+    }
+
+    @Test
+    fun `getExpelStatus returns poll-based status with elector counts`() {
+        val guildId = 333333L
+        val session = Session().apply { this.guildId = guildId }
+        // Create poll and add electors
+        val poll = ExpelPoll(guildId, 0L, session, null)
+        val c1 = Candidate(player = session.addedPlayerForTest(1))
+        c1.electors.add(111111111L)
+        c1.electors.add(222222222L)
+        poll.candidates[c1.player.id] = c1
+        expelService.polls[guildId] = poll
+
+        val status = expelService.getExpelStatus(guildId)
+        assertNotNull(status)
+        assertEquals(1, status!!.candidates.size)
+        assertEquals(2, status.candidates.first().voters.size)
+    }
+}
+
+// Test helpers: add players to a session for candidate creation
+private fun Session.addedPlayerForTest(id: Int): dev.robothanzo.werewolf.database.documents.Player {
+    val p = dev.robothanzo.werewolf.database.documents.Player().apply { this.id = id }
+    this.addPlayer(p)
+    return p
 }

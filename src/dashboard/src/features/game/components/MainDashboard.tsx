@@ -3,12 +3,12 @@ import {Mic, Play, Shuffle, SkipForward, Skull, StepForward, Sun, Users} from 'l
 import {useTranslation} from '@/lib/i18n';
 import {useMutation} from '@tanstack/react-query';
 import {
-    setStateMutation,
+    assignRolesMutation,
     nextStateMutation,
-    startGameMutation,
-    assignRolesMutation
+    setStateMutation,
+    startGameMutation
 } from '@/api/@tanstack/react-query.gen';
-import {Session, Player} from '@/api/types.gen';
+import {Player, Session} from '@/api/types.gen';
 import {SpeechManager} from '@/features/speech/components/SpeechManager';
 import {VoteStatus} from './VoteStatus';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
@@ -327,6 +327,7 @@ export const MainDashboard = ({
                             <VoteStatus
                                 candidates={currentExpel.candidates || []}
                                 endTime={currentExpel.endTime as any}
+                                totalVoters={players ? players.filter(p => p.alive).length : undefined}
                                 players={players || []}
                                 title={t('steps.voting')}
                                 guildId={guildId}

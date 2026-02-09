@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -90,6 +91,11 @@ class GameActionServiceImplTest {
     fun `broadcastProgress calls sessionService broadcastEvent`() {
         gameActionService.broadcastProgress(1L, "Loading", 50)
 
-        verify(gameSessionService).broadcastEvent(eq("PROGRESS"), any())
+        val captor = argumentCaptor<dev.robothanzo.werewolf.websocket.WebSocketEventData>()
+        verify(gameSessionService).broadcastEvent(captor.capture())
+        val ev = captor.firstValue as dev.robothanzo.werewolf.websocket.WebSocketEventData.ProgressUpdate
+        assertEquals("1", ev.guildId)
+        assertEquals("Loading", ev.message)
+        assertEquals(50, ev.percent)
     }
 }

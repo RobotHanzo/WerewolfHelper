@@ -2,7 +2,6 @@ package dev.robothanzo.werewolf.service.impl
 
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.SessionRepository
-import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.database.documents.UserRole
 import dev.robothanzo.werewolf.game.GameStep
@@ -12,7 +11,8 @@ import dev.robothanzo.werewolf.service.ExpelService
 import dev.robothanzo.werewolf.service.SpeechService
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -52,10 +52,7 @@ class GameSessionServiceImplTest {
         gameSessionService = GameSessionServiceImpl(
             sessionRepository,
             webSocketHandler,
-            speechService,
-            roleRegistry,
-            emptyStepList,
-            expelService
+            roleRegistry
         )
 
         // Mock JDA and Guild for proper initialization
