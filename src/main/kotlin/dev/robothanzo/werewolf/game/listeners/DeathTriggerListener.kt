@@ -1,11 +1,12 @@
 package dev.robothanzo.werewolf.game.listeners
 
+import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.ActionTiming
+import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.game.model.RoleEventType
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import org.springframework.stereotype.Component
-import dev.robothanzo.werewolf.game.model.Role as GameRole
 
 /**
  * Generic listener for death trigger actions.
@@ -23,32 +24,30 @@ class DeathTriggerListener(
         }
 
         val userId = (metadata["userId"] as? Number)?.toLong() ?: return
-        val player = session.getPlayer(userId)
+        val deathCause = metadata["deathCause"] as? DeathCause ?: DeathCause.UNKNOWN
 
-        if (player == null || player.roles.isNullOrEmpty()) {
+        val player = session.getPlayer(userId) ?: return
+
+        if (player.roles.isEmpty()) {
             return
         }
 
         // Check each role for death trigger actions
-        var hasDeathTrigger = false
-        for (roleName in player.roles!!) {
-            val roleObj: GameRole? = session.hydratedRoles[roleName] ?: roleRegistry.getRole(roleName)
-            if (roleObj != null) {
-                val deathTriggerActions = roleObj.getActions().filter { it.timing == ActionTiming.DEATH_TRIGGER }
-
-                if (deathTriggerActions.isNotEmpty()) {
-                    // Mark death trigger actions as available for this role
-                    for (action in deathTriggerActions) {
-                        session.stateData.deathTriggerAvailableMap[action.actionId] = player.id
-                    }
-                    hasDeathTrigger = true
-                }
-            }
+        val deathTriggerActions = player.roles.flatMap { roleName ->
+            (session.hydratedRoles[roleName] ?: roleRegistry.getRole(roleName))?.getActions()
+                ?.filter { it.timing == ActionTiming.DEATH_TRIGGER } ?: emptyList()
         }
 
-        if (hasDeathTrigger) {
-            dev.robothanzo.werewolf.WerewolfApplication.gameSessionService.saveSession(session)
+        if (deathTriggerActions.isEmpty()) {
+            return
         }
+
+        // Call onDeath for each death trigger action
+        for (action in deathTriggerActions) {
+            action.onDeath(session, player.id, deathCause)
+        }
+
+        WerewolfApplication.gameSessionService.saveSession(session)
     }
 
     override fun getInterestedEvents(): List<RoleEventType> {

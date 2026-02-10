@@ -79,15 +79,15 @@ class SeerCheckAction(
         val targetId = action.targets[0]
         val target = session.getPlayer(targetId) ?: return accumulatedState
 
-        val isWolfBrotherAlive = session.alivePlayers().values.any { it.roles?.contains("狼兄") == true }
-        val isYoungerBrother = target.roles?.contains("狼弟") == true
+        val isWolfBrotherAlive = session.alivePlayers().values.any { it.roles.contains("狼兄") }
+        val isYoungerBrother = target.roles.contains("狼弟")
 
         val isWolf = if (isYoungerBrother && isWolfBrotherAlive) {
             false
         } else {
-            target.roles?.any { role ->
+            target.roles.any { role ->
                 (session.hydratedRoles[role] ?: roleRegistry.getRole(role))?.camp == Camp.WEREWOLF
-            } ?: false
+            }
         }
 
         val seerPlayer = session.getPlayer(action.actor)
@@ -191,8 +191,12 @@ class GuardProtectAction : BaseRoleAction(
 class HunterRevengeAction : BaseRoleAction(
     actionId = ActionDefinitionId.HUNTER_REVENGE,
     priority = PredefinedRoles.HUNTER_PRIORITY,
-    timing = ActionTiming.DEATH_TRIGGER
+    timing = ActionTiming.DEATH_TRIGGER,
+    usageLimit = 1
 ) {
+    override val isImmediate: Boolean
+        get() = true
+
     override fun execute(
         session: Session,
         action: RoleActionInstance,
@@ -200,7 +204,10 @@ class HunterRevengeAction : BaseRoleAction(
     ): ActionExecutionResult {
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
         accumulatedState.deaths.getOrPut(DeathCause.HUNTER_REVENGE) { mutableListOf() }.add(targetId)
-        session.stateData.deathTriggerAvailableMap.remove(actionId)
+
+        // Consume the granted action
+        session.stateData.playerOwnedActions[action.actor]?.remove(actionId.toString())
+
         return accumulatedState
     }
 
@@ -210,7 +217,16 @@ class HunterRevengeAction : BaseRoleAction(
         alivePlayers: List<Int>,
         accumulatedState: ActionExecutionResult
     ): List<Int> {
-        return if (session.stateData.deathTriggerAvailableMap[actionId] == actor) alivePlayers else emptyList()
+        return if (isAvailable(session, actor)) alivePlayers else emptyList()
+    }
+
+    override fun onDeath(session: Session, actor: Int, cause: DeathCause) {
+        if (cause != DeathCause.POISON) {
+            session.stateData.playerOwnedActions.getOrPut(actor) { mutableMapOf() }[actionId.toString()] = 1
+        } else {
+            session.getPlayer(actor)?.channel?.sendMessage("🧪 **你被女巫毒死了**！你感到身體虛弱，無法帶走任何玩家。")
+                ?.queue()
+        }
     }
 }
 
@@ -218,8 +234,12 @@ class HunterRevengeAction : BaseRoleAction(
 class WolfKingRevengeAction : BaseRoleAction(
     actionId = ActionDefinitionId.WOLF_KING_REVENGE,
     priority = PredefinedRoles.HUNTER_PRIORITY,
-    timing = ActionTiming.DEATH_TRIGGER
+    timing = ActionTiming.DEATH_TRIGGER,
+    usageLimit = 1
 ) {
+    override val isImmediate: Boolean
+        get() = true
+
     override fun execute(
         session: Session,
         action: RoleActionInstance,
@@ -227,7 +247,10 @@ class WolfKingRevengeAction : BaseRoleAction(
     ): ActionExecutionResult {
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
         accumulatedState.deaths.getOrPut(DeathCause.WOLF_KING_REVENGE) { mutableListOf() }.add(targetId)
-        session.stateData.deathTriggerAvailableMap.remove(actionId)
+
+        // Consume the granted action
+        session.stateData.playerOwnedActions[action.actor]?.remove(actionId.toString())
+
         return accumulatedState
     }
 
@@ -237,7 +260,16 @@ class WolfKingRevengeAction : BaseRoleAction(
         alivePlayers: List<Int>,
         accumulatedState: ActionExecutionResult
     ): List<Int> {
-        return if (session.stateData.deathTriggerAvailableMap[actionId] == actor) alivePlayers else emptyList()
+        return if (isAvailable(session, actor)) alivePlayers else emptyList()
+    }
+
+    override fun onDeath(session: Session, actor: Int, cause: DeathCause) {
+        if (cause != DeathCause.POISON) {
+            session.stateData.playerOwnedActions.getOrPut(actor) { mutableMapOf() }[actionId.toString()] = 1
+        } else {
+            session.getPlayer(actor)?.channel?.sendMessage("🧪 **你被女巫毒死了**！你感到身體虛弱，無法帶走任何玩家。")
+                ?.queue()
+        }
     }
 }
 
@@ -364,9 +396,9 @@ class MerchantSeerCheckAction(
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
         val target = session.getPlayer(targetId) ?: return accumulatedState
 
-        val isWolf = target.roles?.any { role ->
+        val isWolf = target.roles.any { role ->
             (session.hydratedRoles[role] ?: roleRegistry.getRole(role))?.camp == Camp.WEREWOLF
-        } ?: false
+        }
 
         val seerPlayer = session.getPlayer(action.actor)
         val resultText = if (isWolf) "狼人" else "好人"

@@ -4,10 +4,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
 import dev.robothanzo.werewolf.WerewolfApplication
-import io.swagger.v3.oas.annotations.media.Schema
+import dev.robothanzo.werewolf.game.model.ActionTiming
 import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.game.model.RoleEventContext
 import dev.robothanzo.werewolf.game.model.RoleEventType
+import io.swagger.v3.oas.annotations.media.Schema
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.User
@@ -15,7 +20,6 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import org.bson.codecs.pojo.annotations.BsonIgnore
 import org.springframework.data.annotation.Transient
 import java.text.DecimalFormat
-import java.util.*
 import dev.robothanzo.werewolf.game.model.Role as GameRole
 
 data class Player(
@@ -171,7 +175,8 @@ data class Player(
                     mapOf(
                         "userId" to (user?.idLong ?: 0L),
                         "killedRole" to killedRole,
-                        "playerId" to id
+                        "playerId" to id,
+                        "deathCause" to cause
                     )
                 )
             }
@@ -224,19 +229,107 @@ data class Player(
     /**
      * Handles the killing of police role and transfers it to another player if applicable.
      */
-    private fun transferPolice() {
+    fun transferPolice() {
         if (police)
             session?.let {
                 WerewolfApplication.policeService.transferPolice(it, it.guild, this) {
                     discordDeath()
+                    promptDeathTrigger()
                 }
             }
         else {
             discordDeath()
+            promptDeathTrigger()
         }
     }
 
-    private fun discordDeath() {
+    private fun promptDeathTrigger() {
+        if (session != null) {
+            val roles = roles
+            val deathActions = roles.flatMap { roleName ->
+                val roleObj =
+                    session?.hydratedRoles?.get(roleName) ?: WerewolfApplication.roleRegistry.getRole(roleName)
+                roleObj?.getActions()?.filter {
+                    it.timing == ActionTiming.DEATH_TRIGGER && it.isAvailable(
+                        session!!,
+                        id
+                    )
+                } ?: emptyList()
+            }
+
+            if (deathActions.isNotEmpty()) {
+                val actionName = deathActions.firstOrNull()?.actionName ?: "死亡技能"
+                actionSubmitted = false
+                channel?.sendMessage("你的 $actionName 已觸發！你可以選擇一名玩家帶走。")?.queue()
+
+                WerewolfApplication.actionUIService.promptPlayerForAction(
+                    session!!.guildId,
+                    session!!,
+                    id,
+                    deathActions,
+                    30
+                )
+
+                // Safety timer and reminders
+                @OptIn(DelicateCoroutinesApi::class)
+                GlobalScope.launch {
+                    // 20s reminder (10s remaining)
+                    delay(20000)
+                    var alreadySubmitted = false
+                    WerewolfApplication.gameSessionService.withLockedSession(session!!.guildId) { lockedSession ->
+                        val p = lockedSession.getPlayer(this@Player.id) ?: return@withLockedSession
+                        alreadySubmitted = p.actionSubmitted || deathActions.none {
+                            (lockedSession.stateData.playerOwnedActions[p.id]?.get(it.actionId.toString()) ?: 0) > 0
+                        }
+                        if (!alreadySubmitted) {
+                            p.channel?.sendMessage("⚠️ **提醒**: 你的技能選擇還剩 **10秒**，請儘快做出選擇！")?.queue()
+                        }
+                    }
+
+                    if (alreadySubmitted) return@launch
+
+                    // 10s later (at 30s) - Timeout
+                    delay(10000)
+                    WerewolfApplication.gameSessionService.withLockedSession(session!!.guildId) { lockedSession ->
+                        val p = lockedSession.getPlayer(this@Player.id) ?: return@withLockedSession
+                        val stillAvailable = deathActions.any {
+                            (lockedSession.stateData.playerOwnedActions[p.id]?.get(it.actionId.toString()) ?: 0) > 0
+                        }
+                        if (stillAvailable && !p.actionSubmitted) {
+                            p.channel?.sendMessage("⏱️ **時間到！** 你未能在規定時間內選擇目標，行動已取消。")?.queue()
+                            // Force consume trigger status to ensure discordDeath proceeds
+                            deathActions.forEach { action ->
+                                lockedSession.stateData.playerOwnedActions[p.id]?.remove(action.actionId.toString())
+                            }
+                            p.discordDeath()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun discordDeath() {
+        // If player has a death trigger available, don't give spectator role yet
+        // They need to be able to see their channel to perform the action
+        if (session != null) {
+            val roles = roles
+            val hasDeathTrigger = roles.any { roleName ->
+                val roleObj =
+                    session?.hydratedRoles?.get(roleName) ?: WerewolfApplication.roleRegistry.getRole(roleName)
+                roleObj?.getActions()?.any {
+                    it.timing == ActionTiming.DEATH_TRIGGER && it.isAvailable(
+                        session!!,
+                        id
+                    )
+                } == true
+            }
+            if (hasDeathTrigger) {
+                updateNickname()
+                return
+            }
+        }
+
         session?.let {
             member?.let { it1 -> it.guild?.modifyMemberRoles(it1, it.spectatorRole) }?.queue()
             updateNickname()

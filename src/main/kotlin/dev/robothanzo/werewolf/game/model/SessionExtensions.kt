@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.game.model
 
+import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
@@ -13,14 +14,10 @@ private val log = LoggerFactory.getLogger("SessionExtensions")
 fun Session.getAvailableActionsForPlayer(playerId: Int, roleRegistry: RoleRegistry): List<RoleAction> {
     val player = getPlayer(playerId) ?: return emptyList()
 
-    if (!player.alive) {
-        return emptyList()
-    }
-
     val actions = mutableListOf<RoleAction>()
 
     // Get actions from hydrated roles
-    for (roleName in player.roles ?: emptyList()) {
+    for (roleName in player.roles) {
         val roleObj: GameRole? = hydratedRoles[roleName] ?: roleRegistry.getRole(roleName)
         if (roleObj != null) {
             for (action in roleObj.getActions()) {
@@ -55,11 +52,14 @@ fun Session.isActionAvailable(
     val action = roleRegistry.getAction(actionDefinitionId) ?: return false
     val player = getPlayer(playerId) ?: return false
 
+    // Only death triggers are allowed if the player is dead
+    if (!player.alive && action.timing != ActionTiming.DEATH_TRIGGER) return false
+
     // Ownership check: must have the action from role OR from playerOwnedActions
-    val hasFromRole = player.roles?.any { roleName ->
+    val hasFromRole = player.roles.any { roleName ->
         (hydratedRoles[roleName] ?: roleRegistry.getRole(roleName))?.getActions()
             ?.any { it.actionId == actionDefinitionId } == true
-    } == true
+    }
 
     val hasGifted =
         stateData.playerOwnedActions[playerId]?.containsKey(actionDefinitionId.toString()) == true && !player.wolf
@@ -96,7 +96,7 @@ fun Session.isActionAvailable(
     }
 
     if (actionDefinitionId == ActionDefinitionId.WEREWOLF_KILL && currentPlayer?.roles?.contains("狼弟") == true) {
-        val isWolfBrotherAlive = alivePlayers().values.any { it.roles?.contains("狼兄") == true }
+        val isWolfBrotherAlive = alivePlayers().values.any { it.roles.contains("狼兄") }
         // Younger Brother only gets to kill if Brother is dead
         if (isWolfBrotherAlive) return false
     }
@@ -114,19 +114,13 @@ fun Session.getActionUsageCount(
 }
 
 fun Session.hasDeathTriggerAvailable(playerId: Int, roleRegistry: RoleRegistry): Boolean {
-    // Get all death trigger actions from registry
-    val deathTriggerActions = roleRegistry.getAllActions()
-        .filter { it.timing == ActionTiming.DEATH_TRIGGER }
+    val player = getPlayer(playerId) ?: return false
+    val roles = player.roles
 
-    // Check if any death trigger action is available for this player
-    for (action in deathTriggerActions) {
-        val availablePlayerId = stateData.deathTriggerAvailableMap[action.actionId]
-        if (availablePlayerId == playerId) {
-            return true
-        }
+    return roles.any { roleName ->
+        val roleObj = hydratedRoles[roleName] ?: roleRegistry.getRole(roleName)
+        roleObj?.getActions()?.any { it.timing == ActionTiming.DEATH_TRIGGER && it.isAvailable(this, playerId) } == true
     }
-
-    return false
 }
 
 fun Session.executeDeathTriggers(roleRegistry: RoleRegistry, roleActionExecutor: RoleActionExecutor): List<Int> {
@@ -172,7 +166,7 @@ fun Session.updateActionStatus(
     targetPlayerIds: List<Int> = emptyList()
 ) {
     val actorPlayer = getPlayer(actorPlayerId) ?: return
-    val actorRole = actorPlayer.roles?.firstOrNull() ?: "未知"
+    val actorRole = actorPlayer.roles.firstOrNull() ?: "未知"
 
     // Find match by actor only (reuse any pending action to avoid duplicates)
     val actionInstance = stateData.submittedActions.find {
@@ -327,7 +321,7 @@ fun Session.validateAndSubmitAction(
 
     val action = RoleActionInstance(
         actor = actorPlayerId,
-        actorRole = (actor.roles?.firstOrNull() ?: "未知"),
+        actorRole = (actor.roles.firstOrNull() ?: "未知"),
         actionDefinitionId = actionDefinitionId,
         targets = targetPlayerIds,
         submittedBy = source,
@@ -349,21 +343,42 @@ fun Session.validateAndSubmitAction(
         stateData.submittedActions.size
     )
 
-    // Execute immediately if requested (e.g., Seer)
+    // Execute immediately if requested (e.g., Seer, Hunter Revenge)
     if (actionDef.isImmediate) {
-        roleActionExecutor.executeActionInstance(this, action)
+        val executionResult = roleActionExecutor.executeActionInstance(this, action)
+
+        // Handle immediate deaths if any (e.g. Hunter revenge)
+        for ((_, deaths) in executionResult.deaths) {
+            for (userId in deaths) {
+                // If it's a death trigger, it shouldn't allow last words for the target
+                // as per user requirement: "kill that player as well (no last words)"
+                WerewolfApplication.gameActionService.markPlayerDead(this, userId, false)
+            }
+        }
+
+        // For death triggers, we need to finalize the actor's death status in Discord
+        if (actionDef.timing == ActionTiming.DEATH_TRIGGER) {
+            // Explicitly consume to ensure discordDeath() proceeds
+            stateData.playerOwnedActions[actorPlayerId]?.remove(actionDefinitionId.toString())
+            actor.discordDeath()
+        }
+
+        // Mark as PROCESSED so it's not processed again in batch resolution
+        action.status = ActionStatus.PROCESSED
     }
 
     // Call submission hook
     actionDef.onSubmitted(this, actorPlayerId, targetPlayerIds)
 
     // Update UI status using our extension method
-    updateActionStatus(
-        actorPlayerId,
-        if (targetPlayerIds.contains(SKIP_TARGET_ID)) ActionStatus.SKIPPED else ActionStatus.SUBMITTED,
-        actionDefinitionId,
-        targetPlayerIds
-    )
+    if (action.status != ActionStatus.PROCESSED) {
+        updateActionStatus(
+            actorPlayerId,
+            if (targetPlayerIds.contains(SKIP_TARGET_ID)) ActionStatus.SKIPPED else ActionStatus.SUBMITTED,
+            actionDefinitionId,
+            targetPlayerIds
+        )
+    }
 
     return mapOf("success" to true, "message" to "Action submitted")
 }

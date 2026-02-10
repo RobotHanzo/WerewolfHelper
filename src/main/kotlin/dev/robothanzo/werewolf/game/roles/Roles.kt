@@ -33,7 +33,8 @@ class Hunter(@Transient private val revengeAction: HunterRevengeAction) : BaseRo
     override fun getActions(): List<RoleAction> = listOf(revengeAction)
 
     override fun onDeath(context: RoleEventContext) {
-        context.session.stateData.deathTriggerAvailableMap[revengeAction.actionId] = context.actorPlayerId
+        val deathCause = context.metadata["deathCause"] as? DeathCause
+        revengeAction.onDeath(context.session, context.actorPlayerId, deathCause ?: DeathCause.UNKNOWN)
     }
 }
 
@@ -42,7 +43,8 @@ class WolfKing(@Transient private val revengeAction: WolfKingRevengeAction) : Ba
     override fun getActions(): List<RoleAction> = listOf(revengeAction)
 
     override fun onDeath(context: RoleEventContext) {
-        context.session.stateData.deathTriggerAvailableMap[revengeAction.actionId] = context.actorPlayerId
+        val deathCause = context.metadata["deathCause"] as? DeathCause
+        revengeAction.onDeath(context.session, context.actorPlayerId, deathCause ?: DeathCause.UNKNOWN)
     }
 }
 

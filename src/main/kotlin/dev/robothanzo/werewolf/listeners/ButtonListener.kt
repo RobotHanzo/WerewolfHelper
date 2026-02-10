@@ -30,7 +30,7 @@ class ButtonListener : ListenerAdapter() {
                 event.hook.editOriginal(":x: 找不到玩家").queue()
                 return null to isJudge
             }
-            val interactingPlayer = event.member?.player()
+            val interactingPlayer = event.member?.player(false)
             if (player.id != interactingPlayer?.id && !isJudge) {
                 event.hook.editOriginal(":x: 這不是你的按鈕").queue()
                 return null to false
@@ -160,10 +160,21 @@ class ButtonListener : ListenerAdapter() {
                 WerewolfApplication.gameSessionService.withLockedSession(event.guild!!.idLong) { session ->
                     val (player, _) = getVerifiedPlayerAndIsJudge(event, session)
                     if (player == null) return@withLockedSession
-                    // Mark action as submitted but without actual action
+
+                    // For death triggers, we need to finalize the actor's death status
+                    if (!player.alive) {
+                        val roleRegistry = WerewolfApplication.roleRegistry
+                        player.roles.forEach { roleName ->
+                            val roleObj = session.hydratedRoles[roleName] ?: roleRegistry.getRole(roleName)
+                            roleObj?.getActions()?.filter { it.timing == ActionTiming.DEATH_TRIGGER }
+                                ?.forEach { action ->
+                                    session.stateData.playerOwnedActions[player.id]?.remove(action.actionId.toString())
+                                }
+                        }
+                        player.discordDeath()
+                    }
+
                     player.actionSubmitted = true
-                    // Update UI status to SKIPPED so the night can resolve early
-                    // Update UI status to SKIPPED so the night can resolve early
                     session.updateActionStatus(
                         player.id,
                         ActionStatus.SKIPPED,
@@ -281,7 +292,7 @@ class ButtonListener : ListenerAdapter() {
                 event.hook.editOriginal(":x: 只有玩家能投票").queue()
                 return@withLockedSession
             }
-            if (player.idiot && (player.roles == null || player.roles!!.isEmpty())) {
+            if (player.idiot && player.roles.containsAll(player.deadRoles)) {
                 event.hook.editOriginal(":x: 死掉的白癡不得投票").queue()
                 return@withLockedSession
             }

@@ -26,7 +26,6 @@ class GameStateServiceImpl(
         "NIGHT_PHASE",
         "SHERIFF_ELECTION", // Day 1 only
         "DEATH_ANNOUNCEMENT",
-        "DEATH_TRIGGER", // Hunter/Wolf King revenge
         "SPEECH_PHASE",
         "VOTING_PHASE"
     )

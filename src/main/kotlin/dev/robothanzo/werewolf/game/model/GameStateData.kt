@@ -104,8 +104,6 @@ data class GameStateData(
     @Schema(example = "{\"1\": {\"WEREWOLF_KILL\": 1}}")
     var playerOwnedActions: MutableMap<Int, MutableMap<String, Int>> = mutableMapOf(), // playerId -> (actionId -> usesLeft)
 
-    @Schema(example = "{\"HUNTER_REVENGE\": 1}")
-    var deathTriggerAvailableMap: MutableMap<ActionDefinitionId, Int> = mutableMapOf(), // actionId -> playerId
 
     @Schema(description = "List of actions submitted in the current phase but not yet executed")
     var submittedActions: MutableList<RoleActionInstance> = mutableListOf(), // Actions yet to be processed, executed at death announcement

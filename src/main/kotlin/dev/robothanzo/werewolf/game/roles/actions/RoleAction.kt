@@ -92,8 +92,21 @@ interface RoleAction {
      */
     fun isAvailable(session: Session, actor: Int): Boolean {
         // Check usage limit
-        return !(usageLimit != -1 && getUsageCount(session, actor) >= usageLimit)
+        if (usageLimit != -1 && getUsageCount(session, actor) >= usageLimit) return false
+
+        // For death triggers, require explicit grant in playerOwnedActions
+        if (timing == ActionTiming.DEATH_TRIGGER) {
+            return (session.stateData.playerOwnedActions[actor]?.get(actionId.toString()) ?: 0) > 0
+        }
+
+        return true
     }
+
+    /**
+     * Hook called when a player dies, if this action is part of the player's role
+     * or is owned by the player.
+     */
+    fun onDeath(session: Session, actor: Int, cause: DeathCause) {}
 
     /**
      * Validate a potential action submission.
@@ -103,7 +116,7 @@ interface RoleAction {
     fun validate(session: Session, actor: Int, targets: List<Int>): String? {
         // Basic actor check
         val actorPlayer = session.getPlayer(actor.toString()) ?: return "Actor not found"
-        if (!actorPlayer.alive) return "你已死亡，無法執行此動作"
+        if (!actorPlayer.alive && timing != ActionTiming.DEATH_TRIGGER) return "你已死亡，無法執行此動作"
 
         // Usage limit check
         if (!isAvailable(session, actor)) return "已達到使用限制"
