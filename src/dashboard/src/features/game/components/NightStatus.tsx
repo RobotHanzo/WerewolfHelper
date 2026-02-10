@@ -1,199 +1,33 @@
-import React, {useEffect, useState} from 'react';
-import {ChevronRight, Clock, FastForward, MessageCircle, Skull, Users} from 'lucide-react';
-import {GameStateDto as GameState, Player, RoleActionInstance} from '@/api/types.gen';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {
+    AlertCircle,
+    AlertTriangle,
+    ArrowRight,
+    Ban,
+    Brain,
+    Check,
+    Clock,
+    Eye,
+    FlaskConical,
+    MessageSquare,
+    Moon,
+    Shield,
+    Target,
+    User,
+    Users
+} from 'lucide-react';
+import {GameStateDto as GameState, Player, RoleActionInstance, WolfMessage, WolfVote} from '@/api/types.gen';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 import {useTranslation} from '@/lib/i18n';
 
-// Local types for enriched data display
-export type ActionStatusType = RoleActionInstance['status'];
-
+// --- Types ---
 interface EnrichedActionStatus extends RoleActionInstance {
     playerName: string;
     playerUserId?: string | number | bigint;
     targetName: string | null;
     targetUserId?: string | number | bigint;
-}
-
-interface RoleActionsScreenProps {
-    statuses: EnrichedActionStatus[];
-    wolfTargetName: string;
-    wolfTargetUserId?: string | number | bigint;
-    wolfTargetId: number | null;
-    wolfVoteCount: number;
-    guildId?: string | number | bigint;
-}
-
-const RoleActionsScreen: React.FC<RoleActionsScreenProps> = ({
-                                                                 statuses,
-                                                                 wolfTargetName,
-                                                                 wolfTargetUserId,
-                                                                 wolfTargetId,
-                                                                 wolfVoteCount,
-                                                                 guildId
-                                                             }) => {
-    const {t} = useTranslation();
-
-    // Deduplicate statuses by actor to handle potential backend data issues
-    const uniqueStatuses = React.useMemo(() => {
-        const map = new Map<number, EnrichedActionStatus>();
-        statuses.forEach(s => map.set(s.actor, s));
-        return Array.from(map.values());
-    }, [statuses]);
-
-    const getRoleBorderColor = (role: string): string => {
-        if (role.includes('狼')) return 'border-red-500/50 hover:border-red-500';
-        if (role.includes('女巫')) return 'border-purple-500/50 hover:border-purple-500';
-        if (role.includes('獵人')) return 'border-amber-500/50 hover:border-amber-500';
-        if (role.includes('預言家')) return 'border-blue-500/50 hover:border-blue-500';
-        if (role.includes('守衛')) return 'border-cyan-500/50 hover:border-cyan-500';
-        return 'border-slate-700 hover:border-slate-500';
-    };
-
-    const getStatusColor = (status: ActionStatusType): string => {
-        switch (status) {
-            case 'SUBMITTED':
-                return 'bg-green-500/20 text-green-300 border-green-500';
-            case 'SKIPPED':
-                return 'bg-amber-500/20 text-amber-300 border-amber-500';
-            case 'ACTING':
-                return 'bg-blue-500/20 text-blue-300 border-blue-500';
-            case 'PROCESSED':
-                return 'bg-indigo-500/20 text-indigo-300 border-indigo-500';
-            default:
-                return 'bg-slate-500/20 text-slate-300 border-slate-500';
-        }
-    };
-
-    return (
-        <div className="flex flex-col h-full">
-            {/* Wolf Kill Summary */}
-            <div
-                className="animate-slide-in mb-3 bg-red-900/20 border border-red-800/50 rounded-lg p-3 flex items-center justify-between flex-shrink-0"
-                style={{animationDelay: '50ms'}}
-            >
-                <div className="flex items-center gap-3">
-                    <div className="bg-red-600/20 p-2 rounded-full">
-                        <Skull className="w-5 h-5 text-red-500"/>
-                    </div>
-                    <div>
-                        <div className="text-xs text-red-300 font-bold uppercase tracking-wider">狼人擊殺目標</div>
-                        <div className="font-bold text-lg text-white flex items-center gap-2">
-                            {wolfTargetName}
-                            {wolfVoteCount > 0 && <span
-                                className="text-xs bg-red-600 px-1.5 py-0.5 rounded-full">{wolfVoteCount} 票</span>}
-                        </div>
-                    </div>
-                </div>
-                {wolfTargetId === -1 ? (
-                    <div
-                        className="w-10 h-10 rounded-full border-2 border-amber-500/50 bg-amber-500/20 flex items-center justify-center">
-                        <FastForward className="w-5 h-5 text-amber-500"/>
-                    </div>
-                ) : (
-                    <DiscordAvatar userId={wolfTargetUserId} guildId={guildId}
-                                   avatarClassName="w-10 h-10 rounded-full border-2 border-red-600/50"/>
-                )}
-            </div>
-
-            {/* Grid of actions */}
-            <div className="grid grid-cols-2 gap-3 overflow-y-auto p-2 min-h-0">
-                {uniqueStatuses.length === 0 ? (
-                    <div className="col-span-2 flex items-center justify-center h-full text-slate-400">
-                        等待職業行動...
-                    </div>
-                ) : (
-                    uniqueStatuses.map((status, index) => (
-                        <div
-                            key={status.actor}
-                            className={`animate-slide-in bg-slate-800/80 rounded-lg p-4 border-2 ${getRoleBorderColor(status.actorRole)} transition-all duration-300 flex flex-col justify-between shadow-lg`}
-                            style={{animationDelay: `${100 + index * 75}ms`}}
-                        >
-                            <div className="flex items-start justify-between mb-3">
-                                <div className="min-w-0">
-                                    <h3 className="font-bold text-lg leading-tight truncate">
-                                        <DiscordName userId={status.playerUserId} guildId={guildId}
-                                                     fallbackName={status.playerName}/>
-                                    </h3>
-                                    <p className="text-xs opacity-70 mt-0.5">{status.actorRole}</p>
-                                </div>
-                                <DiscordAvatar userId={status.playerUserId} guildId={guildId}
-                                               avatarClassName="w-10 h-10 rounded-full border border-slate-700 shadow-sm flex-shrink-0 ml-3"/>
-                            </div>
-
-                            <div className="space-y-2">
-                                {status.actionDefinitionId && (
-                                    <div className="bg-white/5 rounded px-2 py-1">
-                                        <p className="text-xs opacity-60">行動</p>
-                                        <p className="font-semibold text-slate-200">
-                                            {t(`actions.labels.${status.actionDefinitionId}`, {defaultValue: status.actionDefinitionId})}
-                                        </p>
-                                    </div>
-                                )}
-
-                                {status.targetName && (
-                                    <div
-                                        className="bg-white/10 rounded px-2 py-1 flex items-center justify-between gap-2">
-                                        <div className="min-w-0">
-                                            <p className="text-[10px] opacity-60 uppercase font-bold tracking-tight">目標</p>
-                                            <p className="font-semibold text-sm truncate">
-                                                <DiscordName userId={status.targetUserId} guildId={guildId}
-                                                             fallbackName={status.targetName || ''}/>
-                                            </p>
-                                        </div>
-                                        {status.targets?.[0] === -1 ? (
-                                            <div
-                                                className="w-6 h-6 rounded-full border border-amber-500/50 bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                                                <FastForward className="w-3 h-3 text-amber-500"/>
-                                            </div>
-                                        ) : (
-                                            <DiscordAvatar userId={status.targetUserId} guildId={guildId}
-                                                           avatarClassName="w-6 h-6 rounded-full border border-slate-600 flex-shrink-0"/>
-                                        )}
-                                    </div>
-                                )}
-
-                                <div
-                                    className={`border rounded px-2 py-1 text-xs font-semibold text-center ${getStatusColor(status.status)}`}>
-                                    {status.status === 'SUBMITTED'
-                                        ? '✓ 已提交'
-                                        : status.status === 'SKIPPED'
-                                            ? '⏭️ 已跳過'
-                                            : status.status === 'ACTING'
-                                                ? '⚡ 行動中...'
-                                                : status.status === 'PROCESSED'
-                                                    ? '✨ 已處理'
-                                                    : '⏳ 待提交'}
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-        </div>
-    );
-};
-
-interface NightStatusProps {
-    guildId?: string;
-    players?: Player[];
-    gameState?: GameState;
-}
-
-interface WerewolfMessage {
-    senderId: number;
-    senderName?: string;
-    content: string;
-    timestamp: number;
-    senderUserId?: string | number | bigint;
-}
-
-interface WerewolfVote {
-    voterId: number;
-    targetId: number | string | null;
-    voterName?: string;
-    voterUserId?: string | number | bigint;
-    targetName?: string;
-    targetUserId?: string | number | bigint;
+    targetRole?: string;
+    actionName: string | null;
 }
 
 interface NightStatusData {
@@ -201,45 +35,39 @@ interface NightStatusData {
     phaseType: 'WEREWOLF_VOTING' | 'ROLE_ACTIONS' | 'WOLF_YOUNGER_BROTHER_ACTION';
     startTime: number;
     endTime: number;
-    werewolfMessages: WerewolfMessage[];
-    werewolfVotes: WerewolfVote[];
+    werewolfMessages: WolfMessage[];
+    werewolfVotes: WolfVote[];
     actionStatuses: RoleActionInstance[];
 }
 
-export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, players = [], gameState}) => {
+// --- Main Component ---
+
+interface NightStatusProps {
+    guildId?: string;
+    players?: Player[];
+    gameState?: GameState;
+}
+
+export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], gameState}) => {
+    const {t} = useTranslation();
     const [activeTab, setActiveTab] = useState<'werewolves' | 'actions'>('werewolves');
-    const messageScrollContainerRef = React.useRef<HTMLDivElement>(null);
+    const messageScrollContainerRef = useRef<HTMLDivElement>(null);
 
-    // Get guildId from URL or props
-    const pathParts = typeof window !== 'undefined' ? window.location.pathname.split('/') : [];
-    const guildId = propGuildId || pathParts[2];
-
-    const nightStatus = React.useMemo<NightStatusData | null>(() => {
+    // Data Processing
+    const nightStatus = useMemo<NightStatusData | null>(() => {
         if (!gameState?.stateData) return null;
 
         const stateData = gameState.stateData as any;
         const phaseType = stateData.phaseType || 'WEREWOLF_VOTING';
 
-        // Map werewolf messages
-        const werewolfMessages = (stateData.werewolfMessages || []).map((msg: any) => {
-            const sender = players.find(p => p.id === msg.senderId);
-            return {
-                senderId: msg.senderId,
-                senderName: sender?.nickname,
-                senderUserId: sender?.userId,
-                content: msg.content,
-                timestamp: msg.timestamp
-            };
-        });
+        // Werewolf Messages
+        const werewolfMessages = (stateData.werewolfMessages || []) as WolfMessage[];
 
-        // Map werewolf votes
+        // Werewolf Votes
         const wolfState = stateData.wolfStates?.['WEREWOLF_KILL'];
-        const werewolfVotes = (wolfState?.votes || []).map((vote: any) => ({
-            voterId: vote.voterId,
-            targetId: vote.targetId
-        }));
+        const werewolfVotes = (wolfState?.votes || []) as WolfVote[];
 
-        // Map action statuses
+        // Action Statuses
         const actionStatuses = (stateData.submittedActions || []) as RoleActionInstance[];
 
         return {
@@ -253,307 +81,636 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId: propGuildId, p
         };
     }, [gameState, players]);
 
-    // Calculate remaining time based on phase start time and phase type
+    // Helpers
     const getRemainingSeconds = (): number => {
         if (!nightStatus) return 0;
         return Math.max(0, Math.floor((nightStatus.endTime - Date.now()) / 1000));
     };
 
-    // Auto-scroll messages to bottom
+    // Effects
     useEffect(() => {
-        if (messageScrollContainerRef.current) {
+        if (activeTab === 'werewolves' && messageScrollContainerRef.current) {
             messageScrollContainerRef.current.scrollTop = messageScrollContainerRef.current.scrollHeight;
         }
-    }, [nightStatus?.werewolfMessages]);
+    }, [nightStatus?.werewolfMessages, activeTab]);
 
-    // Auto-switch tab when phase changes
     useEffect(() => {
-        if (nightStatus?.phaseType === 'ROLE_ACTIONS' || nightStatus?.phaseType === 'WOLF_YOUNGER_BROTHER_ACTION') {
+        const type = nightStatus?.phaseType;
+        if (type === 'ROLE_ACTIONS' || type === 'WOLF_YOUNGER_BROTHER_ACTION') {
             setActiveTab('actions');
+        } else {
+            setActiveTab('werewolves');
         }
     }, [nightStatus?.phaseType]);
 
-    if (!nightStatus) {
-        return null;
-    }
+    // UI Transformation
+    if (!nightStatus) return null;
 
     const enrichedMessages = nightStatus.werewolfMessages.map(msg => {
-        const sender = players.find(p => p.id === Number(msg.senderId));
+        const sender = players.find((p: Player) => p.userId === Number(msg.senderUserId));
+        const timestamp = Number(msg.timestamp) < 10000000000 ? Number(msg.timestamp) * 1000 : Number(msg.timestamp);
+
         return {
             ...msg,
-            senderName: msg.senderName || sender?.nickname || `玩家 ${msg.senderId}`,
-            senderUserId: sender?.userId || undefined,
+            timestamp,
+            senderName: sender?.nickname || `${t('messages.player')} ${msg.senderUserId}`,
+            senderUserId: msg.senderUserId,
         };
     });
 
-    const enrichedVotes = nightStatus.werewolfVotes.map(vote => {
-        const voter = players.find(p => p.id === Number(vote.voterId));
-        const rawTargetId = vote.targetId;
-        const targetId = (rawTargetId !== null && rawTargetId !== undefined) ? Number(rawTargetId) : null;
-        const target = (targetId !== null && targetId > 0) ? players.find(p => p.id === targetId) : null;
+    const enrichedVotes = useMemo(() => {
+        const stateData = gameState?.stateData as any;
+        const wolfState = stateData?.wolfStates?.['WEREWOLF_KILL'];
+        const electorates = wolfState?.electorates || [];
 
-        let targetName = '未投票';
-        if (targetId === -1) {
-            targetName = '跳過';
-        } else if (target) {
-            targetName = target.nickname;
-        } else if (targetId !== null && targetId > 0) {
-            targetName = `玩家 ${targetId}`;
-        }
+        // Use electorates if available, otherwise fallback to all alive wolves
+        const votingWolfIds = electorates.length > 0
+            ? electorates
+            : players.filter((p: Player) => p.wolf && p.alive).map(p => p.id);
 
-        return {
-            ...vote,
-            targetId,
-            voterName: voter?.nickname || `玩家 ${vote.voterId}`,
-            voterUserId: voter?.userId || undefined,
-            targetName,
-            targetUserId: target?.userId || undefined,
-        };
-    }).sort((a, b) => Number(a.voterId) - Number(b.voterId));
+        return votingWolfIds.map((voterId: number) => {
+            const wolf = players.find(p => p.id === voterId);
+            const vote = nightStatus.werewolfVotes.find(v => Number(v.voterId) === voterId);
+            const rawTargetId = vote?.targetId;
+            const targetId = (rawTargetId !== null && rawTargetId !== undefined) ? Number(rawTargetId) : null;
+            const target = (targetId !== null && targetId > 0) ? players.find((p: Player) => p.id === targetId) : null;
 
-    // Filter out wolf actions from the main list
+            let targetName = t('nightStatus.waiting');
+            if (targetId === -1) targetName = t('nightStatus.skipped');
+            else if (target) targetName = target.nickname;
+
+            return {
+                voterId,
+                targetId,
+                voterName: wolf?.nickname || `${t('messages.player')} ${voterId}`,
+                voterUserId: wolf?.userId,
+                targetName,
+                targetUserId: target?.userId,
+                hasVoted: !!vote
+            };
+        }).sort((a: any, b: any) => Number(a.voterId) - Number(b.voterId));
+    }, [players, nightStatus.werewolfVotes, gameState, t]);
+
     const enrichedStatuses: EnrichedActionStatus[] = (nightStatus.actionStatuses || [])
         .filter(status => !status.actorRole.includes('狼'))
         .map(status => {
-            const player = players.find(p => p.id === Number(status.actor));
+            const player = players.find((p: Player) => p.id === Number(status.actor));
             const rawTargetId = status.targets?.[0];
             const targetId = (rawTargetId !== null && rawTargetId !== undefined) ? Number(rawTargetId) : null;
-            const target = (targetId !== null && targetId > 0) ? players.find(p => p.id === targetId) : null;
+            const target = (targetId !== null && targetId > 0) ? players.find((p: Player) => p.id === targetId) : null;
 
             let targetName = null;
-            if (targetId === -1) {
-                targetName = '跳過';
-            } else if (target) {
-                targetName = target.nickname;
-            } else if (targetId !== null && targetId > 0) {
-                targetName = `玩家 ${targetId}`;
-            } else if (status.status === 'SUBMITTED') {
-                targetName = '已提交';
-            }
+            if (targetId === -1) targetName = t('nightStatus.skipped');
+            else if (target) targetName = target.nickname;
+            else if (status.status === 'SUBMITTED') targetName = t('nightStatus.submitted');
 
             return {
                 ...status,
-                playerName: player?.nickname || `玩家 ${status.actor}`,
-                playerUserId: player?.userId || undefined,
+                playerName: player?.nickname || `${t('messages.player')} ${status.actor}`,
+                playerUserId: player?.userId,
                 targetName,
-                targetUserId: target?.userId || undefined,
+                targetUserId: target?.userId,
+                targetRole: target?.roles?.[0],
+                actionName: status.actionDefinitionId ? t(`actions.labels.${status.actionDefinitionId}`) : null
             };
         });
 
-    // Calculate wolf kill target
-    const wolfVotes = nightStatus.werewolfVotes;
+    // Top Hunt Calculation
     const voteCounts: Record<number, number> = {};
-    wolfVotes.forEach(v => {
+    nightStatus.werewolfVotes.forEach(v => {
         if (v.targetId !== null && v.targetId !== undefined) {
             const tid = Number(v.targetId);
-            if (!isNaN(tid) && tid !== 0) {
-                voteCounts[tid] = (voteCounts[tid] || 0) + 1;
-            }
+            if (!isNaN(tid)) voteCounts[tid] = (voteCounts[tid] || 0) + 1;
         }
     });
 
     let topTargetId: number | null = null;
     let maxVotes = 0;
     Object.entries(voteCounts).forEach(([tid, count]) => {
-        const targetId = Number(tid);
-        if (count > maxVotes) {
+        const tId = Number(tid);
+        if (count > maxVotes && tId !== 0) {
             maxVotes = count;
-            topTargetId = targetId;
+            topTargetId = tId;
         }
     });
 
-    const topTarget = (topTargetId !== null && topTargetId > 0) ? players.find(p => p.id === topTargetId) : null;
-    let wolfTargetName = '未定';
+    const huntTargetPlayer = (topTargetId !== null && topTargetId > 0) ? players.find((p: Player) => p.id === topTargetId) : null;
+    const totalWolves = gameState?.stateData?.wolfStates['WEREWOLF_KILL']?.electorates.length || players.filter((p: Player) => p.wolf && p.alive).length;
+    const lockThreshold = Math.floor(totalWolves / 2) + 1;
+    const votePercentage = Math.round((maxVotes / totalWolves) * 100);
 
-    if (maxVotes === 0) {
-        wolfTargetName = '未定';
-    } else if (topTargetId === -1) {
-        wolfTargetName = '跳過';
-    } else if (topTarget) {
-        wolfTargetName = topTarget.nickname;
-    } else if (topTargetId !== null && topTargetId > 0) {
-        wolfTargetName = `玩家 ${topTargetId}`;
-    }
-    const wolfTargetUserId = topTarget?.userId || undefined;
+    const getRoleColor = (role: string) => {
+        if (role.includes('預')) return 'seer-cyan';
+        if (role.includes('女')) return 'witch-purple';
+        if (role.includes('守')) return 'guard-green';
+        if (role.includes('獵')) return 'hunter-orange';
+        return 'primary';
+    };
+
+    const getRoleIcon = (role: string) => {
+        if (role.includes('預')) return <Eye className="w-5 h-5"/>;
+        if (role.includes('女')) return <FlaskConical className="w-5 h-5"/>;
+        if (role.includes('守')) return <Shield className="w-5 h-5"/>;
+        if (role.includes('獵')) return <Target className="w-5 h-5"/>;
+        return <Brain className="w-5 h-5"/>;
+    };
 
     return (
-        <div className="w-full h-full bg-slate-900 text-white p-4 overflow-hidden flex flex-col">
-            <style>
-                {`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-                @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
-                .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
-                .animate-slide-in { animation: slideIn 0.3s ease-out; animation-fill-mode: backwards; }
-                .message-scroll { scrollbar-width: thin; scrollbar-color: rgba(100, 116, 139, 0.5) transparent; }
-                .message-scroll::-webkit-scrollbar { width: 6px; }
-                .message-scroll::-webkit-scrollbar-track { background: transparent; }
-                .message-scroll::-webkit-scrollbar-thumb { background-color: rgba(100, 116, 139, 0.5); border-radius: 3px; }
-                .message-scroll::-webkit-scrollbar-thumb:hover { background-color: rgba(100, 116, 139, 0.7); }`}
-            </style>
-            <div className="mb-4">
-                <div className="flex items-center justify-between mb-3">
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Clock className="w-6 h-6 text-cyan-400"/>
-                        第 {nightStatus.day} 晚
-                    </h1>
-                    <div className="text-3xl font-bold font-mono text-cyan-400">
-                        {String(Math.floor(getRemainingSeconds() / 60)).padStart(2, '0')}:
-                        {String(getRemainingSeconds() % 60).padStart(2, '0')}
+        <div className="text-slate-800 dark:text-white font-['Spline_Sans'] min-h-screen flex flex-col overflow-hidden">
+            {/* Top Navigation */}
+            <header
+                className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center px-6 justify-between flex-shrink-0 z-20">
+                <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 bg-[#3211d4] rounded-lg flex items-center justify-center text-white">
+                        <Moon className="w-6 h-6"/>
+                    </div>
+                    <div>
+                        <h1 className="font-bold text-lg tracking-tight">
+                            {t(`nightStatus.phases.${nightStatus.phaseType}`)}
+                        </h1>
                     </div>
                 </div>
 
-                <div className="flex gap-2">
+                <nav className="hidden md:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
                     <button
                         onClick={() => setActiveTab('werewolves')}
-                        className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'werewolves'
-                            ? 'bg-red-600 shadow-lg shadow-red-600/50'
-                            : 'bg-slate-700 hover:bg-slate-600'
-                        }`}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'werewolves' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'}`}
                     >
-                        <MessageCircle className="w-4 h-4"/>
-                        狼人投票
+                        {t('nightStatus.tabs.wolfPhase')}
                     </button>
                     <button
                         onClick={() => setActiveTab('actions')}
-                        className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'actions'
-                            ? 'bg-blue-600 shadow-lg shadow-blue-600/50'
-                            : 'bg-slate-700 hover:bg-slate-600'
-                        }`}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'actions' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'}`}
                     >
-                        <Users className="w-4 h-4"/>
-                        職業行動
+                        {t('nightStatus.tabs.actions')}
                     </button>
-                </div>
-            </div>
+                </nav>
 
-            <div className="flex-1 overflow-hidden">
-                {activeTab === 'werewolves' ? (
-                    <WerewolfVotingScreen
-                        messages={enrichedMessages}
-                        votes={enrichedVotes}
-                        messageScrollContainerRef={messageScrollContainerRef}
-                        guildId={guildId}
-                    />
-                ) : (
-                    <RoleActionsScreen
-                        statuses={enrichedStatuses}
-                        wolfTargetName={wolfTargetName}
-                        wolfTargetUserId={wolfTargetUserId}
-                        wolfTargetId={topTargetId}
-                        wolfVoteCount={maxVotes}
-                        guildId={guildId}
-                    />
-                )}
-            </div>
-        </div>
-    );
-};
+            </header>
 
-interface WerewolfVotingScreenProps {
-    messages: Array<WerewolfMessage & { senderName: string }>;
-    votes: Array<WerewolfVote & { voterName: string, targetName: string }>;
-    messageScrollContainerRef: React.RefObject<HTMLDivElement>;
-    guildId?: string | number | bigint;
-}
+            {/* Main Content Area */}
+            <main className="flex-1 overflow-y-auto p-6 relative overflow-x-hidden">
 
-const WerewolfVotingScreen: React.FC<WerewolfVotingScreenProps> = ({
-                                                                       messages,
-                                                                       votes,
-                                                                       messageScrollContainerRef,
-                                                                       guildId
-                                                                   }) => {
-    return (
-        <div className="grid grid-cols-3 gap-4 h-full">
-            <div
-                className="col-span-2 flex flex-col bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700">
-                <div className="px-4 py-2 bg-slate-900 border-b border-slate-700">
-                    <h2 className="font-semibold text-sm uppercase tracking-wider">狼人討論</h2>
-                </div>
-                <div ref={messageScrollContainerRef} className="flex-1 overflow-y-auto space-y-2 p-4 message-scroll">
-                    {messages.length === 0 ? (
-                        <div className="flex items-center justify-center h-full text-slate-400">等待狼人發言...</div>
-                    ) : (
-                        (() => {
-                            const reversed = [...messages].reverse();
-                            return reversed.map((msg, idx) => {
-                                const newerMsg = reversed[idx - 1];
-                                const olderMsg = reversed[idx + 1];
-                                const isContinuation = newerMsg && newerMsg.senderId === msg.senderId && (newerMsg.timestamp - msg.timestamp) < 5 * 60 * 1000;
-                                const isPredecessor = olderMsg && olderMsg.senderId === msg.senderId && (msg.timestamp - olderMsg.timestamp) < 5 * 60 * 1000;
-
-                                return (
-                                    <div key={`${msg.senderId}-${msg.timestamp}`}
-                                         className={`animate-fade-in flex gap-3 px-3 transition-colors group ${isContinuation ? (isPredecessor ? 'py-0 mt-0' : 'pb-2 pt-0 mt-0') : (isPredecessor ? 'pt-2 pb-0 mt-4' : 'py-2 mt-4')} hover:bg-slate-700/30 ${!isContinuation ? 'rounded-t-md' : ''} ${!isPredecessor ? 'rounded-b-md' : ''}`}>
-                                        <div className="flex-shrink-0 w-10">
-                                            {!isContinuation ? (
-                                                <div className="mt-0.5">
-                                                    <DiscordAvatar userId={msg.senderUserId} guildId={guildId}
-                                                                   avatarClassName="w-10 h-10 rounded-full shadow-sm shadow-black/20"
-                                                                   useInitialsFallback={true}
-                                                                   avatarFallbackClassName="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center"
-                                                                   avatarFallbackTextClassName="text-xs font-bold text-slate-300"/>
-                                                </div>
-                                            ) : (
-                                                <div
-                                                    className="w-10 h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity min-h-[1.5rem]">
-                                                    <span className="text-[10px] text-slate-500 font-mono">•</span>
-                                                </div>
-                                            )}
+                <div className="max-w-7xl mx-auto relative z-10 space-y-8 h-full">
+                    {activeTab === 'werewolves' ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full pb-20">
+                            {/* LEFT COLUMN: Wolf Channel (Chat) */}
+                            <section
+                                className="lg:col-span-7 flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden h-[600px] animate-in fade-in slide-in-from-left-4 duration-500">
+                                {/* Chat Header */}
+                                <div
+                                    className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
+                                    <div
+                                        className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500 delay-150 fill-mode-both">
+                                        <div
+                                            className="h-10 w-10 rounded-lg bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center shadow-inner">
+                                            <Users className="w-6 h-6 text-white"/>
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            {!isContinuation && (
-                                                <div className="flex items-baseline gap-2 mb-0.5">
-                                                    <span className="font-semibold text-red-400 text-[15px]">
-                                                        <DiscordName userId={msg.senderUserId} guildId={guildId}
-                                                                     fallbackName={msg.senderName}/>
-                                                    </span>
-                                                    <span
-                                                        className="text-[10px] text-slate-500 font-medium">{new Date(msg.timestamp).toLocaleTimeString('zh-TW', {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })}</span>
-                                                </div>
-                                            )}
-                                            <div
-                                                className="text-[15px] text-slate-200 leading-normal break-words">{msg.content}</div>
+                                        <div>
+                                            <h3 className="font-bold text-lg leading-tight">{t('nightStatus.wolfDiscussion')}</h3>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">{t('nightStatus.wolvesOnline', {count: String(totalWolves)})}</p>
                                         </div>
                                     </div>
-                                );
-                            });
-                        })()
-                    )}
-                </div>
-            </div>
-
-            <div className="flex flex-col bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700">
-                <div className="px-4 py-2 bg-slate-900 border-b border-slate-700">
-                    <h2 className="font-semibold text-sm uppercase tracking-wider">投票結果</h2>
-                </div>
-                <div className="flex-1 overflow-y-auto space-y-2 p-3">
-                    {votes.length === 0 ? (
-                        <div
-                            className="flex items-center justify-center h-full text-slate-400 text-sm">投票進行中...</div>
-                    ) : (
-                        votes.map((vote, idx) => (
-                            <div key={idx}
-                                 className="animate-slide-in bg-slate-700/50 rounded px-2 py-2 hover:bg-slate-700 transition-colors text-xs"
-                                 style={{animationDelay: `${idx * 50}ms`}}>
-                                <div className="font-semibold text-cyan-400 mb-1">
-                                    <DiscordName userId={vote.voterUserId} guildId={guildId}
-                                                 fallbackName={vote.voterName}/>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <ChevronRight className="w-3 h-3 text-amber-400"/>
-                                    <span
-                                        className={vote.targetName === '跳過' ? 'text-slate-400' : 'text-red-400 font-semibold'}>
-                                        <DiscordName userId={vote.targetUserId} guildId={guildId}
-                                                     fallbackName={vote.targetName || '未投票'}/>
-                                    </span>
+                                {/* Chat Messages Area */}
+                                <div ref={messageScrollContainerRef}
+                                     className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-50 dark:bg-slate-950 scrollbar-hide">
+                                    {/* Time Divider */}
+                                    <div
+                                        className="flex justify-center animate-in fade-in zoom-in-95 duration-500 delay-200 fill-mode-both">
+                                        <span
+                                            className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 bg-slate-200 dark:bg-[#3211d4]/10 px-3 py-1 rounded-full">{t('nightStatus.nightPhaseStarted')}</span>
+                                    </div>
+
+                                    {enrichedMessages.length === 0 ? (
+                                        <div
+                                            className="flex flex-col items-center justify-center h-full text-slate-500 py-12">
+                                            <MessageSquare className="w-12 h-12 mb-2 opacity-20"/>
+                                            <p className="text-sm font-medium opacity-50">{t('nightStatus.waitingForWolf')}</p>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            {enrichedMessages.map((msg, index) => {
+                                                const isConsecutive = index > 0 && enrichedMessages[index - 1].senderUserId === msg.senderUserId;
+                                                const isLastInGroup = index === enrichedMessages.length - 1 || enrichedMessages[index + 1].senderUserId !== msg.senderUserId;
+
+                                                return (
+                                                    <div
+                                                        key={`${msg.senderUserId}-${msg.timestamp}-${index}`}
+                                                        className={`flex gap-4 group animate-in fade-in slide-in-from-left-4 duration-500 fill-mode-both ${isConsecutive ? '-mt-[1px]' : 'mt-6'}`}
+                                                        style={{animationDelay: `${250 + Math.min(index * 50, 400)}ms`}}
+                                                    >
+                                                        <div className="flex-none w-10">
+                                                            {!isConsecutive && (
+                                                                <div
+                                                                    className="h-10 w-10 rounded-full bg-slate-800 border-2 border-slate-700 overflow-hidden relative">
+                                                                    <DiscordAvatar
+                                                                        userId={String(msg.senderUserId || '')}
+                                                                        guildId={guildId}
+                                                                        avatarClassName="object-cover w-full h-full"/>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            {!isConsecutive && (
+                                                                <div className="flex items-baseline gap-2 mb-1">
+                                                                    <span
+                                                                        className="font-semibold text-sm text-red-400">
+                                                                        <DiscordName
+                                                                            userId={String(msg.senderUserId || '')}
+                                                                            guildId={guildId}
+                                                                            fallbackName={msg.senderName || ''}/>
+                                                                    </span>
+                                                                    <span className="text-[10px] text-slate-500">
+                                                                        {new Date(msg.timestamp).toLocaleTimeString([], {
+                                                                            hour: '2-digit',
+                                                                            minute: '2-digit',
+                                                                            hour12: false
+                                                                        })}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            <div
+                                                                className={`bg-white dark:bg-slate-800 p-3 shadow-sm inline-block max-w-[90%] text-sm leading-relaxed text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 ${!isConsecutive ? 'rounded-t-2xl rounded-br-2xl rounded-bl-sm' : isLastInGroup ? 'rounded-b-2xl rounded-tr-2xl rounded-tl-sm' : 'rounded-r-2xl rounded-l-sm'}`}>
+                                                                {msg.content}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+
+                            {/* RIGHT COLUMN: Voting Results */}
+                            <section
+                                className="lg:col-span-5 flex flex-col gap-6 h-[600px] animate-in fade-in slide-in-from-right-4 duration-500">
+                                {/* Target Summary Card */}
+                                <div
+                                    className="bg-gradient-to-br from-[#3211d4] to-[#200a8a] rounded-2xl p-6 shadow-xl text-white relative overflow-hidden animate-in fade-in zoom-in-95 duration-700 fill-mode-both">
+                                    <div
+                                        className="absolute top-0 right-0 opacity-10 transform translate-x-1/4 -translate-y-1/4">
+                                        <Target className="w-44 h-44"/>
+                                    </div>
+                                    <div className="relative z-10">
+                                        <h2 className="text-white/70 text-sm uppercase tracking-wider font-semibold mb-2 animate-in fade-in slide-in-from-top-2 duration-500 delay-100 fill-mode-both">{t('nightStatus.wolfTarget')}</h2>
+                                        <div className="flex items-center gap-4 mb-6">
+                                            <div
+                                                className="h-16 w-16 rounded-full border-4 border-white/20 overflow-hidden shadow-lg bg-slate-800 animate-in fade-in zoom-in-75 duration-500 delay-200 fill-mode-both transition-transform hover:scale-105">
+                                                {!!topTargetId ? (
+                                                    <DiscordAvatar userId={String(huntTargetPlayer?.userId ?? '')}
+                                                                   guildId={guildId}
+                                                                   avatarClassName="object-cover w-full h-full"/>
+                                                ) : (
+                                                    <div
+                                                        className="w-full h-full flex items-center justify-center bg-slate-700">
+                                                        <User className="w-8 h-8 opacity-20"/>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div
+                                                className="animate-in fade-in slide-in-from-left-4 duration-500 delay-300 fill-mode-both">
+                                                <h3 className="text-3xl font-bold">
+                                                    {topTargetId === -1 ? t('nightStatus.targetSkipped') : (huntTargetPlayer?.nickname || t('roles.unknown'))}
+                                                </h3>
+                                                <div className="flex items-center gap-2 text-white/70">
+                                                    <AlertCircle className="w-4 h-4"/>
+                                                    <span
+                                                        className="text-sm font-medium">{topTargetId ? t('nightStatus.atRisk') : t('nightStatus.undecided')}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {/* Progress Bar */}
+                                        <div
+                                            className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-400 fill-mode-both">
+                                            <div className="flex justify-between text-sm font-medium">
+                                                <span>{t('nightStatus.votesRatio', {
+                                                    current: String(maxVotes),
+                                                    total: String(totalWolves)
+                                                })}</span>
+                                                <span>{votePercentage}%</span>
+                                            </div>
+                                            <div className="h-3 w-full bg-black/20 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-1000 ease-out"
+                                                    style={{width: `${votePercentage}%`}}
+                                                ></div>
+                                            </div>
+                                            <p className="text-xs text-white/60 mt-2">
+                                                {maxVotes >= lockThreshold ? t('nightStatus.targetLocked') : t('nightStatus.moreVotesNeeded', {count: String(lockThreshold - maxVotes)})}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Live Feed Panel */}
+                                <div
+                                    className="flex-1 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both"
+                                    style={{animationDelay: '150ms'}}>
+                                    <div
+                                        className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
+                                        <h3 className="font-bold text-lg">{t('nightStatus.wolfVotes')}</h3>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-3 relative">
+                                        <div
+                                            className="absolute left-[27px] top-4 bottom-4 w-px bg-slate-200 dark:bg-slate-700 z-0"></div>
+
+                                        {enrichedVotes.length === 0 ? (
+                                            <div
+                                                className="flex items-center justify-center h-full text-slate-400 text-sm">{t('nightStatus.waitingForVotes')}</div>
+                                        ) : (
+                                            enrichedVotes.map((vote: any, idx: number) => {
+                                                const isSkipped = vote.targetId === -1;
+                                                const isVoted = vote.hasVoted && vote.targetId !== null && !isSkipped;
+                                                const isPending = !vote.hasVoted || (vote.hasVoted && vote.targetId === null);
+
+                                                return (
+                                                    <div
+                                                        key={idx}
+                                                        className={`relative z-10 flex items-center gap-3 transition-opacity duration-300 animate-in fade-in slide-in-from-right-4 fill-mode-both ${isPending ? 'opacity-60' : 'opacity-100'}`}
+                                                        style={{animationDelay: `${200 + idx * 50}ms`}}
+                                                    >
+                                                        <div
+                                                            className={`h-6 w-6 rounded-full flex items-center justify-center border-2 border-[#f6f6f8] dark:border-[#1c1836] shadow-sm flex-none transition-colors duration-300 ${isVoted ? 'bg-green-500' : isSkipped ? 'bg-amber-500' : 'bg-slate-400 animate-pulse'}`}>
+                                                            {isVoted ?
+                                                                <Check className="w-3 h-3 text-white"/> : isSkipped ?
+                                                                    <Ban className="w-3 h-3 text-white"/> :
+                                                                    <Clock className="w-3 h-3 text-white"/>}
+                                                        </div>
+                                                        <div
+                                                            className={`flex-1 bg-slate-50 dark:bg-slate-900/50 border p-3 rounded-lg flex justify-between items-center group transition-all duration-300 ${isPending ? 'border-dashed border-slate-300 dark:border-slate-700' : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+                                                            <div className="flex items-center gap-2">
+                                                                <DiscordAvatar userId={String(vote.voterUserId || '')}
+                                                                               guildId={guildId}
+                                                                               avatarClassName="h-6 w-6 rounded-full object-cover"/>
+                                                                <span
+                                                                    className={`text-sm font-medium ${isVoted ? 'text-red-400' : 'text-slate-500'}`}>
+                                                                    <DiscordName userId={String(vote.voterUserId || '')}
+                                                                                 guildId={guildId}
+                                                                                 fallbackName={vote.voterName || ''}/>
+                                                                </span>
+                                                            </div>
+                                                            <ArrowRight
+                                                                className={`w-4 h-4 transition-colors ${isVoted ? 'text-slate-400' : 'text-slate-300'}`}/>
+                                                            <div className="flex items-center gap-2">
+                                                                <span
+                                                                    className={`text-sm font-bold ${isVoted ? 'text-slate-700 dark:text-white' : 'text-slate-400 italic font-normal text-xs'}`}>
+                                                                    {vote.targetName}
+                                                                </span>
+                                                                {!!vote.targetUserId && isVoted && (
+                                                                    <DiscordAvatar userId={String(vote.targetUserId)}
+                                                                                   guildId={guildId}
+                                                                                   avatarClassName="h-6 w-6 rounded-full object-cover grayscale group-hover:grayscale-0 transition-all"/>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    ) : (
+                        /* Role Actions Screen (Redesigned) */
+                        <div className="space-y-8 pb-32 animate-in fade-in duration-500">
+                            {/* Wolf Kill Summary Banner */}
+                            <section
+                                className="bg-slate-900/70 backdrop-blur-xl rounded-xl overflow-hidden shadow-lg border border-red-500/30 relative animate-in fade-in slide-in-from-top-4 duration-700 fill-mode-both">
+                                <div
+                                    className="absolute inset-0 bg-gradient-to-r from-red-500/10 via-transparent to-transparent"></div>
+                                <div className="p-6 md:flex md:items-center md:justify-between relative">
+                                    <div className="flex items-center gap-6">
+                                        <div
+                                            className="h-16 w-16 rounded-full bg-red-500/20 flex items-center justify-center border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-in fade-in zoom-in-75 duration-500 delay-100 fill-mode-both">
+                                            <AlertTriangle className="text-red-500 w-8 h-8"/>
+                                        </div>
+                                        <div
+                                            className="animate-in fade-in slide-in-from-left-4 duration-500 delay-200 fill-mode-both">
+                                            <h2 className="text-red-500 font-bold text-sm tracking-widest uppercase mb-1">{t('nightStatus.wolfKillConsensus')}</h2>
+                                            <div className="flex items-baseline gap-3">
+                                                <span className="text-3xl font-bold text-white">
+                                                    {topTargetId === -1 ? t('nightStatus.targetSkipped') : (huntTargetPlayer?.nickname || t('nightStatus.thinking'))}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="text-xs text-slate-400">{t('nightStatus.votesCount', {
+                                                    current: String(maxVotes),
+                                                    total: String(totalWolves)
+                                                })}</span>
+                                                <div className="w-32 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-red-500 transition-all duration-1000 ease-out"
+                                                        style={{width: `${votePercentage}%`}}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div
+                                        className="mt-6 md:mt-0 flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-500 delay-300 fill-mode-both">
+                                        <div className="flex -space-x-3">
+                                            {enrichedVotes.slice(0, 3).map((v: any, i: number) => (
+                                                <div key={i}
+                                                     className="w-10 h-10 rounded-full border-2 border-slate-900 overflow-hidden shadow-lg">
+                                                    <DiscordAvatar userId={String(v.voterUserId || '')}
+                                                                   guildId={guildId}
+                                                                   avatarClassName="w-full h-full object-cover"/>
+                                                </div>
+                                            ))}
+                                            {totalWolves > 3 && (
+                                                <div
+                                                    className="w-10 h-10 rounded-full bg-slate-800 border-2 border-slate-900 flex items-center justify-center text-[10px] text-slate-400">
+                                                    +{totalWolves - 3}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="text-right">
+                                            <div
+                                                className="text-xs text-slate-400 uppercase font-semibold">{t('nightStatus.timeRemaining')}</div>
+                                            <div className="text-2xl font-mono text-white font-bold">
+                                                {String(Math.floor(getRemainingSeconds() / 60)).padStart(2, '0')}:
+                                                {String(getRemainingSeconds() % 60).padStart(2, '0')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                        <Brain className="text-[#3211d4]"/>
+                                        {t('nightStatus.specialRoleActions')}
+                                    </h3>
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-sm text-slate-400">
+                                            {t('nightStatus.actionsCompleted', {
+                                                completed: String(enrichedStatuses.filter(s => s.status === 'SUBMITTED').length),
+                                                total: String(enrichedStatuses.length)
+                                            })}
+                                        </span>
+                                        {enrichedStatuses.length > 0 && (
+                                            <div
+                                                className="w-32 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
+                                                <div
+                                                    className="h-full bg-[#3211d4] rounded-full transition-all duration-700 ease-out shadow-[0_0_10px_rgba(50,17,212,0.5)]"
+                                                    style={{width: `${Math.round((enrichedStatuses.filter(s => s.status === 'SUBMITTED').length / enrichedStatuses.length) * 100)}%`}}
+                                                ></div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {enrichedStatuses.map((status, index) => {
+                                        const roleColor = getRoleColor(status.actorRole);
+                                        const isActing = status.status === 'ACTING';
+                                        const isSkipped = status.status === 'SKIPPED';
+                                        const isSubmitted = status.status === 'SUBMITTED';
+
+                                        // Explicit style mapping for Tailwind
+                                        const borderColorClass =
+                                            roleColor === 'seer-cyan' ? '!border-l-[#06b6d4]' :
+                                                roleColor === 'witch-purple' ? '!border-l-[#a855f7]' :
+                                                    roleColor === 'guard-green' ? '!border-l-[#10b981]' :
+                                                        roleColor === 'hunter-orange' ? '!border-l-[#f97316]' :
+                                                            '!border-l-[#3211d4]';
+
+                                        const bgColorClass =
+                                            roleColor === 'seer-cyan' ? 'bg-[#06b6d4]/20 text-[#06b6d4]' :
+                                                roleColor === 'witch-purple' ? 'bg-[#a855f7]/20 text-[#a855f7]' :
+                                                    roleColor === 'guard-green' ? 'bg-[#10b981]/20 text-[#10b981]' :
+                                                        roleColor === 'hunter-orange' ? 'bg-[#f97316]/20 text-[#f97316]' :
+                                                            'bg-[#3211d4]/20 text-[#3211d4]';
+
+                                        const glowClass =
+                                            roleColor === 'seer-cyan' ? 'shadow-[0_0_20px_rgba(6,182,212,0.3)] ring-[#06b6d4]/40' :
+                                                roleColor === 'witch-purple' ? 'shadow-[0_0_20px_rgba(168,85,247,0.3)] ring-[#a855f7]/40' :
+                                                    roleColor === 'guard-green' ? 'shadow-[0_0_20px_rgba(16,185,129,0.3)] ring-[#10b981]/40' :
+                                                        roleColor === 'hunter-orange' ? 'shadow-[0_0_20px_rgba(249,115,22,0.3)] ring-[#f97316]/40' :
+                                                            'shadow-[0_0_20px_rgba(50,17,212,0.3)] ring-[#3211d4]/40';
+
+                                        return (
+                                            <div
+                                                key={`${status.actor}-${index}`}
+                                                className={`bg-white dark:bg-slate-900 rounded-xl border-l-4 border-t border-r border-b border-slate-200 dark:border-slate-800 overflow-hidden group transition-all duration-300 animate-in fade-in slide-in-from-left-4 fill-mode-both ${isActing ? `ring-1 ${glowClass}` : 'shadow-lg'} ${isSkipped ? 'opacity-75 grayscale border-l-slate-500' : borderColorClass}`}
+                                                style={{animationDelay: `${300 + index * 50}ms`}}
+                                            >
+                                                <div className="p-5 relative z-10">
+                                                    <div className="flex justify-between items-start mb-6">
+                                                        <div className="flex items-center gap-3">
+                                                            <div
+                                                                className={`h-10 w-10 rounded-lg flex items-center justify-center ${isSkipped ? 'bg-slate-500/20 text-slate-500' : bgColorClass}`}>
+                                                                {getRoleIcon(status.actorRole)}
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="font-bold text-white">{status.actorRole}</h4>
+                                                                <div className="flex flex-col">
+                                                                    {status.actionName && (
+                                                                        <span
+                                                                            className={`text-[10px] font-bold mt-1 px-1.5 py-0.5 rounded ${bgColorClass}`}>
+                                                                            {status.actionName}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <span
+                                                            className={`px-2.5 py-1 rounded text-[10px] font-bold tracking-wide uppercase border ${isSubmitted ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                                                                isActing ? 'bg-[#3211d4]/20 text-white border-[#3211d4]/50 animate-pulse' :
+                                                                    isSkipped ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                                                                        'bg-slate-700 text-slate-300 border-slate-600'
+                                                            }`}>
+                                                            {status.status}
+                                                        </span>
+                                                    </div>
+
+                                                    <div
+                                                        className="flex items-center justify-between bg-black/20 rounded-lg p-4 relative min-h-[100px]">
+                                                        {isSkipped ? (
+                                                            <div className="flex flex-col items-center gap-2 w-full">
+                                                                <Ban className="text-slate-600 w-8 h-8"/>
+                                                                <span
+                                                                    className="text-xs text-slate-500">{t('nightStatus.noActionTaken')}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                <div
+                                                                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-[2px] bg-gradient-to-r from-white/10 to-white/30 z-0"></div>
+                                                                <div
+                                                                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-900 p-1 rounded-full border border-slate-200 dark:border-slate-800">
+                                                                    <ArrowRight className="text-slate-500 w-4 h-4"/>
+                                                                </div>
+
+                                                                <div className="relative z-10 text-center">
+                                                                    <div
+                                                                        className={`w-12 h-12 rounded-full border-2 p-0.5 mx-auto mb-2 ${isSkipped ? 'border-slate-500/50' : borderColorClass.replace('border-l-', 'border-')}/50`}>
+                                                                        <DiscordAvatar
+                                                                            userId={String(status.playerUserId || '')}
+                                                                            guildId={guildId}
+                                                                            avatarClassName="w-full h-full rounded-full object-cover"/>
+                                                                    </div>
+                                                                    <span
+                                                                        className="text-[10px] font-bold text-slate-400 truncate max-w-[60px] block">
+                                                                        <DiscordName
+                                                                            userId={String(status.playerUserId || '')}
+                                                                            guildId={guildId}
+                                                                            fallbackName={status.playerName}/>
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="relative z-10 text-center">
+                                                                    <div
+                                                                        className="w-12 h-12 rounded-full border-2 border-slate-600 p-0.5 mx-auto mb-2 relative group-hover:border-white/50 transition-colors duration-300">
+                                                                        {status.targetUserId ? (
+                                                                            <DiscordAvatar
+                                                                                userId={String(status.targetUserId)}
+                                                                                guildId={guildId}
+                                                                                avatarClassName="w-full h-full rounded-full object-cover"/>
+                                                                        ) : (
+                                                                            <div
+                                                                                className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center">
+                                                                                <User
+                                                                                    className="text-slate-600 w-6 h-6"/>
+                                                                            </div>
+                                                                        )}
+                                                                        {isSubmitted && (
+                                                                            <div
+                                                                                className="absolute -top-1 -right-1 h-5 w-5 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border border-slate-200 dark:border-slate-800">
+                                                                                <Check
+                                                                                    className="text-green-500 w-3 h-3"/>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex flex-col">
+                                                                        <span
+                                                                            className="text-xs font-bold text-white truncate max-w-[80px]">
+                                                                            {status.targetUserId ? (
+                                                                                <DiscordName
+                                                                                    userId={String(status.targetUserId)}
+                                                                                    guildId={guildId}
+                                                                                    fallbackName={status.targetName || ''}/>
+                                                                            ) : (status.targetName || (isActing ? t('nightStatus.thinking') : t('nightStatus.waiting')))}
+                                                                        </span>
+                                                                        <span
+                                                                            className="text-[10px] text-[#3211d4] font-bold uppercase">{status.targetRole}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
-                        ))
+
+                        </div>
                     )}
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

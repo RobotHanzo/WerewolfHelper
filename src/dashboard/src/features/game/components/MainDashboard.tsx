@@ -342,9 +342,9 @@ export const MainDashboard = ({
     };
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full h-full">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full h-full">
             {/* Left: Stage Content Area */}
-            <div className={`lg:col-span-2 overflow-y-auto ${isStageAnimating ? 'scrollbar-hide' : ''}`}>
+            <div className={`lg:col-span-3 overflow-y-auto ${isStageAnimating ? 'scrollbar-hide' : ''}`}>
                 <div className="space-y-4">
                     <div key={currentId} className={`stage-transition ${transitionClass}`}>
                         {renderStageContent()}

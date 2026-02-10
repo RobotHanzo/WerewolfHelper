@@ -67,21 +67,10 @@ class ActionUIServiceImpl(
                 actionInstance.status = ActionStatus.ACTING
                 actionInstance.targetPromptId = message?.idLong
             } else {
-                // Ensure no conflicting pending/acting actions exist
-                session.stateData.submittedActions.removeIf {
+                val action = session.stateData.submittedActions.find {
                     it.actor == playerId && it.status != ActionStatus.SUBMITTED
                 }
-
-                actionInstance = RoleActionInstance(
-                    actor = playerId,
-                    actorRole = actorRole,
-                    actionDefinitionId = null, // Not chosen yet
-                    targets = mutableListOf(),
-                    submittedBy = ActionSubmissionSource.PLAYER,
-                    status = ActionStatus.ACTING,
-                    targetPromptId = message?.idLong
-                )
-                session.stateData.submittedActions.add(actionInstance)
+                action?.status = ActionStatus.ACTING
             }
 
             WerewolfApplication.gameSessionService.saveSession(session)

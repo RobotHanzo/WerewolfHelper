@@ -78,12 +78,16 @@
 .animate-in {
     animation-name: enter;
     animation-duration: 0.5s;
-    animation-fill-mode: forwards;
+    animation-fill-mode: both;
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
     --tw-enter-opacity: initial;
     --tw-enter-scale: initial;
     --tw-enter-translate-x: initial;
     --tw-enter-translate-y: initial;
+}
+
+.fill-mode-both {
+    animation-fill-mode: both;
 }
 
 .animate-out {
@@ -139,6 +143,22 @@
 
 .slide-in-from-right {
     --tw-enter-translate-x: 100%;
+}
+
+.slide-in-from-left {
+    --tw-enter-translate-x: -100%;
+}
+
+.slide-in-from-left-4 {
+    --tw-enter-translate-x: -1rem;
+}
+
+.slide-in-from-left-4 {
+    --tw-enter-translate-x: -1rem;
+}
+
+.slide-in-from-right-4 {
+    --tw-enter-translate-x: 1rem;
 }
 
 .slide-out-from-top-4 {

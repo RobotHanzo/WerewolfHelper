@@ -174,7 +174,7 @@ fun Session.updateActionStatus(
     }
 
     if (actionInstance == null) {
-        // Create new only if absolutely needed
+        log.warn("Could not find action with id $actorPlayerId")
         val newInstance = RoleActionInstance(
             actor = actorPlayerId,
             actorRole = actorRole,
@@ -319,29 +319,19 @@ fun Session.validateAndSubmitAction(
         else -> ActionSubmissionSource.PLAYER
     }
 
-    val action = RoleActionInstance(
-        actor = actorPlayerId,
-        actorRole = (actor.roles.firstOrNull() ?: "未知"),
-        actionDefinitionId = actionDefinitionId,
-        targets = targetPlayerIds,
-        submittedBy = source,
-        status = if (targetPlayerIds.contains(SKIP_TARGET_ID)) ActionStatus.SKIPPED else ActionStatus.SUBMITTED
-    )
-
-    // Store in submitted actions (centralized list)
-    // Remove existing action of same definition from same actor to prevent duplicates
-    stateData.submittedActions.removeIf { it.actor == actorPlayerId && it.actionDefinitionId == actionDefinitionId }
-    stateData.submittedActions.add(action)
+    val action =
+        stateData.submittedActions.find { it.actor == actorPlayerId && it.actionDefinitionId == actionDefinitionId }
+            ?: return mapOf("success" to false, "error" to "Action instance not found for actor")
+    action.targets.clear()
+    action.targets.addAll(targetPlayerIds)
+    action.status = if (targetPlayerIds.contains(SKIP_TARGET_ID)) ActionStatus.SKIPPED else ActionStatus.SUBMITTED
 
     // Mark action as submitted (for players only)
     if (submittedBy == "PLAYER" && !actionDef.allowMultiplePerPhase) {
         actor.actionSubmitted = true
     }
 
-    log.info(
-        "[ActionSubmit] Stored action. Submitted actions now: {}",
-        stateData.submittedActions.size
-    )
+    log.info("[ActionSubmit] Stored action. Submitted actions now: {}", stateData.submittedActions.size)
 
     // Execute immediately if requested (e.g., Seer, Hunter Revenge)
     if (actionDef.isImmediate) {

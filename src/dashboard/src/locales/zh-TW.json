@@ -114,7 +114,6 @@
     "nextStep": "下一階段",
     "currentStep": "目前階段",
     "currentStepId": "階段代碼",
-    "dayCount": "天數",
     "timer": "計時器",
     "stepNavigator": "階段導覽",
     "allStages": "所有階段",
@@ -428,5 +427,48 @@
     "PENDING": "等待中",
     "BLOCKED": "玩家 (受限)",
     "null": "未知"
+  },
+  "nightStatus": {
+    "roleActions": "角色行動",
+    "wolfTarget": "狼人擊殺目標",
+    "wolfDiscussion": "狼人討論區",
+    "wolfVotes": "投票明細",
+    "waitingForActions": "等待職業提交行動...",
+    "waitingForWolf": "等待狼人們開始討論...",
+    "noVotesYet": "目前尚無投票",
+    "targetSkipped": "跳過",
+    "acting": "醞釀中...",
+    "submitted": "已就緒",
+    "skipped": "已跳過",
+    "processed": "生效中",
+    "pending": "等待中",
+    "actor": "執行者",
+    "target": "行動目標",
+    "noVote": "未投票",
+    "tabs": {
+      "actions": "角色行動",
+      "wolfPhase": "狼人投票"
+    },
+    "wolvesOnline": "{count} 位存活狼人",
+    "nightPhaseStarted": "夜晚環節開始",
+    "atRisk": "危險",
+    "undecided": "未決定",
+    "votesCount": "得票: {current}/{total} 存活狼人",
+    "votesRatio": "{current} / {total} 票",
+    "moreVotesNeeded": "還需要 {count} 票來鎖定目標",
+    "targetLocked": "目標已鎖定",
+    "waitingForVotes": "等待投票中...",
+    "wolfKillConsensus": "狼人擊殺目標",
+    "timeRemaining": "剩餘時間",
+    "thinking": "思考中...",
+    "specialRoleActions": "神職行動",
+    "actionsCompleted": "{completed} / {total} 行動已完成",
+    "noActionTaken": "未採取行動",
+    "waiting": "等待中",
+    "phases": {
+      "WEREWOLF_VOTING": "狼人投票",
+      "ROLE_ACTIONS": "角色行動",
+      "WOLF_YOUNGER_BROTHER_ACTION": "狼弟行動"
+    }
   }
 }

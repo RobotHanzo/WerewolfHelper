@@ -44,9 +44,9 @@ class MessageListener : ListenerAdapter() {
     private fun shouldSend(player: Player, session: Session): Boolean {
         // Kotlin handles nullability; assuming roles is not null per logic
         val roles = player.roles
-        if (roles.isNullOrEmpty()) return false
+        if (roles.isEmpty()) return false
 
-        val firstRole = roles.filterNot { player.deadRoles?.contains(it) == true }.firstOrNull() ?: return false
+        val firstRole = roles.filterNot { player.deadRoles.contains(it) }.firstOrNull() ?: return false
         return firstRole.contains("狼人") ||
                 roles.contains("狼兄") ||
                 firstRole.contains("狼王") ||
@@ -69,7 +69,7 @@ class MessageListener : ListenerAdapter() {
         val isJudgeChannel = event.channel == session.judgeTextChannel
 
         for (player in alivePlayers) {
-            if (!player.roles.isNullOrEmpty()) {
+            if (player.roles.isNotEmpty()) {
                 if ((player.channel == event.channel && shouldSend(player, session)) ||
                     isJudgeChannel
                 ) {
@@ -78,14 +78,12 @@ class MessageListener : ListenerAdapter() {
                         gameSessionService.withLockedSession(session.guildId) { lockedSession ->
                             // Record if it's from the judge channel or the werewolf's own channel
                             val messagesList = lockedSession.stateData.werewolfMessages
-                            val senderId =
-                                if (isJudgeChannel) 0 else lockedSession.getPlayer(event.author.idLong)?.id ?: 0
 
                             messagesList.add(
                                 WolfMessage(
-                                    senderId = senderId,
+                                    senderUserId = event.author.idLong,
                                     content = event.message.contentRaw,
-                                    timestamp = System.currentTimeMillis()
+                                    timestamp = event.message.timeCreated.toEpochSecond()
                                 )
                             )
 

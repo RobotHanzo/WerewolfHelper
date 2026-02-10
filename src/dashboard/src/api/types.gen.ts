@@ -285,7 +285,7 @@ export type SessionResponse = {
 };
 
 export type WolfMessage = {
-    senderId: number;
+    senderUserId: number;
     content: string;
     timestamp: number;
 };

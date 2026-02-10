@@ -76,7 +76,7 @@ data class WolfVote(
 )
 
 data class WolfMessage(
-    val senderId: Int,
+    val senderUserId: Long,
     val content: String,
     val timestamp: Long = System.currentTimeMillis()
 )
