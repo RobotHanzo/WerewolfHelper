@@ -78,6 +78,7 @@ class ExpelServiceImpl : ExpelService {
         channel: GuildMessageChannel,
         allowPK: Boolean,
         durationMillis: Long,
+        candidates: Map<Int, Candidate>?,
         callback: (() -> Unit)?
     ) {
         // Create poll instance and register
@@ -85,9 +86,14 @@ class ExpelServiceImpl : ExpelService {
         polls[channel.guild.idLong] = poll
 
         // Populate candidates
-        val map = mutableMapOf<Int, Candidate>()
-        for (player in session.alivePlayers().values.sortedWith(compareBy { it.id })) {
-            map[player.id] = Candidate(player = player)
+        val map = if (candidates != null) {
+            candidates.toMutableMap()
+        } else {
+            val m = mutableMapOf<Int, Candidate>()
+            for (player in session.alivePlayers().values.sortedBy { it.id }) {
+                m[player.id] = Candidate(player = player)
+            }
+            m
         }
         poll.candidates.clear()
         poll.candidates.putAll(map)

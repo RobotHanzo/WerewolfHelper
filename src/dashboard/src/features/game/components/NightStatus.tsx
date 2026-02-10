@@ -526,8 +526,6 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                             )}
                                         </div>
                                         <div className="text-right">
-                                            <div
-                                                className="text-xs text-slate-400 uppercase font-semibold">{t('nightStatus.timeRemaining')}</div>
                                             <div className="text-2xl font-mono text-white font-bold">
                                                 {String(Math.floor(getRemainingSeconds() / 60)).padStart(2, '0')}:
                                                 {String(getRemainingSeconds() % 60).padStart(2, '0')}

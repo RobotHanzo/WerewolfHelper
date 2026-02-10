@@ -161,6 +161,14 @@
     --tw-enter-translate-x: 1rem;
 }
 
+.candidate-glow {
+    box-shadow: 0 0 20px 2px rgba(50, 17, 212, 0.4);
+}
+
+.danger-glow {
+    box-shadow: 0 0 15px 0px rgba(239, 68, 68, 0.3);
+}
+
 .slide-out-from-top-4 {
     --tw-exit-translate-y: -1rem;
 }

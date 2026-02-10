@@ -28,6 +28,7 @@ interface ExpelService {
         channel: GuildMessageChannel,
         allowPK: Boolean,
         durationMillis: Long = 30000L,
+        candidates: Map<Int, Candidate>? = null,
         callback: (() -> Unit)? = null
     )
 

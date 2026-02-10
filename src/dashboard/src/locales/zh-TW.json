@@ -132,7 +132,8 @@
     "sheriffElection": "警長參選",
     "deathAnnouncement": "宣布死訊",
     "speech": "發言流程",
-    "voting": "放逐投票"
+    "voting": "放逐投票",
+    "votingPhase": "放逐投票階段"
   },
   "players": {
     "title": "玩家",
@@ -312,7 +313,21 @@
     "total": "總票數",
     "count": "票",
     "noVotes": "尚未有人投票",
-    "waiting": "等待 {count} 位玩家..."
+    "waiting": "等待 {count} 位玩家...",
+    "participation": "投票進度",
+    "statusDescription": "即時統計村莊共識與玩家參與狀況",
+    "suspectsOnTrial": "被懷疑的對象",
+    "leadingCandidates": "最高得票者",
+    "totalVotesCount": "總計票數: {current}/{total}",
+    "waitingInitialVotes": "正在等待初始投票以確定嫌疑人...",
+    "leading": "領先",
+    "received": "收到票數",
+    "consensus": "得票率",
+    "votingMap": "投票狀態",
+    "voted": "已投票",
+    "thinking": "思考中",
+    "eliminated": "已出局",
+    "thinkingMap": "思考中..."
   },
   "playerEdit": {
     "title": "編輯玩家",
@@ -459,7 +474,6 @@
     "targetLocked": "目標已鎖定",
     "waitingForVotes": "等待投票中...",
     "wolfKillConsensus": "狼人擊殺目標",
-    "timeRemaining": "剩餘時間",
     "thinking": "思考中...",
     "specialRoleActions": "神職行動",
     "actionsCompleted": "{completed} / {total} 行動已完成",

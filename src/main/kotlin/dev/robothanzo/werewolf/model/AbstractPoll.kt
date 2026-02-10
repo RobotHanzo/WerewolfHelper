@@ -71,6 +71,7 @@ abstract class AbstractPoll(
 
             if (winners.isEmpty()) {
                 message?.reply("沒有人投票，本次${title}無人出局")?.queue()
+                finishedCallback?.invoke()
                 return@withLockedSession
             }
 

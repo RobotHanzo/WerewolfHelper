@@ -358,6 +358,7 @@ class SpeechServiceImpl(
             speechSession.order.clear()
             stopCurrentSpeaker(speechSession)
             speechSessions.remove(guildId)
+            speechSession.finishedCallback?.invoke()
         }
     }
 

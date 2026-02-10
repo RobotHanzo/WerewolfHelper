@@ -1,5 +1,4 @@
-import {useEffect, useState} from 'react';
-import {ArrowDown, ArrowUp, Clock, Mic, Play, Shield, Square, UserMinus, UserPlus} from 'lucide-react';
+import {ArrowDown, ArrowUp, Mic, Play, Shield, Square, UserMinus, UserPlus} from 'lucide-react';
 import {useTranslation} from '@/lib/i18n';
 import {useMutation} from '@tanstack/react-query';
 import {
@@ -14,6 +13,7 @@ import {Player} from '@/api/types.gen';
 import {SpeakerCard} from './SpeakerCard';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 import {VoteStatus} from '@/features/game/components/VoteStatus';
+import {Timer} from '@/components/Timer';
 
 // Local interfaces for states missing from SDK
 export interface SpeechState {
@@ -47,34 +47,6 @@ interface SpeechManagerProps {
 
 export const SpeechManager = ({speech, police, players, guildId, readonly = false}: SpeechManagerProps) => {
     const {t} = useTranslation();
-    const [timeLeft, setTimeLeft] = useState(0);
-
-    // Mutations
-    const skipSpeech = useMutation(skipSpeechMutation());
-    const interruptSpeech = useMutation(interruptSpeechMutation());
-    const confirmOrder = useMutation(confirmSpeechMutation());
-    const startAutoSpeech = useMutation(startAutoSpeechMutation());
-    const startPoliceEnroll = useMutation(startPoliceEnrollMutation());
-    const setSpeechOrder = useMutation(setSpeechOrderMutation());
-
-    const currentSpeaker = speech?.currentSpeakerId ? players.find(p => p.id === speech.currentSpeakerId) : null;
-    const isPaused = speech?.isPaused || false;
-    const speechEndTime = speech?.endTime ? Number(speech.endTime) : 0;
-
-    useEffect(() => {
-        if (!speechEndTime || isPaused) {
-            if (!isPaused) setTimeLeft(0);
-            return;
-        }
-
-        const interval = setInterval(() => {
-            const now = Date.now();
-            const remaining = Math.max(0, Math.ceil((speechEndTime - now) / 1000));
-            setTimeLeft(remaining);
-        }, 100);
-
-        return () => clearInterval(interval);
-    }, [speechEndTime, isPaused]);
 
     const handleSkip = () => {
         if (readonly) return;
@@ -105,6 +77,17 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
         if (readonly) return;
         setSpeechOrder.mutate({path: {guildId}, body: {direction}});
     };
+    // Mutations
+    const skipSpeech = useMutation(skipSpeechMutation());
+    const interruptSpeech = useMutation(interruptSpeechMutation());
+    const confirmOrder = useMutation(confirmSpeechMutation());
+    const startAutoSpeech = useMutation(startAutoSpeechMutation());
+    const startPoliceEnroll = useMutation(startPoliceEnrollMutation());
+    const setSpeechOrder = useMutation(setSpeechOrderMutation());
+
+    const currentSpeaker = speech?.currentSpeakerId ? players.find(p => p.id === speech.currentSpeakerId) : null;
+    const isPaused = speech?.isPaused || false;
+    const speechEndTime = speech?.endTime ? Number(speech.endTime) : 0;
 
     const isPoliceSelecting = speech && speech.currentSpeakerId === -1 && (!speech.order || speech.order.length === 0);
     const isSpeechActive = speech && (speech.currentSpeakerId !== undefined || (speech.order && speech.order.length > 0) || isPoliceSelecting);
@@ -132,15 +115,15 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
                                 )}
                                 <div
                                     className="w-full bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-between opacity-70">
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
                                         <span
-                                            className="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-slate-800 rounded-full text-xs font-bold text-slate-500">
+                                            className="w-6 h-6 flex-shrink-0 flex items-center justify-center bg-slate-200 dark:bg-slate-800 rounded-full text-xs font-bold text-slate-500">
                                             {idx + 1}
                                         </span>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
                                             <DiscordAvatar userId={player.userId}
-                                                           avatarClassName="w-8 h-8 rounded-full"/>
-                                            <span className="font-medium text-slate-700 dark:text-slate-300">
+                                                           avatarClassName="w-8 h-8 rounded-full flex-shrink-0"/>
+                                            <span className="font-medium text-slate-700 dark:text-slate-300 truncate">
                                                 {player.nickname}
                                             </span>
                                         </div>
@@ -208,7 +191,6 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
 
     if (isPoliceActive && !isSpeechActive) {
         const isUnenrollment = police?.state === 'UNENROLLMENT';
-        const timerSeconds = police?.stageEndTime ? Math.max(0, Math.ceil((police.stageEndTime - Date.now()) / 1000)) : 0;
 
         return (
             <div
@@ -218,11 +200,12 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
                     <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
                         {isUnenrollment ? t('speechManager.policeUnenrollment') : t('speechManager.policeEnrollment')}
                     </h2>
-                    {timerSeconds > 0 && (
-                        <div
-                            className="mt-4 flex items-center justify-center gap-2 text-3xl font-mono font-bold text-amber-600 dark:text-amber-400">
-                            <Clock className="w-8 h-8"/>
-                            <span>{Math.floor(timerSeconds / 60).toString().padStart(2, '0')}:{String(timerSeconds % 60).padStart(2, '0')}</span>
+                    {police?.stageEndTime && (
+                        <div className="mt-4 flex justify-center">
+                            <Timer
+                                endTime={Number(police.stageEndTime)}
+                                label={isUnenrollment ? t('speechManager.unenrollTime', 'Unenrollment Ends') : t('speechManager.enrollTime', 'Enrollment Ends')}
+                            />
                         </div>
                     )}
                 </div>
@@ -336,7 +319,8 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
                                 >
                                     <SpeakerCard
                                         player={currentSpeaker}
-                                        timeLeft={timeLeft}
+                                        endTime={speechEndTime}
+                                        isPaused={isPaused}
                                         t={t}
                                         readonly={readonly}
                                         onSkip={handleSkip}

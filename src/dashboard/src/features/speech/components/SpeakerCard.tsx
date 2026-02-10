@@ -1,17 +1,19 @@
-import {Clock, Mic, SkipForward, Square} from 'lucide-react';
+import {Mic, SkipForward, Square} from 'lucide-react';
 import {Player} from '@/api/types.gen';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
+import {Timer} from '@/components/Timer';
 
 interface SpeakerCardProps {
     player: Player;
-    timeLeft: number;
+    endTime: number;
+    isPaused?: boolean;
     t: any;
     readonly: boolean;
     onSkip?: () => void;
     onInterrupt?: () => void;
 }
 
-export const SpeakerCard = ({player, timeLeft, t, readonly, onSkip, onInterrupt}: SpeakerCardProps) => (
+export const SpeakerCard = ({player, endTime, isPaused, t, readonly, onSkip, onInterrupt}: SpeakerCardProps) => (
     <div className="relative w-full">
         <div className="absolute inset-0 bg-indigo-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
         <div
@@ -26,21 +28,20 @@ export const SpeakerCard = ({player, timeLeft, t, readonly, onSkip, onInterrupt}
                     </div>
                 </div>
 
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                <div className="min-w-0">
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white truncate">
                         <DiscordName userId={player.userId} fallbackName={player.nickname}/>
                     </h2>
                     <span className="text-indigo-500 font-medium">{t('speechManager.speaking')}</span>
                 </div>
             </>
 
-            <div
-                className="flex items-center gap-2 text-3xl font-mono font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-900 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700">
-                <Clock className="w-6 h-6 text-slate-400"/>
-                <span className={timeLeft < 10 ? 'text-red-500' : ''}>
-                    {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{String(timeLeft % 60).padStart(2, '0')}
-                </span>
-            </div>
+            <Timer
+                endTime={endTime}
+                isPaused={isPaused}
+                size="md"
+                className="w-full justify-center"
+            />
 
             {!readonly && (
                 <div className="flex gap-2 w-full mt-4">

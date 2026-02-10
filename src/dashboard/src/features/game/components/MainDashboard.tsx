@@ -321,15 +321,22 @@ export const MainDashboard = ({
 
             case 'VOTING_PHASE':
                 const currentExpel = (gameState.stateData as any)?.expel;
+                const expelSpeech = (gameState.stateData as any)?.speech;
                 return (
                     <div className="animate-in fade-in duration-300 h-full">
-                        {currentExpel && (
+                        {expelSpeech ? (
+                            <SpeechManager
+                                guildId={guildId}
+                                speech={expelSpeech as any}
+                                players={players || []}
+                                readonly={readonly}
+                            />
+                        ) : currentExpel && (
                             <VoteStatus
                                 candidates={currentExpel.candidates || []}
                                 endTime={currentExpel.endTime as any}
                                 totalVoters={players ? players.filter(p => p.alive).length : undefined}
                                 players={players || []}
-                                title={t('steps.voting')}
                                 guildId={guildId}
                             />
                         )}
@@ -344,7 +351,7 @@ export const MainDashboard = ({
     return (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full h-full">
             {/* Left: Stage Content Area */}
-            <div className={`lg:col-span-3 overflow-y-auto ${isStageAnimating ? 'scrollbar-hide' : ''}`}>
+            <div className={`lg:col-span-3 min-w-0 overflow-y-auto ${isStageAnimating ? 'scrollbar-hide' : ''}`}>
                 <div className="space-y-4">
                     <div key={currentId} className={`stage-transition ${transitionClass}`}>
                         {renderStageContent()}

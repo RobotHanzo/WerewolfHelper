@@ -54,14 +54,15 @@ class ExpelPoll(
             it.expelPK = true
         }.associateByTo(ConcurrentHashMap()) { it.player.id }
 
-        candidates.clear()
-        candidates.putAll(newCandidates)
-
-        // start speech for PK players, after which finish with allowPK=false
+        // start speech for PK players, after which restart the expel poll UI
         WerewolfApplication.speechService.startSpeechPoll(
             channel.guild, message,
             newCandidates.values.map { it.player }
-        ) { finish(channel, false) }
+        ) {
+            WerewolfApplication.expelService.startExpelPollUI(
+                session, channel, false, 30000L, newCandidates, finishedCallback
+            )
+        }
     }
 
     override fun finish(channel: GuildMessageChannel, allowPK: Boolean, title: String) {
