@@ -1,7 +1,7 @@
 import {Mic, SkipForward, Square} from 'lucide-react';
 import {Player} from '@/api/types.gen';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
-import {Timer} from '@/components/Timer';
+import {Timer} from '@/components/ui/Timer';
 
 interface SpeakerCardProps {
     player: Player;

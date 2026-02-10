@@ -3,7 +3,7 @@ import {Gavel, Skull, Users} from 'lucide-react';
 import {Player} from '@/api/types.gen';
 import {useTranslation} from '@/lib/i18n';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
-import {Timer} from '@/components/Timer';
+import {Timer} from '@/components/ui/Timer';
 
 interface VoteStatusProps {
     candidates: { id: number, voters: string[] }[];

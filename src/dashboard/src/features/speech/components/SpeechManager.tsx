@@ -13,7 +13,7 @@ import {Player} from '@/api/types.gen';
 import {SpeakerCard} from './SpeakerCard';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 import {VoteStatus} from '@/features/game/components/VoteStatus';
-import {Timer} from '@/components/Timer';
+import {Timer} from '@/components/ui/Timer';
 
 // Local interfaces for states missing from SDK
 export interface SpeechState {
