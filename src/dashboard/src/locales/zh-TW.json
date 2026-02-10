@@ -4,10 +4,13 @@
     "subtitle": "管理員儀表板與遊戲管理器"
   },
   "login": {
-    "title": "狼人殺助手",
-    "subtitle": "管理員儀表板與遊戲管理器",
+    "title": "Werewolf Dashboard",
+    "subtitle": "管理每一場狼人殺遊戲，享受最流暢的控制體驗",
     "loginButton": "使用 Discord 登入",
-    "restriction": "僅限狼人伺服器管理員"
+    "restriction": "僅限伺服器管理員與旁觀者登入使用",
+    "privacy": "隱私權政策",
+    "terms": "服務條款",
+    "support": "技術支援"
   },
   "auth": {
     "loggingIn": "登入中...",
@@ -24,7 +27,7 @@
     "botConnected": "機器人已連接",
     "botDisconnected": "機器人未連接",
     "spectator": "上帝視角",
-    "spectatorView": "上帝視角 / 亡者國度",
+    "spectatorView": "上帝視角",
     "speechManager": "發言管理系統",
     "signOut": "登出",
     "viewAsSpectator": "以觀眾身分檢視 (預覽)",
@@ -149,7 +152,7 @@
     "switchOrder": "切換身分順序"
   },
   "spectator": {
-    "title": "上帝視角 / 亡者國度",
+    "title": "上帝視角",
     "subtitle": "在此查看遊戲進度及各陣營勝利條件",
     "wolfGoal": "狼人目標：屠戮神職",
     "wolfGoalDesc": "殺死所有神職人員",
@@ -170,7 +173,11 @@
     "winConditions": "詳細勝利條件",
     "goodWinCondition": "好人陣營：所有狼人死亡",
     "wolfWinConditionNormal": "狼人陣營：所有神職死亡 或 所有平民死亡",
-    "wolfWinConditionDouble": "狼人陣營：所有神職死亡 或 所有金寶寶死亡"
+    "wolfWinConditionDouble": "狼人陣營：所有神職死亡 或 所有金寶寶死亡",
+    "factionStats": "勢力狀況統計",
+    "gameId": "遊戲編號",
+    "searchPlaceholder": "搜尋玩家...",
+    "viewDetails": "查看詳細資訊"
   },
   "roles": {
     "title": "角色編輯",
@@ -180,7 +187,9 @@
     "assigned": "個已分配",
     "needed": "個角色待補",
     "status": "狀態",
+    "ok": "配置正確",
     "warning": "角色不足",
+    "countWarning": "人數不足",
     "factions": {
       "werewolf": "狼人陣營",
       "special": "神職身分",
@@ -251,11 +260,12 @@
     "doubleIdentities": "雙重身分",
     "doubleIdentitiesDesc": "每位玩家獲得兩個角色",
     "playerCount": "玩家人數",
-    "totalPlayers": "總玩家數（含特殊身分）",
+    "totalPlayers": "總玩家數",
     "playerCountDesc": "調整此數值將會自動建立或刪除遊戲頻道。"
   },
   "buttons": {
-    "update": "更新配置"
+    "update": "更新配置",
+    "nextPhase": "進入下一階段"
   },
   "speechManager": {
     "startAuto": "開始自動發言",

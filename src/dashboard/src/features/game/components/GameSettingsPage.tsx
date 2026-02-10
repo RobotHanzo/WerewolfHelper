@@ -1,19 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {
-    AlertCircle,
-    Check,
-    Eye,
-    LayoutDashboard,
-    Loader2,
-    Minus,
-    Moon,
-    Plus,
-    Settings2,
-    Shield,
-    Swords,
-    Users,
-    Zap
-} from 'lucide-react';
+import {AlertCircle, Check, Eye, Loader2, Minus, Moon, Plus, Settings2, Shield, Swords, Users, Zap} from 'lucide-react';
 import {useParams} from 'react-router-dom';
 import {useTranslation} from '@/lib/i18n';
 import {useMutation} from '@tanstack/react-query';
@@ -250,23 +236,11 @@ export const GameSettingsPage: React.FC = () => {
     }
 
     // Role Faction Mapping
-    const assignedRoles = Object.keys(roleCounts);
     const factionConfigs = [
         {id: 'werewolf', label: t('roles.factions.werewolf'), roles: ROLE_FACTIONS.werewolf},
         {id: 'special', label: t('roles.factions.special'), roles: ROLE_FACTIONS.special},
         {id: 'civilian', label: t('roles.factions.civilian'), roles: ROLE_FACTIONS.civilian}
     ];
-
-    const categorizedRoleSet = new Set(Object.values(ROLE_FACTIONS).flat());
-    const othersList = assignedRoles.filter(role => !categorizedRoleSet.has(role) && !categorizedRoleSet.has(role.toUpperCase()));
-
-    if (othersList.length > 0) {
-        factionConfigs.push({
-            id: 'others',
-            label: t('roles.factions.others'),
-            roles: othersList
-        });
-    }
 
     const progress = Math.min((roles.length / playerCount) * 100, 100);
     const isReady = roles.length === playerCount;
@@ -276,11 +250,6 @@ export const GameSettingsPage: React.FC = () => {
             {/* Header section - Stitch Design */}
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-1.5 shrink-0">
-                    <div
-                        className="flex items-center gap-2 text-primary dark:text-indigo-400 font-bold text-sm tracking-wide uppercase">
-                        <LayoutDashboard className="w-4 h-4"/>
-                        <span>{t('sidebar.dashboard')}</span>
-                    </div>
                     <div className="flex items-center gap-4">
                         <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">
                             {t('settings.title')}
@@ -311,7 +280,7 @@ export const GameSettingsPage: React.FC = () => {
                         <div className="flex items-center gap-4">
                             <div className="text-right">
                                 <span
-                                    className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 block">
+                                    className="text-[15px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 block">
                                     {t('roles.status')}
                                 </span>
                                 <div className="flex items-baseline gap-1.5">
@@ -329,7 +298,7 @@ export const GameSettingsPage: React.FC = () => {
                                 }`}>
                                 {isReady ? <Check className="w-4 h-4"/> : <AlertCircle className="w-4 h-4"/>}
                                 <span className="text-xs font-black uppercase tracking-wider">
-                                    {isReady ? t('messages.saved') : t('roles.warning')}
+                                    {isReady ? t('roles.ok') : (roles.length < playerCount ? t('roles.warning') : t('roles.countWarning'))}
                                 </span>
                             </div>
                         </div>
@@ -487,12 +456,22 @@ export const GameSettingsPage: React.FC = () => {
                     <div className="space-y-8">
                         {factionConfigs.map(faction => {
                             const factionRoles = Object.entries(roleCounts).filter(([role]) => {
-                                if (faction.id === 'others') return othersList.includes(role);
-                                return faction.roles.includes(role) || faction.roles.includes(role.toUpperCase());
+                                const uRole = role.toUpperCase();
+                                if (faction.id === 'werewolf') {
+                                    return ROLE_FACTIONS.werewolf.includes(role) || ROLE_FACTIONS.werewolf.includes(uRole);
+                                }
+                                if (faction.id === 'civilian') {
+                                    return ROLE_FACTIONS.civilian.includes(role) || ROLE_FACTIONS.civilian.includes(uRole);
+                                }
+                                if (faction.id === 'special') {
+                                    const isWolf = ROLE_FACTIONS.werewolf.includes(role) || ROLE_FACTIONS.werewolf.includes(uRole);
+                                    const isVillager = ROLE_FACTIONS.civilian.includes(role) || ROLE_FACTIONS.civilian.includes(uRole);
+                                    return !isWolf && !isVillager; // Default to Special (Gods)
+                                }
+                                return false;
                             });
 
-                            if (factionRoles.length === 0 && faction.id !== 'special' && faction.id !== 'others') return null;
-                            if (factionRoles.length === 0 && faction.id === 'others') return null;
+                            if (factionRoles.length === 0 && faction.id !== 'special') return null;
 
                             return (
                                 <div key={faction.id} className="space-y-3">
