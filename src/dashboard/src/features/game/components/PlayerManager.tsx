@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {MessageSquare, X} from 'lucide-react';
 import {useTranslation} from '@/lib/i18n';

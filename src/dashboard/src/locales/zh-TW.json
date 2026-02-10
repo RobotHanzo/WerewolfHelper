@@ -175,13 +175,18 @@
   "roles": {
     "title": "角色編輯",
     "role": "角色",
-    "WEREWOLF": "狼人",
-    "VILLAGER": "村民",
-    "SEER": "預言家",
-    "WITCH": "女巫",
-    "HUNTER": "獵人",
-    "GUARD": "守衛",
-    "unknown": "未知身分"
+    "unknown": "未知身分",
+    "assignment": "角色分配",
+    "assigned": "個已分配",
+    "needed": "個角色待補",
+    "status": "狀態",
+    "warning": "角色不足",
+    "factions": {
+      "werewolf": "狼人陣營",
+      "special": "神職身分",
+      "civilian": "平民陣營",
+      "others": "其他角色"
+    }
   },
   "status": {
     "sheriff": "警長",
@@ -239,17 +244,18 @@
     "switching": "切換伺服器中..."
   },
   "settings": {
-    "general": "一般設定",
+    "title": "遊戲設定",
+    "general": "一般規則",
     "muteAfterSpeech": "發言後靜音",
     "muteAfterSpeechDesc": "玩家發言結束後自動將其靜音",
     "doubleIdentities": "雙重身分",
     "doubleIdentitiesDesc": "每位玩家獲得兩個角色",
-    "playerCount": "玩家人數設定",
-    "totalPlayers": "總玩家數",
+    "playerCount": "玩家人數",
+    "totalPlayers": "總玩家數（含特殊身分）",
     "playerCountDesc": "調整此數值將會自動建立或刪除遊戲頻道。"
   },
   "buttons": {
-    "update": "更新"
+    "update": "更新配置"
   },
   "speechManager": {
     "startAuto": "開始自動發言",
@@ -342,11 +348,11 @@
     "backToDashboard": "返回儀表板",
     "gameSettings": "遊戲機制設定",
     "witchCanSaveSelf": "女巫可以救自己",
-    "witchCanSaveSelfDesc": "女巫是否允許使用女巫解藥來救自己",
+    "witchCanSaveSelfDesc": "第一晚是否可以使用解藥救自己",
     "allowWolfSelfKill": "狼人可以自刀",
-    "allowWolfSelfKillDesc": "狼人是否允許在夜晚殺死自己",
+    "allowWolfSelfKillDesc": "狼人是否允許在夜晚選擇自己作為目標",
     "hiddenRoleOnDeath": "死亡不顯示身分",
-    "hiddenRoleOnDeathDesc": "玩家死亡時是否隱藏其身分"
+    "hiddenRoleOnDeathDesc": "玩家死亡時不揭露其真實身分"
   },
   "settingsModal": {
     "backendUrl": "後端伺服器網址",
@@ -380,9 +386,9 @@
     "saving": "儲存中...",
     "saved": "已儲存",
     "progress": "進度",
-    "totalCount": "總數",
+    "totalCount": "總角色數",
     "noRolesConfigured": "尚無角色配置",
-    "selectOrEnterRole": "選擇或輸入角色名稱...",
+    "selectOrEnterRole": "選擇或輸入角色...",
     "add": "新增",
     "lockRoleOrder": "鎖定角色順序",
     "autoMuteAfterSpeech": "發言後自動閉麥",
