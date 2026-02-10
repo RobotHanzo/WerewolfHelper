@@ -171,7 +171,7 @@ data class GameStateData(
             }?.key
         }
 
-    // For frontend display after death announcement
+    // For frontend display after death announcement only, shows who died last night
     var deadPlayers: List<Int> = emptyList()
 }
 

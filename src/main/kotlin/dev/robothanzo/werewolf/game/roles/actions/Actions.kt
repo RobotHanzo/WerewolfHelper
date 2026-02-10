@@ -35,7 +35,8 @@ class WolfYoungerBrotherExtraKillAction : BaseRoleAction(
     priority = PredefinedRoles.WEREWOLF_PRIORITY + 1,
     timing = ActionTiming.NIGHT,
     usageLimit = 1,
-    isOptional = false
+    isOptional = false,
+    allowMultiplePerPhase = true
 ) {
     override fun execute(
         session: Session,

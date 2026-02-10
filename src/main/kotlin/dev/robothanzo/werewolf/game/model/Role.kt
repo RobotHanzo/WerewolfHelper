@@ -46,6 +46,11 @@ interface Role {
      * Hook called when a player is expelled (voted out)
      */
     fun onPlayerExpelled(context: RoleEventContext) {}
+
+    /**
+     * Hook called when a player with this role is revived
+     */
+    fun onRevived(context: RoleEventContext) {}
 }
 
 /**

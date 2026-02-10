@@ -272,4 +272,16 @@ data class Session(
             playerCount = this.players.size
         )
     }
+
+    fun isCharacterAlive(character: String): Boolean {
+        for (player in alivePlayers().values) {
+            if (player.roles.contains(character)) {
+                // Check if this specific role is NOT dead
+                if (!player.deadRoles.contains(character)) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
 }

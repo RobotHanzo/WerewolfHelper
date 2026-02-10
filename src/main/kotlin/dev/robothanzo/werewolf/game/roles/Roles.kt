@@ -74,6 +74,11 @@ class WolfBrother(@Transient private val killAction: WerewolfKillAction) : BaseR
             context.session.stateData.wolfBrotherAwakenedPlayerId = yb.id
         }
     }
+
+    override fun onRevived(context: RoleEventContext) {
+        // Reset the awakened flag when the Wolf Brother revives
+        context.session.stateData.wolfBrotherAwakenedPlayerId = null
+    }
 }
 
 @Component

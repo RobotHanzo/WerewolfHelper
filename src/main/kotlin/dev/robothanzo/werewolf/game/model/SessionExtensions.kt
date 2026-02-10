@@ -334,7 +334,7 @@ fun Session.validateAndSubmitAction(
     stateData.submittedActions.add(action)
 
     // Mark action as submitted (for players only)
-    if (submittedBy == "PLAYER") {
+    if (submittedBy == "PLAYER" && !actionDef.allowMultiplePerPhase) {
         actor.actionSubmitted = true
     }
 

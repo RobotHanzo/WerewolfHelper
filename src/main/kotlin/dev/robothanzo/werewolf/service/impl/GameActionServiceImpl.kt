@@ -5,6 +5,8 @@ import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.game.model.GameStateData
+import dev.robothanzo.werewolf.game.model.RoleEventContext
+import dev.robothanzo.werewolf.game.model.RoleEventType
 import dev.robothanzo.werewolf.service.GameActionService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.utils.ActionTask
@@ -115,11 +117,11 @@ class GameActionServiceImpl(
     override fun revivePlayer(session: Session, playerId: Int) {
         val targetPlayer: Player? = session.getPlayer(playerId)
 
-        if (targetPlayer == null || targetPlayer.deadRoles.isNullOrEmpty()) {
+        if (targetPlayer == null || targetPlayer.deadRoles.isEmpty()) {
             throw Exception("Player has no dead roles to revive")
         }
 
-        val rolesToRevive = targetPlayer.deadRoles?.toMutableList() ?: mutableListOf()
+        val rolesToRevive = targetPlayer.deadRoles.toMutableList()
         for (role in rolesToRevive) {
             reviveRole(session, playerId, role)
         }
@@ -130,7 +132,7 @@ class GameActionServiceImpl(
         val player = session.getPlayer(playerId) ?: throw Exception("Player not found")
         val member = player.member ?: throw Exception("Player member not found")
         val deadRoles = player.deadRoles
-        if (deadRoles == null || !deadRoles.contains(role)) throw Exception("Role not dead")
+        if (!deadRoles.contains(role)) throw Exception("Role not dead")
 
         val wasFullyDead = !player.alive
         deadRoles.remove(role)
@@ -140,6 +142,18 @@ class GameActionServiceImpl(
         metadata["playerName"] = player.nickname
         metadata["revivedRole"] = role
         session.addLog(LogType.PLAYER_REVIVED, player.nickname + " 的 " + role + " 身份已復活", metadata)
+
+        // Trigger Role.onRevived hook
+        val roleObj = session.hydratedRoles[role]
+        roleObj?.onRevived(
+            RoleEventContext(
+                session = session,
+                eventType = RoleEventType.ON_REVIVED,
+                actorPlayerId = player.id,
+                metadata = mapOf("revivedRole" to role)
+            )
+        )
+
         if (wasFullyDead) {
             val spectatorRole = session.spectatorRole
             if (spectatorRole != null) {
@@ -151,8 +165,8 @@ class GameActionServiceImpl(
             member.modifyNickname(newName).queue()
         }
 
-        val remainingRoles = player.roles?.toMutableList() ?: mutableListOf()
-        player.deadRoles?.forEach { deadRole ->
+        val remainingRoles = player.roles.toMutableList()
+        player.deadRoles.forEach { deadRole ->
             remainingRoles.remove(deadRole)
         }
 

@@ -62,19 +62,21 @@ class ButtonListener : ListenerAdapter() {
                 WerewolfApplication.gameSessionService.withLockedSession(event.guild!!.idLong) { session ->
                     val (player, isJudge) = getVerifiedPlayerAndIsJudge(event, session)
                     if (player == null) return@withLockedSession
-                    if (player.actionSubmitted) {
+
+                    // Get the action definition
+                    val actionExecutor = WerewolfApplication.roleActionExecutor
+                    val action = actionExecutor.getAction(actionId)
+
+                    if (player.actionSubmitted && action?.allowMultiplePerPhase != true) {
                         event.hook.sendMessage(":x: 你已提交行動，無法再次選擇").queue()
                         return@withLockedSession
                     }
+
                     // Get the action instance to check if there's already a pending selection, if so, delete
                     val actionInstance = WerewolfApplication.actionUIService.getActionData(session, player.id)
                     if (actionInstance?.actionDefinitionId != null && actionInstance.targets.isEmpty()) {
                         actionInstance.targetPromptId?.let { event.messageChannel.deleteMessageById(it).queue() }
                     }
-
-                    // Get the action definition
-                    val actionExecutor = WerewolfApplication.roleActionExecutor
-                    val action = actionExecutor.getAction(actionId)
 
                     if (action != null && action.targetCount > 0) {
                         // Update selection in a persistent state
@@ -209,6 +211,7 @@ class ButtonListener : ListenerAdapter() {
                         event.hook.editOriginal(":x: 沒有待選的行動").queue()
                         return@withLockedSession
                     }
+                    val actionDef = WerewolfApplication.roleActionExecutor.getAction(actionId)
 
                     if (targetId == SKIP_TARGET_ID.toString()) {
                         // Handle Skip
@@ -222,7 +225,9 @@ class ButtonListener : ListenerAdapter() {
                         )
 
                         WerewolfApplication.actionUIService.clearPrompt(session, player.id)
-                        player.actionSubmitted = true
+                        if (actionDef?.allowMultiplePerPhase != true) {
+                            player.actionSubmitted = true
+                        }
                         event.hook.editOriginal(":white_check_mark: 已選擇 **跳過** 本回合行動").queue()
                         return@withLockedSession
                     }
@@ -233,7 +238,7 @@ class ButtonListener : ListenerAdapter() {
                         event.hook.editOriginal(":x: 找不到目標").queue()
                         return@withLockedSession
                     }
-                    if (player.actionSubmitted) {
+                    if (player.actionSubmitted && actionDef?.allowMultiplePerPhase != true) {
                         event.hook.editOriginal(":x: 你已提交行動，無法再次選擇").queue()
                         return@withLockedSession
                     }
@@ -257,16 +262,16 @@ class ButtonListener : ListenerAdapter() {
 
                     if (result["success"] == true) {
                         // Clear the prompt after submission
-                        WerewolfApplication.actionUIService.clearPrompt(
-                            session,
-                            player.id
-                        )
-                        player.actionSubmitted = true
+                        WerewolfApplication.actionUIService.clearPrompt(session, player.id)
+                        if (actionDef?.allowMultiplePerPhase != true) {
+                            player.actionSubmitted = true
+                        }
                         event.hook.editOriginal(":white_check_mark: 已選擇 **${target.nickname}** 為目標").queue()
                     } else {
                         event.hook.editOriginal(":x: ${result["error"]}").queue()
                     }
                 }
+
                 return
             }
         }
@@ -276,7 +281,8 @@ class ButtonListener : ListenerAdapter() {
         event.deferReply(true).queue()
 
         val guildId = event.guild!!.idLong
-        WerewolfApplication.gameSessionService.withLockedSession(guildId) { session ->
+        WerewolfApplication.gameSessionService.withLockedSession(guildId)
+        { session ->
             var player: DatabasePlayer? = null
             var check = false
 

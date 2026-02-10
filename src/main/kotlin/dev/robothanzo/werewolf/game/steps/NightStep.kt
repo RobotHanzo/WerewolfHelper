@@ -125,9 +125,8 @@ class NightStep(
         val werewolves = session.players.values.filter { p ->
             if (!p.alive || !p.wolf) return@filter false
 
-            if (p.roles.contains("狼弟")) {
-                // Joins ONLY if Brother has died (at any point)
-                session.stateData.wolfBrotherDiedDay ?: return@filter false
+            if (p.roles.contains("狼弟") && session.isCharacterAlive("狼兄")) {
+                return@filter false
             }
 
             true

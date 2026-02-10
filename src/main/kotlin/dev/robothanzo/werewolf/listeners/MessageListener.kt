@@ -41,18 +41,6 @@ class MessageListener : ListenerAdapter() {
         }
     }
 
-    private fun isCharacterAlive(session: Session, character: String): Boolean {
-        for (player in session.alivePlayers().values) {
-            if (player.roles?.contains(character) == true) {
-                // Check if this specific role is NOT dead
-                if (player.deadRoles == null || !player.deadRoles!!.contains(character)) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
     private fun shouldSend(player: Player, session: Session): Boolean {
         // Kotlin handles nullability; assuming roles is not null per logic
         val roles = player.roles
@@ -67,10 +55,8 @@ class MessageListener : ListenerAdapter() {
                 firstRole.contains("血月使者") ||
                 firstRole.contains("惡靈騎士") ||
                 firstRole.contains("夢魘") ||
-                (roles.contains("狼弟") && !isCharacterAlive(
-                    session,
-                    "狼兄"
-                ) && (session.stateData.wolfBrotherDiedDay == null || session.stateData.wolfBrotherDiedDay!! < session.day ||
+                (roles.contains("狼弟") && !session.isCharacterAlive("狼兄") &&
+                        (session.stateData.wolfBrotherDiedDay == null || session.stateData.wolfBrotherDiedDay!! < session.day ||
                         (session.stateData.phaseType?.let { it.order > NightPhase.WOLF_YOUNGER_BROTHER_ACTION.order }
                             ?: false)))
     }
