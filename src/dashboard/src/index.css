@@ -145,6 +145,11 @@
     --tw-exit-translate-y: -1rem;
 }
 
+/* Slide out towards bottom (used for popups that close downward) */
+.slide-out-to-bottom-4 {
+    --tw-exit-translate-y: 1rem;
+}
+
 @keyframes enter {
     from {
         opacity: var(--tw-enter-opacity, 1);

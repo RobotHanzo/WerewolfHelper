@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {MessageSquare, X} from 'lucide-react';
 import {useTranslation} from '@/lib/i18n';
@@ -34,6 +34,8 @@ export const PlayerManager = () => {
     // Local UI State
 
     const [showLogs, setShowLogs] = useState(false);
+    const [closingLogs, setClosingLogs] = useState(false);
+    const popupCloseTimeoutRef = useRef<number | null>(null);
     const [lastSeenLogCount, setLastSeenLogCount] = useState(0);
     const [isSpectatorSimulation, setIsSpectatorSimulation] = useState(false);
 
@@ -77,6 +79,16 @@ export const PlayerManager = () => {
             setLastSeenLogCount(gameState.logs.length);
         }
     }, [gameState?.logs?.length, showLogs]);
+
+    // Clean up timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (popupCloseTimeoutRef.current) {
+                window.clearTimeout(popupCloseTimeoutRef.current);
+                popupCloseTimeoutRef.current = null;
+            }
+        };
+    }, []);
 
     if (user?.user?.role === 'PENDING') {
         return (
@@ -124,11 +136,31 @@ export const PlayerManager = () => {
     };
 
     const toggleLogs = () => {
-        const newShowLogs = !showLogs;
-        setShowLogs(newShowLogs);
-        if (newShowLogs) {
-            setLastSeenLogCount(gameState.logs?.length || 0);
+        // If currently closing, cancel the close and keep open
+        if (closingLogs) {
+            if (popupCloseTimeoutRef.current) {
+                window.clearTimeout(popupCloseTimeoutRef.current);
+                popupCloseTimeoutRef.current = null;
+            }
+            setClosingLogs(false);
+            return;
         }
+
+        // Open case
+        if (!showLogs) {
+            setShowLogs(true);
+            setLastSeenLogCount(gameState.logs?.length || 0);
+            return;
+        }
+
+        // Close case: play exit animation, then hide after duration
+        setClosingLogs(true);
+        // Match the CSS duration (300ms)
+        popupCloseTimeoutRef.current = window.setTimeout(() => {
+            setShowLogs(false);
+            setClosingLogs(false);
+            popupCloseTimeoutRef.current = null;
+        }, 300);
     };
 
     return (
@@ -200,9 +232,9 @@ export const PlayerManager = () => {
                             )}
                         </button>
 
-                        {showLogs && (
+                        {(showLogs || closingLogs) && (
                             <div
-                                className="fixed bottom-24 right-6 z-50 w-[350px] md:w-[400px] h-[500px] max-h-[70vh] shadow-2xl animate-in fade-in slide-in-from-bottom-4 animate-out fade-out slide-out-from-top-4 duration-300 pointer-events-auto">
+                                className={`fixed bottom-24 right-6 z-50 w-[350px] md:w-[400px] h-[500px] max-h-[70vh] shadow-2xl duration-300 pointer-events-auto ${closingLogs ? 'animate-out fade-out slide-out-to-bottom-4' : 'animate-in fade-in slide-in-from-bottom-4'}`}>
                                 <GameLog
                                     logs={gameState.logs}
                                     onGlobalAction={handleGlobalAction}
