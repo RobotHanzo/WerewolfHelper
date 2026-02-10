@@ -10,6 +10,17 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
         },
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'react-vendor': ['react', 'react-dom'],
+                    'tanstack-vendor': ['@tanstack/react-query'],
+                    'lucide-vendor': ['lucide-react'],
+                }
+            }
+        }
+    },
     server: {
         proxy: {
             '/api': {

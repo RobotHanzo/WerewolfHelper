@@ -25,12 +25,7 @@ export const ServerSelector: React.FC<ServerSelectorProps> = ({onSelectServer, o
 
     useEffect(() => {
         if (data) {
-            console.log('API Response:', data);
-            // Response is wrapped in {data: [...], success: boolean}
-            // guildId is now sent as string from backend, no conversion needed
             const sessionsArray = Array.isArray(data.data) ? data.data : [];
-            console.log('Sessions array:', sessionsArray);
-            console.log('Sessions length:', sessionsArray.length);
             setSessions(sessionsArray);
         }
     }, [data]);

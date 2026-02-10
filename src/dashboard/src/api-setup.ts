@@ -11,7 +11,6 @@ client.setConfig({
         if (typeof data === 'string') {
             try {
                 const a = JSONbigNative.parse(data);
-                console.log(a)
                 return a;
             } catch (e) {
                 return data;
