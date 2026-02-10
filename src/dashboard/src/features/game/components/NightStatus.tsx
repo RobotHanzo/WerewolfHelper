@@ -315,7 +315,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                                             {!isConsecutive && (
                                                                 <div className="flex items-baseline gap-2 mb-1">
                                                                     <span
-                                                                        className="font-semibold text-sm text-red-400">
+                                                                        className="font-semibold text-sm text-red-600 dark:text-red-400">
                                                                         <DiscordName
                                                                             userId={String(msg.senderUserId || '')}
                                                                             guildId={guildId}
@@ -477,7 +477,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                         <div className="space-y-8 pb-32 animate-in fade-in duration-500">
                             {/* Wolf Kill Summary Banner */}
                             <section
-                                className="bg-slate-900/70 backdrop-blur-xl rounded-xl overflow-hidden shadow-lg border border-red-500/30 relative animate-in fade-in slide-in-from-top-4 duration-700 fill-mode-both">
+                                className="bg-red-50/50 dark:bg-slate-900/70 backdrop-blur-xl rounded-xl overflow-hidden shadow-lg border border-red-200 dark:border-red-500/30 relative animate-in fade-in slide-in-from-top-4 duration-700 fill-mode-both">
                                 <div
                                     className="absolute inset-0 bg-gradient-to-r from-red-500/10 via-transparent to-transparent"></div>
                                 <div className="p-6 md:flex md:items-center md:justify-between relative">
@@ -490,7 +490,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                             className="animate-in fade-in slide-in-from-left-4 duration-500 delay-200 fill-mode-both">
                                             <h2 className="text-red-500 font-bold text-sm tracking-widest uppercase mb-1">{t('nightStatus.wolfKillConsensus')}</h2>
                                             <div className="flex items-baseline gap-3">
-                                                <span className="text-3xl font-bold text-white">
+                                                <span className="text-3xl font-bold text-slate-900 dark:text-white">
                                                     {topTargetId === -1 ? t('nightStatus.targetSkipped') : (huntTargetPlayer?.nickname || t('nightStatus.thinking'))}
                                                 </span>
                                             </div>
@@ -507,12 +507,12 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                             </div>
                                         </div>
                                     </div>
-                                    <div
-                                        className="mt-6 md:mt-0 flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-500 delay-300 fill-mode-both">
+                                    <div className="mt-6 md:mt-0 flex items-center gap-4">
                                         <div className="flex -space-x-3">
                                             {enrichedVotes.slice(0, 3).map((v: any, i: number) => (
                                                 <div key={i}
-                                                     className="w-10 h-10 rounded-full border-2 border-slate-900 overflow-hidden shadow-lg">
+                                                     className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-900 overflow-hidden shadow-lg animate-in fade-in slide-in-from-right-4 duration-500 fill-mode-both"
+                                                     style={{animationDelay: `${200 + i * 80}ms`}}>
                                                     <DiscordAvatar userId={String(v.voterUserId || '')}
                                                                    guildId={guildId}
                                                                    avatarClassName="w-full h-full object-cover"/>
@@ -520,13 +520,15 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                             ))}
                                             {totalWolves > 3 && (
                                                 <div
-                                                    className="w-10 h-10 rounded-full bg-slate-800 border-2 border-slate-900 flex items-center justify-center text-[10px] text-slate-400">
+                                                    className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 flex items-center justify-center text-[10px] text-slate-500 dark:text-slate-400 animate-in fade-in slide-in-from-right-4 duration-500 fill-mode-both"
+                                                    style={{animationDelay: `${200 + Math.min(enrichedVotes.length, 3) * 80}ms`}}>
                                                     +{totalWolves - 3}
                                                 </div>
                                             )}
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-2xl font-mono text-white font-bold">
+                                            <div
+                                                className="text-2xl font-mono text-slate-900 dark:text-white font-bold">
                                                 {String(Math.floor(getRemainingSeconds() / 60)).padStart(2, '0')}:
                                                 {String(getRemainingSeconds() % 60).padStart(2, '0')}
                                             </div>
@@ -537,7 +539,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
 
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                         <Brain className="text-[#3211d4]"/>
                                         {t('nightStatus.specialRoleActions')}
                                     </h3>
@@ -576,11 +578,11 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                                             '!border-l-[#3211d4]';
 
                                         const bgColorClass =
-                                            roleColor === 'seer-cyan' ? 'bg-[#06b6d4]/20 text-[#06b6d4]' :
-                                                roleColor === 'witch-purple' ? 'bg-[#a855f7]/20 text-[#a855f7]' :
-                                                    roleColor === 'guard-green' ? 'bg-[#10b981]/20 text-[#10b981]' :
-                                                        roleColor === 'hunter-orange' ? 'bg-[#f97316]/20 text-[#f97316]' :
-                                                            'bg-[#3211d4]/20 text-[#3211d4]';
+                                            roleColor === 'seer-cyan' ? 'bg-cyan-100 dark:bg-[#06b6d4]/20 text-cyan-700 dark:text-[#06b6d4]' :
+                                                roleColor === 'witch-purple' ? 'bg-purple-100 dark:bg-[#a855f7]/20 text-purple-700 dark:text-[#a855f7]' :
+                                                    roleColor === 'guard-green' ? 'bg-emerald-100 dark:bg-[#10b981]/20 text-emerald-700 dark:text-[#10b981]' :
+                                                        roleColor === 'hunter-orange' ? 'bg-orange-100 dark:bg-[#f97316]/20 text-orange-700 dark:text-[#f97316]' :
+                                                            'bg-indigo-100 dark:bg-[#3211d4]/20 text-indigo-700 dark:text-[#3211d4]';
 
                                         const glowClass =
                                             roleColor === 'seer-cyan' ? 'shadow-[0_0_20px_rgba(6,182,212,0.3)] ring-[#06b6d4]/40' :
@@ -593,7 +595,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                             <div
                                                 key={`${status.actor}-${index}`}
                                                 className={`bg-white dark:bg-slate-900 rounded-xl border-l-4 border-t border-r border-b border-slate-200 dark:border-slate-800 overflow-hidden group transition-all duration-300 animate-in fade-in slide-in-from-left-4 fill-mode-both ${isActing ? `ring-1 ${glowClass}` : 'shadow-lg'} ${isSkipped ? 'opacity-75 grayscale border-l-slate-500' : borderColorClass}`}
-                                                style={{animationDelay: `${300 + index * 50}ms`}}
+                                                style={{animationDelay: `${250 + index * 100}ms`}}
                                             >
                                                 <div className="p-5 relative z-10">
                                                     <div className="flex justify-between items-start mb-6">
@@ -603,7 +605,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                                                 {getRoleIcon(status.actorRole)}
                                                             </div>
                                                             <div>
-                                                                <h4 className="font-bold text-white">{status.actorRole}</h4>
+                                                                <h4 className="font-bold text-slate-900 dark:text-white">{status.actorRole}</h4>
                                                                 <div className="flex flex-col">
                                                                     {status.actionName && (
                                                                         <span
@@ -616,16 +618,16 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                                         </div>
                                                         <span
                                                             className={`px-2.5 py-1 rounded text-[10px] font-bold tracking-wide uppercase border ${isSubmitted ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-                                                                isActing ? 'bg-[#3211d4]/20 text-white border-[#3211d4]/50 animate-pulse' :
-                                                                    isSkipped ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                                                                        'bg-slate-700 text-slate-300 border-slate-600'
+                                                                isActing ? 'bg-[#3211d4]/10 dark:bg-[#3211d4]/20 text-[#3211d4] dark:text-white border-[#3211d4]/30 dark:border-[#3211d4]/50 animate-pulse' :
+                                                                    isSkipped ? 'bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20' :
+                                                                        'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
                                                             }`}>
                                                             {status.status}
                                                         </span>
                                                     </div>
 
                                                     <div
-                                                        className="flex items-center justify-between bg-black/20 rounded-lg p-4 relative min-h-[100px]">
+                                                        className="flex items-center justify-between bg-slate-50 dark:bg-black/20 rounded-lg p-4 relative min-h-[100px] border border-slate-100 dark:border-transparent">
                                                         {isSkipped ? (
                                                             <div className="flex flex-col items-center gap-2 w-full">
                                                                 <Ban className="text-slate-600 w-8 h-8"/>
@@ -637,7 +639,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                                                 <div
                                                                     className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-[2px] bg-gradient-to-r from-white/10 to-white/30 z-0"></div>
                                                                 <div
-                                                                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-900 p-1 rounded-full border border-slate-200 dark:border-slate-800">
+                                                                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-900 p-1 rounded-full border border-slate-200 dark:border-slate-800 shadow-sm">
                                                                     <ArrowRight className="text-slate-500 w-4 h-4"/>
                                                                 </div>
 
@@ -683,7 +685,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                                                     </div>
                                                                     <div className="flex flex-col">
                                                                         <span
-                                                                            className="text-xs font-bold text-white truncate max-w-[80px]">
+                                                                            className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[80px]">
                                                                             {status.targetUserId ? (
                                                                                 <DiscordName
                                                                                     userId={String(status.targetUserId)}
