@@ -96,6 +96,9 @@ export const GameLog: React.FC<GameLogProps> = ({
                                             className="text-xs bg-indigo-100 dark:bg-indigo-900/20 hover:bg-indigo-200 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-2 rounded border border-indigo-300 dark:border-indigo-900/30 truncate"
                                             title={t('globalCommands.skipStage')}>{t('globalCommands.skipStage')}</button>
                                 )}
+                                <button onClick={() => onGlobalAction('force_police')}
+                                        className="text-xs bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-2 rounded border border-slate-400 dark:border-slate-700 truncate"
+                                        title={t('admin.forcePolice')}>{t('admin.forcePolice')}</button>
                                 <button
                                     onClick={() => {
                                         if (resetConfirming) {
@@ -136,16 +139,19 @@ export const GameLog: React.FC<GameLogProps> = ({
                         {/* Admin & Roles */}
                         <div className="space-y-2">
                             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('globalCommands.adminRoles')}</h3>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-2 gap-2">
                                 <button onClick={() => onGlobalAction('assign_judge')}
                                         className="text-xs bg-purple-100 dark:bg-purple-900/20 hover:bg-purple-200 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-2 py-2 rounded border border-purple-300 dark:border-purple-900/30 truncate"
                                         title={t('admin.assignJudge')}>{t('admin.assignJudge')}</button>
                                 <button onClick={() => onGlobalAction('demote_judge')}
                                         className="text-xs bg-purple-100 dark:bg-purple-900/20 hover:bg-purple-200 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-2 py-2 rounded border border-purple-300 dark:border-purple-900/30 truncate"
                                         title={t('admin.demoteJudge')}>{t('admin.demoteJudge')}</button>
-                                <button onClick={() => onGlobalAction('force_police')}
-                                        className="text-xs bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-2 rounded border border-slate-400 dark:border-slate-700 truncate"
-                                        title={t('admin.forcePolice')}>{t('admin.forcePolice')}</button>
+                                <button onClick={() => onGlobalAction('add_spectator')}
+                                        className="text-xs bg-blue-100 dark:bg-blue-900/20 hover:bg-blue-200 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-2 rounded border border-blue-300 dark:border-blue-900/30 truncate"
+                                        title={t('admin.addSpectator')}>{t('admin.addSpectator')}</button>
+                                <button onClick={() => onGlobalAction('remove_spectator')}
+                                        className="text-xs bg-rose-100 dark:bg-rose-900/20 hover:bg-rose-200 dark:hover:bg-rose-900/40 text-rose-700 dark:text-rose-300 px-2 py-2 rounded border border-rose-300 dark:border-rose-900/30 truncate"
+                                        title={t('admin.removeSpectator')}>{t('admin.removeSpectator')}</button>
                             </div>
                         </div>
 

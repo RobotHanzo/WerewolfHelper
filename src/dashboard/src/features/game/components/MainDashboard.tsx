@@ -204,7 +204,7 @@ export const MainDashboard = ({
                 const currentPolice = (gameState.stateData as any)?.police;
                 return (
                     <div className="animate-in fade-in duration-300 h-full">
-                        {currentSpeech && players && (
+                        {(currentSpeech || currentPolice) && players && (
                             <SpeechManager
                                 guildId={guildId}
                                 speech={currentSpeech as any}
@@ -337,6 +337,9 @@ export const MainDashboard = ({
                                 endTime={currentExpel.endTime as any}
                                 totalVoters={players ? players.filter(p => p.alive).length : undefined}
                                 players={players || []}
+                                electorate={players ? players.filter(p => p.alive).map(p => p.id) : undefined}
+                                title={t('steps.votingPhase')}
+                                subtitle={t('vote.suspectsOnTrial')}
                                 guildId={guildId}
                             />
                         )}

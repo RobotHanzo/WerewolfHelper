@@ -103,6 +103,15 @@ interface PoliceService {
     fun destroyPolice(event: ButtonInteractionEvent)
 
     fun getPoliceStatus(guildId: Long): PoliceStatus?
+
+    /**
+     * Removes a player from the police candidates list or marks them as quit.
+     *
+     * @param guildId the ID of the guild
+     * @param playerId the ID of the player to remove/mark as quit
+     * @return true if the player was successfully removed or marked as quit
+     */
+    fun quitEnrollment(guildId: Long, playerId: Int): Boolean
 }
 
 data class TransferPoliceSession(

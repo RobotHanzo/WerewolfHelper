@@ -304,7 +304,9 @@ export const PlayerManager = () => {
                         title={
                             playerSelectModal.type === 'ASSIGN_JUDGE' ? t('modal.assignJudge') :
                                 playerSelectModal.type === 'DEMOTE_JUDGE' ? t('modal.demoteJudge') :
-                                    playerSelectModal.type === 'FORCE_POLICE' ? t('modal.forcePolice') : ''
+                                    playerSelectModal.type === 'FORCE_POLICE' ? t('modal.forcePolice') :
+                                        playerSelectModal.type === 'ADD_SPECTATOR' ? t('modal.addSpectator') :
+                                            playerSelectModal.type === 'REMOVE_SPECTATOR' ? t('modal.removeSpectator') : ''
                         }
                         players={playerSelectModal.customPlayers || playersArray}
                         onClose={() => setPlayerSelectModal({
@@ -315,10 +317,16 @@ export const PlayerManager = () => {
                         onSelect={handlePlayerSelect}
                         filter={(p) => {
                             if (!p.userId) return false;
-                            const isJudge = gameState?.judgeRoleId && p.roles.includes(gameState.judgeRoleId.toString());
+                            const isJudge = !!(gameState?.judgeRoleId && p.roles.includes(gameState.judgeRoleId.toString()));
+                            const isSpectator = !!(gameState?.spectatorRoleId && p.roles.includes(gameState.spectatorRoleId.toString()));
+                            const playerUserIds = new Set((gameState?.players ? Object.values(gameState.players) : []).map(pl => pl.userId?.toString()));
+                            const isPlayer = playerUserIds.has(p.userId.toString());
+
                             if (playerSelectModal.type === 'ASSIGN_JUDGE') return !isJudge;
-                            if (playerSelectModal.type === 'DEMOTE_JUDGE') return !!isJudge;
-                            if (playerSelectModal.type === 'FORCE_POLICE') return p.alive;
+                            if (playerSelectModal.type === 'DEMOTE_JUDGE') return isJudge;
+                            if (playerSelectModal.type === 'FORCE_POLICE') return !!p.alive;
+                            if (playerSelectModal.type === 'ADD_SPECTATOR') return !isPlayer && !isJudge && !isSpectator;
+                            if (playerSelectModal.type === 'REMOVE_SPECTATOR') return isSpectator;
                             return true;
                         }}
                     />

@@ -133,7 +133,8 @@
     "deathAnnouncement": "宣布死訊",
     "speech": "發言流程",
     "voting": "放逐投票",
-    "votingPhase": "放逐投票階段"
+    "votingPhase": "放逐投票階段",
+    "sheriffElectionPhase": "警長選舉階段"
   },
   "players": {
     "title": "玩家",
@@ -238,7 +239,9 @@
   "admin": {
     "assignJudge": "指派法官",
     "demoteJudge": "解除法官",
-    "forcePolice": "強制警長"
+    "forcePolice": "強制警長",
+    "addSpectator": "給予旁觀身分",
+    "removeSpectator": "移除旁觀身分"
   },
   "serverSelector": {
     "title": "選擇伺服器",
@@ -278,6 +281,7 @@
     "autoProcess": "自動流程",
     "remainingOrder": "發言順序",
     "speaking": "正在發言",
+    "speakingTime": "發言倒數",
     "waiting": "等待發言",
     "noMoreSpeakers": "沒有更多發言者",
     "interruptVote": "下台投票",
@@ -288,6 +292,11 @@
     "allowUnEnroll": "允許退選",
     "candidates": "參選名單",
     "noCandidates": "目前無參選者...",
+    "collectingCandidates": "正在收集參選名單",
+    "enrollTime": "參選倒數",
+    "unenrollTime": "退選倒數",
+    "waitingForCandidates": "等待玩家舉手參選...",
+    "candidate": "參選者",
     "waitingForPolice": "等待警長選擇發言順序...",
     "waitingForPoliceSub": "警長正在選擇發言順序 (警上/警下)",
     "forceUp": "強制往上",
@@ -312,6 +321,8 @@
     "progress": "投票進行中",
     "total": "總票數",
     "count": "票",
+    "timeLeft": "剩餘時間",
+    "ineligible": "無投票權",
     "noVotes": "尚未有人投票",
     "waiting": "等待 {count} 位玩家...",
     "participation": "投票進度",
@@ -327,7 +338,8 @@
     "voted": "已投票",
     "thinking": "思考中",
     "eliminated": "已出局",
-    "thinkingMap": "思考中..."
+    "thinkingMap": "思考中...",
+    "unenroll": "退選"
   },
   "playerEdit": {
     "title": "編輯玩家",
@@ -394,7 +406,9 @@
   "modal": {
     "assignJudge": "指派法官",
     "demoteJudge": "解除法官",
-    "forcePolice": "強制警長"
+    "forcePolice": "強制警長",
+    "addSpectator": "指派觀戰者",
+    "removeSpectator": "移除觀戰者"
   },
   "tooltips": {
     "skipSpeaker": "跳過當前發言者，換下一位",

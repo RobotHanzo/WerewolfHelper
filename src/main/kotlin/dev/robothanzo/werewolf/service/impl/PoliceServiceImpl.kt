@@ -66,43 +66,18 @@ class PoliceServiceImpl(
             return
         }
 
-        val iterator = policeSession.candidates.entries.iterator()
-        while (iterator.hasNext()) {
-            val candidate = iterator.next()
-            if (event.user.idLong == candidate.value.player.user?.idLong) {
-                if (policeSession.state.canEnroll()) { // ENROLLMENT -> Remove completely
-                    iterator.remove()
-                    event.hook.editOriginal(":white_check_mark: 已取消參選").queue()
+        val player = event.member?.player() ?: run {
+            event.hook.editOriginal(":x: 你不是玩家").queue()
+            return
+        }
 
-                    val metadata: MutableMap<String, Any> = HashMap()
-                    metadata["playerId"] = candidate.value.player.id
-                    metadata["playerName"] = candidate.value.player.nickname
-                    session.addLog(
-                        LogType.POLICE_UNENROLLED,
-                        buildString {
-                            append(candidate.value.player.nickname)
-                            append(" 已取消參選警長")
-                        }, metadata
-                    )
-
-                } else if (policeSession.state.canQuit()) { // UNENROLLMENT -> Mark quit
-                    candidate.value.quit = true
-                    event.hook.editOriginal(":white_check_mark: 已取消參選").queue()
-                    // Use session helper to announce cancel in court
-                    session.courtTextChannel?.sendMessage(event.user.asMention + " 已取消參選")?.queue()
-
-                    val metadata = mutableMapOf<String, Any>()
-                    metadata["playerId"] = candidate.value.player.id
-                    metadata["playerName"] = candidate.value.player.nickname
-                    session.addLog(
-                        LogType.POLICE_UNENROLLED,
-                        "${candidate.value.player.nickname} 已取消參選警長", metadata
-                    )
-                } else {
-                    event.hook.editOriginal(":x: 無法取消參選，投票已開始").queue()
-                }
-                return
-            }
+        if (policeSession.candidates.containsKey(player.id)) {
+            val result = quitEnrollment(guild.idLong, player.id)
+            event.hook.editOriginal(
+                if (result) ":white_check_mark: 已取消參選"
+                else ":x: 無法取消參選，投票已開始"
+            ).queue()
+            return
         }
 
         if (!policeSession.state.canEnroll()) {
@@ -110,8 +85,7 @@ class PoliceServiceImpl(
             return
         }
 
-        val player = event.member?.player()
-        if (player != null && player.alive) {
+        if (player.alive) {
             policeSession.candidates[player.id] = Candidate(player = player)
             event.hook.editOriginal(":white_check_mark: 已參選").queue()
 
@@ -123,9 +97,66 @@ class PoliceServiceImpl(
                 "${player.nickname} 已參選警長", metadata
             )
 
+            gameSessionService.broadcastSessionUpdate(session)
             return
         }
         event.hook.editOriginal(":x: 你不是玩家").queue()
+    }
+
+    override fun quitEnrollment(guildId: Long, playerId: Int): Boolean {
+        val policeSession = sessions[guildId] ?: return false
+        val candidate = policeSession.candidates[playerId] ?: return false
+        val session = policeSession.session
+
+        if (policeSession.state.canEnroll()) { // ENROLLMENT -> Remove completely
+            policeSession.candidates.remove(playerId)
+
+            val metadata: MutableMap<String, Any> = HashMap()
+            metadata["playerId"] = candidate.player.id
+            metadata["playerName"] = candidate.player.nickname
+            session.addLog(
+                LogType.POLICE_UNENROLLED,
+                buildString {
+                    append(candidate.player.nickname)
+                    append(" 已取消參選警長")
+                }, metadata
+            )
+
+            gameSessionService.broadcastSessionUpdate(session)
+            return true
+        } else if (policeSession.state.canQuit()) { // UNENROLLMENT or SPEECH -> Mark quit
+            if (candidate.quit) return true // Already quit
+            candidate.quit = true
+
+            // Use session helper to announce cancel in court
+            session.courtTextChannel?.sendMessage(
+                (candidate.player.user?.asMention ?: candidate.player.nickname) + " 已取消參選"
+            )?.queue()
+
+            val metadata = mutableMapOf<String, Any>()
+            metadata["playerId"] = candidate.player.id
+            metadata["playerName"] = candidate.player.nickname
+            session.addLog(
+                LogType.POLICE_UNENROLLED,
+                "${candidate.player.nickname} 已取消參選警長", metadata
+            )
+
+            // If in speech phase, remove from order
+            if (policeSession.state == PoliceSession.State.SPEECH) {
+                val speechSession = speechService.getSpeechSession(guildId)
+                if (speechSession != null) {
+                    val wasCurrent = speechSession.lastSpeaker == playerId
+                    speechSession.order.removeIf { it.id == playerId }
+                    if (wasCurrent) {
+                        speechService.skipToNext(guildId)
+                    }
+                }
+            }
+
+            gameSessionService.broadcastSessionUpdate(session)
+            return true
+        }
+        return false
     }
 
     override fun next(guildId: Long) {
@@ -218,21 +249,30 @@ class PoliceServiceImpl(
                     policeSession.stageEndTime = System.currentTimeMillis() + 20000
 
                     // Use session helper to announce end of speeches
-                    session.courtTextChannel?.sendMessage("政見發表結束，參選人查20秒進行退選，20秒不会自動開始投票")
+                    session.courtTextChannel?.sendMessage("政見發表結束，參選人有20秒進行退選，20秒後自動開始投票")
                         ?.queue()
 
                     CmdUtils.schedule({ next(guildId) }, 20000)
                 }
 
                 PoliceSession.State.UNENROLLMENT -> {
-                    policeSession.state = PoliceSession.State.VOTING
-                    policeSession.stageEndTime = System.currentTimeMillis() + 30000
-
-                    if (policeSession.candidates.values.stream().allMatch { it.quit }) {
+                    val remainingCandidates = policeSession.candidates.values.filter { !it.quit }
+                    if (remainingCandidates.isEmpty()) {
                         policeSession.message?.reply("所有人退選，警徽撕毀")?.queue()
                         interrupt(guildId, true)
                         return@withLockedSession
+                    } else if (remainingCandidates.size == 1) {
+                        val winner = remainingCandidates.first()
+                        policeSession.message?.reply(
+                            (winner.player.user?.asMention ?: winner.player.nickname) + " 退選後僅剩一人參選，直接當選"
+                        )?.queue()
+                        setPolice(guildId, winner.player.id)
+                        interrupt(guildId, true)
+                        return@withLockedSession
                     }
+
+                    policeSession.state = PoliceSession.State.VOTING
+                    policeSession.stageEndTime = System.currentTimeMillis() + 30000
 
                     gameSessionService.broadcastSessionUpdate(session)
                     startVoting(channel, true, policeSession)

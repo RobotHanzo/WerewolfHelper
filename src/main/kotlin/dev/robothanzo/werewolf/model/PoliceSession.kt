@@ -21,7 +21,7 @@ class PoliceSession(
         }
 
         fun canQuit(): Boolean {
-            return this == ENROLLMENT || this == UNENROLLMENT
+            return this == ENROLLMENT || this == UNENROLLMENT || this == SPEECH
         }
     }
 

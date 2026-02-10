@@ -176,6 +176,12 @@ class GameSessionServiceImpl(
             if (spectatorRole != null) {
                 guild.addRoleToMember(member, spectatorRole).complete()
             }
+        } else if (role == UserRole.PENDING || role == UserRole.BLOCKED) {
+            guild.removeRoleFromMember(member!!, judgeRole).complete()
+            val spectatorRole = session.spectatorRole
+            if (spectatorRole != null) {
+                guild.removeRoleFromMember(member, spectatorRole).complete()
+            }
         } else {
             throw Exception("Unsupported role update: $role")
         }

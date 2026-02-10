@@ -1,4 +1,4 @@
-import {Mic, SkipForward, Square} from 'lucide-react';
+import {Mic, SkipForward, Square, UserMinus} from 'lucide-react';
 import {Player} from '@/api/types.gen';
 import {DiscordAvatar, DiscordName} from '@/components/DiscordUser';
 import {Timer} from '@/components/ui/Timer';
@@ -11,9 +11,19 @@ interface SpeakerCardProps {
     readonly: boolean;
     onSkip?: () => void;
     onInterrupt?: () => void;
+    onUnenroll?: () => void;
 }
 
-export const SpeakerCard = ({player, endTime, isPaused, t, readonly, onSkip, onInterrupt}: SpeakerCardProps) => (
+export const SpeakerCard = ({
+                                player,
+                                endTime,
+                                isPaused,
+                                t,
+                                readonly,
+                                onSkip,
+                                onInterrupt,
+                                onUnenroll
+                            }: SpeakerCardProps) => (
     <div className="relative w-full">
         <div className="absolute inset-0 bg-indigo-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
         <div
@@ -40,6 +50,7 @@ export const SpeakerCard = ({player, endTime, isPaused, t, readonly, onSkip, onI
                 endTime={endTime}
                 isPaused={isPaused}
                 size="md"
+                label={t('speechManager.speakingTime', 'Speaking Time')}
                 className="w-full justify-center"
             />
 
@@ -61,6 +72,16 @@ export const SpeakerCard = ({player, endTime, isPaused, t, readonly, onSkip, onI
                         <Square className="w-4 h-4 fill-current"/>
                         {t('speechManager.interrupt')}
                     </button>
+                    {onUnenroll && (
+                        <button
+                            onClick={onUnenroll}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                            title={t('vote.unenroll')}
+                        >
+                            <UserMinus className="w-4 h-4"/>
+                            {t('vote.unenroll')}
+                        </button>
+                    )}
                 </div>
             )}
         </div>

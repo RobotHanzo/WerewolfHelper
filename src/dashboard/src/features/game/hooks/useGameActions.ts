@@ -47,7 +47,7 @@ export const useGameActions = (
     const [deathConfirmPlayerId, setDeathConfirmPlayerId] = useState<number | null>(null);
     const [playerSelectModal, setPlayerSelectModal] = useState<{
         visible: boolean;
-        type: 'ASSIGN_JUDGE' | 'DEMOTE_JUDGE' | 'FORCE_POLICE' | null;
+        type: 'ASSIGN_JUDGE' | 'DEMOTE_JUDGE' | 'FORCE_POLICE' | 'ADD_SPECTATOR' | 'REMOVE_SPECTATOR' | null;
         customPlayers?: any[];
     }>({visible: false, type: null});
 
@@ -218,7 +218,7 @@ export const useGameActions = (
             muteAll.mutate({path: {guildId: gId}});
         } else if (action === 'unmute_all') {
             unmuteAll.mutate({path: {guildId: gId}});
-        } else if (action === 'assign_judge' || action === 'demote_judge') {
+        } else if (action === 'assign_judge' || action === 'demote_judge' || action === 'add_spectator' || action === 'remove_spectator') {
             getMembers({path: {guildId: gId}}).then(response => {
                 const members = response.data?.data;
                 if (!members || !Array.isArray(members)) {
@@ -246,12 +246,13 @@ export const useGameActions = (
                 }));
                 setPlayerSelectModal({
                     visible: true,
-                    type: action === 'assign_judge' ? 'ASSIGN_JUDGE' : 'DEMOTE_JUDGE',
+                    type: action === 'assign_judge' ? 'ASSIGN_JUDGE' :
+                        action === 'demote_judge' ? 'DEMOTE_JUDGE' :
+                            action === 'add_spectator' ? 'ADD_SPECTATOR' : 'REMOVE_SPECTATOR',
                     customPlayers: mappedPlayers
                 });
             }).catch(err => {
                 console.error("Failed to fetch members", err);
-
             });
         } else if (action === 'force_police') {
             setPlayerSelectModal({visible: true, type: 'FORCE_POLICE'});
@@ -279,6 +280,16 @@ export const useGameActions = (
             await updateUserRole.mutateAsync({
                 path: {guildId: gId, userId: player.userId.toString()},
                 body: {role: 'SPECTATOR'}
+            });
+        } else if (playerSelectModal.type === 'ADD_SPECTATOR' && player.userId) {
+            await updateUserRole.mutateAsync({
+                path: {guildId: gId, userId: player.userId.toString()},
+                body: {role: 'SPECTATOR'}
+            });
+        } else if (playerSelectModal.type === 'REMOVE_SPECTATOR' && player.userId) {
+            await updateUserRole.mutateAsync({
+                path: {guildId: gId, userId: player.userId.toString()},
+                body: {role: 'PENDING'}
             });
         } else if (playerSelectModal.type === 'FORCE_POLICE') {
             await setPolice.mutateAsync({path: {guildId: gId, playerId: Number(player.id)}});

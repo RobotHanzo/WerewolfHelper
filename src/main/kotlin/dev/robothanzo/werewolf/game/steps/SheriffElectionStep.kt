@@ -47,6 +47,16 @@ class SheriffElectionStep(
                 mapOf("success" to true)
             }
 
+            "quit" -> {
+                val playerId = (input["playerId"] as? Number)?.toInt()
+                if (playerId == null) {
+                    mapOf("success" to false, "message" to "Missing playerId")
+                } else {
+                    val result = policeService.quitEnrollment(session.guildId, playerId)
+                    mapOf("success" to result)
+                }
+            }
+
             "start" -> {
                 WerewolfApplication.jda.getGuildById(session.guildId) ?: return mapOf(
                     "success" to false,

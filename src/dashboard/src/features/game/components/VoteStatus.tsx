@@ -10,7 +10,9 @@ interface VoteStatusProps {
     totalVoters?: number;
     endTime?: number;
     players: Player[];
+    electorate?: number[]; // List of player IDs eligible to vote
     title?: string;
+    subtitle?: string;
     onTimerExpired?: () => void;
     guildId?: string;
 }
@@ -20,6 +22,9 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                                                           totalVoters,
                                                           endTime,
                                                           players,
+                                                          electorate,
+                                                          title,
+                                                          subtitle,
                                                           guildId
                                                       }) => {
     const {t} = useTranslation();
@@ -50,7 +55,7 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                 <div>
                     <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
                         <Gavel className="w-8 h-8 text-[#3211d4] dark:text-indigo-400"/>
-                        {t('steps.votingPhase', 'Voting Phase')}
+                        {title || t('steps.votingPhase', 'Voting Phase')}
                     </h2>
                     <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
                         {t('vote.statusDescription', 'Live tally of village consensus and player participation')}
@@ -67,7 +72,7 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
                     <div className="min-w-0">
                         <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-                            {t('vote.suspectsOnTrial', 'Suspects on Trial')}
+                            {subtitle || t('vote.suspectsOnTrial', 'Suspects on Trial')}
                         </h3>
                         <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mt-0.5 truncate">
                             {t('vote.leadingCandidates', 'Main candidates identified by the village')}
@@ -199,6 +204,10 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                         </div>
                         <div className="flex items-center gap-2 mb-0.5 opacity-50">
                             <span
+                                className="size-2.5 rounded-full bg-slate-200 dark:bg-slate-700"></span> {t('vote.ineligible', 'Ineligible')}
+                        </div>
+                        <div className="flex items-center gap-2 mb-0.5 opacity-50">
+                            <span
                                 className="size-2.5 rounded-full bg-slate-400 dark:bg-slate-800"></span> {t('vote.eliminated', 'Eliminated')}
                         </div>
                     </div>
@@ -207,14 +216,17 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-8 gap-4">
                     {players.map((player) => {
                         const isDead = !player.alive;
+                        const isEligible = electorate ? electorate.includes(player.id) : player.alive;
                         const votedFor = getVotedCandidate(String(player.userId || ''));
-                        const isThinking = !isDead && !votedFor;
+                        const isThinking = isEligible && !votedFor;
+                        const isIneligible = !isDead && !isEligible;
 
                         return (
                             <div key={player.id} className={`bg-white dark:bg-slate-900/50 border transition-all duration-300 rounded-xl p-3 flex flex-col items-center gap-2 relative group shadow-sm overflow-hidden min-w-0
                                 ${isDead ? 'opacity-40 grayscale border-slate-100 dark:border-white/5' :
-                                votedFor ? 'border-[#3211d4]/30 hover:bg-[#3211d4]/5 select-none' :
-                                    'border-slate-200 dark:border-white/10 hover:border-amber-500/50 hover:bg-amber-500/5'}`}>
+                                isIneligible ? 'opacity-50 grayscale bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/5' :
+                                    votedFor ? 'border-[#3211d4]/30 hover:bg-[#3211d4]/5 select-none' :
+                                        'border-slate-200 dark:border-white/10 hover:border-amber-500/50 hover:bg-amber-500/5'}`}>
 
                                 <div className={`size-14 rounded-xl overflow-hidden transition-all duration-500 
                                     ${votedFor ? 'ring-2 ring-[#3211d4]/30' :
@@ -239,6 +251,11 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                                     <span
                                         className="text-[9px] px-2 py-0.5 rounded-full bg-red-950/20 text-red-500 border border-red-900/10 font-black uppercase tracking-tighter">
                                         {t('dashboard.eliminated', 'DEAD')}
+                                    </span>
+                                ) : isIneligible ? (
+                                    <span
+                                        className="text-[9px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 font-black uppercase tracking-tighter">
+                                        {t('vote.ineligible', 'INELIGIBLE')}
                                     </span>
                                 ) : votedFor ? (
                                     <span

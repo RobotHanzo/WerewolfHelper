@@ -7,7 +7,8 @@ import {
     setSpeechOrderMutation,
     skipSpeechMutation,
     startAutoSpeechMutation,
-    startPoliceEnrollMutation
+    startPoliceEnrollMutation,
+    stateActionMutation
 } from '@/api/@tanstack/react-query.gen';
 import {Player} from '@/api/types.gen';
 import {SpeakerCard} from './SpeakerCard';
@@ -18,7 +19,7 @@ import {Timer} from '@/components/ui/Timer';
 // Local interfaces for states missing from SDK
 export interface SpeechState {
     order: number[]; // List of Player IDs (internal IDs)
-    currentSpeakerId?: number;
+    currentSpeakerId?: number | null;
     endTime: number;
     totalTime: number;
     isPaused?: boolean;
@@ -38,8 +39,8 @@ export interface PoliceState {
 }
 
 interface SpeechManagerProps {
-    speech?: SpeechState;
-    police?: PoliceState;
+    speech?: SpeechState | null;
+    police?: PoliceState | null;
     players: Player[];
     guildId: string;
     readonly?: boolean;
@@ -47,6 +48,15 @@ interface SpeechManagerProps {
 
 export const SpeechManager = ({speech, police, players, guildId, readonly = false}: SpeechManagerProps) => {
     const {t} = useTranslation();
+
+    // Mutations
+    const skipSpeech = useMutation(skipSpeechMutation());
+    const interruptSpeech = useMutation(interruptSpeechMutation());
+    const confirmOrder = useMutation(confirmSpeechMutation());
+    const startAutoSpeech = useMutation(startAutoSpeechMutation());
+    const startPoliceEnroll = useMutation(startPoliceEnrollMutation());
+    const setSpeechOrder = useMutation(setSpeechOrderMutation());
+    const stateAction = useMutation(stateActionMutation());
 
     const handleSkip = () => {
         if (readonly) return;
@@ -63,6 +73,17 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
         confirmOrder.mutate({path: {guildId}});
     };
 
+    const handleUnenroll = (playerId: number) => {
+        if (readonly) return;
+        stateAction.mutate({
+            path: {guildId},
+            body: {
+                action: 'quit',
+                data: {playerId}
+            }
+        });
+    };
+
     const handleStartAutoSpeech = () => {
         if (readonly) return;
         startAutoSpeech.mutate({path: {guildId}});
@@ -77,22 +98,30 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
         if (readonly) return;
         setSpeechOrder.mutate({path: {guildId}, body: {direction}});
     };
-    // Mutations
-    const skipSpeech = useMutation(skipSpeechMutation());
-    const interruptSpeech = useMutation(interruptSpeechMutation());
-    const confirmOrder = useMutation(confirmSpeechMutation());
-    const startAutoSpeech = useMutation(startAutoSpeechMutation());
-    const startPoliceEnroll = useMutation(startPoliceEnrollMutation());
-    const setSpeechOrder = useMutation(setSpeechOrderMutation());
 
-    const currentSpeaker = speech?.currentSpeakerId ? players.find(p => p.id === speech.currentSpeakerId) : null;
+    // Correctly handle null/undefined from SDK
+    const currentSpeakerId = speech?.currentSpeakerId;
+    const currentSpeaker = (currentSpeakerId != null && currentSpeakerId > 0)
+        ? players.find(p => p.id === currentSpeakerId)
+        : null;
+
     const isPaused = speech?.isPaused || false;
     const speechEndTime = speech?.endTime ? Number(speech.endTime) : 0;
 
-    const isPoliceSelecting = speech && speech.currentSpeakerId === -1 && (!speech.order || speech.order.length === 0);
-    const isSpeechActive = speech && (speech.currentSpeakerId !== undefined || (speech.order && speech.order.length > 0) || isPoliceSelecting);
-    const isPoliceActive = police && (police.allowEnroll || police.allowUnEnroll || police.state === 'VOTING');
-    const isActive = isSpeechActive || isPoliceActive;
+    // Special state where someone (usually police) is selecting the speech order
+    const isSelectingOrder = !!(speech && (currentSpeakerId === -1 || currentSpeakerId == null) && (!speech.order || speech.order.length === 0));
+
+    // Core activity flags
+    const isSpeechRunning = speech && (
+        (currentSpeakerId != null && currentSpeakerId !== 0) ||
+        (speech.order && speech.order.length > 0) ||
+        isSelectingOrder
+    );
+
+    const hasPoliceElection = police && police.state !== 'NONE' && police.state !== 'FINISHED';
+    const isActive = isSpeechRunning || hasPoliceElection;
+
+    const activeCandidates = police?.candidates?.filter(c => !c.quit) || [];
 
     const renderSpeechOrder = () => {
         if (!speech?.order || speech.order.length === 0) return null;
@@ -128,7 +157,18 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
                                             </span>
                                         </div>
                                     </div>
-                                    <span className="text-xs text-slate-400">{t('speechManager.waiting')}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-slate-400">{t('speechManager.waiting')}</span>
+                                        {!readonly && police?.state === 'SPEECH' && activeCandidates.some(c => c.id === pid) && (
+                                            <button
+                                                onClick={() => handleUnenroll(pid)}
+                                                className="p-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-500 hover:text-red-600 dark:hover:text-red-400 rounded-md transition-colors"
+                                                title={t('vote.unenroll')}
+                                            >
+                                                <UserMinus className="w-4 h-4"/>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -138,6 +178,7 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
         );
     };
 
+    // 1. If nothing is happening, show empty state
     if (!isActive) {
         return (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6">
@@ -170,18 +211,22 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
         );
     }
 
+    // 2. Voting takes absolute priority
     if (police?.state === 'VOTING') {
+        const eligibleVoters = players.filter(p => p.alive && !activeCandidates.some(c => c.id === p.id)).map(p => p.id);
         return (
             <div
                 className="h-full flex flex-col p-4 gap-6 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 items-center justify-center">
                 <div
                     className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700">
                     <VoteStatus
-                        candidates={police.candidates.filter(c => !c.quit)}
-                        totalVoters={players.filter(p => p.alive && !police.candidates.some(c => c.id === p.id)).length}
+                        candidates={activeCandidates}
+                        totalVoters={eligibleVoters.length}
                         endTime={police.stageEndTime as any}
                         players={players}
-                        title={t('vote.policeElection')}
+                        electorate={eligibleVoters}
+                        title={t('steps.sheriffElectionPhase')}
+                        subtitle={t('speechManager.candidates')}
                         guildId={guildId}
                     />
                 </div>
@@ -189,73 +234,136 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
         );
     }
 
-    if (isPoliceActive && !isSpeechActive) {
-        const isUnenrollment = police?.state === 'UNENROLLMENT';
+    // 3. Enrollment/Unenrollment phases
+    if (police?.state === 'ENROLLMENT' || police?.state === 'UNENROLLMENT') {
+        const isUnenrollment = police.state === 'UNENROLLMENT';
 
         return (
             <div
-                className="h-full flex flex-col p-4 gap-6 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 items-center justify-center">
-                <div className="text-center mb-8">
-                    <Shield className="w-16 h-16 text-amber-500 mx-auto mb-4 animate-bounce"/>
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                        {isUnenrollment ? t('speechManager.policeUnenrollment') : t('speechManager.policeEnrollment')}
-                    </h2>
-                    {police?.stageEndTime && (
-                        <div className="mt-4 flex justify-center">
-                            <Timer
-                                endTime={Number(police.stageEndTime)}
-                                label={isUnenrollment ? t('speechManager.unenrollTime', 'Unenrollment Ends') : t('speechManager.enrollTime', 'Enrollment Ends')}
-                            />
-                        </div>
-                    )}
-                </div>
+                className="h-full flex flex-col p-4 gap-8 overflow-y-auto scrollbar-hide animate-in fade-in duration-500">
+                {/* Status Header Banner */}
+                <section
+                    className={`relative overflow-hidden rounded-2xl shadow-xl border backdrop-blur-xl animate-in fade-in slide-in-from-top-4 duration-700 fill-mode-both
+                        ${isUnenrollment
+                        ? 'bg-amber-50/50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-900/30'
+                        : 'bg-indigo-50/50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-900/30'}`}>
 
-                <div className="flex gap-4 mb-8">
                     <div
-                        className={`px-4 py-2 rounded-lg border ${police?.allowEnroll ? 'bg-green-100 border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400' : 'bg-red-100 border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400'}`}>
-                        <div className="flex items-center gap-2">
-                            {police?.allowEnroll ? <UserPlus className="w-4 h-4"/> : <Square className="w-3 h-3"/>}
-                            <span
-                                className="font-bold">{t('speechManager.allowEnroll')}: {police?.allowEnroll ? 'YES' : 'NO'}</span>
-                        </div>
-                    </div>
-                    <div
-                        className={`px-4 py-2 rounded-lg border ${police?.allowUnEnroll ? 'bg-green-100 border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400' : 'bg-red-100 border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400'}`}>
-                        <div className="flex items-center gap-2">
-                            {police?.allowUnEnroll ? <UserMinus className="w-4 h-4"/> : <Square className="w-3 h-3"/>}
-                            <span
-                                className="font-bold">{t('speechManager.allowUnEnroll')}: {police?.allowUnEnroll ? 'YES' : 'NO'}</span>
-                        </div>
-                    </div>
-                </div>
+                        className={`absolute inset-0 bg-gradient-to-r via-transparent to-transparent ${isUnenrollment ? 'from-amber-500/10' : 'from-indigo-500/10'}`}></div>
 
-                <div className="w-full max-w-2xl">
-                    <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-4 text-center">{t('speechManager.candidates')}</h3>
-                    {police?.candidates && police.candidates.length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {police.candidates.map(candidate => {
+                    <div
+                        className="p-6 md:p-8 relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="flex items-center gap-6">
+                            <div className={`h-16 w-16 rounded-2xl flex items-center justify-center border shadow-lg animate-in fade-in zoom-in-75 duration-500 delay-100 fill-mode-both
+                                ${isUnenrollment
+                                ? 'bg-amber-500/20 border-amber-500/50 text-amber-600 dark:text-amber-400 shadow-amber-500/20'
+                                : 'bg-indigo-500/20 border-indigo-500/50 text-indigo-600 dark:text-indigo-400 shadow-indigo-500/20'}`}>
+                                <Shield className="w-8 h-8"/>
+                            </div>
+                            <div
+                                className="animate-in fade-in slide-in-from-left-4 duration-500 delay-200 fill-mode-both">
+                                <h2 className={`font-bold text-sm tracking-widest uppercase mb-1 ${isUnenrollment ? 'text-amber-600' : 'text-indigo-600'}`}>
+                                    {isUnenrollment ? t('speechManager.policeUnenrollment') : t('speechManager.policeEnrollment')}
+                                </h2>
+                                <div className="flex items-baseline gap-3">
+                                    <span className="text-3xl font-black text-slate-900 dark:text-white">
+                                        {t('speechManager.collectingCandidates')}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-4 mt-3">
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className={`w-2 h-2 rounded-full ${police?.allowEnroll ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                        <span
+                                            className="text-xs font-bold text-slate-500 uppercase tracking-tighter">{t('speechManager.allowEnroll')}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className={`w-2 h-2 rounded-full ${police?.allowUnEnroll ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                        <span
+                                            className="text-xs font-bold text-slate-500 uppercase tracking-tighter">{t('speechManager.allowUnEnroll')}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {police?.stageEndTime && (
+                            <div
+                                className="flex-shrink-0 animate-in fade-in slide-in-from-right-4 duration-500 delay-300 fill-mode-both">
+                                <Timer
+                                    endTime={Number(police.stageEndTime)}
+                                    size="md"
+                                    label={isUnenrollment ? t('speechManager.unenrollTime') : t('speechManager.enrollTime')}
+                                />
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                {/* Candidate Grid */}
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between px-2">
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+                            <div
+                                className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                <UserPlus className="w-5 h-5 text-slate-500"/>
+                            </div>
+                            {t('speechManager.candidates')}
+                            <span
+                                className="ml-2 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-500">
+                                {activeCandidates.length}
+                            </span>
+                        </h3>
+                    </div>
+
+                    {activeCandidates.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {activeCandidates.map((candidate, index) => {
                                 const p = players.find(x => x.id === candidate.id);
                                 return (
                                     <div key={candidate.id}
-                                         className="flex flex-col items-center p-3 bg-white dark:bg-slate-800 rounded-xl shadow border border-slate-200 dark:border-slate-700 animate-in zoom-in-50">
-                                        <DiscordAvatar userId={p?.userId}
-                                                       avatarClassName="w-12 h-12 rounded-full mb-2"/>
-                                        <span className="font-medium text-slate-800 dark:text-slate-200">
-                                            <DiscordName userId={p?.userId}
-                                                         fallbackName={p?.nickname || `Player ${candidate.id}`}/>
-                                        </span>
+                                         style={{animationDelay: `${100 + index * 50}ms`}}
+                                         className="group relative bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-white/10 shadow-sm hover:shadow-md transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 fill-mode-both">
+                                        <div className="flex items-center gap-4">
+                                            <div className="relative">
+                                                <div
+                                                    className="absolute inset-0 bg-indigo-500/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                <DiscordAvatar userId={p?.userId}
+                                                               avatarClassName="w-14 h-14 rounded-2xl relative z-10 border-2 border-slate-100 dark:border-slate-800 shadow-sm"/>
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div
+                                                    className="text-sm font-black text-slate-900 dark:text-white truncate">
+                                                    <DiscordName userId={p?.userId}
+                                                                 fallbackName={p?.nickname || `Player ${candidate.id}`}/>
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span
+                                                        className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('speechManager.candidate')}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 );
                             })}
                         </div>
                     ) : (
-                        <div className="text-center text-slate-500 italic">{t('speechManager.noCandidates')}</div>
+                        <div
+                            className="flex flex-col items-center justify-center py-20 px-4 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-white/[0.02] animate-in fade-in duration-700">
+                            <div
+                                className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-300 dark:text-slate-700">
+                                <UserMinus className="w-8 h-8"/>
+                            </div>
+                            <h4 className="text-lg font-bold text-slate-400 dark:text-slate-600">{t('speechManager.noCandidates')}</h4>
+                            <p className="text-sm text-slate-400 mt-1">{t('speechManager.waitingForCandidates', 'Expecting participants to step forward...')}</p>
+                        </div>
                     )}
                 </div>
             </div>
         );
     }
 
+    // 4. Fallback to Speech View if active
     return (
         <div
             className="h-full flex flex-col p-4 gap-6 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -273,7 +381,7 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
             </div>
 
             <div className="flex-1 overflow-y-auto scrollbar-hide min-h-0 flex flex-col items-center gap-8 py-8">
-                {isPoliceSelecting ? (
+                {isSelectingOrder ? (
                     <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in-95">
                         <div className="relative">
                             <div
@@ -325,6 +433,7 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
                                         readonly={readonly}
                                         onSkip={handleSkip}
                                         onInterrupt={handleInterrupt}
+                                        onUnenroll={police?.state === 'SPEECH' && activeCandidates.some(c => c.id === currentSpeaker.id) ? () => handleUnenroll(currentSpeaker.id) : undefined}
                                     />
                                 </div>
                             ) : (
@@ -361,7 +470,7 @@ export const SpeechManager = ({speech, police, players, guildId, readonly = fals
                     </>
                 )}
             </div>
-            {!readonly && !isSpeechActive && !isPoliceActive && (
+            {!readonly && !isSpeechRunning && (
                 <div className="flex flex-wrap gap-3 justify-center mt-auto">
                     <button
                         onClick={handleConfirmOrder}
