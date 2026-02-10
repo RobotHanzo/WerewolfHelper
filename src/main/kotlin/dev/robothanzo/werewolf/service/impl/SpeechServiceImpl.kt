@@ -346,7 +346,7 @@ class SpeechServiceImpl(
         }
     }
 
-    override fun interruptSession(guildId: Long) {
+    override fun interruptSession(guildId: Long, triggerCallback: Boolean) {
         val speechSession = speechSessions[guildId]
         if (speechSession != null) {
             val guild = WerewolfApplication.jda.getGuildById(guildId)
@@ -358,7 +358,9 @@ class SpeechServiceImpl(
             speechSession.order.clear()
             stopCurrentSpeaker(speechSession)
             speechSessions.remove(guildId)
-            speechSession.finishedCallback?.invoke()
+            if (triggerCallback) {
+                speechSession.finishedCallback?.invoke()
+            }
         }
     }
 

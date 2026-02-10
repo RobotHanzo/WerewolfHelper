@@ -89,7 +89,7 @@ interface SpeechService {
     /**
      * Interrupts the entire speech session for a guild.
      */
-    fun interruptSession(guildId: Long)
+    fun interruptSession(guildId: Long, triggerCallback: Boolean = false)
 
     /**
      * Skips to the next speaker for a guild.

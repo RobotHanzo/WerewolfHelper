@@ -1,7 +1,6 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
     AlertCircle,
-    AlertTriangle,
     ArrowRight,
     Ban,
     Brain,
@@ -9,6 +8,7 @@ import {
     Clock,
     Eye,
     FlaskConical,
+    Lightbulb,
     MessageSquare,
     Moon,
     Shield,
@@ -358,10 +358,15 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                         <div className="flex items-center gap-4 mb-6">
                                             <div
                                                 className="h-16 w-16 rounded-full border-4 border-white/20 overflow-hidden shadow-lg bg-slate-800 animate-in fade-in zoom-in-75 duration-500 delay-200 fill-mode-both transition-transform hover:scale-105">
-                                                {!!topTargetId ? (
+                                                {topTargetId && topTargetId > 0 ? (
                                                     <DiscordAvatar userId={String(huntTargetPlayer?.userId ?? '')}
                                                                    guildId={guildId}
                                                                    avatarClassName="object-cover w-full h-full"/>
+                                                ) : topTargetId === -1 ? (
+                                                    <div
+                                                        className="w-full h-full flex items-center justify-center bg-amber-600">
+                                                        <Ban className="w-8 h-8 text-white"/>
+                                                    </div>
                                                 ) : (
                                                     <div
                                                         className="w-full h-full flex items-center justify-center bg-slate-700">
@@ -371,8 +376,14 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                             </div>
                                             <div
                                                 className="animate-in fade-in slide-in-from-left-4 duration-500 delay-300 fill-mode-both">
-                                                <h3 className="text-3xl font-bold">
-                                                    {topTargetId === -1 ? t('nightStatus.targetSkipped') : (huntTargetPlayer?.nickname || t('roles.unknown'))}
+                                                <h3 className="text-3xl font-bold flex items-center">
+                                                    {topTargetId === -1 ? (
+                                                        <span
+                                                            className="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-lg text-lg border border-amber-200 dark:border-amber-800 flex items-center gap-2">
+                                                            <Ban className="w-5 h-5"/>
+                                                            {t('nightStatus.targetSkipped')}
+                                                        </span>
+                                                    ) : (huntTargetPlayer?.nickname || t('roles.unknown'))}
                                                 </h3>
                                                 <div className="flex items-center gap-2 text-white/70">
                                                     <AlertCircle className="w-4 h-4"/>
@@ -483,15 +494,32 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                 <div className="p-6 md:flex md:items-center md:justify-between relative">
                                     <div className="flex items-center gap-6">
                                         <div
-                                            className="h-16 w-16 rounded-full bg-red-500/20 flex items-center justify-center border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-in fade-in zoom-in-75 duration-500 delay-100 fill-mode-both">
-                                            <AlertTriangle className="text-red-500 w-8 h-8"/>
+                                            className={`h-16 w-16 rounded-full flex items-center justify-center border shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-in fade-in zoom-in-75 duration-500 delay-100 fill-mode-both overflow-hidden ${topTargetId === -1 ? 'bg-amber-500/20 border-amber-500/50' : 'bg-red-500/20 border-red-500/50'}`}>
+                                            {topTargetId && topTargetId > 0 ? (
+                                                <DiscordAvatar
+                                                    userId={String(huntTargetPlayer?.userId ?? '')}
+                                                    guildId={guildId}
+                                                    avatarClassName="object-cover w-full h-full"
+                                                />
+                                            ) : topTargetId === -1 ? (
+                                                <Ban className="text-amber-500 w-8 h-8"/>
+                                            ) : (
+                                                <Lightbulb className="text-red-500 w-8 h-8"/>
+                                            )}
                                         </div>
                                         <div
                                             className="animate-in fade-in slide-in-from-left-4 duration-500 delay-200 fill-mode-both">
                                             <h2 className="text-red-500 font-bold text-sm tracking-widest uppercase mb-1">{t('nightStatus.wolfKillConsensus')}</h2>
                                             <div className="flex items-baseline gap-3">
-                                                <span className="text-3xl font-bold text-slate-900 dark:text-white">
-                                                    {topTargetId === -1 ? t('nightStatus.targetSkipped') : (huntTargetPlayer?.nickname || t('nightStatus.thinking'))}
+                                                <span
+                                                    className="text-3xl font-bold text-slate-900 dark:text-white flex items-center">
+                                                    {topTargetId === -1 ? (
+                                                        <span
+                                                            className="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-lg text-lg border border-amber-200 dark:border-amber-800 flex items-center gap-2">
+                                                            <Ban className="w-5 h-5"/>
+                                                            {t('nightStatus.targetSkipped')}
+                                                        </span>
+                                                    ) : (huntTargetPlayer?.nickname || t('nightStatus.thinking'))}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2 mt-2">
@@ -622,7 +650,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({guildId, players = [], 
                                                                     isSkipped ? 'bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20' :
                                                                         'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
                                                             }`}>
-                                                            {status.status}
+                                                            {status.status ? t(`nightStatus.${status.status.toLowerCase()}`) : status.status}
                                                         </span>
                                                     </div>
 
