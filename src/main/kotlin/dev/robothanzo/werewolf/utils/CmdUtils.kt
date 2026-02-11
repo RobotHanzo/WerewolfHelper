@@ -91,3 +91,9 @@ fun Member.player(aliveOnly: Boolean = true): Player? {
     val p = CmdUtils.getSession(this.guild)?.getPlayer(this.idLong)
     return if (!aliveOnly || p?.alive == true) p else null
 }
+
+fun parseLong(value: Any?): Long? = when (value) {
+    is Number -> value.toLong()
+    is String -> value.toLongOrNull()
+    else -> null
+}
