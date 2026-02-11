@@ -67,15 +67,22 @@ class ButtonListener : ListenerAdapter() {
                     val actionExecutor = WerewolfApplication.roleActionExecutor
                     val action = actionExecutor.getAction(actionId)
 
+                    // Get the action instance to check if there's already a pending selection, if so, delete
+                    val actionInstance = WerewolfApplication.actionUIService.getActionData(session, player.id)
+
+                    // Verify prompt message ID to prevent clicking old prompts from previous nights
+                    if (actionInstance?.actionPromptId != event.messageIdLong) {
+                        event.hook.sendMessage(":x: 這是舊的按鈕，請使用最新的行動提示").setEphemeral(true).queue()
+                        return@withLockedSession
+                    }
+
                     if (player.actionSubmitted && action?.allowMultiplePerPhase != true) {
                         event.hook.sendMessage(":x: 你已提交行動，無法再次選擇").queue()
                         return@withLockedSession
                     }
-
-                    // Get the action instance to check if there's already a pending selection, if so, delete
-                    val actionInstance = WerewolfApplication.actionUIService.getActionData(session, player.id)
-                    if (actionInstance?.actionDefinitionId != null && actionInstance.targets.isEmpty()) {
+                    if (actionInstance.actionDefinitionId != null && actionInstance.targets.isEmpty()) {
                         actionInstance.targetPromptId?.let { event.messageChannel.deleteMessageById(it).queue() }
+                        actionInstance.targetPromptId = null
                     }
 
                     if (action != null && action.targetCount > 0) {
@@ -131,7 +138,7 @@ class ButtonListener : ListenerAdapter() {
                                 )
                                 .complete()
 
-                        WerewolfApplication.actionUIService.updateTargetPromptId(session, player.id, message.idLong)
+                        actionInstance.targetPromptId = message.idLong
 
                         // Update status manually using extension
                         session.updateActionStatus(
@@ -162,6 +169,16 @@ class ButtonListener : ListenerAdapter() {
                 WerewolfApplication.gameSessionService.withLockedSession(event.guild!!.idLong) { session ->
                     val (player, _) = getVerifiedPlayerAndIsJudge(event, session)
                     if (player == null) return@withLockedSession
+
+                    val actionInstance = session.stateData.submittedActions.find {
+                        it.actor == player.id && it.status != ActionStatus.SUBMITTED
+                    }
+
+                    // Verify prompt message ID to prevent clicking old prompts from previous nights
+                    if (actionInstance?.actionPromptId != event.messageIdLong) {
+                        event.hook.editOriginal(":x: 這是舊的按鈕，請使用最新的行動提示").queue()
+                        return@withLockedSession
+                    }
 
                     // For death triggers, we need to finalize the actor's death status
                     if (!player.alive) {
@@ -206,7 +223,14 @@ class ButtonListener : ListenerAdapter() {
                         session,
                         player.id
                     )
-                    val actionId = actionInstance?.actionDefinitionId
+
+                    // Verify prompt message ID to prevent clicking old target selection prompts
+                    if (actionInstance?.targetPromptId != event.messageIdLong) {
+                        event.hook.editOriginal(":x: 這是舊的按鈕，請使用最新的行動提示").queue()
+                        return@withLockedSession
+                    }
+
+                    val actionId = actionInstance.actionDefinitionId
                     if (actionId == null) {
                         event.hook.editOriginal(":x: 沒有待選的行動").queue()
                         return@withLockedSession
@@ -308,6 +332,12 @@ class ButtonListener : ListenerAdapter() {
                     val policeSession = WerewolfApplication.policeService.sessions[guildId]!!
                     val candidates = policeSession.candidates
 
+                    // Verify prompt message ID to prevent clicking old prompts
+                    if (policeSession.message?.idLong != event.messageIdLong) {
+                        event.hook.editOriginal(":x: 這是舊的投票按鈕，請使用最新的提示").queue()
+                        return@withLockedSession
+                    }
+
                     if (!policeSession.isEligibleVoter(player)) {
                         event.hook.editOriginal(":x: 你曾經參選過或正在參選，不得投票").queue()
                         return@withLockedSession
@@ -331,6 +361,12 @@ class ButtonListener : ListenerAdapter() {
             if (customId.startsWith("voteExpel")) {
                 val poll = WerewolfApplication.expelService.getPoll(guildId)
                 if (poll != null) {
+                    // Verify prompt message ID to prevent clicking old prompts
+                    if (poll.message?.idLong != event.messageIdLong) {
+                        event.hook.editOriginal(":x: 這是舊的投票按鈕，請使用最新的提示").queue()
+                        return@withLockedSession
+                    }
+
                     // Check voter eligibility
                     if (!poll.isEligibleVoter(player)) {
                         event.hook.editOriginal(":x: 你不得投票").queue()

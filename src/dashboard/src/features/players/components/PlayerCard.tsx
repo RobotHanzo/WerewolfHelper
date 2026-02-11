@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeftRight, HeartPulse, Lock, Settings, Shield, Skull, Unlock } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  Ban,
+  HeartPulse,
+  Lock,
+  Settings,
+  Shield,
+  Skull,
+  Unlock,
+} from 'lucide-react';
 import { Player } from '@/api/types.gen';
 import { useTranslation } from '@/lib/i18n';
 import { DiscordAvatar, DiscordName } from '@/components/DiscordUser';
@@ -8,9 +17,15 @@ interface PlayerCardProps {
   player: Player;
   onAction: (id: number, action: string) => void;
   readonly?: boolean;
+  isSkipped?: boolean;
 }
 
-export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onAction, readonly = false }) => {
+export const PlayerCard: React.FC<PlayerCardProps> = ({
+  player,
+  onAction,
+  readonly = false,
+  isSkipped = false,
+}) => {
   const { t } = useTranslation();
   const cardStyle =
     'bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-300 dark:border-slate-700/50 hover:border-indigo-400 dark:hover:border-indigo-500/50 transition-all duration-200 overflow-hidden relative group';
@@ -105,6 +120,14 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onAction, readon
                   <HeartPulse className="w-3 h-3" />
                 </div>
               )}
+              {isSkipped && (
+                <div
+                  className="absolute -top-1 -left-1 bg-amber-500 text-white rounded-full p-0.5 border-2 border-white dark:border-slate-800 z-10"
+                  title="Skipped Action"
+                >
+                  <Ban className="w-3 h-3" />
+                </div>
+              )}
 
               {/* Unlock Icon - Persistent if unlocked and has multiple roles */}
               {player.roles.length > 1 && !player.rolePositionLocked && (
@@ -163,7 +186,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onAction, readon
                               : undefined
                           }
                           className={`text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded border ${swapAnim[index] || ''}
-                            ${isDeadRole ? 'line-through opacity-60 decoration-2 decoration-slate-500' : ''} 
+                            ${isDeadRole ? 'line-through opacity-60 decoration-2 decoration-slate-500' : ''}
                             ${!readonly && isDeadRole ? 'cursor-pointer hover:opacity-100 hover:decoration-red-500 hover:text-red-600 transition-all' : ''}
                             ${
                               role.includes('狼')

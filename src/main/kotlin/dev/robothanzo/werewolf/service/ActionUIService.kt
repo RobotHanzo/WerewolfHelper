@@ -56,8 +56,6 @@ interface ActionUIService {
 
     fun getActionData(session: Session, playerId: Int): RoleActionInstance?
 
-    fun updateTargetPromptId(session: Session, playerId: Int, promptId: Long)
-
     /**
      * Record a vote in a group action
      */

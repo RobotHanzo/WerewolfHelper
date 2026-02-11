@@ -46,13 +46,7 @@ export const SpeakerCard = ({
         </div>
       </>
 
-      <Timer
-        endTime={endTime}
-        isPaused={isPaused}
-        size="md"
-        label={t('speechManager.speakingTime', 'Speaking Time')}
-        className="w-full justify-center"
-      />
+      <Timer endTime={endTime} isPaused={isPaused} size="md" className="w-full justify-center" />
 
       {!readonly && (
         <div className="flex gap-2 w-full mt-4">

@@ -119,5 +119,6 @@ data class TransferPoliceSession(
     val senderId: Int,
     val possibleRecipientIds: MutableList<Int> = ArrayList(),
     var recipientId: Int? = null,
+    var messageId: Long? = null,
     val callback: (() -> Unit)? = null
 )

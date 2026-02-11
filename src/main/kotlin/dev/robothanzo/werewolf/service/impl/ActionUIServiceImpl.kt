@@ -55,22 +55,14 @@ class ActionUIServiceImpl(
                 MsgUtils.spreadButtonsAcrossActionRows(actionButtons)
             )?.complete()
 
-            // Create/Update action data in unified submittedActions list
-            val actorRole = player.roles?.firstOrNull() ?: "未知"
-
             // Only look for non-finalized actions to reuse
-            var actionInstance = session.stateData.submittedActions.find {
+            val actionInstance = session.stateData.submittedActions.find {
                 it.actor == playerId && it.status != ActionStatus.SUBMITTED
             }
 
             if (actionInstance != null) {
                 actionInstance.status = ActionStatus.ACTING
-                actionInstance.targetPromptId = message?.idLong
-            } else {
-                val action = session.stateData.submittedActions.find {
-                    it.actor == playerId && it.status != ActionStatus.SUBMITTED
-                }
-                action?.status = ActionStatus.ACTING
+                actionInstance.actionPromptId = message?.idLong
             }
 
             WerewolfApplication.gameSessionService.saveSession(session)
@@ -126,9 +118,13 @@ class ActionUIServiceImpl(
             session.players.values
                 .filter { it.id in participants }
                 .forEach { player ->
-                    player.channel?.sendMessage(actionText)?.setComponents(
+                    val message = player.channel?.sendMessage(actionText)?.setComponents(
                         ActionRow.of(selectMenu.build())
-                    )?.queue()
+                    )?.complete()
+
+                    if (message != null) {
+                        groupState.promptMessageIds[player.id] = message.idLong
+                    }
                 }
 
             // Initialize empty votes for all participants so dashboard shows them as "Not Voted"
@@ -192,6 +188,8 @@ class ActionUIServiceImpl(
             actionInstance.targets.clear()
             actionInstance.targets.add(targetPlayerId)
             actionInstance.status = ActionStatus.SUBMITTED
+            actionInstance.actionPromptId = null
+            actionInstance.targetPromptId = null
 
             // Notify NightManager of activity
             nightManager.notifyPhaseUpdate(guildId)
@@ -221,6 +219,9 @@ class ActionUIServiceImpl(
 
             groupState.votes.removeIf { it.voterId == playerId }
             groupState.votes.add(WolfVote(voterId = playerId, targetId = targetPlayerId))
+
+            // Clear prompt ID to prevent replay attacks as requested
+            groupState.promptMessageIds.remove(playerId)
 
             // Explicitly re-put into the map to ensure persistence detection
             lockedSession.stateData.wolfStates[groupStateId] = groupState
@@ -353,18 +354,12 @@ class ActionUIServiceImpl(
         val actionInstance =
             session.stateData.submittedActions.find { it.actor == playerId && it.status != ActionStatus.SUBMITTED }
         if (actionInstance != null) {
+            actionInstance.actionPromptId = null
             actionInstance.targetPromptId = null
-            actionInstance.status = ActionStatus.SUBMITTED // Assuming cleared means settled or handled
+            if (actionInstance.status != ActionStatus.SKIPPED) {
+                actionInstance.status = ActionStatus.SUBMITTED
+            }
             WerewolfApplication.gameSessionService.saveSession(session)
         }
-    }
-
-    override fun updateTargetPromptId(session: Session, playerId: Int, promptId: Long) {
-        val actionInstance =
-            session.stateData.submittedActions.find { it.actor == playerId && it.status != ActionStatus.SUBMITTED }
-                ?: return
-        actionInstance.targetPromptId = promptId
-        // Explicitly save the session as this modifies state
-        WerewolfApplication.gameSessionService.saveSession(session)
     }
 }

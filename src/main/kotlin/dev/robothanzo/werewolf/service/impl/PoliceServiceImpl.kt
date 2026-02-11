@@ -66,6 +66,12 @@ class PoliceServiceImpl(
             return
         }
 
+        // Verify message ID to prevent clicking old enrollment buttons
+        if (policeSession.message?.idLong != event.messageIdLong) {
+            event.hook.editOriginal(":x: 這是舊的按鈕，請使用最新的提示").queue()
+            return
+        }
+
         val player = event.member?.player() ?: run {
             event.hook.editOriginal(":x: 你不是玩家").queue()
             return
@@ -330,9 +336,11 @@ class PoliceServiceImpl(
                 }
             }
 
-        policeSession.session.courtTextChannel?.sendMessageEmbeds(embedBuilder.build())
+        val message = policeSession.session.courtTextChannel?.sendMessageEmbeds(embedBuilder.build())
             ?.setComponents(*MsgUtils.spreadButtonsAcrossActionRows(buttons).toTypedArray())
-            ?.queue()
+            ?.complete()
+
+        policeSession.message = message
 
         policeSession.poll10sTask = CmdUtils.schedule({
             val vc = policeSession.session.courtVoiceChannel
@@ -489,6 +497,7 @@ class PoliceServiceImpl(
             )
                 ?.complete()
             if (message == null) return
+            transferSession.messageId = message.idLong
 
             CmdUtils.schedule({
                 if (transferSessions.remove(guild.idLong) != null) {
@@ -504,6 +513,13 @@ class PoliceServiceImpl(
     override fun selectNewPolice(event: EntitySelectInteractionEvent) {
         val guild = event.guild ?: return
         val session = transferSessions[guild.idLong] ?: return
+
+        // Verify message ID
+        if (session.messageId != event.messageIdLong) {
+            event.reply(":x: 這是舊的按鈕，請使用最新的提示").setEphemeral(true).queue()
+            return
+        }
+
         val targetMember = event.mentions.members.firstOrNull() ?: return
 
         gameSessionService.withLockedSession(guild.idLong) { guildSession ->
@@ -527,6 +543,12 @@ class PoliceServiceImpl(
         val guild = event.guild ?: return
         if (transferSessions.containsKey(guild.idLong)) {
             val session = transferSessions[guild.idLong] ?: return
+
+            // Verify message ID
+            if (session.messageId != event.messageIdLong) {
+                event.reply(":x: 這是舊的按鈕，請使用最新的提示").setEphemeral(true).queue()
+                return
+            }
 
             gameSessionService.withLockedSession(guild.idLong) { guildSession ->
                 val senderPlayer = guildSession.getPlayer(session.senderId)
@@ -563,6 +585,12 @@ class PoliceServiceImpl(
         val guild = event.guild ?: return
         if (transferSessions.containsKey(guild.idLong)) {
             val session = transferSessions[guild.idLong] ?: return
+
+            // Verify message ID
+            if (session.messageId != event.messageIdLong) {
+                event.reply(":x: 這是舊的按鈕，請使用最新的提示").setEphemeral(true).queue()
+                return
+            }
 
             gameSessionService.withLockedSession(guild.idLong) { guildSession ->
                 val senderPlayer = guildSession.getPlayer(session.senderId)

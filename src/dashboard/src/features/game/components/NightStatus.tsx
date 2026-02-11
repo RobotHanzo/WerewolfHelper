@@ -7,6 +7,7 @@ import {
   Check,
   Clock,
   Eye,
+  FastForward,
   FlaskConical,
   Lightbulb,
   MessageSquare,
@@ -16,7 +17,7 @@ import {
   User,
   Users,
 } from 'lucide-react';
-import { Session, Player, RoleActionInstance, WolfMessage, WolfVote } from '@/api/types.gen';
+import { Player, RoleActionInstance, Session, WolfMessage, WolfVote } from '@/api/types.gen';
 import { DiscordAvatar, DiscordName } from '@/components/DiscordUser';
 import { useTranslation } from '@/lib/i18n';
 
@@ -729,80 +730,91 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
                           </div>
 
                           <div className="flex items-center justify-between bg-slate-50 dark:bg-black/20 rounded-lg p-4 relative min-h-[100px] border border-slate-100 dark:border-transparent">
-                            {isSkipped ? (
-                              <div className="flex flex-col items-center gap-2 w-full">
-                                <Ban className="text-slate-600 w-8 h-8" />
-                                <span className="text-xs text-slate-500">
-                                  {t('nightStatus.noActionTaken')}
-                                </span>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-[2px] bg-gradient-to-r from-white/10 to-white/30 z-0"></div>
-                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-900 p-1 rounded-full border border-slate-200 dark:border-slate-800 shadow-sm">
-                                  <ArrowRight className="text-slate-500 w-4 h-4" />
-                                </div>
+                            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-[2px] bg-gradient-to-r from-white/10 to-white/30 z-0"></div>
+                            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-900 p-1 rounded-full border border-slate-200 dark:border-slate-800 shadow-sm">
+                              {isSkipped ? (
+                                <Ban className="text-amber-500 w-4 h-4" />
+                              ) : (
+                                <ArrowRight className="text-slate-500 w-4 h-4" />
+                              )}
+                            </div>
 
-                                <div className="relative z-10 text-center">
-                                  <div
-                                    className={`w-12 h-12 rounded-full border-2 p-0.5 mx-auto mb-2 ${isSkipped ? 'border-slate-500/50' : borderColorClass.replace('border-l-', 'border-')}/50`}
-                                  >
+                            <div className="relative z-10 text-center">
+                              <div
+                                className={`w-12 h-12 rounded-full border-2 p-0.5 mx-auto mb-2 ${isSkipped ? 'border-amber-500/50' : borderColorClass.replace('border-l-', 'border-')}/50`}
+                              >
+                                {status.playerUserId ? (
+                                  <div className="relative w-full h-full">
                                     <DiscordAvatar
-                                      userId={String(status.playerUserId || '')}
+                                      userId={String(status.playerUserId)}
                                       guildId={guildId}
                                       avatarClassName="w-full h-full rounded-full object-cover"
                                     />
                                   </div>
-                                  <span className="text-[10px] font-bold text-slate-400 truncate max-w-[60px] block">
-                                    <DiscordName
-                                      userId={String(status.playerUserId || '')}
-                                      guildId={guildId}
-                                      fallbackName={status.playerName}
-                                    />
-                                  </span>
-                                </div>
+                                ) : (
+                                  <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center">
+                                    <User className="text-slate-600 w-6 h-6" />
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-bold text-slate-400 truncate max-w-[60px] block">
+                                <DiscordName
+                                  userId={String(status.playerUserId || '')}
+                                  guildId={guildId}
+                                  fallbackName={status.playerName}
+                                />
+                              </span>
+                            </div>
 
-                                <div className="relative z-10 text-center">
-                                  <div className="w-12 h-12 rounded-full border-2 border-slate-600 p-0.5 mx-auto mb-2 relative group-hover:border-white/50 transition-colors duration-300">
-                                    {status.targetUserId ? (
-                                      <DiscordAvatar
-                                        userId={String(status.targetUserId)}
-                                        guildId={guildId}
-                                        avatarClassName="w-full h-full rounded-full object-cover"
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center">
-                                        <User className="text-slate-600 w-6 h-6" />
-                                      </div>
-                                    )}
-                                    {isSubmitted && (
-                                      <div className="absolute -top-1 -right-1 h-5 w-5 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border border-slate-200 dark:border-slate-800">
-                                        <Check className="text-green-500 w-3 h-3" />
-                                      </div>
-                                    )}
+                            <div className="relative z-10 text-center">
+                              <div
+                                className={`w-12 h-12 rounded-full border-2 ${isSkipped ? 'border-amber-500/50' : 'border-slate-600'} p-0.5 mx-auto mb-2 relative group-hover:border-white/50 transition-colors duration-300`}
+                              >
+                                {isSkipped ? (
+                                  <div className="w-full h-full rounded-full bg-amber-500/10 flex items-center justify-center">
+                                    <FastForward className="text-amber-500 w-6 h-6" />
                                   </div>
-                                  <div className="flex flex-col">
-                                    <span className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[80px]">
-                                      {status.targetUserId ? (
-                                        <DiscordName
-                                          userId={String(status.targetUserId)}
-                                          guildId={guildId}
-                                          fallbackName={status.targetName || ''}
-                                        />
-                                      ) : (
-                                        status.targetName ||
-                                        (isActing
-                                          ? t('nightStatus.thinking')
-                                          : t('nightStatus.waiting'))
-                                      )}
-                                    </span>
-                                    <span className="text-[10px] text-[#3211d4] font-bold uppercase">
-                                      {status.targetRole}
-                                    </span>
+                                ) : status.targetUserId ? (
+                                  <DiscordAvatar
+                                    userId={String(status.targetUserId)}
+                                    guildId={guildId}
+                                    avatarClassName="w-full h-full rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center">
+                                    <User className="text-slate-600 w-6 h-6" />
                                   </div>
-                                </div>
-                              </>
-                            )}
+                                )}
+                                {isSubmitted && (
+                                  <div className="absolute -top-1 -right-1 h-5 w-5 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border border-slate-200 dark:border-slate-800">
+                                    <Check className="text-green-500 w-3 h-3" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[80px]">
+                                  {isSkipped ? (
+                                    <span className="text-amber-500 italic">
+                                      {t('nightStatus.skipped')}
+                                    </span>
+                                  ) : status.targetUserId ? (
+                                    <DiscordName
+                                      userId={String(status.targetUserId)}
+                                      guildId={guildId}
+                                      fallbackName={status.targetName || ''}
+                                    />
+                                  ) : (
+                                    status.targetName ||
+                                    (isActing
+                                      ? t('nightStatus.thinking')
+                                      : t('nightStatus.waiting'))
+                                  )}
+                                </span>
+                                <span className="text-[10px] text-[#3211d4] font-bold uppercase">
+                                  {status.targetRole}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>

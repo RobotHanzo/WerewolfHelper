@@ -47,6 +47,7 @@ data class RoleActionInstance(
     val targets: MutableList<Int>,
     var submittedBy: ActionSubmissionSource,
     var status: ActionStatus, // PENDING, ACTING, SUBMITTED, SKIPPED
+    var actionPromptId: Long? = null, // Discord message ID for action selection prompt
     var targetPromptId: Long? = null // Discord message ID for target selection prompt
 )
 
@@ -66,7 +67,7 @@ data class WolvesActionState(
     val actionId: String,
     val electorates: List<Int>, // Player IDs of players (wolves) voting
     val votes: MutableList<WolfVote> = mutableListOf(),
-    val messageId: Long? = null, // Discord message ID for the group channel
+    val promptMessageIds: MutableMap<Int, Long> = mutableMapOf(), // Player ID -> Discord message ID
     val finished: Boolean = false
 )
 

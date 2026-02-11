@@ -49,8 +49,15 @@ class ActionSelectionListener(
         val targetPlayerId = event.selectedOptions.firstOrNull()?.value?.toIntOrNull() ?: return
         val session = gameSessionService.getSession(guildId).getOrNull() ?: return
         val player = session.getPlayerByChannel(event.channelIdLong) ?: return
+        val groupState = actionUIService.getGroupState(session, actionId)
         if (player.user?.idLong != userId && event.member?.isAdmin() != true) {
             event.reply("❌ 這不是你的投票").setEphemeral(true).queue()
+            return
+        }
+
+        // Verify prompt message ID to prevent clicking old prompts
+        if (groupState?.promptMessageIds?.get(player.id) != event.messageIdLong) {
+            event.reply("❌ 這是舊的投票按鈕，請使用最新的提示").setEphemeral(true).queue()
             return
         }
 
@@ -82,7 +89,7 @@ class ActionSelectionListener(
                 p.channel?.sendMessage(tallyMessage)?.queue()
             }
 
-        // Broadcasting real-time tally is enough. 
+        // Broadcasting real-time tally is enough.
         // NightStep will detect when all participants have voted via notifyPhaseUpdate.
     }
 

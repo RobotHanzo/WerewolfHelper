@@ -1,7 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import { Users } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
-import { Session, Player } from '@/api/types.gen';
+import { Player, Session } from '@/api/types.gen';
 import { PlayerCard } from '@/features/players/components/PlayerCard';
 import { SpectatorView } from '@/features/spectator/components/SpectatorView';
 import { SpeechManager } from '@/features/speech/components/SpeechManager';
@@ -52,14 +52,20 @@ export const GameRoutes = ({
               </h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {players.map((player) => (
-                <PlayerCard
-                  key={player.id}
-                  player={player}
-                  onAction={onPlayerAction}
-                  readonly={readonly}
-                />
-              ))}
+              {players.map((player) => {
+                const isSkipped = (gameState.stateData as any)?.submittedActions?.some(
+                  (a: any) => a.actor === player.id && a.status === 'SKIPPED'
+                );
+                return (
+                  <PlayerCard
+                    key={player.id}
+                    player={player}
+                    onAction={onPlayerAction}
+                    readonly={readonly}
+                    isSkipped={isSkipped}
+                  />
+                );
+              })}
             </div>
           </>
         }
