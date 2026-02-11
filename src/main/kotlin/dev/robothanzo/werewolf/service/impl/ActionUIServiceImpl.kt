@@ -18,7 +18,8 @@ import org.springframework.stereotype.Service
 class ActionUIServiceImpl(
     private val nightManager: NightManager,
     private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry,
-    private val roleActionExecutor: dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
+    private val roleActionExecutor: dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor,
+    private val roleEventService: dev.robothanzo.werewolf.service.RoleEventService
 ) : ActionUIService {
     private val log = LoggerFactory.getLogger(ActionUIServiceImpl::class.java)
 
@@ -56,11 +57,23 @@ class ActionUIServiceImpl(
             )?.complete()
 
             // Only look for non-finalized actions to reuse
-            val actionInstance = session.stateData.submittedActions.find {
-                it.actor == playerId && it.status != ActionStatus.SUBMITTED
+            var actionInstance = session.stateData.submittedActions.find {
+                it.actor == playerId && it.status != ActionStatus.SUBMITTED &&
+                    it.status != ActionStatus.SKIPPED && it.status != ActionStatus.PROCESSED
             }
 
-            if (actionInstance != null) {
+            if (actionInstance == null) {
+                actionInstance = RoleActionInstance(
+                    actor = playerId,
+                    actorRole = player.roles.firstOrNull() ?: "Unknown",
+                    actionDefinitionId = null,
+                    targets = mutableListOf(),
+                    submittedBy = ActionSubmissionSource.PLAYER,
+                    status = ActionStatus.ACTING,
+                    actionPromptId = message?.idLong
+                )
+                session.stateData.submittedActions.add(actionInstance)
+            } else {
                 actionInstance.status = ActionStatus.ACTING
                 actionInstance.actionPromptId = message?.idLong
             }
@@ -193,6 +206,15 @@ class ActionUIServiceImpl(
 
             // Notify NightManager of activity
             nightManager.notifyPhaseUpdate(guildId)
+
+            // Notify ActionProcessed event for callback-based step advancement
+            roleEventService.notifyListeners(
+                lockedSession, RoleEventType.ACTION_PROCESSED, mapOf(
+                    "playerId" to playerId,
+                    "actionId" to actionInstance.actionDefinitionId!!
+                )
+            )
+
             true
         }
     }
@@ -229,6 +251,15 @@ class ActionUIServiceImpl(
             log.info("Vote recorded: Player $playerId -> Target $targetPlayerId in group action $groupStateId")
 
             nightManager.notifyPhaseUpdate(guildId)
+
+            // Notify ActionProcessed event for callback-based step advancement
+            roleEventService.notifyListeners(
+                lockedSession, RoleEventType.ACTION_PROCESSED, mapOf(
+                    "playerId" to playerId,
+                    "groupActionId" to groupStateId
+                )
+            )
+
             WerewolfApplication.gameSessionService.broadcastSessionUpdate(lockedSession)
             true
         }
@@ -306,6 +337,16 @@ class ActionUIServiceImpl(
                         it.targets.clear()
                         it.targets.add(SKIP_TARGET_ID)
                         it.targetPromptId = null
+
+                        // Notify ActionProcessed event for callback-based step advancement
+                        // (even for timeouts/skips)
+                        roleEventService.notifyListeners(
+                            session, RoleEventType.ACTION_PROCESSED, mapOf(
+                                "playerId" to playerId,
+                                "actionId" to (it.actionDefinitionId ?: "UNKNOWN"),
+                                "isTimeout" to true
+                            )
+                        )
                     }
 
                     if (player != null) {

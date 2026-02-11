@@ -270,6 +270,15 @@ data class Player(
                     30
                 )
 
+                // Extend session duration if we are in DEATH_ANNOUNCEMENT step
+                WerewolfApplication.gameSessionService.withLockedSession(session!!.guildId) { sess ->
+                    if (sess.currentState == "DEATH_ANNOUNCEMENT") {
+                        val now = System.currentTimeMillis()
+                        sess.currentStepEndTime = maxOf(sess.currentStepEndTime, now + 30000L)
+                        WerewolfApplication.gameSessionService.broadcastSessionUpdate(sess)
+                    }
+                }
+
                 // Safety timer and reminders
                 @OptIn(DelicateCoroutinesApi::class)
                 GlobalScope.launch {
@@ -300,7 +309,20 @@ data class Player(
                             // Force consume trigger status to ensure discordDeath proceeds
                             deathActions.forEach { action ->
                                 lockedSession.stateData.playerOwnedActions[p.id]?.remove(action.actionId.toString())
+                                // Mark as processed so it's not detected as an "active" trigger anymore
+                                lockedSession.stateData.submittedActions.find {
+                                    it.actor == p.id && it.actionDefinitionId == action.actionId
+                                }?.status = dev.robothanzo.werewolf.game.model.ActionStatus.PROCESSED
                             }
+
+                            // Trigger completion check for potential early step advancement
+                            if (lockedSession.currentState == "DEATH_ANNOUNCEMENT") {
+                                (WerewolfApplication.gameStateService.getCurrentStep(lockedSession) as? dev.robothanzo.werewolf.game.steps.DeathAnnouncementStep)?.checkAdvance(
+                                    lockedSession,
+                                    WerewolfApplication.gameStateService
+                                )
+                            }
+
                             p.discordDeath()
                         }
                     }

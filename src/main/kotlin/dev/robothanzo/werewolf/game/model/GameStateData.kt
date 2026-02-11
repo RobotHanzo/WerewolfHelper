@@ -122,6 +122,8 @@ data class GameStateData(
 
     @Schema(description = "Player ID of the Wolf Younger Brother if he is awakened this night")
     var wolfBrotherAwakenedPlayerId: Int? = null,
+    @Schema(description = "Start time of the current game step")
+    var stepStartTime: Long = 0,
 ) {
     // --- Transient fields for UI state synchronization ---
     @Transient

@@ -201,6 +201,15 @@ class ButtonListener : ListenerAdapter() {
                     )
                     // Clear the action prompt to cancel reminder
                     WerewolfApplication.actionUIService.clearPrompt(session, player.id)
+
+                    // Trigger completion check for potential early step advancement
+                    if (session.currentState == "DEATH_ANNOUNCEMENT") {
+                        (WerewolfApplication.gameStateService.getCurrentStep(session) as? dev.robothanzo.werewolf.game.steps.DeathAnnouncementStep)?.checkAdvance(
+                            session,
+                            WerewolfApplication.gameStateService
+                        )
+                    }
+
                     event.hook.editOriginal(":white_check_mark: 已跳過").queue()
                 }
                 return

@@ -370,5 +370,13 @@ fun Session.validateAndSubmitAction(
         )
     }
 
+    // Check if we can advance if this was a death trigger in announcement phase
+    if (currentState == "DEATH_ANNOUNCEMENT") {
+        (WerewolfApplication.gameStateService.getCurrentStep(this) as? dev.robothanzo.werewolf.game.steps.DeathAnnouncementStep)?.checkAdvance(
+            this,
+            WerewolfApplication.gameStateService
+        )
+    }
+
     return mapOf("success" to true, "message" to "Action submitted")
 }

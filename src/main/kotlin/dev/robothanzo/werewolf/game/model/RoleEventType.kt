@@ -7,5 +7,6 @@ enum class RoleEventType {
     ON_DAY_START,
     ON_SPEECH_START,
     ON_VOTE_START,
-    ON_REVIVED
+    ON_REVIVED,
+    ACTION_PROCESSED
 }
