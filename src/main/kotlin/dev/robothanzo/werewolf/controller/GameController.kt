@@ -29,35 +29,6 @@ class GameController(
     private val gameStateService: GameStateService
 ) {
     // --- Game State ---
-    @Operation(summary = "Get Game State", description = "Retrieves the current state of the game session.")
-    @ApiResponses(
-        value = [
-            SwaggerApiResponse(
-                responseCode = "200", description = "Successfully retrieved game state",
-                content = [Content(schema = Schema(implementation = GameStateResponse::class))]
-            ),
-            SwaggerApiResponse(responseCode = "404", description = "Session not found"),
-            SwaggerApiResponse(responseCode = "403", description = "User does not have permission to view this guild")
-        ]
-    )
-    @GetMapping("/state")
-    @CanViewGuild
-    fun getGameState(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
-        val session = gameSessionService.getSession(guildId.toLong())
-            .orElseThrow { Exception("Session not found") }
-
-        return ResponseEntity.ok(
-            GameStateResponse(
-                GameStateDto(
-                    currentState = session.currentState,
-                    currentStep = gameStateService.getCurrentStep(session)?.name,
-                    day = session.day,
-                    stateData = session.stateData
-                )
-            )
-        )
-    }
-
     @Operation(summary = "Advance Game State", description = "Manually advances the game to the next state/phase.")
     @ApiResponses(
         value = [

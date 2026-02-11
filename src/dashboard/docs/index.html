@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html class="default" lang="en" data-base="./">
 <head>
-    <meta charset="utf-8"/>
-    <meta http-equiv="x-ua-compatible" content="IE=edge"/>
+  <meta charset="utf-8"/>
+  <meta http-equiv="x-ua-compatible" content="IE=edge"/>
     <title>werewolf-helper-dashboard</title>
-    <meta name="description" content="Documentation for werewolf-helper-dashboard"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <link rel="stylesheet" href="assets/style.css"/>
-    <link rel="stylesheet" href="assets/highlight.css"/>
+  <meta name="description" content="Documentation for werewolf-helper-dashboard"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="assets/style.css"/>
+  <link rel="stylesheet" href="assets/highlight.css"/>
     <script defer src="assets/main.js"></script>
     <script async src="assets/icons.js" id="tsd-icons-script"></script>
     <script async src="assets/search.js" id="tsd-search-script"></script>
@@ -15,274 +15,432 @@
     <script async src="assets/hierarchy.js" id="tsd-hierarchy-script"></script>
 </head>
 <body>
-<script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";
-document.body.style.display = "none";
-setTimeout(() => window.app ? app.showPage() : document.body.style.removeProperty("display"), 500)</script>
+<script>
+  document.documentElement.dataset.theme = localStorage.getItem('tsd-theme') || 'os';
+  document.body.style.display = 'none';
+  setTimeout(
+    () => (window.app ? app.showPage() : document.body.style.removeProperty('display')),
+    500
+  );
+</script>
 <header class="tsd-page-toolbar">
-    <div class="tsd-toolbar-contents container"><a href="index.html" class="title">werewolf-helper-dashboard</a>
+  <div class="tsd-toolbar-contents container">
+    <a href="index.html" class="title">werewolf-helper-dashboard</a>
         <div id="tsd-toolbar-links"></div>
         <button id="tsd-search-trigger" class="tsd-widget" aria-label="Search">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <use href="assets/icons.svg#icon-search"></use>
-            </svg>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <use href="assets/icons.svg#icon-search"></use>
+          </svg>
         </button>
-        <dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input"
-                                                           aria-controls="tsd-search-results" aria-autocomplete="list"
-                                                           aria-expanded="true" autocapitalize="off" autocomplete="off"
-                                                           placeholder="Search the docs" maxLength="100"/>
-            <ul role="listbox" id="tsd-search-results"></ul>
-            <div id="tsd-search-status" aria-live="polite" aria-atomic="true">
-                <div>Preparing search index...</div>
-            </div>
+    <dialog id="tsd-search" aria-label="Search">
+      <input
+        role="combobox"
+        id="tsd-search-input"
+        aria-controls="tsd-search-results"
+        aria-autocomplete="list"
+        aria-expanded="true"
+        autocapitalize="off"
+        autocomplete="off"
+        placeholder="Search the docs"
+        maxlength="100"
+      />
+      <ul role="listbox" id="tsd-search-results"></ul>
+      <div id="tsd-search-status" aria-live="polite" aria-atomic="true">
+        <div>Preparing search index...</div>
+      </div>
         </dialog>
-        <a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <use href="assets/icons.svg#icon-menu"></use>
-            </svg>
-        </a></div>
+    <a
+      href="#"
+      class="tsd-widget menu"
+      id="tsd-toolbar-menu-trigger"
+      data-toggle="menu"
+      aria-label="Menu"
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <use href="assets/icons.svg#icon-menu"></use>
+      </svg
+      >
+    </a>
+  </div>
 </header>
 <div class="container container-main">
-    <div class="col-content">
+  <div class="col-content">
         <div class="tsd-page-title"><h1>werewolf-helper-dashboard</h1></div>
         <div class="tsd-panel tsd-typography">
-            <h1 id="werewolf-helper-dashboard" class="tsd-anchor-link">Werewolf Helper Dashboard<a
-                    href="#werewolf-helper-dashboard" aria-label="Permalink" class="tsd-anchor-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="assets/icons.svg#icon-anchor"></use>
-                </svg>
-            </a></h1>
-            <p>This is the admin dashboard frontend for the Werewolf Discord Bot. It allows admins to view the game
-                state in real-time
-                and execute commands.
-                <em>Made by vibe-coding using Google Antigravity, I take no credit for the design, and no responsibility
-                    for any issues
-                    that may arise.</em></p>
-            <h2 id="prerequisites" class="tsd-anchor-link">Prerequisites<a href="#prerequisites" aria-label="Permalink"
-                                                                           class="tsd-anchor-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="assets/icons.svg#icon-anchor"></use>
-                </svg>
-            </a></h2>
-            <ul>
-                <li><a href="https://nodejs.org/">Node.js</a> (Version 16 or higher)</li>
-                <li><a href="https://yarnpkg.com/">Yarn</a></li>
-            </ul>
-            <h2 id="installation" class="tsd-anchor-link">Installation<a href="#installation" aria-label="Permalink"
-                                                                         class="tsd-anchor-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="assets/icons.svg#icon-anchor"></use>
-                </svg>
-            </a></h2>
-            <ol>
-                <li>
-                    <p>Clone the repository (or download the source).</p>
-                </li>
-                <li>
-                    <p>Install dependencies:</p>
-                    <pre><code class="bash"><span class="hl-0">yarn</span><span class="hl-1"> </span><span class="hl-2">install</span>
+          <h1 id="werewolf-helper-dashboard" class="tsd-anchor-link">
+            Werewolf Helper Dashboard<a
+            href="#werewolf-helper-dashboard"
+            aria-label="Permalink"
+            class="tsd-anchor-icon"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <use href="assets/icons.svg#icon-anchor"></use>
+            </svg
+            >
+          </a>
+          </h1>
+          <p>
+            This is the admin dashboard frontend for the Werewolf Discord Bot. It allows admins to
+            view the game state in real-time and execute commands.
+            <em
+            >Made by vibe-coding using Google Antigravity, I take no credit for the design, and no
+              responsibility for any issues that may arise.</em
+            >
+          </p>
+          <h2 id="prerequisites" class="tsd-anchor-link">
+            Prerequisites<a href="#prerequisites" aria-label="Permalink" class="tsd-anchor-icon"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <use href="assets/icons.svg#icon-anchor"></use>
+            </svg
+            >
+          </a>
+          </h2>
+          <ul>
+            <li><a href="https://nodejs.org/">Node.js</a> (Version 16 or higher)</li>
+            <li><a href="https://yarnpkg.com/">Yarn</a></li>
+          </ul>
+          <h2 id="installation" class="tsd-anchor-link">
+            Installation<a href="#installation" aria-label="Permalink" class="tsd-anchor-icon"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <use href="assets/icons.svg#icon-anchor"></use>
+            </svg
+            >
+          </a>
+          </h2>
+          <ol>
+            <li>
+              <p>Clone the repository (or download the source).</p>
+            </li>
+            <li>
+              <p>Install dependencies:</p>
+              <pre><code class="bash"><span class="hl-0">yarn</span><span class="hl-1"> </span><span
+                class="hl-2">install</span>
+</code><button type="button">Copy</button></pre>
+            </li>
+          </ol>
+          <h2 id="development" class="tsd-anchor-link">
+            Development<a href="#development" aria-label="Permalink" class="tsd-anchor-icon"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <use href="assets/icons.svg#icon-anchor"></use>
+            </svg
+            >
+          </a>
+          </h2>
+          <p>To start the local development server:</p>
+          <pre><code class="bash"><span class="hl-0">yarn</span><span class="hl-1"> </span><span
+            class="hl-2">dev</span>
 </code><button type="button">Copy</button></pre>
 
-                </li>
-            </ol>
-            <h2 id="development" class="tsd-anchor-link">Development<a href="#development" aria-label="Permalink"
-                                                                       class="tsd-anchor-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="assets/icons.svg#icon-anchor"></use>
-                </svg>
-            </a></h2>
-            <p>To start the local development server:</p>
-            <pre><code class="bash"><span class="hl-0">yarn</span><span class="hl-1"> </span><span
-                    class="hl-2">dev</span>
+          <p>The application will be available at <code>http://localhost:5173</code>.</p>
+          <h2 id="production-build" class="tsd-anchor-link">
+            Production Build<a
+            href="#production-build"
+            aria-label="Permalink"
+            class="tsd-anchor-icon"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <use href="assets/icons.svg#icon-anchor"></use>
+            </svg
+            >
+          </a>
+          </h2>
+          <p>To build the application for production:</p>
+          <pre><code class="bash"><span class="hl-0">yarn</span><span class="hl-1"> </span><span
+            class="hl-2">build</span>
 </code><button type="button">Copy</button></pre>
 
-            <p>The application will be available at <code>http://localhost:5173</code>.</p>
-            <h2 id="production-build" class="tsd-anchor-link">Production Build<a href="#production-build"
-                                                                                 aria-label="Permalink"
-                                                                                 class="tsd-anchor-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="assets/icons.svg#icon-anchor"></use>
-                </svg>
-            </a></h2>
-            <p>To build the application for production:</p>
-            <pre><code class="bash"><span class="hl-0">yarn</span><span class="hl-1"> </span><span
-                    class="hl-2">build</span>
+          <p>
+            The output will be in the <code>dist/</code> directory. You can serve this static
+            directory using any web server (Nginx, Apache, Vercel, Netlify, etc.).
+          </p>
+          <h3 id="preview-production-build" class="tsd-anchor-link">
+            Preview Production Build<a
+            href="#preview-production-build"
+            aria-label="Permalink"
+            class="tsd-anchor-icon"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <use href="assets/icons.svg#icon-anchor"></use>
+            </svg
+            >
+          </a>
+          </h3>
+          <p>To preview the production build locally:</p>
+          <pre><code class="bash"><span class="hl-0">yarn</span><span class="hl-1"> </span><span
+            class="hl-2">preview</span>
 </code><button type="button">Copy</button></pre>
 
-            <p>The output will be in the <code>dist/</code> directory. You can serve this static directory using any web
-                server (Nginx, Apache,
-                Vercel, Netlify, etc.).</p>
-            <h3 id="preview-production-build" class="tsd-anchor-link">Preview Production Build<a
-                    href="#preview-production-build" aria-label="Permalink" class="tsd-anchor-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="assets/icons.svg#icon-anchor"></use>
-                </svg>
-            </a></h3>
-            <p>To preview the production build locally:</p>
-            <pre><code class="bash"><span class="hl-0">yarn</span><span class="hl-1"> </span><span
-                    class="hl-2">preview</span>
+          <h2 id="discord-oauth-configuration" class="tsd-anchor-link">
+            Discord OAuth Configuration<a
+            href="#discord-oauth-configuration"
+            aria-label="Permalink"
+            class="tsd-anchor-icon"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <use href="assets/icons.svg#icon-anchor"></use>
+            </svg
+            >
+          </a>
+          </h2>
+          <p>The dashboard uses Discord OAuth2 for authentication. To set this up:</p>
+          <ol>
+            <li>
+              <p><strong>Create a Discord Application</strong>:</p>
+              <ul>
+                <li>
+                  Go to the
+                  <a href="https://discord.com/developers/applications">Discord Developer Portal</a>
+                </li>
+                <li>Click <strong>New Application</strong> and give it a name</li>
+                <li>Navigate to the <strong>OAuth2</strong> section</li>
+              </ul>
+            </li>
+            <li>
+              <p><strong>Configure Redirect URIs</strong>:</p>
+              <ul>
+                <li>
+                  Add your redirect URI (e.g., <code>http://localhost:5173/auth/callback</code> for
+                  local development)
+                </li>
+                <li>
+                  For production, use your deployed dashboard URL (e.g.,
+                  <code>https://yourdomain.com/auth/callback</code>)
+                </li>
+              </ul>
+            </li>
+            <li>
+              <p><strong>Get Your Credentials</strong>:</p>
+              <ul>
+                <li>Copy your <strong>Client ID</strong> from the General Information page</li>
+                <li>Generate a <strong>Client Secret</strong> from the OAuth2 page</li>
+              </ul>
+            </li>
+            <li>
+              <p><strong>Set Environment Variables</strong>:</p>
+              <ul>
+                <li>
+                  The backend requires the following environment variables:
+                  <pre><code class="bash"><span class="hl-3">DISCORD_CLIENT_ID</span><span
+                    class="hl-1">=</span><span class="hl-2">your_client_id_here</span><br/><span
+                    class="hl-3">DISCORD_CLIENT_SECRET</span><span class="hl-1">=</span><span
+                    class="hl-2">your_client_secret_here</span><br/><span class="hl-3">DISCORD_REDIRECT_URI</span><span
+                    class="hl-1">=</span><span
+                    class="hl-2">http://localhost:5173/auth/callback</span><br/><span class="hl-3">DASHBOARD_URL</span><span
+                    class="hl-1">=</span><span class="hl-2">http://localhost:5173</span>
 </code><button type="button">Copy</button></pre>
-
-            <h2 id="discord-oauth-configuration" class="tsd-anchor-link">Discord OAuth Configuration<a
-                    href="#discord-oauth-configuration" aria-label="Permalink" class="tsd-anchor-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="assets/icons.svg#icon-anchor"></use>
-                </svg>
-            </a></h2>
-            <p>The dashboard uses Discord OAuth2 for authentication. To set this up:</p>
-            <ol>
-                <li>
-                    <p><strong>Create a Discord Application</strong>:</p>
-                    <ul>
-                        <li>Go to the <a href="https://discord.com/developers/applications">Discord Developer Portal</a>
-                        </li>
-                        <li>Click <strong>New Application</strong> and give it a name</li>
-                        <li>Navigate to the <strong>OAuth2</strong> section</li>
-                    </ul>
                 </li>
+              </ul>
+            </li>
+            <li>
+              <p><strong>Bot Permissions</strong>:</p>
+              <ul>
                 <li>
-                    <p><strong>Configure Redirect URIs</strong>:</p>
-                    <ul>
-                        <li>Add your redirect URI (e.g., <code>http://localhost:5173/auth/callback</code> for local
-                            development)
-                        </li>
-                        <li>For production, use your deployed dashboard URL (e.g., <code>https://yourdomain.com/auth/callback</code>)
-                        </li>
-                    </ul>
+                  The OAuth2 application needs the following scopes: <code>identify</code>,
+                  <code>guilds</code>, <code>guilds.members.read</code>
                 </li>
-                <li>
-                    <p><strong>Get Your Credentials</strong>:</p>
-                    <ul>
-                        <li>Copy your <strong>Client ID</strong> from the General Information page</li>
-                        <li>Generate a <strong>Client Secret</strong> from the OAuth2 page</li>
-                    </ul>
-                </li>
-                <li>
-                    <p><strong>Set Environment Variables</strong>:</p>
-                    <ul>
-                        <li>The backend requires the following environment variables:
-                            <pre><code class="bash"><span class="hl-3">DISCORD_CLIENT_ID</span><span
-                                    class="hl-1">=</span><span class="hl-2">your_client_id_here</span><br/><span
-                                    class="hl-3">DISCORD_CLIENT_SECRET</span><span class="hl-1">=</span><span
-                                    class="hl-2">your_client_secret_here</span><br/><span class="hl-3">DISCORD_REDIRECT_URI</span><span
-                                    class="hl-1">=</span><span
-                                    class="hl-2">http://localhost:5173/auth/callback</span><br/><span class="hl-3">DASHBOARD_URL</span><span
-                                    class="hl-1">=</span><span class="hl-2">http://localhost:5173</span>
-</code><button type="button">Copy</button></pre>
-
-                        </li>
-                    </ul>
-                </li>
-                <li>
-                    <p><strong>Bot Permissions</strong>:</p>
-                    <ul>
-                        <li>The OAuth2 application needs the following scopes: <code>identify</code>,
-                            <code>guilds</code>, <code>guilds.members.read</code></li>
-                    </ul>
-                </li>
-            </ol>
-            <h2 id="integration" class="tsd-anchor-link">Integration<a href="#integration" aria-label="Permalink"
-                                                                       class="tsd-anchor-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="assets/icons.svg#icon-anchor"></use>
-                </svg>
-            </a></h2>
-            <p>Refer to the &quot;Integration Guide&quot; within the dashboard application for details on how to connect
-                this frontend to your
-                Java Discord Bot backend.</p>
+              </ul>
+            </li>
+          </ol>
+          <h2 id="integration" class="tsd-anchor-link">
+            Integration<a href="#integration" aria-label="Permalink" class="tsd-anchor-icon"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <use href="assets/icons.svg#icon-anchor"></use>
+            </svg
+            >
+          </a>
+          </h2>
+          <p>
+            Refer to the &quot;Integration Guide&quot; within the dashboard application for details
+            on how to connect this frontend to your Java Discord Bot backend.
+          </p>
         </div>
-    </div>
-    <div class="col-sidebar">
+  </div>
+  <div class="col-sidebar">
         <div class="page-menu">
-            <div class="tsd-navigation settings">
-                <details class="tsd-accordion">
-                    <summary class="tsd-accordion-summary">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <use href="assets/icons.svg#icon-chevronDown"></use>
-                        </svg>
-                        <h3>Settings</h3></summary>
-                    <div class="tsd-accordion-details">
-                        <div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span>
-                            <ul id="tsd-filter-options">
-                                <li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox"
-                                                                                                   id="tsd-filter-protected"
-                                                                                                   name="protected"/>
-                                    <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
-                                        <rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6"
-                                              fill="none"></rect>
-                                        <path class="tsd-checkbox-checkmark"
-                                              d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none"
-                                              stroke-width="3.5" stroke-linejoin="round" fill="none"></path>
-                                    </svg>
-                                    <span>Protected</span></label></li>
-                                <li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox"
-                                                                                                   id="tsd-filter-inherited"
-                                                                                                   name="inherited"
-                                                                                                   checked/>
-                                    <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
-                                        <rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6"
-                                              fill="none"></rect>
-                                        <path class="tsd-checkbox-checkmark"
-                                              d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none"
-                                              stroke-width="3.5" stroke-linejoin="round" fill="none"></path>
-                                    </svg>
-                                    <span>Inherited</span></label></li>
-                                <li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox"
-                                                                                                   id="tsd-filter-external"
-                                                                                                   name="external"/>
-                                    <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
-                                        <rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6"
-                                              fill="none"></rect>
-                                        <path class="tsd-checkbox-checkmark"
-                                              d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none"
-                                              stroke-width="3.5" stroke-linejoin="round" fill="none"></path>
-                                    </svg>
-                                    <span>External</span></label></li>
-                            </ul>
-                        </div>
-                        <div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select
-                                id="tsd-theme">
-                            <option value="os">OS</option>
-                            <option value="light">Light</option>
-                            <option value="dark">Dark</option>
-                        </select></div>
-                    </div>
-                </details>
-            </div>
-            <details open class="tsd-accordion tsd-page-navigation">
-                <summary class="tsd-accordion-summary">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <use href="assets/icons.svg#icon-chevronDown"></use>
-                    </svg>
-                    <h3>On This Page</h3></summary>
-                <div class="tsd-accordion-details"><a href="#werewolf-helper-dashboard"><span>Werewolf <wbr/>Helper <wbr/>Dashboard</span></a>
-                    <ul>
-                        <li><a href="#prerequisites"><span>Prerequisites</span></a></li>
-                        <li><a href="#installation"><span>Installation</span></a></li>
-                        <li><a href="#development"><span>Development</span></a></li>
-                        <li><a href="#production-build"><span>Production <wbr/>Build</span></a></li>
-                        <li>
-                            <ul>
-                                <li><a href="#preview-production-build"><span>Preview <wbr/>Production <wbr/>Build</span></a>
-                                </li>
-                            </ul>
-                        </li>
-                        <li><a href="#discord-oauth-configuration"><span>Discord <wbr/>O<wbr/>Auth <wbr/>Configuration</span></a>
-                        </li>
-                        <li><a href="#integration"><span>Integration</span></a></li>
-                    </ul>
+          <div class="tsd-navigation settings">
+            <details class="tsd-accordion">
+              <summary class="tsd-accordion-summary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <use href="assets/icons.svg#icon-chevronDown"></use>
+                </svg>
+                <h3>Settings</h3>
+              </summary>
+              <div class="tsd-accordion-details">
+                <div class="tsd-filter-visibility">
+                  <span class="settings-label">Member Visibility</span>
+                  <ul id="tsd-filter-options">
+                    <li class="tsd-filter-item">
+                      <label class="tsd-filter-input"
+                      ><input type="checkbox" id="tsd-filter-protected" name="protected"/>
+                        <svg
+                          width="32"
+                          height="32"
+                          viewBox="0 0 32 32"
+                          aria-hidden="true"
+                        >
+                          <rect
+                            class="tsd-checkbox-background"
+                            width="30"
+                            height="30"
+                            x="1"
+                            y="1"
+                            rx="6"
+                            fill="none"
+                          ></rect>
+                          <path
+                            class="tsd-checkbox-checkmark"
+                            d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25"
+                            stroke="none"
+                            stroke-width="3.5"
+                            stroke-linejoin="round"
+                            fill="none"
+                          ></path>
+                        </svg
+                        >
+                        <span>Protected</span></label
+                      >
+                    </li>
+                    <li class="tsd-filter-item">
+                      <label class="tsd-filter-input"
+                      ><input
+                        type="checkbox"
+                        id="tsd-filter-inherited"
+                        name="inherited"
+                        checked
+                      />
+                        <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                          <rect
+                            class="tsd-checkbox-background"
+                            width="30"
+                            height="30"
+                            x="1"
+                            y="1"
+                            rx="6"
+                            fill="none"
+                          ></rect>
+                          <path
+                            class="tsd-checkbox-checkmark"
+                            d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25"
+                            stroke="none"
+                            stroke-width="3.5"
+                            stroke-linejoin="round"
+                            fill="none"
+                          ></path>
+                        </svg
+                        >
+                        <span>Inherited</span></label
+                      >
+                    </li>
+                    <li class="tsd-filter-item">
+                      <label class="tsd-filter-input"
+                      ><input type="checkbox" id="tsd-filter-external" name="external"/>
+                        <svg
+                          width="32"
+                          height="32"
+                          viewBox="0 0 32 32"
+                          aria-hidden="true"
+                        >
+                          <rect
+                            class="tsd-checkbox-background"
+                            width="30"
+                            height="30"
+                            x="1"
+                            y="1"
+                            rx="6"
+                            fill="none"
+                          ></rect>
+                          <path
+                            class="tsd-checkbox-checkmark"
+                            d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25"
+                            stroke="none"
+                            stroke-width="3.5"
+                            stroke-linejoin="round"
+                            fill="none"
+                          ></path>
+                        </svg
+                        >
+                        <span>External</span></label
+                      >
+                    </li>
+                  </ul>
                 </div>
+                <div class="tsd-theme-toggle">
+                  <label class="settings-label" for="tsd-theme">Theme</label
+                  ><select id="tsd-theme">
+                  <option value="os">OS</option>
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                </select>
+                </div>
+              </div>
             </details>
+          </div>
+          <details open class="tsd-accordion tsd-page-navigation">
+            <summary class="tsd-accordion-summary">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <use href="assets/icons.svg#icon-chevronDown"></use>
+              </svg>
+              <h3>On This Page</h3>
+            </summary>
+            <div class="tsd-accordion-details">
+              <a href="#werewolf-helper-dashboard"
+              ><span>Werewolf <wbr/>Helper <wbr/>Dashboard</span></a
+              >
+              <ul>
+                <li>
+                  <a href="#prerequisites"><span>Prerequisites</span></a>
+                </li>
+                <li>
+                  <a href="#installation"><span>Installation</span></a>
+                </li>
+                <li>
+                  <a href="#development"><span>Development</span></a>
+                </li>
+                <li>
+                  <a href="#production-build"
+                  ><span>Production <wbr/>Build</span></a
+                  >
+                </li>
+                <li>
+                  <ul>
+                    <li>
+                      <a href="#preview-production-build"
+                      ><span>Preview <wbr/>Production <wbr/>Build</span></a
+                      >
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <a href="#discord-oauth-configuration"
+                  ><span>Discord <wbr/>O<wbr/>Auth <wbr/>Configuration</span></a
+                  >
+                </li>
+                <li>
+                  <a href="#integration"><span>Integration</span></a>
+                </li>
+              </ul>
+            </div>
+          </details>
         </div>
         <div class="site-menu">
-            <nav class="tsd-navigation"><a href="modules.html">werewolf-helper-dashboard</a>
-                <ul class="tsd-small-nested-navigation" id="tsd-nav-container">
-                    <li>Loading...</li>
-                </ul>
-            </nav>
+          <nav class="tsd-navigation">
+            <a href="modules.html">werewolf-helper-dashboard</a>
+            <ul class="tsd-small-nested-navigation" id="tsd-nav-container">
+              <li>Loading...</li>
+            </ul>
+          </nav>
         </div>
-    </div>
+  </div>
 </div>
-<footer><p class="tsd-generator">Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></footer>
+<footer>
+  <p class="tsd-generator">
+    Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a>
+  </p>
+</footer>
 <div class="overlay"></div>
 </body>
 </html>

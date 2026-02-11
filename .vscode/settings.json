@@ -1,13 +1,24 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive",
-    "chat.tools.terminal.autoApprove": {
-      ".\\gradlew": true,
-      "gradlew": true,
-      "failed": true,
-      "passed": true,
-      "Tee-Object": true,
-      "yarn build": true,
-      "Select": true,
-      "type": true
-    }
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "chat.tools.terminal.autoApprove": {
+    ".\\gradlew": true,
+    "gradlew": true,
+    "failed": true,
+    "passed": true,
+    "Tee-Object": true,
+    "yarn build": true,
+    "Select": true,
+    "type": true
+  },
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
 }

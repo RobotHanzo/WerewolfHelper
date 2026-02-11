@@ -76,6 +76,7 @@ data class WolfVote(
 )
 
 data class WolfMessage(
+  @get:Schema(type = "string")
     val senderUserId: Long,
     val content: String,
     val timestamp: Long = System.currentTimeMillis()

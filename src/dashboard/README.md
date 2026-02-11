@@ -2,8 +2,8 @@
 
 This is the admin dashboard frontend for the Werewolf Discord Bot. It allows admins to view the game state in real-time
 and execute commands.
-*Made by vibe-coding using Google Antigravity, I take no credit for the design, and no responsibility for any issues
-that may arise.*
+_Made by vibe-coding using Google Antigravity, I take no credit for the design, and no responsibility for any issues
+that may arise._
 
 ## Prerequisites
 
@@ -53,29 +53,29 @@ yarn preview
 The dashboard uses Discord OAuth2 for authentication. To set this up:
 
 1. **Create a Discord Application**:
-    - Go to the [Discord Developer Portal](https://discord.com/developers/applications)
-    - Click **New Application** and give it a name
-    - Navigate to the **OAuth2** section
+  - Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+  - Click **New Application** and give it a name
+  - Navigate to the **OAuth2** section
 
 2. **Configure Redirect URIs**:
-    - Add your redirect URI (e.g., `http://localhost:5173/auth/callback` for local development)
-    - For production, use your deployed dashboard URL (e.g., `https://yourdomain.com/auth/callback`)
+  - Add your redirect URI (e.g., `http://localhost:5173/auth/callback` for local development)
+  - For production, use your deployed dashboard URL (e.g., `https://yourdomain.com/auth/callback`)
 
 3. **Get Your Credentials**:
-    - Copy your **Client ID** from the General Information page
-    - Generate a **Client Secret** from the OAuth2 page
+  - Copy your **Client ID** from the General Information page
+  - Generate a **Client Secret** from the OAuth2 page
 
 4. **Set Environment Variables**:
-    - The backend requires the following environment variables:
-      ```bash
-      DISCORD_CLIENT_ID=your_client_id_here
-      DISCORD_CLIENT_SECRET=your_client_secret_here
-      DISCORD_REDIRECT_URI=http://localhost:5173/auth/callback
-      DASHBOARD_URL=http://localhost:5173
-      ```
+  - The backend requires the following environment variables:
+    ```bash
+    DISCORD_CLIENT_ID=your_client_id_here
+    DISCORD_CLIENT_SECRET=your_client_secret_here
+    DISCORD_REDIRECT_URI=http://localhost:5173/auth/callback
+    DASHBOARD_URL=http://localhost:5173
+    ```
 
 5. **Bot Permissions**:
-    - The OAuth2 application needs the following scopes: `identify`, `guilds`, `guilds.members.read`
+  - The OAuth2 application needs the following scopes: `identify`, `guilds`, `guilds.members.read`
 
 ## Integration
 
