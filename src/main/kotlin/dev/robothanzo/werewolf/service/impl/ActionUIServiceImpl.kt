@@ -117,7 +117,17 @@ class ActionUIServiceImpl(
 
             val selectMenu = StringSelectMenu.create("group_target_$actionId")
                 .setPlaceholder("選擇擊殺目標")
-            targetPlayers.forEach {
+
+            val actionDefId = ActionDefinitionId.fromString(actionId)
+            val actionDef = actionDefId?.let { roleRegistry.getAction(it) }
+            val eligibleTargetIds = if (actionDef != null) {
+                val allAliveIds = targetPlayers.map { it.id }
+                actionDef.eligibleTargets(session, participants.firstOrNull() ?: 0, allAliveIds)
+            } else {
+                targetPlayers.map { it.id }
+            }
+
+            targetPlayers.filter { it.id in eligibleTargetIds }.forEach {
                 selectMenu.addOption(it.nickname, it.id.toString())
             }
             selectMenu.addOption("跳過", SKIP_TARGET_ID.toString())
@@ -238,6 +248,20 @@ class ActionUIServiceImpl(
 
             val playerId = player.id
             if (playerId !in groupState.electorates) return@withLockedSession false
+
+            // Validate target eligibility
+            if (targetPlayerId != SKIP_TARGET_ID) {
+                val actionDefId = ActionDefinitionId.fromString(groupStateId)
+                val actionDef = actionDefId?.let { roleRegistry.getAction(it) }
+                if (actionDef != null) {
+                    val allAliveIds = lockedSession.alivePlayers().values.map { it.id }
+                    val eligible = actionDef.eligibleTargets(lockedSession, playerId, allAliveIds)
+                    if (targetPlayerId !in eligible) {
+                        log.warn("Player $playerId tried to vote for ineligible target $targetPlayerId in action $groupStateId")
+                        return@withLockedSession false
+                    }
+                }
+            }
 
             groupState.votes.removeIf { it.voterId == playerId }
             groupState.votes.add(WolfVote(voterId = playerId, targetId = targetPlayerId))

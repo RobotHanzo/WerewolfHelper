@@ -69,7 +69,13 @@ class DeathAnnouncementStep(
             if (allDeaths.isNotEmpty()) {
                 val deathList = allDeaths.joinToString("、") { userId ->
                     val player = lockedSession.getPlayer(userId)
-                    player?.nickname ?: "玩家 $userId"
+                    val nickname = player?.nickname ?: "玩家 $userId"
+                    if (!lockedSession.settings.hiddenRoleOnDeath) {
+                        val role = player?.deadRoles?.lastOrNull() ?: "未知角色"
+                        "$nickname ($role)"
+                    } else {
+                        nickname
+                    }
                 }
 
                 lockedSession.addLog(LogType.SYSTEM, "昨晚 $deathList 死亡")

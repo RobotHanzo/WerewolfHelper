@@ -181,7 +181,8 @@ data class Player(
                 )
             }
 
-            session.courtTextChannel?.sendMessage("**:skull: " + member.asMention + " 已死亡**")?.queue()
+            val roleMention = if (!session.settings.hiddenRoleOnDeath) " ($killedRole)" else ""
+            session.courtTextChannel?.sendMessage("**:skull: " + member.asMention + " 已死亡$roleMention**")?.queue()
         }
 
         val result = session.hasEnded(killedRole)

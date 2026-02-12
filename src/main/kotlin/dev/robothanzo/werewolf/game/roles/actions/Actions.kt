@@ -27,6 +27,36 @@ class WerewolfKillAction : BaseRoleAction(
         accumulatedState.deaths.getOrPut(DeathCause.WEREWOLF) { mutableListOf() }.add(targetId)
         return accumulatedState
     }
+
+    override fun eligibleTargets(
+        session: Session,
+        actor: Int,
+        alivePlayers: List<Int>,
+        accumulatedState: ActionExecutionResult
+    ): List<Int> {
+        val targets = super.eligibleTargets(session, actor, alivePlayers, accumulatedState)
+        if (session.settings.allowWolfSelfKill) return targets
+
+        return targets.filter { targetId ->
+            val targetPlayer = session.getPlayer(targetId)
+            targetPlayer?.wolf == false
+        }
+    }
+
+    override fun validate(session: Session, actor: Int, targets: List<Int>): String? {
+        val baseError = super.validate(session, actor, targets)
+        if (baseError != null) return baseError
+
+        if (!session.settings.allowWolfSelfKill) {
+            for (targetId in targets) {
+                val targetPlayer = session.getPlayer(targetId)
+                if (targetPlayer?.wolf == true) {
+                    return "不允許狼人自殺"
+                }
+            }
+        }
+        return null
+    }
 }
 
 @Component
