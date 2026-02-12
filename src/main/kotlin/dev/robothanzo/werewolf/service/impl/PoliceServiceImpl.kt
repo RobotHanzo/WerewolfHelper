@@ -103,6 +103,15 @@ class PoliceServiceImpl(
                 "${player.nickname} 已參選警長", metadata
             )
 
+            // Record for replay
+            session.stateData.policeEnrollmentHistory.add(
+                dev.robothanzo.werewolf.game.model.PoliceEnrollmentRecord(
+                    playerId = player.id,
+                    type = dev.robothanzo.werewolf.database.documents.ReplayEventType.POLICE_ENROLL,
+                    stage = dev.robothanzo.werewolf.database.documents.PoliceActionStage.ENROLLMENT
+                )
+            )
+
             gameSessionService.broadcastSessionUpdate(session)
             return
         }
@@ -129,6 +138,16 @@ class PoliceServiceImpl(
             )
 
             gameSessionService.broadcastSessionUpdate(session)
+
+            // Record for replay
+            session.stateData.policeEnrollmentHistory.add(
+                dev.robothanzo.werewolf.game.model.PoliceEnrollmentRecord(
+                    playerId = candidate.player.id,
+                    type = dev.robothanzo.werewolf.database.documents.ReplayEventType.POLICE_UNENROLLED,
+                    stage = dev.robothanzo.werewolf.database.documents.PoliceActionStage.ENROLLMENT
+                )
+            )
+
             return true
         } else if (policeSession.state.canQuit()) { // UNENROLLMENT or SPEECH -> Mark quit
             if (candidate.quit) return true // Already quit
@@ -160,6 +179,16 @@ class PoliceServiceImpl(
             }
 
             gameSessionService.broadcastSessionUpdate(session)
+
+            // Record for replay
+            session.stateData.policeEnrollmentHistory.add(
+                dev.robothanzo.werewolf.game.model.PoliceEnrollmentRecord(
+                    playerId = candidate.player.id,
+                    type = dev.robothanzo.werewolf.database.documents.ReplayEventType.POLICE_UNENROLLED,
+                    stage = if (policeSession.state == PoliceSession.State.SPEECH) dev.robothanzo.werewolf.database.documents.PoliceActionStage.SPEECH else dev.robothanzo.werewolf.database.documents.PoliceActionStage.UNENROLLMENT
+                )
+            )
+
             return true
         }
         return false
@@ -568,6 +597,17 @@ class PoliceServiceImpl(
                         senderPlayer.updateNickname()
 
                         log.info("Transferred police to {} in guild {}", session.recipientId, guild.idLong)
+
+                        // Record for replay
+                        guildSession.stateData.policeTransferHistory.add(
+                            dev.robothanzo.werewolf.game.model.PoliceTransferRecord(
+                                day = guildSession.day,
+                                fromPlayerId = session.senderId,
+                                toPlayerId = session.recipientId!!,
+                                timestamp = System.currentTimeMillis()
+                            )
+                        )
+
                         transferSessions.remove(guild.idLong)
 
                         session.callback?.invoke()

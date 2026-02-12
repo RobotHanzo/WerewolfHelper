@@ -196,6 +196,9 @@ data class Player(
                     ?.queue()
             }
             lastWords = false
+
+            // Trigger Replay Generation
+            Replay.upsertFromSession(session, WerewolfApplication.replayRepository)
         }
 
         if (alive) {

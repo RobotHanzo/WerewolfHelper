@@ -55,6 +55,8 @@ data class Session(
     @JsonIgnore
     @Schema(hidden = true)
     var _id: ObjectId? = null,
+    @Schema(description = "Unique identifier for this session for replay indexing")
+    var sessionId: String = UUID.randomUUID().toString(),
     @Version
     @JsonIgnore
     var version: Long? = null,
@@ -77,7 +79,7 @@ data class Session(
     var day: Int = 0,
 
     // Game Settings
-    var settings: GameSettings = GameSettings()
+    var settings: GameSettings = GameSettings(),
 ) : Persistable<ObjectId>, Serializable {
     @Transient
     var hydratedRoles: MutableMap<String, GameRole> = HashMap()

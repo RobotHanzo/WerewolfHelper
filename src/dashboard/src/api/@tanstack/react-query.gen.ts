@@ -9,8 +9,10 @@ import {
   assignRoles,
   callback,
   confirmSpeech,
+  deleteReplay,
   getAllSessions,
   getMembers,
+  getReplay,
   getSession,
   getUser,
   interruptSpeech,
@@ -53,12 +55,18 @@ import type {
   CallbackData,
   ConfirmSpeechData,
   ConfirmSpeechResponse,
+  DeleteReplayData,
+  DeleteReplayError,
+  DeleteReplayResponse,
   GetAllSessionsData,
   GetAllSessionsError,
   GetAllSessionsResponse,
   GetMembersData,
   GetMembersError,
   GetMembersResponse,
+  GetReplayData,
+  GetReplayError,
+  GetReplayResponse,
   GetSessionData,
   GetSessionError,
   GetSessionResponse,
@@ -1047,6 +1055,58 @@ export const getMembersOptions = (options: Options<GetMembersData>) =>
       return data;
     },
     queryKey: getMembersQueryKey(options),
+  });
+
+/**
+ * Delete replay (Judges only)
+ */
+export const deleteReplayMutation = (
+  options?: Partial<Options<DeleteReplayData>>
+): UseMutationOptions<
+  DeleteReplayResponse,
+  AxiosError<DeleteReplayError>,
+  Options<DeleteReplayData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    DeleteReplayResponse,
+    AxiosError<DeleteReplayError>,
+    Options<DeleteReplayData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await deleteReplay({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+export const getReplayQueryKey = (options: Options<GetReplayData>) =>
+  createQueryKey('getReplay', options);
+
+/**
+ * Get replay by session ID
+ */
+export const getReplayOptions = (options: Options<GetReplayData>) =>
+  queryOptions<
+    GetReplayResponse,
+    AxiosError<GetReplayError>,
+    GetReplayResponse,
+    ReturnType<typeof getReplayQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await getReplay({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: getReplayQueryKey(options),
   });
 
 export const meQueryKey = (options?: Options<MeData>) => createQueryKey('me', options);

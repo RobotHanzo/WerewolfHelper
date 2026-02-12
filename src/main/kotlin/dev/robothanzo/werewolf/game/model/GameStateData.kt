@@ -95,6 +95,25 @@ data class ExpelStatus(
     val candidates: List<ExpelCandidateDto>
 )
 
+data class HistoricalPollRecord(
+    val day: Int,
+    val title: String,
+    val votes: Map<Int, List<Long>> // TargetPlayerID -> List of Voter User IDs
+)
+
+data class PoliceEnrollmentRecord(
+    val playerId: Int,
+    val type: dev.robothanzo.werewolf.database.documents.ReplayEventType,
+    val stage: dev.robothanzo.werewolf.database.documents.PoliceActionStage
+)
+
+data class PoliceTransferRecord(
+    val day: Int,
+    val fromPlayerId: Int,
+    val toPlayerId: Int,
+    val timestamp: Long
+)
+
 /**
  * Structured game state data to replace the generic stateData map.
  */
@@ -105,7 +124,6 @@ data class GameStateData(
     // RoleDefinition shall have defined them, copy them here to track the usage and process when extra action are granted
     @Schema(example = "{\"1\": {\"WEREWOLF_KILL\": 1}}")
     var playerOwnedActions: MutableMap<Int, MutableMap<String, Int>> = mutableMapOf(), // playerId -> (actionId -> usesLeft)
-
 
     @Schema(description = "List of actions submitted in the current phase but not yet executed")
     var submittedActions: MutableList<RoleActionInstance> = mutableListOf(), // Actions yet to be processed, executed at death announcement
@@ -124,6 +142,15 @@ data class GameStateData(
     var wolfBrotherAwakenedPlayerId: Int? = null,
     @Schema(description = "Start time of the current game step")
     var stepStartTime: Long = 0,
+
+    @Schema(description = "History of polls in this session")
+    var historicalPolls: MutableList<HistoricalPollRecord> = mutableListOf(),
+
+    @Schema(description = "History of police enrollment/unenrollment in this session")
+    var policeEnrollmentHistory: MutableList<PoliceEnrollmentRecord> = mutableListOf(),
+
+    @Schema(description = "History of police badge transfers in this session")
+    var policeTransferHistory: MutableList<PoliceTransferRecord> = mutableListOf(),
 ) {
     // --- Transient fields for UI state synchronization ---
     @Transient

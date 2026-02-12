@@ -114,10 +114,10 @@ export type AuthSession = {
   guildId?: string;
   role?: 'JUDGE' | 'SPECTATOR' | 'PENDING' | 'BLOCKED';
   createdAt?: string;
+  isPending: boolean;
   isJudge: boolean;
   isPrivileged: boolean;
   isSpectator: boolean;
-  isPending: boolean;
   isBlocked: boolean;
 };
 
@@ -195,10 +195,30 @@ export type GameStateData = {
    * Start time of the current game step
    */
   stepStartTime: number;
+  /**
+   * History of polls in this session
+   */
+  historicalPolls: Array<HistoricalPollRecord>;
+  /**
+   * History of police enrollment/unenrollment in this session
+   */
+  policeEnrollmentHistory: Array<PoliceEnrollmentRecord>;
+  /**
+   * History of police badge transfers in this session
+   */
+  policeTransferHistory: Array<PoliceTransferRecord>;
   deadPlayers: Array<number>;
   lastGuardProtectedId?: number;
   nightWolfKillTargetId?: number;
   wolfBrotherDiedDay?: number;
+};
+
+export type HistoricalPollRecord = {
+  day: number;
+  title: string;
+  votes: {
+    [key: string]: Array<number>;
+  };
 };
 
 export type LogEntry = {
@@ -271,6 +291,26 @@ export type Player = {
   nickname: string;
 };
 
+export type PoliceEnrollmentRecord = {
+  playerId: number;
+  type:
+    | 'DISCUSSION_START'
+    | 'DISCUSSION_END'
+    | 'POLL_START'
+    | 'POLL_END'
+    | 'POLICE_ENROLL'
+    | 'POLICE_UNENROLLED'
+    | 'POLICE_TRANSFER';
+  stage: 'ENROLLMENT' | 'SPEECH' | 'UNENROLLMENT';
+};
+
+export type PoliceTransferRecord = {
+  day: number;
+  fromPlayerId: number;
+  toPlayerId: number;
+  timestamp: number;
+};
+
 export type Role = {
   actions: Array<RoleAction>;
   roleName: string;
@@ -299,10 +339,10 @@ export type RoleAction = {
     | 'DEATH_RESOLUTION'
     | 'DEATH';
   timing: 'NIGHT' | 'DAY' | 'ANYTIME' | 'DEATH_TRIGGER';
-  requiresAliveTarget: boolean;
-  allowMultiplePerPhase: boolean;
-  targetCount: number;
   usageLimit: number;
+  requiresAliveTarget: boolean;
+  targetCount: number;
+  allowMultiplePerPhase: boolean;
   actionName: string;
 };
 
@@ -334,6 +374,10 @@ export type RoleActionInstance = {
 };
 
 export type Session = {
+  /**
+   * Unique identifier for this session for replay indexing
+   */
+  sessionId: string;
   guildId: string;
   discordIDs: DiscordIds;
   doubleIdentities: boolean;
@@ -397,6 +441,58 @@ export type GuildMembersResponse = {
   success: boolean;
   message?: string;
   error?: string;
+};
+
+/**
+ * Structured game replay data
+ */
+export type Replay = {
+    id?: ObjectId;
+    sessionId: string;
+    startTime: number;
+    endTime: number;
+    settings: GameSettings;
+    players: {
+        [key: string]: ReplayPlayer;
+    };
+    judgeList: Array<number>;
+    spectatorList: Array<number>;
+    timeline: {
+        [key: string]: ReplayDay;
+    };
+    logs: Array<LogEntry>;
+    result: 'NOT_ENDED' | 'VILLAGERS_DIED' | 'GODS_DIED' | 'WOLVES_DIED' | 'JIN_BAO_BAO_DIED' | 'EQUAL_PLAYERS';
+};
+
+export type ReplayDay = {
+    day: number;
+    nightActions: Array<RoleActionInstance>;
+    nightEvents: Array<ReplayEvent>;
+    dayEvents: Array<ReplayEvent>;
+};
+
+export type ReplayEvent = {
+    type: 'DISCUSSION_START' | 'DISCUSSION_END' | 'POLL_START' | 'POLL_END' | 'POLICE_ENROLL' | 'POLICE_UNENROLLED' | 'POLICE_TRANSFER';
+    details: {
+        [key: string]: unknown;
+    };
+};
+
+export type ReplayPlayer = {
+    id: number;
+    userId: number;
+    username: string;
+    avatarUrl: string;
+    initialRoles: Array<string>;
+    deathDay?: number;
+    deathCause?: 'WEREWOLF' | 'POISON' | 'HUNTER_REVENGE' | 'WOLF_KING_REVENGE' | 'DOUBLE_PROTECTION' | 'EXPEL' | 'TRADED_WITH_WOLF' | 'UNKNOWN';
+};
+
+export type ReplayResponse = {
+    data: Replay;
+    success: boolean;
+    message?: string;
+    error?: string;
 };
 
 export type UpdateSettingsData = {
@@ -1303,6 +1399,76 @@ export type GetMembersResponses = {
 };
 
 export type GetMembersResponse = GetMembersResponses[keyof GetMembersResponses];
+
+export type DeleteReplayData = {
+  body?: never;
+  path: {
+    sessionId: string;
+  };
+  query?: never;
+  url: '/api/replays/{sessionId}';
+};
+
+export type DeleteReplayErrors = {
+  /**
+   * Unauthorized
+   */
+  401: ApiResponse;
+  /**
+   * Access denied
+   */
+  403: ApiResponse;
+  /**
+   * Replay not found
+   */
+  404: ApiResponse;
+};
+
+export type DeleteReplayError = DeleteReplayErrors[keyof DeleteReplayErrors];
+
+export type DeleteReplayResponses = {
+  /**
+   * Replay deleted successfully
+   */
+  200: ApiResponse;
+};
+
+export type DeleteReplayResponse = DeleteReplayResponses[keyof DeleteReplayResponses];
+
+export type GetReplayData = {
+  body?: never;
+  path: {
+    sessionId: string;
+  };
+  query?: never;
+  url: '/api/replays/{sessionId}';
+};
+
+export type GetReplayErrors = {
+  /**
+   * Unauthorized
+   */
+  401: ApiResponse;
+  /**
+   * Access denied
+   */
+  403: ApiResponse;
+  /**
+   * Replay not found
+   */
+  404: ApiResponse;
+};
+
+export type GetReplayError = GetReplayErrors[keyof GetReplayErrors];
+
+export type GetReplayResponses = {
+  /**
+   * Replay found
+   */
+  200: ReplayResponse;
+};
+
+export type GetReplayResponse = GetReplayResponses[keyof GetReplayResponses];
 
 export type MeData = {
   body?: never;

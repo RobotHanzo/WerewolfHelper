@@ -1,8 +1,9 @@
 package dev.robothanzo.werewolf.controller.dto
 
-import dev.robothanzo.werewolf.database.documents.AuthSession
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
+import dev.robothanzo.werewolf.database.documents.AuthSession
+import dev.robothanzo.werewolf.database.documents.Replay
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.GameStateData
 import io.swagger.v3.oas.annotations.media.Schema
@@ -31,6 +32,10 @@ open class ApiResponse(
 
 data class SessionResponse(
     val data: Session
+) : ApiResponse(true, null, null)
+
+data class ReplayResponse(
+    val data: Replay
 ) : ApiResponse(true, null, null)
 
 data class SessionSummary(

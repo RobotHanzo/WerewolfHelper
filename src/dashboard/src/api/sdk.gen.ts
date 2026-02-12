@@ -13,12 +13,18 @@ import type {
   CallbackResponses,
   ConfirmSpeechData,
   ConfirmSpeechResponses,
+  DeleteReplayData,
+  DeleteReplayErrors,
+  DeleteReplayResponses,
   GetAllSessionsData,
   GetAllSessionsErrors,
   GetAllSessionsResponses,
   GetMembersData,
   GetMembersErrors,
   GetMembersResponses,
+  GetReplayData,
+  GetReplayErrors,
+  GetReplayResponses,
   GetSessionData,
   GetSessionErrors,
   GetSessionResponses,
@@ -570,6 +576,28 @@ export const getMembers = <ThrowOnError extends boolean = false>(
 ) =>
   (options.client ?? client).get<GetMembersResponses, GetMembersErrors, ThrowOnError>({
     url: '/api/sessions/{guildId}/members',
+    ...options,
+  });
+
+/**
+ * Delete replay (Judges only)
+ */
+export const deleteReplay = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteReplayData, ThrowOnError>
+) =>
+  (options.client ?? client).delete<DeleteReplayResponses, DeleteReplayErrors, ThrowOnError>({
+    url: '/api/replays/{sessionId}',
+    ...options,
+  });
+
+/**
+ * Get replay by session ID
+ */
+export const getReplay = <ThrowOnError extends boolean = false>(
+  options: Options<GetReplayData, ThrowOnError>
+) =>
+  (options.client ?? client).get<GetReplayResponses, GetReplayErrors, ThrowOnError>({
+    url: '/api/replays/{sessionId}',
     ...options,
   });
 

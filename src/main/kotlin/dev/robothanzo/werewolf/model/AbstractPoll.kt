@@ -75,6 +75,14 @@ abstract class AbstractPoll(
                 return@withLockedSession
             }
 
+            // Record poll results for replay
+            val pollRecord = dev.robothanzo.werewolf.game.model.HistoricalPollRecord(
+                day = lockedSession.day,
+                title = title,
+                votes = candidates.values.associate { it.player.id to it.electors.toList() }
+            )
+            lockedSession.stateData.historicalPolls.add(pollRecord)
+
             // Allow subclass to populate a description or other fields before sending
             val resultEmbed = buildResultEmbed(title)
             onPrepareResultEmbed(winners, resultEmbed)
