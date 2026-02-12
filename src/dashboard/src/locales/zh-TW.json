@@ -497,5 +497,59 @@
       "ROLE_ACTIONS": "角色行動",
       "WOLF_YOUNGER_BROTHER_ACTION": "狼弟行動"
     }
+  },
+  "replays": {
+    "selection": {
+      "welcome": "歡迎回來，{username}",
+      "subtitle": "選擇您今天要執行的操作：管理進行中的遊戲，或回顧過往的遊戲。",
+      "liveSession": "即時對戰面版",
+      "liveSessionDesc": "管理或旁觀進行中的遊戲。",
+      "replayLibrary": "對局錄影庫",
+      "replayLibraryDesc": "觀看已完成對局的逐步重構與回放。",
+      "logout": "登出帳號"
+    },
+    "list": {
+      "title": "回放庫",
+      "subtitle": "選擇一場對局進行觀看",
+      "loading": "正在掃描編年史...",
+      "error": "載入回放失敗。",
+      "emptyTitle": "查無紀錄",
+      "emptyDesc": "您尚未參與過任何完整的對局。",
+      "gameIdPrefix": "對局 #",
+      "durationSuffix": "分鐘",
+      "delete": "刪除回放",
+      "watch": "觀看回放"
+    },
+    "view": {
+      "loading": "正在重構現實...",
+      "error": "載入回放錯誤。",
+      "backToLibrary": "返回庫",
+      "titlePrefix": "回放：對局 #",
+      "durationLabel": "遊戲時長",
+      "timelineStart": "開始",
+      "timelineEnd": "結束",
+      "shareClip": "分享片段",
+      "critical": "重點",
+      "nightPhaseLabel": "夜晚行動階段",
+      "dayPhaseLabel": "討論與事件",
+      "gameStart": "遊戲開始",
+      "events": {
+        "pollEnd": "投票「{title}」已結案。",
+        "policeTransfer": "警徽已從 {from} 移交給 {to}。"
+      },
+      "actions": {
+        "targeted": "執行者 {actor} 標記了 {target}。"
+      },
+      "emptyPhase": "此階段無重大事件記錄。",
+      "stepCounter": "步驟 {current} / {total}",
+      "viewFullLog": "查看完整日誌",
+      "boardStateLabel": "版面狀態：{title}",
+      "statusDead": "死亡",
+      "statusTargeted": "被標記",
+      "statusActive": "活躍",
+      "targetIndicator": "目標",
+      "statusAlive": "存活",
+      "deadAtDay": "已出局 (D{day})"
+    }
   }
 }

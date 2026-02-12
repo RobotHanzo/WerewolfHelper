@@ -13,6 +13,7 @@ import {
   getAllSessions,
   getMembers,
   getReplay,
+  getReplays,
   getSession,
   getUser,
   interruptSpeech,
@@ -67,6 +68,9 @@ import type {
   GetReplayData,
   GetReplayError,
   GetReplayResponse,
+  GetReplaysData,
+  GetReplaysError,
+  GetReplaysResponse,
   GetSessionData,
   GetSessionError,
   GetSessionResponse,
@@ -1055,6 +1059,31 @@ export const getMembersOptions = (options: Options<GetMembersData>) =>
       return data;
     },
     queryKey: getMembersQueryKey(options),
+  });
+
+export const getReplaysQueryKey = (options?: Options<GetReplaysData>) =>
+  createQueryKey('getReplays', options);
+
+/**
+ * List replays for current user
+ */
+export const getReplaysOptions = (options?: Options<GetReplaysData>) =>
+  queryOptions<
+    GetReplaysResponse,
+    AxiosError<GetReplaysError>,
+    GetReplaysResponse,
+    ReturnType<typeof getReplaysQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await getReplays({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: getReplaysQueryKey(options),
   });
 
 /**

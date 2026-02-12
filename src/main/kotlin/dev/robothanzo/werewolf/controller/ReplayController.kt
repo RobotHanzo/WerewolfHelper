@@ -1,6 +1,7 @@
 package dev.robothanzo.werewolf.controller
 
 import dev.robothanzo.werewolf.controller.dto.ApiResponse
+import dev.robothanzo.werewolf.controller.dto.ReplayListResponse
 import dev.robothanzo.werewolf.controller.dto.ReplayResponse
 import dev.robothanzo.werewolf.database.ReplayRepository
 import dev.robothanzo.werewolf.utils.IdentityUtils
@@ -22,6 +23,32 @@ class ReplayController(
     private val replayRepository: ReplayRepository,
     private val identityUtils: IdentityUtils
 ) {
+    @GetMapping(path = [""])
+    @Operation(summary = "List replays for current user")
+    @ApiResponses(
+        value = [
+            SwaggerApiResponse(
+                responseCode = "200", description = "Replays retrieved",
+                content = [Content(schema = Schema(implementation = ReplayListResponse::class))]
+            ),
+            SwaggerApiResponse(responseCode = "401", description = "Unauthorized")
+        ]
+    )
+    fun getReplays(): ResponseEntity<ApiResponse> {
+        val user = identityUtils.getCurrentUser()
+            .orElseThrow { ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated") }
+        val userId = user.userId ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Discord ID not found")
+
+        // Find replays where user was a player, judge, or spectator
+        val replays = replayRepository.findAll().filter { replay ->
+            replay.players.values.any { it.userId.toString() == userId } ||
+                replay.judgeList.any { it.toString() == userId } ||
+                replay.spectatorList.any { it.toString() == userId }
+        }
+
+        return ResponseEntity.ok(ReplayListResponse(replays))
+    }
+
 
     @GetMapping("/{sessionId}")
     @Operation(summary = "Get replay by session ID")

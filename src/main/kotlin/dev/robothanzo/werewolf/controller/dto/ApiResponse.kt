@@ -38,6 +38,10 @@ data class ReplayResponse(
     val data: Replay
 ) : ApiResponse(true, null, null)
 
+data class ReplayListResponse(
+    val data: List<Replay>
+) : ApiResponse(true, null, null)
+
 data class SessionSummary(
     val guildId: String,
     val guildName: String,

@@ -25,6 +25,9 @@ import type {
   GetReplayData,
   GetReplayErrors,
   GetReplayResponses,
+  GetReplaysData,
+  GetReplaysErrors,
+  GetReplaysResponses,
   GetSessionData,
   GetSessionErrors,
   GetSessionResponses,
@@ -576,6 +579,17 @@ export const getMembers = <ThrowOnError extends boolean = false>(
 ) =>
   (options.client ?? client).get<GetMembersResponses, GetMembersErrors, ThrowOnError>({
     url: '/api/sessions/{guildId}/members',
+    ...options,
+  });
+
+/**
+ * List replays for current user
+ */
+export const getReplays = <ThrowOnError extends boolean = false>(
+  options?: Options<GetReplaysData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<GetReplaysResponses, GetReplaysErrors, ThrowOnError>({
+    url: '/api/replays',
     ...options,
   });
 
