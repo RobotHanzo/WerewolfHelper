@@ -320,10 +320,12 @@ export const PlayerManager = () => {
             filter={(p) => {
               if (!p.userId) return false;
               const isJudge = !!(
-                gameState?.judgeRoleId && p.roles.includes(gameState.judgeRoleId.toString())
+                gameState?.discordIDs.judgeRoleId &&
+                p.roles.includes(gameState.discordIDs.judgeRoleId.toString())
               );
               const isSpectator = !!(
-                gameState?.spectatorRoleId && p.roles.includes(gameState.spectatorRoleId.toString())
+                gameState?.discordIDs.spectatorRoleId &&
+                p.roles.includes(gameState.discordIDs.spectatorRoleId.toString())
               );
               const playerUserIds = new Set(
                 (gameState?.players ? Object.values(gameState.players) : []).map((pl) =>

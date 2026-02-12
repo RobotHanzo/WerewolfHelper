@@ -153,4 +153,4 @@ export const createClient = (config: Config = {}): Client => {
     },
     trace: makeMethodFn('TRACE'),
   } as Client;
-};;
+};

@@ -25,13 +25,26 @@ import java.util.*
 import dev.robothanzo.werewolf.game.model.Role as GameRole
 
 data class DiscordIDs(
-    var guildId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var courtTextChannelId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var courtVoiceChannelId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var spectatorTextChannelId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var judgeTextChannelId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var judgeRoleId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var spectatorRoleId: Long = 0,
+    @get:JsonSerialize(using = ToStringSerializer::class)
+    @get:Schema(type = "string")
     var owner: Long = 0,
 )
 
@@ -49,27 +62,7 @@ data class Session(
     @get:Schema(type = "string")
     @Indexed(unique = true)
     var guildId: Long = 0,
-    @get:JsonSerialize(using = ToStringSerializer::class)
-    @get:Schema(type = "string")
-    var courtTextChannelId: Long = 0,
-    @get:JsonSerialize(using = ToStringSerializer::class)
-    @get:Schema(type = "string")
-    var courtVoiceChannelId: Long = 0,
-    @get:JsonSerialize(using = ToStringSerializer::class)
-    @get:Schema(type = "string")
-    var spectatorTextChannelId: Long = 0,
-    @get:JsonSerialize(using = ToStringSerializer::class)
-    @get:Schema(type = "string")
-    var judgeTextChannelId: Long = 0,
-    @get:JsonSerialize(using = ToStringSerializer::class)
-    @get:Schema(type = "string")
-    var judgeRoleId: Long = 0,
-    @get:JsonSerialize(using = ToStringSerializer::class)
-    @get:Schema(type = "string")
-    var spectatorRoleId: Long = 0,
-    @get:JsonSerialize(using = ToStringSerializer::class)
-    @get:Schema(type = "string")
-    var owner: Long = 0,
+    val discordIDs: DiscordIDs = DiscordIDs(),
     var doubleIdentities: Boolean = false,
     var hasAssignedRoles: Boolean = false,
     var muteAfterSpeech: Boolean = true,
@@ -98,27 +91,27 @@ data class Session(
 
     @get:JsonIgnore
     val spectatorRole: Role?
-        get() = guild?.getRoleById(spectatorRoleId)
+        get() = guild?.getRoleById(discordIDs.spectatorRoleId)
 
     @get:JsonIgnore
     val judgeRole: Role?
-        get() = guild?.getRoleById(judgeRoleId)
+        get() = guild?.getRoleById(discordIDs.judgeRoleId)
 
     @get:JsonIgnore
     val courtTextChannel: TextChannel?
-        get() = guild?.getTextChannelById(courtTextChannelId)
+        get() = guild?.getTextChannelById(discordIDs.courtTextChannelId)
 
     @get:JsonIgnore
     val courtVoiceChannel: VoiceChannel?
-        get() = guild?.getVoiceChannelById(courtVoiceChannelId)
+        get() = guild?.getVoiceChannelById(discordIDs.courtVoiceChannelId)
 
     @get:JsonIgnore
     val spectatorTextChannel: TextChannel?
-        get() = guild?.getTextChannelById(spectatorTextChannelId)
+        get() = guild?.getTextChannelById(discordIDs.spectatorTextChannelId)
 
     @get:JsonIgnore
     val judgeTextChannel: TextChannel?
-        get() = guild?.getTextChannelById(judgeTextChannelId)
+        get() = guild?.getTextChannelById(discordIDs.judgeTextChannelId)
 
     /**
      * Populate player.session references after loading from database
@@ -135,7 +128,7 @@ data class Session(
     fun hydrateRoles(roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry) {
         hydratedRoles.clear()
         for (player in players.values) {
-            player.roles?.forEach { roleName ->
+            player.roles.forEach { roleName ->
                 if (!hydratedRoles.containsKey(roleName)) {
                     roleRegistry.getRole(roleName)?.let {
                         hydratedRoles[roleName] = it

@@ -62,6 +62,7 @@ export type {
   ConfirmSpeechData,
   ConfirmSpeechResponse,
   ConfirmSpeechResponses,
+  DiscordIds,
   GameSettings,
   GameStateData,
   GetAllSessionsData,

@@ -114,8 +114,8 @@ export type AuthSession = {
   guildId?: string;
   role?: 'JUDGE' | 'SPECTATOR' | 'PENDING' | 'BLOCKED';
   createdAt?: string;
-  isPrivileged: boolean;
   isJudge: boolean;
+  isPrivileged: boolean;
   isSpectator: boolean;
   isPending: boolean;
   isBlocked: boolean;
@@ -146,6 +146,16 @@ export type SessionSummaryResponse = {
   success: boolean;
   message?: string;
   error?: string;
+};
+
+export type DiscordIds = {
+  courtTextChannelId: string;
+  courtVoiceChannelId: string;
+  spectatorTextChannelId: string;
+  judgeTextChannelId: string;
+  judgeRoleId: string;
+  spectatorRoleId: string;
+  owner: string;
 };
 
 export type GameSettings = {
@@ -181,6 +191,10 @@ export type GameStateData = {
    * Player ID of the Wolf Younger Brother if he is awakened this night
    */
   wolfBrotherAwakenedPlayerId?: number;
+  /**
+   * Start time of the current game step
+   */
+  stepStartTime: number;
   deadPlayers: Array<number>;
   lastGuardProtectedId?: number;
   nightWolfKillTargetId?: number;
@@ -252,9 +266,9 @@ export type Player = {
   userId?: string;
   roles: Array<string>;
   deadRoles: Array<string>;
-  nickname: string;
   wolf: boolean;
   alive: boolean;
+  nickname: string;
 };
 
 export type Role = {
@@ -284,12 +298,12 @@ export type RoleAction = {
     | 'MERCHANT_GUN'
     | 'DEATH_RESOLUTION'
     | 'DEATH';
-  targetCount: number;
-  requiresAliveTarget: boolean;
-  actionName: string;
-  usageLimit: number;
-  allowMultiplePerPhase: boolean;
   timing: 'NIGHT' | 'DAY' | 'ANYTIME' | 'DEATH_TRIGGER';
+  requiresAliveTarget: boolean;
+  allowMultiplePerPhase: boolean;
+  targetCount: number;
+  usageLimit: number;
+  actionName: string;
 };
 
 export type RoleActionInstance = {
@@ -315,18 +329,13 @@ export type RoleActionInstance = {
   targets: Array<number>;
   submittedBy: 'PLAYER' | 'JUDGE' | 'SYSTEM';
   status: 'PENDING' | 'ACTING' | 'SUBMITTED' | 'SKIPPED' | 'PROCESSED';
+  actionPromptId?: number;
   targetPromptId?: number;
 };
 
 export type Session = {
   guildId: string;
-  courtTextChannelId: string;
-  courtVoiceChannelId: string;
-  spectatorTextChannelId: string;
-  judgeTextChannelId: string;
-  judgeRoleId: string;
-  spectatorRoleId: string;
-  owner: string;
+  discordIDs: DiscordIds;
   doubleIdentities: boolean;
   hasAssignedRoles: boolean;
   muteAfterSpeech: boolean;
@@ -369,7 +378,9 @@ export type WolvesActionState = {
   actionId: string;
   electorates: Array<number>;
   votes: Array<WolfVote>;
-  messageId?: number;
+  promptMessageIds: {
+    [key: string]: number;
+  };
   finished: boolean;
 };
 

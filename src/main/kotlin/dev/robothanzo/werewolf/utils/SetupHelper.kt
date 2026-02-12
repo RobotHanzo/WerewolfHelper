@@ -39,7 +39,7 @@ object SetupHelper {
             hoisted = true,
             permissions = listOf(Permission.ADMINISTRATOR)
         ).queue({ judgeRole ->
-            session.judgeRoleId = judgeRole.idLong
+            session.discordIDs.judgeRoleId = judgeRole.idLong
 
             // 2. Create Player Roles and Channels
             createPlayerRolesAndChannels(session, config.players).thenAccept { players ->
@@ -51,7 +51,7 @@ object SetupHelper {
                     color = Color(0x654321),
                     permissions = listOf(Permission.VIEW_CHANNEL)
                 ).queue({ deadRole ->
-                    session.spectatorRoleId = deadRole.idLong
+                    session.discordIDs.spectatorRoleId = deadRole.idLong
                     applySpectatorOverrides(guild, players, deadRole)
 
                     // 4. Create remaining core channels
@@ -128,7 +128,7 @@ object SetupHelper {
     private fun createSession(guild: Guild, config: Server.PendingSetup): Session {
         val session = WerewolfApplication.gameSessionService.createSession(guild.idLong)
         session.doubleIdentities = config.doubleIdentity
-        session.owner = guild.ownerIdLong
+        session.discordIDs.owner = guild.ownerIdLong
 
         val roles = if (config.doubleIdentity) {
             listOf(
@@ -202,7 +202,7 @@ object SetupHelper {
                 ))
             )
         ).queue({ courtText ->
-            session.courtTextChannelId = courtText.idLong
+            session.discordIDs.courtTextChannelId = courtText.idLong
 
             // Court Voice
             guild.createVoiceChannel(
@@ -212,7 +212,7 @@ object SetupHelper {
                     deadRole to (listOf(Permission.VIEW_CHANNEL) to listOf(Permission.VOICE_SPEAK))
                 )
             ).queue({ courtVoice ->
-                session.courtVoiceChannelId = courtVoice.idLong
+                session.discordIDs.courtVoiceChannelId = courtVoice.idLong
 
                 // Spectator Text
                 guild.createTextChannel(
@@ -225,7 +225,7 @@ object SetupHelper {
                         ))
                     )
                 ).queue({ specText ->
-                    session.spectatorTextChannelId = specText.idLong
+                    session.discordIDs.spectatorTextChannelId = specText.idLong
 
                     // Spectator Voice
                     guild.createVoiceChannel(
@@ -246,7 +246,7 @@ object SetupHelper {
                                 ))
                             )
                         ).queue({ judgeText ->
-                            session.judgeTextChannelId = judgeText.idLong
+                            session.discordIDs.judgeTextChannelId = judgeText.idLong
                             future.complete(null)
                         }, { ex ->
                             log.error("Failed to create judge text channel in guild {}: {}", guild.id, ex.message)

@@ -12,7 +12,7 @@ class MemberJoinListener(
     override fun onGuildMemberJoin(event: GuildMemberJoinEvent) {
         val session = gameSessionService.getSession(event.guild.idLong).orElse(null)
         if (WerewolfApplication.SERVER_CREATORS.contains(event.member.idLong)) {
-            if (session != null && session.owner == event.user.idLong) {
+            if (session != null && session.discordIDs.owner == event.user.idLong) {
                 val judgeRole = session.judgeRole
                 if (judgeRole != null) {
                     event.guild.addRoleToMember(event.member, judgeRole).queue()
