@@ -145,10 +145,18 @@ fun Session.executeDeathTriggers(roleRegistry: RoleRegistry, roleActionExecutor:
         killedByTriggers.addAll(deaths)
     }
 
-    // Clear pending death trigger actions from submittedActions
+    // Clear pending death trigger actions from submittedActions and record to history
+    val currentDay = day
+    val history = stateData.executedActions.getOrPut(currentDay) { mutableListOf() }
+
     stateData.submittedActions.removeIf {
         val action = it.actionDefinitionId?.let { actionId -> roleRegistry.getAction(actionId) }
-        action?.timing == ActionTiming.DEATH_TRIGGER && it.status == ActionStatus.SUBMITTED
+        val isDeathTrigger = action?.timing == ActionTiming.DEATH_TRIGGER && it.status == ActionStatus.SUBMITTED
+        if (isDeathTrigger) {
+            it.status = ActionStatus.PROCESSED
+            history.add(it)
+        }
+        isDeathTrigger
     }
     // Caller is responsible for saving session
 
@@ -156,7 +164,7 @@ fun Session.executeDeathTriggers(roleRegistry: RoleRegistry, roleActionExecutor:
 }
 
 /**
- * Updates the action status in the session state. 
+ * Updates the action status in the session state.
  * Does NOT save session; caller must save.
  */
 fun Session.updateActionStatus(
@@ -168,9 +176,11 @@ fun Session.updateActionStatus(
     val actorPlayer = getPlayer(actorPlayerId) ?: return
     val actorRole = actorPlayer.roles.firstOrNull() ?: "未知"
 
-    // Find match by actor only (reuse any pending action to avoid duplicates)
-    val actionInstance = stateData.submittedActions.find {
-        it.actor == actorPlayerId && it.status != ActionStatus.SUBMITTED
+    // Find match by actor and actionId (if provided) or find the first non-submitted action
+    val actionInstance = if (actionId != null) {
+        stateData.submittedActions.find { it.actor == actorPlayerId && it.actionDefinitionId == actionId }
+    } else {
+        stateData.submittedActions.find { it.actor == actorPlayerId && it.status != ActionStatus.SUBMITTED }
     }
 
     if (actionInstance == null) {
@@ -239,7 +249,7 @@ fun Session.resolveNightActions(
         }
     }
 
-    if (actionsToProcess.isEmpty()) {
+    if (actionsToProcess.isEmpty() && stateData.submittedActions.none { it.status == ActionStatus.PROCESSED }) {
         log.warn("NightResolution: No actions to process!")
         return NightResolutionResult(emptyMap(), emptyList())
     }
@@ -260,11 +270,15 @@ fun Session.resolveNightActions(
     // Move processed actions to executedActions record
     val currentDay = day
     val history = stateData.executedActions.getOrPut(currentDay) { mutableListOf() }
+
+    // Add both the actions we just processed AND those that were processed immediately (isImmediate)
+    val processedImmediateActions = stateData.submittedActions.filter { it.status == ActionStatus.PROCESSED }
     history.addAll(actionsToProcess)
+    history.addAll(processedImmediateActions)
 
     // Mark as PROCESSED or remove from submitted list
     stateData.submittedActions.removeIf {
-        it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.SKIPPED
+        it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.SKIPPED || it.status == ActionStatus.PROCESSED
     }
 
     return NightResolutionResult(
@@ -321,7 +335,22 @@ fun Session.validateAndSubmitAction(
 
     val action =
         stateData.submittedActions.find { it.actor == actorPlayerId && it.actionDefinitionId == actionDefinitionId }
-            ?: return mapOf("success" to false, "error" to "Action instance not found for actor")
+            ?: if (submittedBy != "PLAYER" || actionDef.isImmediate) {
+                // For non-player submissions (SYSTEM/JUDGE), we can be more lenient and create the instance if missing.
+                // Immediate actions also skip the initial PENDING stage often.
+                val newInstance = RoleActionInstance(
+                    actor = actorPlayerId,
+                    actorRole = actor.roles.firstOrNull() ?: "未知",
+                    actionDefinitionId = actionDefinitionId,
+                    targets = mutableListOf(),
+                    submittedBy = source,
+                    status = ActionStatus.PENDING
+                )
+                stateData.submittedActions.add(newInstance)
+                newInstance
+            } else {
+                return mapOf("success" to false, "error" to "Action instance not found for actor")
+            }
     action.targets.clear()
     action.targets.addAll(targetPlayerIds)
     action.status = if (targetPlayerIds.contains(SKIP_TARGET_ID)) ActionStatus.SKIPPED else ActionStatus.SUBMITTED
@@ -355,6 +384,15 @@ fun Session.validateAndSubmitAction(
 
         // Mark as PROCESSED so it's not processed again in batch resolution
         action.status = ActionStatus.PROCESSED
+
+        // Record to history immediately if it's a death trigger or we're past night resolution
+        val currentDay = day
+        if (actionDef.timing == ActionTiming.DEATH_TRIGGER || currentState != "NIGHT_PHASE") {
+            val history = stateData.executedActions.getOrPut(currentDay) { mutableListOf() }
+            if (!history.contains(action)) {
+                history.add(action)
+            }
+        }
     }
 
     // Call submission hook
@@ -370,13 +408,17 @@ fun Session.validateAndSubmitAction(
         )
     }
 
-    // Check if we can advance if this was a death trigger in announcement phase
-    if (currentState == "DEATH_ANNOUNCEMENT") {
-        (WerewolfApplication.gameStateService.getCurrentStep(this) as? dev.robothanzo.werewolf.game.steps.DeathAnnouncementStep)?.checkAdvance(
-            this,
-            WerewolfApplication.gameStateService
+    // Notify NightManager of activity
+    WerewolfApplication.nightManager.notifyPhaseUpdate(guildId)
+
+    // Notify ActionProcessed event for callback-based step advancement
+    WerewolfApplication.roleEventService.notifyListeners(
+        this, RoleEventType.ACTION_PROCESSED, mapOf(
+            "playerId" to actorPlayerId,
+            "actionId" to actionDefinitionId,
+            "submittedBy" to submittedBy
         )
-    }
+    )
 
     return mapOf("success" to true, "message" to "Action submitted")
 }

@@ -106,6 +106,7 @@ class PoliceServiceImpl(
             // Record for replay
             session.stateData.policeEnrollmentHistory.add(
                 dev.robothanzo.werewolf.game.model.PoliceEnrollmentRecord(
+                    day = session.day,
                     playerId = player.id,
                     type = dev.robothanzo.werewolf.database.documents.ReplayEventType.POLICE_ENROLL,
                     stage = dev.robothanzo.werewolf.database.documents.PoliceActionStage.ENROLLMENT
@@ -142,6 +143,7 @@ class PoliceServiceImpl(
             // Record for replay
             session.stateData.policeEnrollmentHistory.add(
                 dev.robothanzo.werewolf.game.model.PoliceEnrollmentRecord(
+                    day = session.day,
                     playerId = candidate.player.id,
                     type = dev.robothanzo.werewolf.database.documents.ReplayEventType.POLICE_UNENROLLED,
                     stage = dev.robothanzo.werewolf.database.documents.PoliceActionStage.ENROLLMENT
@@ -183,6 +185,7 @@ class PoliceServiceImpl(
             // Record for replay
             session.stateData.policeEnrollmentHistory.add(
                 dev.robothanzo.werewolf.game.model.PoliceEnrollmentRecord(
+                    day = session.day,
                     playerId = candidate.player.id,
                     type = dev.robothanzo.werewolf.database.documents.ReplayEventType.POLICE_UNENROLLED,
                     stage = if (policeSession.state == PoliceSession.State.SPEECH) dev.robothanzo.werewolf.database.documents.PoliceActionStage.SPEECH else dev.robothanzo.werewolf.database.documents.PoliceActionStage.UNENROLLMENT

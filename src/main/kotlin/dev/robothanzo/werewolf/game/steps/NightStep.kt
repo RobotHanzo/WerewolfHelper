@@ -237,7 +237,10 @@ class NightStep(
         }
         // If action doesn't exist, we are finished (or never started)
         // If action exists, check status
-        return ybAction == null || ybAction.status == ActionStatus.SUBMITTED || ybAction.status == ActionStatus.SKIPPED
+        return ybAction == null ||
+            ybAction.status == ActionStatus.SUBMITTED ||
+            ybAction.status == ActionStatus.SKIPPED ||
+            ybAction.status == ActionStatus.PROCESSED
     }
 
     private fun finalizeWolfYoungerBrotherPhase(session: Session) {
@@ -290,8 +293,11 @@ class NightStep(
 
     private fun allActorsSubmitted(guildId: Long): Boolean {
         return gameSessionService.withLockedSession(guildId) { session ->
-            session.stateData.submittedActions.filter { it.actorRole != "狼人" }.all {
-                it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.SKIPPED
+            // Check all actions currently in submittedActions to ensure they are finalized
+            session.stateData.submittedActions.all {
+                it.status == ActionStatus.SUBMITTED ||
+                    it.status == ActionStatus.SKIPPED ||
+                    it.status == ActionStatus.PROCESSED
             }
         }
     }

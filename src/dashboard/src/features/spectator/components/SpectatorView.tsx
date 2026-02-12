@@ -3,6 +3,7 @@ import { useTranslation } from '@/lib/i18n';
 import { Player } from '@/api/types.gen';
 import { Activity, Info, Shield, Skull, Users, Zap } from 'lucide-react';
 import { DiscordAvatar, DiscordName } from '@/components/DiscordUser';
+import { getRoleConfig } from '@/constants/gameData';
 
 interface SpectatorViewProps {
   players: Player[];
@@ -32,29 +33,24 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIde
       }
 
       pRoles.forEach((role) => {
+        const config = getRoleConfig(role);
         const uRole = role.toUpperCase();
-        const isWolf =
-          role.includes('狼') ||
-          [
-            'WEREWOLF',
-            'GARGOYLE',
-            'BLOOD_MOON',
-            'NIGHTMARE',
-            'WOLF_KING',
-            'WHITE_WOLF_KING',
-            'WOLF_BROTHER',
-            'HIDDEN_WOLF',
-          ].includes(uRole);
-        const isVillager = role === '平民' || uRole === 'VILLAGER';
-        const isGod = !isWolf && !isVillager;
 
-        if (isWolf) {
+        if (config.camp === 'WEREWOLF') {
           wolves++;
           if (isDead) deadWolves++;
-        } else if (isVillager) {
+        } else if (
+          config.camp === 'VILLAGER' ||
+          uRole === 'VILLAGER' ||
+          role === '平民' ||
+          role === '村民'
+        ) {
           villagers++;
           if (isDead) deadVillagers++;
-        } else if (isGod) {
+        } else if (
+          config.camp === 'GOD' ||
+          (!role.includes('狼') && uRole !== 'WEREWOLF' && config.camp !== 'OTHER')
+        ) {
           gods++;
           if (isDead) deadGods++;
         }
@@ -73,10 +69,11 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIde
     };
   }, [players]);
 
-  const winProgressWolves =
-    stats.gods + stats.villagers > 0
-      ? ((stats.deadGods + stats.deadVillagers) / (stats.gods + stats.villagers)) * 100
-      : 0;
+  const godProgress = stats.gods > 0 ? (stats.deadGods / stats.gods) * 100 : 0;
+  const villagerProgress = stats.villagers > 0 ? (stats.deadVillagers / stats.villagers) * 100 : 0;
+  const winProgressWolves = Math.max(godProgress, villagerProgress);
+  const wolfTargetLabel =
+    godProgress >= villagerProgress ? t('spectator.killGods') : t('spectator.killVillagers');
   const winProgressGood = stats.wolves > 0 ? (stats.deadWolves / stats.wolves) * 100 : 0;
   const winProgressJBB = stats.wolves > 0 ? (stats.deadWolves / stats.wolves) * 100 : 0;
 
@@ -189,7 +186,10 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIde
               <div className="flex-1 space-y-5">
                 <div className="flex items-center justify-between text-xl font-black tracking-widest text-red-400 uppercase">
                   <span>{Math.round(winProgressWolves)}%</span>
-                  <span>{t('roles.factions.werewolf')}</span>
+                  <span>
+                    {t('roles.factions.werewolf')}
+                    <span className="text-xs ml-2 text-slate-500">({wolfTargetLabel})</span>
+                  </span>
                 </div>
                 <div className="h-5 w-full bg-slate-800 rounded-full overflow-hidden flex justify-end">
                   <div
@@ -282,45 +282,20 @@ const SpectatorPlayerCard: React.FC<{ player: Player }> = ({ player }) => {
   const { t } = useTranslation();
   const isDead = !player.alive;
   const role = player.roles?.[0] || t('roles.unknown');
-  const uRole = (player.roles?.[0] || '').toUpperCase();
 
   // Faction determination for border color
   let factionColor = 'border-slate-800';
   let factionGlow = 'from-slate-500/20';
 
-  const isWolf =
-    role.includes('狼') ||
-    [
-      'WEREWOLF',
-      'GARGOYLE',
-      'BLOOD_MOON',
-      'NIGHTMARE',
-      'WOLF_KING',
-      'WHITE_WOLF_KING',
-      'WOLF_BROTHER',
-      'HIDDEN_WOLF',
-    ].includes(uRole);
-  const isGod =
-    [
-      'WITCH',
-      'SEER',
-      'HUNTER',
-      'GUARD',
-      'IDIOT',
-      'KNIGHT',
-      'GRAVE_KEEPER',
-      'DREAM_EATER',
-      'MAGICIAN',
-    ].includes(uRole) ||
-    (role !== '平民' && uRole !== 'VILLAGER' && !isWolf);
+  const roleConfig = getRoleConfig(role);
 
-  if (isWolf) {
+  if (roleConfig.camp === 'WEREWOLF') {
     factionColor = 'border-red-500/50';
     factionGlow = 'from-red-500/10';
-  } else if (isGod) {
+  } else if (roleConfig.camp === 'GOD') {
     factionColor = 'border-purple-500/50';
     factionGlow = 'from-purple-500/10';
-  } else {
+  } else if (roleConfig.camp === 'VILLAGER') {
     factionColor = 'border-blue-500/50';
     factionGlow = 'from-blue-500/10';
   }

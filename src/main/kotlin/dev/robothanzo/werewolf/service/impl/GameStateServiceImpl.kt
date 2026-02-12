@@ -74,6 +74,9 @@ class GameStateServiceImpl(
     override fun nextStep(session: Session) {
         val currentId = session.currentState
         if (currentId == "SETUP") {
+            if (session.stateData.gameStartTime == 0L) {
+                session.stateData.gameStartTime = System.currentTimeMillis()
+            }
             startStep(session, "NIGHT_PHASE")
             return
         }

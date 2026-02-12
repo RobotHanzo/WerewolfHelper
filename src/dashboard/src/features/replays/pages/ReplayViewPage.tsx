@@ -2,13 +2,14 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
+  Calendar,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Gavel,
   LayoutGrid,
   Loader2,
   Moon,
-  Pill,
   Settings,
   Share2,
   Sun,
@@ -16,6 +17,8 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from '@/lib/i18n';
 import { getReplay } from '@/api';
+import { RoleTag } from '@/components/RoleTag';
+import { getActionConfig } from '@/constants/gameData';
 
 export const ReplayViewPage: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -43,33 +46,25 @@ export const ReplayViewPage: React.FC = () => {
 
     dayNums.forEach((dayNum) => {
       const dayData = replay.timeline[dayNum];
-      allSteps.push({
-        type: 'DAY_INTRO',
-        day: dayNum,
-        title: t('dashboard.day') + ` ${dayNum}`,
-        isNight: false,
-        events: [],
-      });
-
-      // Split into night and day if appropriate, or just show the whole "Day" object
-      // For simplicity in this storyboard View, let's treat each Day/Night cycle as a card
+      // Day 0: Game start card only
+      // Day 1+: Night card followed by Day card
       allSteps.push({
         type: 'CYCLE',
         day: dayNum,
         title:
           dayNum === 0
             ? t('replays.view.gameStart', 'GAME START')
-            : t('dashboard.nightPhase', 'NIGHT') + ` ${dayNum}`,
+            : t('replays.view.nightTitle', { day: dayNum.toString() }),
         isNight: true,
         actions: dayData.nightActions,
         events: dayData.nightEvents,
       });
 
-      if (dayData.dayEvents.length > 0) {
+      if (dayNum > 0 || dayData.dayEvents.length > 0) {
         allSteps.push({
           type: 'CYCLE',
           day: dayNum,
-          title: t('dashboard.day') + ` ${dayNum} ` + t('replays.view.dayPhaseLabel'),
+          title: t('replays.view.dayTitle', { day: dayNum.toString() }),
           isNight: false,
           events: dayData.dayEvents,
         });
@@ -120,11 +115,20 @@ export const ReplayViewPage: React.FC = () => {
               {t('replays.view.titlePrefix')}
               {replay.sessionId.substring(0, 8)}
             </h1>
-            <p className="text-xs text-gray-400 font-medium tracking-wider">
-              {new Date(replay.startTime).toLocaleDateString()} • {replay.result} •{' '}
-              {Math.round((replay.endTime - replay.startTime) / 60000)}
-              {t('replays.view.durationLabel')}
-            </p>
+            <div className="flex items-center gap-4 mt-1 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                {new Date(replay.startTime).toLocaleDateString()}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                {Math.round((replay.endTime - replay.startTime) / 60000)}{' '}
+                {t('replays.list.durationSuffix')}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-surface-darker border border-white/5 text-[9px] text-primary/80">
+                {replay.result}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -211,6 +215,11 @@ export const ReplayViewPage: React.FC = () => {
                       </div>
                       <div className="p-3 rounded-lg bg-white/5 border border-white/5 w-full">
                         <p className="text-gray-300 leading-relaxed text-sm">
+                          {event.type === 'POLL_START' && (
+                            <>
+                              {t('replays.view.events.pollStart', { title: event.details.title })}
+                            </>
+                          )}
                           {event.type === 'POLL_END' && (
                             <>{t('replays.view.events.pollEnd', { title: event.details.title })}</>
                           )}
@@ -222,34 +231,69 @@ export const ReplayViewPage: React.FC = () => {
                               })}
                             </>
                           )}
+                          {event.type === 'POLICE_ENROLL' && (
+                            <>
+                              {t('replays.view.events.policeEnroll', {
+                                player: `Player ${event.details.playerId}`,
+                              })}
+                            </>
+                          )}
+                          {event.type === 'POLICE_UNENROLLED' && (
+                            <>
+                              {t('replays.view.events.policeUnenrolled', {
+                                player: `Player ${event.details.playerId}`,
+                              })}
+                            </>
+                          )}
+                          {event.type === 'DISCUSSION_START' && (
+                            <>{t('replays.view.events.discussionStart')}</>
+                          )}
+                          {event.type === 'DISCUSSION_END' && (
+                            <>{t('replays.view.events.discussionEnd')}</>
+                          )}
                         </p>
                       </div>
                     </div>
                   ))}
 
                   {/* Role Actions Rendering */}
-                  {activeStep?.actions?.map((action: any, i: number) => (
-                    <div key={`act-${i}`} className="flex gap-4 items-start">
-                      <div className="mt-1 w-8 h-8 rounded-full bg-secondary/10 border border-secondary/30 flex items-center justify-center shrink-0 text-secondary">
-                        {action.actionId.includes('KILL') ? (
-                          <Gavel className="w-4 h-4" />
-                        ) : (
-                          <Pill className="w-4 h-4" />
-                        )}
+                  {activeStep?.actions?.map((action: any, i: number) => {
+                    const actionConfig = getActionConfig(action.actionDefinitionId || '');
+                    return (
+                      <div key={`act-${i}`} className="flex gap-4 items-start">
+                        <div
+                          className="mt-1 w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-white/20 shadow-lg text-white"
+                          style={{ backgroundColor: actionConfig.color }}
+                        >
+                          <actionConfig.icon className="w-4 h-4" />
+                        </div>
+                        <div className="p-3 rounded-lg bg-white/5 border border-white/10 w-full group/act relative overflow-hidden">
+                          <div
+                            className="absolute left-0 top-0 bottom-0 w-1 opacity-50"
+                            style={{ backgroundColor: actionConfig.color }}
+                          ></div>
+                          <p className="text-gray-200 leading-relaxed text-sm">
+                            <span
+                              className="font-bold uppercase text-[10px] block mb-1"
+                              style={{ color: actionConfig.color }}
+                            >
+                              {t(
+                                actionConfig.translationKey,
+                                action.actionDefinitionId || 'Unknown Action'
+                              )}
+                            </span>
+                            {t('replays.view.actions.targeted', {
+                              actor: `Player ${action.actor}`,
+                              target:
+                                action.targets?.[0] !== undefined
+                                  ? `Player ${action.targets[0]}`
+                                  : 'None',
+                            })}
+                          </p>
+                        </div>
                       </div>
-                      <div className="p-3 rounded-lg bg-secondary/5 border border-secondary/10 w-full">
-                        <p className="text-gray-200 leading-relaxed text-sm">
-                          <span className="text-secondary font-bold uppercase text-[10px] block mb-1">
-                            {action.actionId}
-                          </span>
-                          {t('replays.view.actions.targeted', {
-                            actor: `Player ${action.actorId}`,
-                            target: `Player ${action.targets[0]}`,
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {activeStep?.events?.length === 0 && activeStep?.actions?.length === 0 && (
                     <p className="text-gray-500 text-center py-12 italic text-sm">
@@ -266,7 +310,7 @@ export const ReplayViewPage: React.FC = () => {
                       total: steps.length.toString(),
                     })}
                   </span>
-                  <button className="text-xs text-primary hover:text-white flex items-center gap-1 font-semibold uppercase tracking-wider transition-colors">
+                  <button className="text-xs text-blue-400 hover:text-white flex items-center gap-1 font-semibold uppercase tracking-wider transition-colors">
                     {t('replays.view.viewFullLog')}
                   </button>
                 </div>
@@ -312,10 +356,20 @@ export const ReplayViewPage: React.FC = () => {
               {Object.values(replay.players).map((player: any) => {
                 const isDead = player.deathDay !== null && player.deathDay < activeStep?.day;
                 const isDying = player.deathDay === activeStep?.day && !activeStep?.isNight;
-                const isTarget = activeStep?.actions?.some((a: any) =>
-                  a.targets.includes(player.id)
-                );
-                const isActor = activeStep?.actions?.some((a: any) => a.actorId === player.id);
+
+                // Track actions this player is involved in
+                const actionsAsTarget =
+                  activeStep?.actions?.filter((a: any) => a.targets.includes(player.id)) || [];
+                const actionsAsActor =
+                  activeStep?.actions?.filter((a: any) => a.actor === player.id) || [];
+
+                const isTarget = actionsAsTarget.length > 0;
+                const isActor = actionsAsActor.length > 0;
+
+                const primaryAction = actionsAsTarget[0] || actionsAsActor[0];
+                const primaryColor = primaryAction
+                  ? getActionConfig(primaryAction.actionDefinitionId || '').color
+                  : null;
 
                 return (
                   <div
@@ -323,16 +377,41 @@ export const ReplayViewPage: React.FC = () => {
                     className={`relative group transition-all duration-500 ${isDead || isDying ? 'opacity-40 grayscale' : ''}`}
                   >
                     <div
-                      className={`aspect-square bg-surface-dark rounded-xl border flex flex-col items-center justify-center relative overflow-hidden transition-colors ${
-                        isTarget
-                          ? 'border-secondary shadow-neon-pink'
-                          : isActor
-                            ? 'border-primary shadow-neon'
-                            : 'border-white/5'
+                      className={`aspect-square bg-surface-dark rounded-xl border flex flex-col items-center justify-center relative overflow-hidden transition-all duration-500 ${
+                        isTarget || isActor ? 'scale-105' : ''
                       }`}
+                      style={{
+                        borderColor: primaryColor || 'rgba(255,255,255,0.05)',
+                        boxShadow: primaryColor ? `0 0 15px ${primaryColor}40` : 'none',
+                      }}
                     >
+                      {/* Multiple Action Indicators */}
+                      <div className="absolute top-1 left-1 flex gap-0.5">
+                        {actionsAsTarget.map((a: any, idx: number) => (
+                          <div
+                            key={`target-${idx}`}
+                            className="w-1.5 h-1.5 rounded-full shadow-sm"
+                            style={{
+                              backgroundColor: getActionConfig(a.actionDefinitionId || '').color,
+                            }}
+                          />
+                        ))}
+                        {actionsAsActor.map((a: any, idx: number) => (
+                          <div
+                            key={`actor-${idx}`}
+                            className="w-1.5 h-1.5 rounded-full border border-white/50"
+                            style={{
+                              backgroundColor: getActionConfig(a.actionDefinitionId || '').color,
+                            }}
+                          />
+                        ))}
+                      </div>
+
                       {isTarget && (
-                        <div className="absolute top-0 right-0 bg-secondary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-bl-lg">
+                        <div
+                          className="absolute top-0 right-0 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-bl-lg uppercase tracking-tighter"
+                          style={{ backgroundColor: primaryColor || '#ec4899' }}
+                        >
                           {t('replays.view.targetIndicator')}
                         </div>
                       )}
@@ -361,14 +440,25 @@ export const ReplayViewPage: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      <span className="text-[10px] font-bold text-gray-300 truncate w-full text-center px-1">
+                      <span className="text-sm font-bold text-gray-100 truncate w-full text-center px-2 mt-1">
                         {player.username}
                       </span>
-                      <span className="text-[9px] text-gray-500 uppercase tracking-wide mt-0.5">
-                        {isDead || isDying
-                          ? t('replays.view.deadAtDay', { day: player.deathDay.toString() })
-                          : t('replays.view.statusAlive')}
-                      </span>
+                      <div className="mt-1 flex flex-wrap gap-1 justify-center px-1">
+                        {player.initialRoles?.map((role: string, idx: number) => (
+                          <RoleTag
+                            key={idx}
+                            roleName={role}
+                            isDead={isDead || isDying}
+                            className="text-[9px]"
+                          />
+                        ))}
+                        {(!player.initialRoles || player.initialRoles.length === 0) && (
+                          <RoleTag
+                            roleName={t('replays.view.statusAlive')}
+                            isDead={isDead || isDying}
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

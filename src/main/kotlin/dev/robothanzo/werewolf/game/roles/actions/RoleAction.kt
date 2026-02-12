@@ -1,10 +1,7 @@
 package dev.robothanzo.werewolf.game.roles.actions
 
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.ActionDefinitionId
-import dev.robothanzo.werewolf.game.model.ActionTiming
-import dev.robothanzo.werewolf.game.model.DeathCause
-import dev.robothanzo.werewolf.game.model.RoleActionInstance
+import dev.robothanzo.werewolf.game.model.*
 
 /**
  * Represents the result of executing a role action
@@ -82,9 +79,11 @@ interface RoleAction {
         get() = true
 
     fun getUsageCount(session: Session, actor: Int): Int {
-        val executedCount = session.stateData.executedActions.values.flatten()
+        val historicalCount = session.stateData.executedActions.values.flatten()
             .count { it.actor == actor && it.actionDefinitionId == actionId }
-        return executedCount
+        val currentCount = session.stateData.submittedActions
+            .count { it.actor == actor && it.actionDefinitionId == actionId && (it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.PROCESSED) }
+        return historicalCount + currentCount
     }
 
     /**
@@ -110,7 +109,7 @@ interface RoleAction {
 
     /**
      * Validate a potential action submission.
-     * 
+     *
      * @return null if valid, or an error message if invalid.
      */
     fun validate(session: Session, actor: Int, targets: List<Int>): String? {
@@ -139,7 +138,7 @@ interface RoleAction {
 
     /**
      * Execute this action with the given context.
-     * 
+     *
      * @param session The current game session
      * @param action The action instance to execute
      * @param accumulatedState The accumulated state from previously executed actions
@@ -153,7 +152,7 @@ interface RoleAction {
 
     /**
      * Filter the list of alive players to determine which ones are eligible targets for this action.
-     * 
+     *
      * @param session The current game session
      * @param actor The player performing the action
      * @param alivePlayers List of all alive players

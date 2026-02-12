@@ -248,7 +248,7 @@ class ButtonListener : ListenerAdapter() {
 
                     if (targetId == SKIP_TARGET_ID.toString()) {
                         // Handle Skip
-                        session.validateAndSubmitAction(
+                        val result = session.validateAndSubmitAction(
                             actionId,
                             player.id,
                             arrayListOf(SKIP_TARGET_ID),
@@ -257,11 +257,15 @@ class ButtonListener : ListenerAdapter() {
                             WerewolfApplication.roleActionExecutor
                         )
 
-                        WerewolfApplication.actionUIService.clearPrompt(session, player.id)
-                        if (actionDef?.allowMultiplePerPhase != true) {
-                            player.actionSubmitted = true
+                        if (result["success"] == true) {
+                            WerewolfApplication.actionUIService.clearPrompt(session, player.id)
+                            if (actionDef?.allowMultiplePerPhase != true) {
+                                player.actionSubmitted = true
+                            }
+                            event.hook.editOriginal(":white_check_mark: 已選擇 **跳過** 本回合行動").queue()
+                        } else {
+                            event.hook.editOriginal(":x: ${result["error"]}").queue()
                         }
-                        event.hook.editOriginal(":white_check_mark: 已選擇 **跳過** 本回合行動").queue()
                         return@withLockedSession
                     }
 
@@ -277,13 +281,6 @@ class ButtonListener : ListenerAdapter() {
                     }
 
                     // Submit action with target
-                    WerewolfApplication.actionUIService.submitTargetSelection(
-                        guildId,
-                        player.id,
-                        target.id,
-                        session
-                    )
-
                     val result = session.validateAndSubmitAction(
                         actionId,
                         player.id,

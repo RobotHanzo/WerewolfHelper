@@ -12,6 +12,7 @@ import {
 import { Player } from '@/api/types.gen';
 import { useTranslation } from '@/lib/i18n';
 import { DiscordAvatar, DiscordName } from '@/components/DiscordUser';
+import { RoleTag } from '@/components/RoleTag';
 
 interface PlayerCardProps {
   player: Player;
@@ -167,7 +168,6 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                   {player.roles &&
                     player.roles.length > 0 &&
                     player.roles.map((role, index) => {
-                      // Check if this specific role instance is dead
                       const roleName = role;
                       const previousOccurrences = player.roles
                         .slice(0, index)
@@ -178,30 +178,19 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                       const isDeadRole = previousOccurrences < deadOccurrences;
 
                       return (
-                        <span
+                        <RoleTag
                           key={`${index}-${role}`}
-                          onClick={() =>
+                          roleName={role}
+                          index={index}
+                          showIndex={player.roles.length > 1}
+                          isDead={isDeadRole}
+                          onClick={
                             !readonly && isDeadRole
-                              ? onAction(player.id, `revive_role:${role}`)
+                              ? () => onAction(player.id, `revive_role:${role}`)
                               : undefined
                           }
-                          className={`text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded border ${swapAnim[index] || ''}
-                            ${isDeadRole ? 'line-through opacity-60 decoration-2 decoration-slate-500' : ''}
-                            ${!readonly && isDeadRole ? 'cursor-pointer hover:opacity-100 hover:decoration-red-500 hover:text-red-600 transition-all' : ''}
-                            ${
-                              role.includes('狼')
-                                ? 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-800 text-red-700 dark:text-red-300'
-                                : role.includes('平民')
-                                  ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
-                                  : 'bg-indigo-100 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300'
-                            }`}
-                          title={
-                            !readonly && isDeadRole ? t('players.reviveRole', { role }) : undefined
-                          }
-                        >
-                          {player.roles.length > 1 && `${index + 1}. `}
-                          {role}
-                        </span>
+                          className={swapAnim[index] || ''}
+                        />
                       );
                     })}
                 </div>

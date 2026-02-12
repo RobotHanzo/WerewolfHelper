@@ -102,9 +102,11 @@ data class HistoricalPollRecord(
 )
 
 data class PoliceEnrollmentRecord(
+    val day: Int,
     val playerId: Int,
     val type: dev.robothanzo.werewolf.database.documents.ReplayEventType,
-    val stage: dev.robothanzo.werewolf.database.documents.PoliceActionStage
+    val stage: dev.robothanzo.werewolf.database.documents.PoliceActionStage,
+    val timestamp: Long = System.currentTimeMillis()
 )
 
 data class PoliceTransferRecord(
@@ -151,6 +153,9 @@ data class GameStateData(
 
     @Schema(description = "History of police badge transfers in this session")
     var policeTransferHistory: MutableList<PoliceTransferRecord> = mutableListOf(),
+
+    @Schema(description = "Start time of the game")
+    var gameStartTime: Long = 0,
 ) {
     // --- Transient fields for UI state synchronization ---
     @Transient

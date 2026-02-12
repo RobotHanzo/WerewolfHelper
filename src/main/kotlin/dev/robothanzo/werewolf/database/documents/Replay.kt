@@ -47,13 +47,23 @@ data class Replay(
             // Group actions and events by day
             for (dayNum in 0..session.day) {
                 val polls = session.stateData.historicalPolls.filter { it.day == dayNum }
-                val enrollments = session.stateData.policeEnrollmentHistory.filter {
-                    // This is a simplification; ideally we'd have timestamps or stages
-                    true
-                }
+                val enrollments = session.stateData.policeEnrollmentHistory.filter { it.day == dayNum }
                 val transfers = session.stateData.policeTransferHistory.filter { it.day == dayNum }
 
                 val dayEvents = mutableListOf<ReplayEvent>()
+
+                enrollments.forEach { enroll ->
+                    dayEvents.add(
+                        ReplayEvent(
+                            type = enroll.type,
+                            details = mapOf(
+                                "playerId" to enroll.playerId,
+                                "stage" to enroll.stage,
+                                "timestamp" to enroll.timestamp
+                            )
+                        )
+                    )
+                }
 
                 polls.forEach { poll ->
                     dayEvents.add(
@@ -82,7 +92,7 @@ data class Replay(
 
                 timeline[dayNum] = ReplayDay(
                     day = dayNum,
-                    nightActions = emptyList(), // Needs to be grouped by day in Session
+                    nightActions = session.stateData.executedActions[dayNum]?.toList() ?: emptyList(),
                     nightEvents = emptyList(),
                     dayEvents = dayEvents
                 )
@@ -104,7 +114,8 @@ data class Replay(
 
             return Replay(
                 sessionId = session.sessionId,
-                startTime = session.stateData.phaseStartTime,
+                startTime = if (session.stateData.gameStartTime != 0L) session.stateData.gameStartTime else (session.logs.firstOrNull()?.timestamp
+                    ?: 0L),
                 endTime = System.currentTimeMillis(),
                 settings = session.settings,
                 players = players,

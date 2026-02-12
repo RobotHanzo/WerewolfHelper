@@ -1,18 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  AlertCircle,
-  Check,
-  Eye,
-  Loader2,
-  Minus,
-  Moon,
-  Plus,
-  Settings2,
-  Shield,
-  Swords,
-  Users,
-  Zap,
-} from 'lucide-react';
+import { AlertCircle, Check, Loader2, Minus, Plus, Settings2, Users } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from '@/lib/i18n';
 import { useMutation } from '@tanstack/react-query';
@@ -26,6 +13,7 @@ import { Toggle } from '@/components/ui/Toggle';
 import { Counter } from '@/components/ui/Counter';
 import { useAuth } from '@/features/auth/contexts/AuthContext';
 import { useGameState } from '@/features/game/hooks/useGameState';
+import { GAME_ROLES, getRoleConfig } from '@/constants/gameData';
 
 export const GameSettingsPage: React.FC = () => {
   const { guildId } = useParams<{ guildId: string }>();
@@ -61,74 +49,13 @@ export const GameSettingsPage: React.FC = () => {
   const removeRoleMut = useMutation(removeRoleMutation());
   const setPlayerCountMut = useMutation(setPlayerCountMutation());
 
-  const AVAILABLE_ROLES = [
-    '平民',
-    '狼人',
-    '女巫',
-    '預言家',
-    '獵人',
-    '守衛',
-    '白痴',
-    '騎士',
-    '守墓人',
-    '攝夢人',
-    '魔術師',
-    '狼王',
-    '白狼王',
-    '狼兄',
-    '狼弟',
-    '隱狼',
-    '石像鬼',
-    '惡靈騎士',
-    '血月使者',
-    '機械狼',
-    '複製人',
-  ];
-
-  const ROLE_FACTIONS: Record<string, string[]> = {
-    werewolf: [
-      'WEREWOLF',
-      '狼人',
-      '狼王',
-      '白狼王',
-      '狼兄',
-      '狼弟',
-      '隱狼',
-      '石像鬼',
-      '惡靈騎士',
-      '血月使者',
-      '機械狼',
-    ],
-    special: [
-      'WITCH',
-      'SEER',
-      'HUNTER',
-      'GUARD',
-      '女巫',
-      '預言家',
-      '獵人',
-      '守衛',
-      '白痴',
-      '騎士',
-      '守墓人',
-      '攝夢人',
-      '魔術師',
-      '複製人',
-    ],
-    civilian: ['VILLAGER', '平民', '村民'],
-  };
+  const AVAILABLE_ROLES = Object.values(GAME_ROLES)
+    .filter((r) => r.id !== 'HIDDEN')
+    .map((r) => t(r.translationKey));
 
   const getRoleIcon = (role: string) => {
-    const uRole = role.toUpperCase();
-    if (ROLE_FACTIONS.werewolf.includes(role) || ROLE_FACTIONS.werewolf.includes(uRole))
-      return <Moon className="w-5 h-5 text-red-500" />;
-    if (role === 'SEER' || role === '預言家') return <Eye className="w-5 h-5 text-purple-500" />;
-    if (role === 'WITCH' || role === '女巫') return <Zap className="w-5 h-5 text-pink-500" />;
-    if (role === 'HUNTER' || role === '獵人') return <Swords className="w-5 h-5 text-orange-500" />;
-    if (role === 'GUARD' || role === '守衛') return <Shield className="w-5 h-5 text-blue-500" />;
-    if (role === 'VILLAGER' || role === '平民' || role === '村民')
-      return <Users className="w-5 h-5 text-emerald-500" />;
-    return <Users className="w-5 h-5 text-slate-400" />;
+    const config = getRoleConfig(role);
+    return <config.icon className={`w-5 h-5`} style={{ color: config.color }} />;
   };
 
   const isFirstLoad = useRef(true);
@@ -305,9 +232,9 @@ export const GameSettingsPage: React.FC = () => {
 
   // Role Faction Mapping
   const factionConfigs = [
-    { id: 'werewolf', label: t('roles.factions.werewolf'), roles: ROLE_FACTIONS.werewolf },
-    { id: 'special', label: t('roles.factions.special'), roles: ROLE_FACTIONS.special },
-    { id: 'civilian', label: t('roles.factions.civilian'), roles: ROLE_FACTIONS.civilian },
+    { id: 'WEREWOLF', label: t('roles.factions.werewolf') },
+    { id: 'GOD', label: t('roles.factions.special') },
+    { id: 'VILLAGER', label: t('roles.factions.civilian') },
   ];
 
   const progress = Math.min((roles.length / playerCount) * 100, 100);
@@ -536,25 +463,8 @@ export const GameSettingsPage: React.FC = () => {
           <div className="space-y-8">
             {factionConfigs.map((faction) => {
               const factionRoles = Object.entries(roleCounts).filter(([role]) => {
-                const uRole = role.toUpperCase();
-                if (faction.id === 'werewolf') {
-                  return (
-                    ROLE_FACTIONS.werewolf.includes(role) || ROLE_FACTIONS.werewolf.includes(uRole)
-                  );
-                }
-                if (faction.id === 'civilian') {
-                  return (
-                    ROLE_FACTIONS.civilian.includes(role) || ROLE_FACTIONS.civilian.includes(uRole)
-                  );
-                }
-                if (faction.id === 'special') {
-                  const isWolf =
-                    ROLE_FACTIONS.werewolf.includes(role) || ROLE_FACTIONS.werewolf.includes(uRole);
-                  const isVillager =
-                    ROLE_FACTIONS.civilian.includes(role) || ROLE_FACTIONS.civilian.includes(uRole);
-                  return !isWolf && !isVillager; // Default to Special (Gods)
-                }
-                return false;
+                const config = getRoleConfig(role);
+                return config.camp === faction.id;
               });
 
               if (factionRoles.length === 0 && faction.id !== 'special') return null;
@@ -579,15 +489,10 @@ export const GameSettingsPage: React.FC = () => {
                         >
                           <div className="flex items-center gap-4">
                             <div
-                              className={`p-2.5 rounded-xl transition-transform group-hover:scale-105 duration-500 ${
-                                faction.id === 'werewolf'
-                                  ? 'bg-red-50 dark:bg-red-900/10'
-                                  : faction.id === 'special'
-                                    ? 'bg-amber-50 dark:bg-amber-900/10'
-                                    : faction.id === 'civilian'
-                                      ? 'bg-emerald-50 dark:bg-emerald-900/10'
-                                      : 'bg-slate-50 dark:bg-slate-800/50'
-                              }`}
+                              className={`p-2.5 rounded-xl transition-transform group-hover:scale-105 duration-500`}
+                              style={{
+                                backgroundColor: `${getRoleConfig(role).color}15`,
+                              }}
                             >
                               {getRoleIcon(role)}
                             </div>

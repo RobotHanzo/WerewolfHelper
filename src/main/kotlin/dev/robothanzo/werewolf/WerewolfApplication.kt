@@ -69,6 +69,7 @@ class WerewolfApplication {
         lateinit var roleActionExecutor: RoleActionExecutor
         lateinit var roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry
         lateinit var roleEventService: RoleEventService
+        lateinit var nightManager: NightManager
         val playerManager: AudioPlayerManager = DefaultAudioPlayerManager()
 
         @JvmStatic
@@ -133,7 +134,8 @@ class WerewolfApplication {
         private val roleActionExecutorBean: RoleActionExecutor,
         private val roleRegistryBean: RoleRegistry,
         private val roleEventServiceBean: RoleEventService,
-        private val gameStateServiceBean: GameStateService
+        private val gameStateServiceBean: GameStateService,
+        private val nightManagerBean: NightManager
     ) {
         private val log = LoggerFactory.getLogger(StaticBridge::class.java)
 
@@ -153,6 +155,7 @@ class WerewolfApplication {
             roleRegistry = roleRegistryBean
             roleEventService = roleEventServiceBean
             gameStateService = gameStateServiceBean
+            nightManager = nightManagerBean
             replayRepository = replayRepositoryBean
             jda = discordServiceBean.jda
 
