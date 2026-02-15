@@ -157,7 +157,7 @@ class ActionUIServiceImplTest {
         )
 
         // Mock role to return actions
-        val mockRole = mock<dev.robothanzo.werewolf.game.model.Role>()
+        val mockRole = mock<Role>()
         whenever(mockRole.getActions()).thenReturn(listOf(mandatoryRoleAction))
         whenever(roleRegistry.getRole("狼弟")).thenReturn(mockRole)
         whenever(roleRegistry.getAction(ActionDefinitionId.WOLF_YOUNGER_BROTHER_EXTRA_KILL)).thenReturn(
@@ -228,7 +228,7 @@ class ActionUIServiceImplTest {
             targets = { _, _, _ -> listOf(targetId) }
         )
 
-        val mockRole = mock<dev.robothanzo.werewolf.game.model.Role>()
+        val mockRole = mock<Role>()
         whenever(mockRole.getActions()).thenReturn(listOf(mandatoryRoleAction))
         whenever(roleRegistry.getRole("預言家")).thenReturn(mockRole)
         whenever(roleRegistry.getAction(ActionDefinitionId.SEER_CHECK)).thenReturn(mandatoryRoleAction)

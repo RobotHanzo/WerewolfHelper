@@ -52,15 +52,6 @@ data class RoleActionInstance(
     var targetPromptId: Long? = null // Discord message ID for target selection prompt
 )
 
-data class ActionSubmissionStatus(
-    val playerId: Int,
-    val role: String,
-    val status: ActionStatus, // PENDING, ACTING, SUBMITTED, SKIPPED
-    val actionType: String? = null, // The action chosen (e.g., "KILL", "HEAL", "CHECK")
-    val targetId: String? = null,
-    val submittedAt: Long? = null
-)
-
 /**
  * Group action state for coordinated actions like wolf kills
  */

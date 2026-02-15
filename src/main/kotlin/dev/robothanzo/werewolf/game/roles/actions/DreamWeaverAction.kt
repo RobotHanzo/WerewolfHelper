@@ -18,8 +18,7 @@ class DreamWeaverLinkAction : BaseRoleAction(
     ): ActionExecutionResult {
         if (action.targets.isEmpty()) return accumulatedState
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
-        val target = session.getPlayer(targetId) ?: return accumulatedState
-        
+
         // Record the target for this day
         session.stateData.dreamWeaverTargets[session.day] = targetId
 

@@ -54,12 +54,5 @@ enum class ActionDefinitionId(val actionName: String) {
         fun fromString(id: String): ActionDefinitionId? {
             return entries.find { it.toString() == id }
         }
-
-        /**
-         * Check if a string ID is valid
-         */
-        fun isValid(id: String): Boolean {
-            return entries.any { it.toString() == id }
-        }
     }
 }
