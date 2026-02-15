@@ -71,25 +71,17 @@ class ActionUIServiceImpl(
                     actionDefinitionId = null,
                     targets = mutableListOf(),
                     submittedBy = ActionSubmissionSource.PLAYER,
-                    status = ActionStatus.ACTING,
+                    status = ActionStatus.PENDING,
                     actionPromptId = message?.idLong
                 )
                 session.stateData.submittedActions.add(actionInstance)
             } else {
-                actionInstance.status = ActionStatus.ACTING
+                actionInstance.status = ActionStatus.PENDING
                 actionInstance.actionPromptId = message?.idLong
+                actionInstance.targets.clear()
             }
 
             WerewolfApplication.gameSessionService.saveSession(session)
-
-            // Update dashboard status to ACTING
-            session.updateActionStatus(
-                playerId,
-                ActionStatus.ACTING,
-                actionId = null,
-                targetPlayerIds = emptyList()
-            )
-
             actionInstance
         } catch (e: Exception) {
             log.error("Error prompting player $playerId for action", e)
@@ -184,15 +176,7 @@ class ActionUIServiceImpl(
 
             actionInstance.actionDefinitionId = actionId
             actionInstance.status = ActionStatus.ACTING
-
-            // Update dashboard status to show selected action
-            lockedSession.updateActionStatus(
-                playerId,
-                ActionStatus.ACTING,
-                actionId = actionId,
-                targetPlayerIds = emptyList()
-            )
-
+            actionInstance.targets.clear()
             actionInstance
         }
     }
@@ -222,7 +206,7 @@ class ActionUIServiceImpl(
             if (actionDef?.isImmediate == true) {
                 roleActionExecutor.executeActionInstance(lockedSession, actionInstance)
                 actionInstance.status = ActionStatus.PROCESSED
-                
+
                 // Add to history if necessary (e.g. for replay or death triggers)
                 val currentDay = lockedSession.day
                 val history = lockedSession.stateData.executedActions.getOrPut(currentDay) { mutableListOf() }
@@ -341,10 +325,12 @@ class ActionUIServiceImpl(
                             val player = session.getPlayer(action.actor)
                             player?.roles?.contains("夢魘") == true
                         }
+
                         NightPhase.WOLF_YOUNGER_BROTHER_ACTION -> {
                             val player = session.getPlayer(action.actor)
                             player?.roles?.contains("狼弟") == true
                         }
+
                         NightPhase.WEREWOLF_VOTING -> false // Handled separately by group vote logic
                         else -> true // ROLE_ACTIONS or generic cleanup
                     }
@@ -388,8 +374,8 @@ class ActionUIServiceImpl(
                         ?.queue()
                     session.stateData.submittedActions.filter {
                         it.actor == playerId &&
-                                it.actionDefinitionId == action.actionDefinitionId &&
-                                (it.status == ActionStatus.PENDING || it.status == ActionStatus.ACTING)
+                            it.actionDefinitionId == action.actionDefinitionId &&
+                            (it.status == ActionStatus.PENDING || it.status == ActionStatus.ACTING)
                     }.forEach {
                         it.status = ActionStatus.SKIPPED
                         it.targets.clear()
@@ -409,11 +395,9 @@ class ActionUIServiceImpl(
 
                     if (player != null) {
                         player.actionSubmitted = true
-                        session.updateActionStatus(
-                            player.id,
-                            ActionStatus.SKIPPED,
-                            targetPlayerIds = listOf(SKIP_TARGET_ID)
-                        )
+                        action.status = ActionStatus.SKIPPED
+                        action.targets.clear()
+                        action.targets.add(SKIP_TARGET_ID)
                     }
                 }
 
@@ -441,10 +425,12 @@ class ActionUIServiceImpl(
                             val player = session.getPlayer(action.actor)
                             player?.roles?.contains("夢魘") == true
                         }
+
                         NightPhase.WOLF_YOUNGER_BROTHER_ACTION -> {
                             val player = session.getPlayer(action.actor)
                             player?.roles?.contains("狼弟") == true
                         }
+
                         NightPhase.WEREWOLF_VOTING -> false // Handled manually or via separate logic
                         else -> true // ROLE_ACTIONS or generic cleanup
                     }
@@ -457,7 +443,7 @@ class ActionUIServiceImpl(
                     availableActions.any { it.actionId == ActionDefinitionId.NIGHTMARE_FEAR }
 
                 val msg = when {
-                    isWolfBrotherAction -> "⚠️ **提醒**: 還剩 **30秒**！若未發動攻擊，你將會 **自殺**！"
+                    isWolfBrotherAction -> "⚠️ **提醒**: 還剩 **30秒**！若未發動攻擊，你將會 **飲恨自殺**！"
                     isNightmareAction -> "⚠️ **提醒**: 還剩 **30秒**！若未選擇目標，系統將為你 **隨機選擇** 一名玩家進行恐懼！"
                     else -> "⚠️ **提醒**: 還剩 **30秒** 需要選擇行動或跳過，否則將視為放棄"
                 }

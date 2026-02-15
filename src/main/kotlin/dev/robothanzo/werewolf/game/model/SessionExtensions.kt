@@ -129,87 +129,6 @@ fun Session.hasDeathTriggerAvailable(playerId: Int, roleRegistry: RoleRegistry):
     }
 }
 
-fun Session.executeDeathTriggers(roleRegistry: RoleRegistry, roleActionExecutor: RoleActionExecutor): List<Int> {
-    val killedByTriggers = mutableListOf<Int>()
-
-    // Execute all pending death trigger actions
-    val pendingActions = stateData.submittedActions.filter { it.status == ActionStatus.SUBMITTED }
-        .filter {
-            val action = it.actionDefinitionId?.let { actionId -> roleRegistry.getAction(actionId) }
-            action?.timing == ActionTiming.DEATH_TRIGGER
-        }
-
-    if (pendingActions.isEmpty()) {
-        return emptyList()
-    }
-
-    // Execute actions using RoleActionExecutor
-    val executionResult = roleActionExecutor.executeActions(this, pendingActions)
-
-    // Collect all deaths from death triggers
-    for ((_, deaths) in executionResult.deaths) {
-        killedByTriggers.addAll(deaths)
-    }
-
-    // Clear pending death trigger actions from submittedActions and record to history
-    val currentDay = day
-    val history = stateData.executedActions.getOrPut(currentDay) { mutableListOf() }
-
-    stateData.submittedActions.removeIf {
-        val action = it.actionDefinitionId?.let { actionId -> roleRegistry.getAction(actionId) }
-        val isDeathTrigger = action?.timing == ActionTiming.DEATH_TRIGGER && it.status == ActionStatus.SUBMITTED
-        if (isDeathTrigger) {
-            it.status = ActionStatus.PROCESSED
-            history.add(it)
-        }
-        isDeathTrigger
-    }
-    // Caller is responsible for saving session
-
-    return killedByTriggers
-}
-
-/**
- * Updates the action status in the session state.
- * Does NOT save session; caller must save.
- */
-fun Session.updateActionStatus(
-    actorPlayerId: Int,
-    status: ActionStatus,
-    actionId: ActionDefinitionId? = null,
-    targetPlayerIds: List<Int> = emptyList()
-) {
-    val actorPlayer = getPlayer(actorPlayerId) ?: return
-    val actorRole = actorPlayer.roles.firstOrNull() ?: "未知"
-
-    // Find match by actor and actionId (if provided) or find the first non-submitted action
-    val actionInstance = if (actionId != null) {
-        stateData.submittedActions.find { it.actor == actorPlayerId && it.actionDefinitionId == actionId }
-    } else {
-        stateData.submittedActions.find { it.actor == actorPlayerId && it.status != ActionStatus.SUBMITTED }
-    }
-
-    if (actionInstance == null) {
-        log.warn("Could not find action with id $actorPlayerId")
-        val newInstance = RoleActionInstance(
-            actor = actorPlayerId,
-            actorRole = actorRole,
-            actionDefinitionId = actionId,
-            targets = if (targetPlayerIds.isNotEmpty()) targetPlayerIds.toMutableList() else mutableListOf(),
-            submittedBy = ActionSubmissionSource.PLAYER,
-            status = status
-        )
-        stateData.submittedActions.add(newInstance)
-    } else {
-        // Mutate existing
-        if (targetPlayerIds.isNotEmpty()) {
-            actionInstance.targets.clear()
-            actionInstance.targets.addAll(targetPlayerIds)
-        }
-        actionInstance.status = status
-    }
-}
-
 fun Session.resolveNightActions(
     roleActionExecutor: RoleActionExecutor,
     roleRegistry: RoleRegistry
@@ -341,6 +260,7 @@ fun Session.validateAndSubmitAction(
 
     val action =
         stateData.submittedActions.find { it.actor == actorPlayerId && it.actionDefinitionId == actionDefinitionId }
+            ?: stateData.submittedActions.find { it.actor == actorPlayerId && it.status == ActionStatus.PENDING }
             ?: if (submittedBy != "PLAYER" || actionDef.isImmediate) {
                 // For non-player submissions (SYSTEM/JUDGE), we can be more lenient and create the instance if missing.
                 // Immediate actions also skip the initial PENDING stage often.
@@ -353,6 +273,7 @@ fun Session.validateAndSubmitAction(
                     status = ActionStatus.PENDING
                 )
                 stateData.submittedActions.add(newInstance)
+                log.warn("Created new action instance for non-player submission or immediate action: {}", newInstance)
                 newInstance
             } else {
                 return mapOf("success" to false, "error" to "Action instance not found for actor")
@@ -406,12 +327,9 @@ fun Session.validateAndSubmitAction(
 
     // Update UI status using our extension method
     if (action.status != ActionStatus.PROCESSED) {
-        updateActionStatus(
-            actorPlayerId,
-            if (targetPlayerIds.contains(SKIP_TARGET_ID)) ActionStatus.SKIPPED else ActionStatus.SUBMITTED,
-            actionDefinitionId,
-            targetPlayerIds
-        )
+        action.status = if (targetPlayerIds.contains(SKIP_TARGET_ID)) ActionStatus.SKIPPED else ActionStatus.SUBMITTED
+        action.targets.clear()
+        action.targets.addAll(targetPlayerIds)
     }
 
     // Notify NightManager of activity

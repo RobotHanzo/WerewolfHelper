@@ -227,7 +227,7 @@ exhaustive way. It was assembled by statically scanning the dashboard source.
 
 - Localization (i18n) via `lib/i18n` and `locales/zh-TW.json`
 - Theme support: `ThemeProvider` + `ThemeToggle` (localStorage + system fallback)
-- `RoleIcon`, `Counter`, `Toggle` UI helpers
+- `Counter`, `Toggle` UI helpers
 - Player info caching & fetch (`PlayerContext`) to resolve Discord names/avatars
 - Safety UXs: double-confirm reset, disabled states while saving/muting, transient animations
 - Development/test helpers: `utils/mockData.ts`, some console debug logs for development

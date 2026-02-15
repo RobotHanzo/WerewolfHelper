@@ -3,6 +3,7 @@ import {
   Dna,
   Eye,
   Flame,
+  FlaskConical,
   Gavel,
   Ghost,
   LucideIcon,
@@ -16,7 +17,6 @@ import {
   Sword,
   Swords,
   User,
-  Wine,
   Zap,
 } from 'lucide-react';
 
@@ -67,7 +67,7 @@ export const GAME_ROLES: Record<string, GameEntityConfig> = {
   WITCH: {
     id: 'WITCH',
     color: '#a855f7', // Purple-500
-    icon: Wine,
+    icon: FlaskConical,
     translationKey: 'roles.labels.WITCH',
     camp: 'GOD',
   },

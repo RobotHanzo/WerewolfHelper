@@ -186,7 +186,12 @@
     "killGods": "屠神",
     "killVillagers": "屠民"
   },
+  "features": {
+    "action": "行動"
+  },
   "roles": {
+    "nightmare": "夢魘",
+    "wolfYoungerBrother": "狼弟",
     "title": "角色編輯",
     "role": "角色",
     "unknown": "未知身分",
@@ -512,6 +517,7 @@
     "wolfDiscussion": "狼人討論區",
     "wolfVotes": "投票明細",
     "waitingForActions": "等待職業提交行動...",
+    "waitingForAction": "正在等待 {role} 採取行動...",
     "waitingForWolf": "等待狼人們開始討論...",
     "noVotesYet": "目前尚無投票",
     "targetSkipped": "跳過",

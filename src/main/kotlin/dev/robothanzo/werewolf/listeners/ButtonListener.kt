@@ -139,13 +139,6 @@ class ButtonListener : ListenerAdapter() {
                                 .complete()
 
                         actionInstance.targetPromptId = message.idLong
-
-                        // Update status manually using extension
-                        session.updateActionStatus(
-                            player.id,
-                            ActionStatus.ACTING,
-                            actionId
-                        )
                     } else {
                         // No targets required - submit immediately
                         WerewolfApplication.actionUIService.clearPrompt(session, player.id)
@@ -194,11 +187,9 @@ class ButtonListener : ListenerAdapter() {
                     }
 
                     player.actionSubmitted = true
-                    session.updateActionStatus(
-                        player.id,
-                        ActionStatus.SKIPPED,
-                        targetPlayerIds = listOf(SKIP_TARGET_ID)
-                    )
+                    actionInstance.status = ActionStatus.SKIPPED
+                    actionInstance.targets.clear()
+                    actionInstance.targets.add(SKIP_TARGET_ID)
                     // Clear the action prompt to cancel reminder
                     WerewolfApplication.actionUIService.clearPrompt(session, player.id)
 

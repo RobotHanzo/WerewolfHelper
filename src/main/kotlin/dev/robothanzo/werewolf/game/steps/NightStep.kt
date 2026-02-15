@@ -6,6 +6,8 @@ import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.game.listeners.RoleEventListener
 import dev.robothanzo.werewolf.game.model.*
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
+import dev.robothanzo.werewolf.game.roles.RoleRegistry
+import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import dev.robothanzo.werewolf.service.ActionUIService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.GameStateService
@@ -22,8 +24,8 @@ class NightStep(
     private val speechService: SpeechService,
     @param:Lazy
     private val actionUIService: ActionUIService,
-    private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry,
-    private val roleActionExecutor: dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor,
+    private val roleRegistry: RoleRegistry,
+    private val roleActionExecutor: RoleActionExecutor,
     @param:Lazy
     private val gameSessionService: GameSessionService
 ) : GameStep, RoleEventListener {
@@ -129,9 +131,6 @@ class NightStep(
                         listOf(fearAction),
                         60
                     )
-
-                    // Set status to ACTING
-                    updateStatusToActing(lockedSession, nightmare.id)
                     return@withLockedSession true
                 }
             }
@@ -167,9 +166,6 @@ class NightStep(
                         listOf(extraKillAction),
                         60
                     )
-
-                    // Set status to ACTING
-                    updateStatusToActing(lockedSession, wolfYoungerBrother.id)
                     return@withLockedSession true
                 }
             }
@@ -281,9 +277,6 @@ class NightStep(
                 if (actions.isNotEmpty()) {
                     actors.add(pid)
                     actionUIService.promptPlayerForAction(guildId, lockedSession, pid, actions, 60)
-
-                    // Set status to ACTING
-                    updateStatusToActing(lockedSession, pid)
                 }
             }
             actors.isNotEmpty()
@@ -456,15 +449,6 @@ class NightStep(
         gameSessionService.withLockedSession(guildId) { session ->
             actionUIService.cleanupExpiredPrompts(session)
             session.addLog(LogType.SYSTEM, "角色行動階段結束，清理未完成的行動")
-        }
-    }
-
-    private fun updateStatusToActing(session: Session, pid: Int) {
-        val actionInstance = session.stateData.submittedActions.find { it.actor == pid } ?: return
-        if (actionInstance.status == ActionStatus.PENDING) {
-            actionInstance.status = ActionStatus.ACTING
-            gameSessionService.saveSession(session)
-            gameSessionService.broadcastSessionUpdate(session)
         }
     }
 

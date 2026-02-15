@@ -6,13 +6,10 @@ import {
   Brain,
   Check,
   Clock,
-  Eye,
   FastForward,
-  FlaskConical,
   Lightbulb,
   MessageSquare,
   Moon,
-  Shield,
   Target,
   User,
   Users,
@@ -20,6 +17,7 @@ import {
 import { Player, RoleActionInstance, Session, WolfMessage, WolfVote } from '@/api/types.gen';
 import { DiscordAvatar, DiscordName } from '@/components/DiscordUser';
 import { useTranslation } from '@/lib/i18n';
+import { getRoleConfig, getActionConfig } from '@/constants/gameData';
 
 // --- Types ---
 interface EnrichedActionStatus extends RoleActionInstance {
@@ -33,7 +31,11 @@ interface EnrichedActionStatus extends RoleActionInstance {
 
 interface NightStatusData {
   day: number;
-  phaseType: 'WEREWOLF_VOTING' | 'ROLE_ACTIONS' | 'WOLF_YOUNGER_BROTHER_ACTION';
+  phaseType:
+    | 'WEREWOLF_VOTING'
+    | 'ROLE_ACTIONS'
+    | 'WOLF_YOUNGER_BROTHER_ACTION'
+    | 'NIGHTMARE_ACTION';
   startTime: number;
   endTime: number;
   werewolfMessages: WolfMessage[];
@@ -51,7 +53,9 @@ interface NightStatusProps {
 
 export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [], session }) => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'werewolves' | 'actions'>('werewolves');
+  const [activeTab, setActiveTab] = useState<
+    'werewolves' | 'actions' | 'nightmare' | 'wolf_brother'
+  >('werewolves');
   const messageScrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Data Processing
@@ -97,8 +101,12 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
 
   useEffect(() => {
     const type = nightStatus?.phaseType;
-    if (type === 'ROLE_ACTIONS' || type === 'WOLF_YOUNGER_BROTHER_ACTION') {
+    if (type === 'ROLE_ACTIONS') {
       setActiveTab('actions');
+    } else if (type === 'NIGHTMARE_ACTION') {
+      setActiveTab('nightmare');
+    } else if (type === 'WOLF_YOUNGER_BROTHER_ACTION') {
+      setActiveTab('wolf_brother');
     } else {
       setActiveTab('werewolves');
     }
@@ -215,20 +223,208 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
   const lockThreshold = Math.floor(totalWolves / 2) + 1;
   const votePercentage = Math.round((maxVotes / totalWolves) * 100);
 
-  const getRoleColor = (role: string) => {
-    if (role.includes('預')) return 'seer-cyan';
-    if (role.includes('女')) return 'witch-purple';
-    if (role.includes('守')) return 'guard-green';
-    if (role.includes('獵')) return 'hunter-orange';
-    return 'primary';
-  };
 
-  const getRoleIcon = (role: string) => {
-    if (role.includes('預')) return <Eye className="w-5 h-5" />;
-    if (role.includes('女')) return <FlaskConical className="w-5 h-5" />;
-    if (role.includes('守')) return <Shield className="w-5 h-5" />;
-    if (role.includes('獵')) return <Target className="w-5 h-5" />;
-    return <Brain className="w-5 h-5" />;
+  const hasNightmare = useMemo(() => {
+    return players.some((p) => p.roles?.some((r) => r.includes('夢魘')));
+  }, [players]);
+
+  const nightmareAction = useMemo(() => {
+    return nightStatus.actionStatuses.find((a) => a.actorRole.includes('夢魘'));
+  }, [nightStatus.actionStatuses]);
+
+  const wolfBrotherAction = useMemo(() => {
+    return nightStatus.actionStatuses.find((a) => a.actorRole.includes('狼弟'));
+  }, [nightStatus.actionStatuses]);
+
+  const renderSpecialActionCard = (
+    action: RoleActionInstance | undefined,
+    roleId: string
+  ) => {
+    const roleConfig = getRoleConfig(roleId);
+    const roleName = t(roleConfig.translationKey);
+    const Icon = roleConfig.icon;
+
+    if (!action) {
+      return (
+        <div className="flex flex-col items-center justify-center p-12 text-slate-400">
+          <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-full mb-4">
+            <Icon className="w-8 h-8" />
+          </div>
+          <p>{t('nightStatus.waitingForAction', { role: roleName })}</p>
+        </div>
+      );
+    }
+
+    const actor = players.find((p) => p.id === Number(action.actor));
+    const targetId = action.targets?.[0];
+    const target =
+      targetId && targetId !== -1 ? players.find((p) => p.id === Number(targetId)) : null;
+    const isSkipped = targetId === -1;
+    const isProcessed = action.status === 'PROCESSED';
+    const isSubmitted = action.status === 'SUBMITTED' || isProcessed;
+
+    const actionConfig = action.actionDefinitionId
+      ? getActionConfig(action.actionDefinitionId)
+      : null;
+    const ActionIcon = actionConfig?.icon || ArrowRight;
+
+    return (
+      <div className="max-w-3xl mx-auto mt-10 animate-in fade-in zoom-in-95 duration-500 p-4">
+        <div
+          className="relative overflow-hidden rounded-3xl shadow-2xl bg-white dark:bg-slate-900 border-2"
+          style={{ borderColor: roleConfig.color }}
+        >
+          {/* Decorative background gradient */}
+          <div
+            className="absolute top-0 left-0 right-0 h-32 opacity-10"
+            style={{
+              background: `linear-gradient(to bottom, ${roleConfig.color}, transparent)`,
+            }}
+          />
+
+          <div className="relative p-8 md:p-12">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
+              <div className="flex items-center gap-5">
+                <div
+                  className="p-4 rounded-2xl shadow-lg"
+                  style={{
+                    backgroundColor: `${roleConfig.color}20`,
+                    color: roleConfig.color,
+                  }}
+                >
+                  <Icon className="w-8 h-8" />
+                </div>
+                <div>
+                  <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+                    {roleName}
+                  </h2>
+                  <p className="text-slate-500 dark:text-slate-400 font-medium">
+                    {action.actionDefinitionId
+                      ? t(`actions.labels.${action.actionDefinitionId}`)
+                      : t('features.action')}
+                  </p>
+                </div>
+              </div>
+
+              <div
+                className={`px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wider border flex items-center gap-2 ${
+                  isSubmitted
+                    ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/30'
+                    : 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30'
+                }`}
+              >
+                {isProcessed ? (
+                  <Check className="w-4 h-4 text-green-500" />
+                ) : (
+                  <div
+                    className={`w-2 h-2 rounded-full ${isSubmitted ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`}
+                  />
+                )}
+                {t(`nightStatus.${action.status.toLowerCase()}`)}
+              </div>
+            </div>
+
+             {/* Action Flow Diagram */}
+             <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative">
+               {/* Connector Line (Desktop) */}
+               <div className="hidden md:block absolute top-1/2 left-20 right-20 h-0.5 bg-slate-200 dark:bg-slate-700 -z-10" />
+
+               {/* Actor Node */}
+               <div className="flex flex-col items-center gap-4 z-10 w-full md:w-auto">
+                 <div className="w-28 h-28 rounded-full p-1 bg-white dark:bg-slate-800 shadow-xl ring-4 ring-slate-100 dark:ring-slate-800 relative group transition-transform hover:scale-105 duration-300">
+                    <div className="w-full h-full rounded-full overflow-hidden relative">
+                      <DiscordAvatar
+                        userId={String(actor?.userId)}
+                        guildId={guildId}
+                        avatarClassName="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-full" />
+                    </div>
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                      {t('nightStatus.actor')}
+                    </div>
+                 </div>
+                 <div className="text-center">
+                   <p className="font-bold text-slate-900 dark:text-white text-lg leading-tight">
+                     <DiscordName
+                       userId={String(actor?.userId)}
+                       guildId={guildId}
+                       fallbackName={actor?.nickname}
+                     />
+                   </p>
+                 </div>
+               </div>
+
+               {/* Action Icon / Status */}
+               <div className="flex flex-col items-center justify-center z-10 bg-white dark:bg-slate-900 px-4 py-2 rounded-full shadow-sm border border-slate-100 dark:border-slate-800">
+                 <ActionIcon
+                   className={`w-8 h-8 ${isSubmitted ? 'text-green-500' : 'text-slate-300 dark:text-slate-600'}`}
+                 />
+               </div>
+
+               {/* Target Node */}
+               <div className="flex flex-col items-center gap-4 z-10 w-full md:w-auto">
+                 <div
+                   className={`w-28 h-28 rounded-full p-1 shadow-xl relative transition-all duration-300 flex items-center justify-center ${
+                     isSkipped
+                       ? 'bg-amber-50 border-4 border-amber-200 ring-4 ring-amber-100 dark:bg-amber-900/20 dark:border-amber-700 dark:ring-amber-900/10'
+                       : target
+                         ? 'bg-white dark:bg-slate-800 border-4 border-white dark:border-slate-700 ring-4 ring-slate-100 dark:ring-slate-800'
+                         : 'bg-slate-50 dark:bg-slate-800/50 border-4 border-dashed border-slate-300 dark:border-slate-700'
+                   }`}
+                 >
+                   {isSkipped ? (
+                     <Ban className="w-12 h-12 text-amber-500" />
+                   ) : target ? (
+                     <div className="w-full h-full rounded-full overflow-hidden relative">
+                       <DiscordAvatar
+                         userId={String(target.userId)}
+                         guildId={guildId}
+                         avatarClassName="w-full h-full object-cover"
+                       />
+                       <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-full" />
+                     </div>
+                   ) : (
+                     <div className="text-5xl text-slate-300 dark:text-slate-600 font-thin animate-pulse">
+                       ?
+                     </div>
+                   )}
+
+                   {/* Target Label */}
+                   {(target || isSkipped) && (
+                     <div
+                       className={`absolute -bottom-2 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm text-white ${isSkipped ? 'bg-amber-600' : 'bg-slate-800'}`}
+                     >
+                       {t('nightStatus.target')}
+                     </div>
+                   )}
+                 </div>
+                 <div className="text-center min-h-[3rem] flex flex-col justify-center">
+                   <p className="font-bold text-slate-900 dark:text-white text-lg leading-tight">
+                     {isSkipped ? (
+                       <span className="text-amber-500 italic">
+                         {t('nightStatus.skipped')}
+                       </span>
+                     ) : target ? (
+                       <DiscordName
+                         userId={String(target.userId)}
+                         guildId={guildId}
+                         fallbackName={target.nickname}
+                       />
+                     ) : (
+                       <span className="text-slate-400 italic">
+                         {t('nightStatus.waiting')}
+                       </span>
+                     )}
+                   </p>
+                 </div>
+               </div>
+             </div>
+           </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -246,16 +442,35 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
           </div>
         </div>
 
-        <nav className="hidden md:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+        <nav className="hidden md:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg overflow-x-auto">
+          {hasNightmare && (
+            <button
+              onClick={() => setActiveTab('nightmare')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === 'nightmare' ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-300 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'}`}
+            >
+              {t('roles.nightmare')}
+            </button>
+          )}
+
           <button
             onClick={() => setActiveTab('werewolves')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'werewolves' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'}`}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === 'werewolves' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'}`}
           >
             {t('nightStatus.tabs.wolfPhase')}
           </button>
+          
+          {nightStatus.phaseType === 'WOLF_YOUNGER_BROTHER_ACTION' && (
+            <button
+              onClick={() => setActiveTab('wolf_brother')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === 'wolf_brother' ? 'bg-white dark:bg-slate-700 text-red-600 dark:text-red-300 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'}`}
+            >
+              {t('roles.wolfYoungerBrother')}
+            </button>
+          )}
+
           <button
             onClick={() => setActiveTab('actions')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'actions' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'}`}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === 'actions' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'}`}
           >
             {t('nightStatus.tabs.actions')}
           </button>
@@ -265,7 +480,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto p-6 relative overflow-x-hidden">
         <div className="max-w-7xl mx-auto relative z-10 space-y-8 h-full">
-          {activeTab === 'werewolves' ? (
+          {activeTab === 'werewolves' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full pb-20">
               {/* LEFT COLUMN: Wolf Channel (Chat) */}
               <section className="lg:col-span-7 flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden h-[600px] animate-in fade-in slide-in-from-left-4 duration-500">
@@ -523,7 +738,19 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
                 </div>
               </section>
             </div>
-          ) : (
+          )}
+
+          {activeTab === 'nightmare' && renderSpecialActionCard(
+            nightmareAction, 
+            'NIGHTMARE'
+          )}
+
+          {activeTab === 'wolf_brother' && renderSpecialActionCard(
+            wolfBrotherAction, 
+            'WOLF_YOUNGER_BROTHER'
+          )}
+
+          {activeTab === 'actions' && (
             /* Role Actions Screen (Redesigned) */
             <div className="space-y-8 pb-32 animate-in fade-in duration-500">
               {/* Wolf Kill Summary Banner */}
@@ -624,7 +851,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
                     <span className="text-sm text-slate-400">
                       {t('nightStatus.actionsCompleted', {
                         completed: String(
-                          enrichedStatuses.filter((s) => s.status === 'SUBMITTED').length
+                          enrichedStatuses.filter((s) => s.status === 'SUBMITTED' || s.status === 'PROCESSED').length
                         ),
                         total: String(enrichedStatuses.length),
                       })}
@@ -634,7 +861,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
                         <div
                           className="h-full bg-[#3211d4] rounded-full transition-all duration-700 ease-out shadow-[0_0_10px_rgba(50,17,212,0.5)]"
                           style={{
-                            width: `${Math.round((enrichedStatuses.filter((s) => s.status === 'SUBMITTED').length / enrichedStatuses.length) * 100)}%`,
+                            width: `${enrichedStatuses.length > 0 ? Math.round((enrichedStatuses.filter((s) => s.status === 'SUBMITTED' || s.status === 'PROCESSED').length / enrichedStatuses.length) * 100) : 0}%`,
                           }}
                         ></div>
                       </div>
@@ -644,58 +871,39 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {enrichedStatuses.map((status, index) => {
-                    const roleColor = getRoleColor(status.actorRole);
+                    const roleConfig = getRoleConfig(status.actorRole);
+                    const actionConfig = status.actionDefinitionId 
+                      ? getActionConfig(status.actionDefinitionId) 
+                      : null;
+
                     const isActing = status.status === 'ACTING';
                     const isSkipped = status.status === 'SKIPPED';
-                    const isSubmitted = status.status === 'SUBMITTED';
+                    const isProcessed = status.status === 'PROCESSED';
+                    const isSubmitted = status.status === 'SUBMITTED' || isProcessed;
 
-                    // Explicit style mapping for Tailwind
-                    const borderColorClass =
-                      roleColor === 'seer-cyan'
-                        ? '!border-l-[#06b6d4]'
-                        : roleColor === 'witch-purple'
-                          ? '!border-l-[#a855f7]'
-                          : roleColor === 'guard-green'
-                            ? '!border-l-[#10b981]'
-                            : roleColor === 'hunter-orange'
-                              ? '!border-l-[#f97316]'
-                              : '!border-l-[#3211d4]';
-
-                    const bgColorClass =
-                      roleColor === 'seer-cyan'
-                        ? 'bg-cyan-100 dark:bg-[#06b6d4]/20 text-cyan-700 dark:text-[#06b6d4]'
-                        : roleColor === 'witch-purple'
-                          ? 'bg-purple-100 dark:bg-[#a855f7]/20 text-purple-700 dark:text-[#a855f7]'
-                          : roleColor === 'guard-green'
-                            ? 'bg-emerald-100 dark:bg-[#10b981]/20 text-emerald-700 dark:text-[#10b981]'
-                            : roleColor === 'hunter-orange'
-                              ? 'bg-orange-100 dark:bg-[#f97316]/20 text-orange-700 dark:text-[#f97316]'
-                              : 'bg-indigo-100 dark:bg-[#3211d4]/20 text-indigo-700 dark:text-[#3211d4]';
-
-                    const glowClass =
-                      roleColor === 'seer-cyan'
-                        ? 'shadow-[0_0_20px_rgba(6,182,212,0.3)] ring-[#06b6d4]/40'
-                        : roleColor === 'witch-purple'
-                          ? 'shadow-[0_0_20px_rgba(168,85,247,0.3)] ring-[#a855f7]/40'
-                          : roleColor === 'guard-green'
-                            ? 'shadow-[0_0_20px_rgba(16,185,129,0.3)] ring-[#10b981]/40'
-                            : roleColor === 'hunter-orange'
-                              ? 'shadow-[0_0_20px_rgba(249,115,22,0.3)] ring-[#f97316]/40'
-                              : 'shadow-[0_0_20px_rgba(50,17,212,0.3)] ring-[#3211d4]/40';
+                    const RoleIcon = roleConfig.icon;
 
                     return (
                       <div
                         key={`${status.actor}-${index}`}
-                        className={`bg-white dark:bg-slate-900 rounded-xl border-l-4 border-t border-r border-b border-slate-200 dark:border-slate-800 overflow-hidden group transition-all duration-300 animate-in fade-in slide-in-from-left-4 fill-mode-both ${isActing ? `ring-1 ${glowClass}` : 'shadow-lg'} ${isSkipped ? 'opacity-75 grayscale border-l-slate-500' : borderColorClass}`}
-                        style={{ animationDelay: `${250 + index * 100}ms` }}
+                        className={`bg-white dark:bg-slate-900 rounded-xl border-l-4 border-t border-r border-b border-slate-200 dark:border-slate-800 overflow-hidden group transition-all duration-300 animate-in fade-in slide-in-from-left-4 fill-mode-both ${isActing ? 'ring-1' : 'shadow-lg'} ${isSkipped ? 'opacity-75 grayscale border-l-slate-500' : ''}`}
+                        style={{
+                          animationDelay: `${250 + index * 100}ms`,
+                          borderLeftColor: isSkipped ? undefined : roleConfig.color,
+                          boxShadow: isActing ? `0 0 20px ${roleConfig.color}40` : undefined,
+                        }}
                       >
                         <div className="p-5 relative z-10">
                           <div className="flex justify-between items-start mb-6">
                             <div className="flex items-center gap-3">
                               <div
-                                className={`h-10 w-10 rounded-lg flex items-center justify-center ${isSkipped ? 'bg-slate-500/20 text-slate-500' : bgColorClass}`}
+                                className="h-10 w-10 rounded-lg flex items-center justify-center"
+                                style={{
+                                  backgroundColor: isSkipped ? undefined : `${roleConfig.color}20`,
+                                  color: isSkipped ? undefined : roleConfig.color,
+                                }}
                               >
-                                {getRoleIcon(status.actorRole)}
+                                <RoleIcon className="w-5 h-5" />
                               </div>
                               <div>
                                 <h4 className="font-bold text-slate-900 dark:text-white">
@@ -704,7 +912,11 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
                                 <div className="flex flex-col">
                                   {status.actionName && (
                                     <span
-                                      className={`text-[10px] font-bold mt-1 px-1.5 py-0.5 rounded ${bgColorClass}`}
+                                      className="text-[10px] font-bold mt-1 px-1.5 py-0.5 rounded"
+                                      style={{
+                                        backgroundColor: `${roleConfig.color}20`,
+                                        color: roleConfig.color,
+                                      }}
                                     >
                                       {status.actionName}
                                     </span>
@@ -713,7 +925,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
                               </div>
                             </div>
                             <span
-                              className={`px-2.5 py-1 rounded text-[10px] font-bold tracking-wide uppercase border ${
+                              className={`px-2.5 py-1 rounded text-[10px] font-bold tracking-wide uppercase border flex items-center gap-1 ${
                                 isSubmitted
                                   ? 'bg-green-500/10 text-green-500 border-green-500/20'
                                   : isActing
@@ -723,6 +935,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
                                       : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
                               }`}
                             >
+                              {isProcessed && <Check className="w-3 h-3" />}
                               {status.status
                                 ? t(`nightStatus.${status.status.toLowerCase()}`)
                                 : status.status}
@@ -734,6 +947,8 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
                             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-900 p-1 rounded-full border border-slate-200 dark:border-slate-800 shadow-sm">
                               {isSkipped ? (
                                 <Ban className="text-amber-500 w-4 h-4" />
+                              ) : actionConfig ? (
+                                <actionConfig.icon className="text-slate-500 w-4 h-4" />
                               ) : (
                                 <ArrowRight className="text-slate-500 w-4 h-4" />
                               )}
@@ -741,7 +956,10 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
 
                             <div className="relative z-10 text-center">
                               <div
-                                className={`w-12 h-12 rounded-full border-2 p-0.5 mx-auto mb-2 ${isSkipped ? 'border-amber-500/50' : borderColorClass.replace('border-l-', 'border-')}/50`}
+                                className="w-12 h-12 rounded-full border-2 p-0.5 mx-auto mb-2"
+                                style={{
+                                  borderColor: isSkipped ? '#f59e0b80' : `${roleConfig.color}80`
+                                }}
                               >
                                 {status.playerUserId ? (
                                   <div className="relative w-full h-full">
@@ -768,7 +986,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
 
                             <div className="relative z-10 text-center">
                               <div
-                                className={`w-12 h-12 rounded-full border-2 ${isSkipped ? 'border-amber-500/50' : 'border-slate-600'} p-0.5 mx-auto mb-2 relative group-hover:border-white/50 transition-colors duration-300`}
+                                className={`w-12 h-12 rounded-full border-2 p-0.5 mx-auto mb-2 relative group-hover:border-white/50 transition-colors duration-300 ${isSkipped ? 'border-amber-500/50' : 'border-slate-600'}`}
                               >
                                 {isSkipped ? (
                                   <div className="w-full h-full rounded-full bg-amber-500/10 flex items-center justify-center">
