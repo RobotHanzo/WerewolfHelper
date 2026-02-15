@@ -11,6 +11,8 @@ object PredefinedRoles {
     const val HUNTER_PRIORITY = 250
     const val POLICE_PRIORITY = 400
     const val DARK_MERCHANT_PRIORITY = 50
+    const val DREAM_WEAVER_PRIORITY = 60 // Before wolves
+    const val NIGHTMARE_PRIORITY = 0 // First thing at night
 
     // Action IDs
     const val WEREWOLF_KILL = "WEREWOLF_KILL"
@@ -28,6 +30,8 @@ object PredefinedRoles {
     const val MERCHANT_POISON = "MERCHANT_POISON"
     const val MERCHANT_GUN = "MERCHANT_GUN"
     const val WOLF_YOUNGER_BROTHER_EXTRA_KILL = "WOLF_YOUNGER_BROTHER_EXTRA_KILL"
+    const val DREAM_WEAVER_LINK = "DREAM_WEAVER_LINK"
+    const val NIGHTMARE_FEAR = "NIGHTMARE_FEAR"
 
     // Special death causes (legacy)
     const val DOUBLE_PROTECTION = "DOUBLE_PROTECTION"

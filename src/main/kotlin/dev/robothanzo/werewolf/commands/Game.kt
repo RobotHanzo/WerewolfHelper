@@ -30,7 +30,7 @@ class Game {
                 return@withLockedSession
             }
 
-            if (player.roles?.contains("狼兄") == true) {
+            if (player.roles.contains("狼兄")) {
                 event.hook.editOriginal(":x: 狼兄不可自爆").queue()
                 return@withLockedSession
             }

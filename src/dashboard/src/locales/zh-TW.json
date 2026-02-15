@@ -51,7 +51,9 @@
       "WOLF_YOUNGER_BROTHER_EXTRA_KILL": "狼弟復仇",
       "MERCHANT_SEER_CHECK": "查驗 (商人贈予)",
       "MERCHANT_POISON": "毒藥 (商人贈予)",
-      "MERCHANT_GUN": "獵槍 (商人贈予)"
+      "MERCHANT_GUN": "獵槍 (商人贈予)",
+      "DREAM_WEAVER_LINK": "攝夢",
+      "NIGHTMARE_FEAR": "恐懼"
     },
     "timing": {
       "NIGHT": "夜晚",
@@ -221,7 +223,8 @@
       "IDIOT": "白痴",
       "KNIGHT": "騎士",
       "GRAVE_KEEPER": "守墓人",
-      "DREAM_EATER": "攝夢人",
+      "DREAM_WEAVER": "攝夢人",
+      "NIGHTMARE": "夢魘",
       "MAGICIAN": "魔術師",
       "CLONE": "複製人",
       "HIDDEN": "隱藏身分"
@@ -239,6 +242,8 @@
       "MERCHANT_SEER_CHECK": "商人技能：查驗",
       "MERCHANT_POISON": "商人技能：毒藥",
       "MERCHANT_GUN": "商人技能：開槍",
+      "DREAM_WEAVER_LINK": "攝夢人：攝夢",
+      "NIGHTMARE_FEAR": "夢魘：恐懼",
       "DEATH": "角色死亡",
       "UNKNOWN": "未知行動"
     }
@@ -540,6 +545,7 @@
     "phases": {
       "WEREWOLF_VOTING": "狼人投票",
       "ROLE_ACTIONS": "角色行動",
+      "NIGHTMARE_ACTION": "夢魘行動",
       "WOLF_YOUNGER_BROTHER_ACTION": "狼弟行動"
     }
   },

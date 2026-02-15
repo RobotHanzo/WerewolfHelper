@@ -113,12 +113,19 @@ export const GAME_ROLES: Record<string, GameEntityConfig> = {
     translationKey: 'roles.labels.GRAVE_KEEPER',
     camp: 'GOD',
   },
-  DREAM_EATER: {
-    id: 'DREAM_EATER',
+  DREAM_WEAVER: {
+    id: 'DREAM_WEAVER',
     color: '#ec4899', // Pink-500
     icon: Moon,
-    translationKey: 'roles.labels.DREAM_EATER',
+    translationKey: 'roles.labels.DREAM_WEAVER',
     camp: 'GOD',
+  },
+  NIGHTMARE: {
+    id: 'NIGHTMARE',
+    color: '#3b82f6', // Blue-500
+    icon: Ghost,
+    translationKey: 'roles.labels.NIGHTMARE',
+    camp: 'WEREWOLF',
   },
   MAGICIAN: {
     id: 'MAGICIAN',
@@ -265,6 +272,18 @@ export const GAME_ACTIONS: Record<string, GameEntityConfig> = {
     icon: Crosshair,
     translationKey: 'roles.actions.MERCHANT_GUN',
   },
+  DREAM_WEAVER_LINK: {
+    id: 'DREAM_WEAVER_LINK',
+    color: '#ec4899',
+    icon: Moon,
+    translationKey: 'roles.actions.DREAM_WEAVER_LINK',
+  },
+  NIGHTMARE_FEAR: {
+    id: 'NIGHTMARE_FEAR',
+    color: '#3b82f6',
+    icon: Ghost,
+    translationKey: 'roles.actions.NIGHTMARE_FEAR',
+  },
   DEATH: {
     id: 'DEATH',
     color: '#6b7280',
@@ -296,7 +315,9 @@ export const getRoleConfig = (roleName: string): GameEntityConfig => {
   if (roleName.includes('白痴')) return GAME_ROLES.IDIOT;
   if (roleName.includes('騎士')) return GAME_ROLES.KNIGHT;
   if (roleName.includes('守墓人')) return GAME_ROLES.GRAVE_KEEPER;
-  if (roleName.includes('攝夢人')) return GAME_ROLES.DREAM_EATER;
+
+  if (roleName.includes('攝夢人')) return GAME_ROLES.DREAM_WEAVER;
+  if (roleName.includes('夢魘')) return GAME_ROLES.NIGHTMARE;
   if (roleName.includes('魔術師')) return GAME_ROLES.MAGICIAN;
   if (roleName.includes('平民') || roleName.includes('村民')) return GAME_ROLES.VILLAGER;
   if (roleName.includes('黑市')) return GAME_ROLES.DARK_MERCHANT;

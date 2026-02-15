@@ -69,6 +69,12 @@ fun Session.isActionAvailable(
     // Check if current game state allows this action's timing
     val isNightPhase = currentState.contains("NIGHT", ignoreCase = true)
 
+    // Nightmare Fear Check: Feared players cannot use skills at night
+    val fearedId = stateData.nightmareFearTargets[day]
+    if (fearedId == playerId && isNightPhase) {
+        return false
+    }
+
     // Filter out actions that don't match current timing
     when (action.timing) {
         ActionTiming.NIGHT -> if (!isNightPhase) return false

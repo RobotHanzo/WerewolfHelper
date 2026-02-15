@@ -371,7 +371,7 @@ data class Player(
         }
 
         fun isWolf(role: String): Boolean {
-            return role.contains("狼") || role == "石像鬼" || role == "血月使者" || role == "惡靈騎士"
+            return role.contains("狼") || role == "石像鬼" || role == "血月使者" || role == "惡靈騎士" || role == "夢魘"
         }
 
         fun isVillager(role: String): Boolean {

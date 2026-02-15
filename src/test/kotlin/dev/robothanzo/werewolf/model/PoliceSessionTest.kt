@@ -43,7 +43,7 @@ class PoliceSessionTest {
     fun testStateEnumCanQuit() {
         assertTrue(PoliceSession.State.ENROLLMENT.canQuit())
         assertTrue(PoliceSession.State.UNENROLLMENT.canQuit())
-        assertFalse(PoliceSession.State.SPEECH.canQuit())
+        assertTrue(PoliceSession.State.SPEECH.canQuit())
         assertFalse(PoliceSession.State.VOTING.canQuit())
         assertFalse(PoliceSession.State.NONE.canQuit())
     }

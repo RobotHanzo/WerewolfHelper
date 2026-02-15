@@ -4,9 +4,11 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.*
+import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 import dev.robothanzo.werewolf.service.ActionUIService
 import dev.robothanzo.werewolf.service.NightManager
+import dev.robothanzo.werewolf.service.RoleEventService
 import dev.robothanzo.werewolf.utils.MsgUtils
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
@@ -17,9 +19,9 @@ import org.springframework.stereotype.Service
 @Service
 class ActionUIServiceImpl(
     private val nightManager: NightManager,
-    private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry,
+    private val roleRegistry: RoleRegistry,
     private val roleActionExecutor: dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor,
-    private val roleEventService: dev.robothanzo.werewolf.service.RoleEventService
+    private val roleEventService: RoleEventService
 ) : ActionUIService {
     private val log = LoggerFactory.getLogger(ActionUIServiceImpl::class.java)
 
@@ -150,8 +152,9 @@ class ActionUIServiceImpl(
                     }
                 }
 
-            // Initialize empty votes for all participants so dashboard shows them as "Not Voted"
-            participants.forEach { pid ->
+            // Initialize empty votes for all electorates so dashboard shows them as "Not Voted"
+            // and allWolvesVoted() knows to wait for them.
+            groupState.electorates.forEach { pid ->
                 if (groupState.votes.none { it.voterId == pid }) {
                     groupState.votes.add(WolfVote(voterId = pid, targetId = null))
                 }
@@ -213,6 +216,20 @@ class ActionUIServiceImpl(
             actionInstance.status = ActionStatus.SUBMITTED
             actionInstance.actionPromptId = null
             actionInstance.targetPromptId = null
+
+            // Execute immediate actions (e.g., Nightmare, Seer)
+            val actionDef = roleRegistry.getAction(actionInstance.actionDefinitionId!!)
+            if (actionDef?.isImmediate == true) {
+                roleActionExecutor.executeActionInstance(lockedSession, actionInstance)
+                actionInstance.status = ActionStatus.PROCESSED
+                
+                // Add to history if necessary (e.g. for replay or death triggers)
+                val currentDay = lockedSession.day
+                val history = lockedSession.stateData.executedActions.getOrPut(currentDay) { mutableListOf() }
+                if (!history.contains(actionInstance)) {
+                    history.add(actionInstance)
+                }
+            }
 
             // Notify NightManager of activity
             nightManager.notifyPhaseUpdate(guildId)
@@ -313,8 +330,25 @@ class ActionUIServiceImpl(
 
         // Check if the current phase has expired
         if (session.stateData.phaseEndTime > 0 && session.stateData.phaseEndTime <= now + 500) {
+            val phaseType = session.stateData.phaseType
             val pendingActions =
-                session.stateData.submittedActions.filter { it.status == ActionStatus.PENDING || it.status == ActionStatus.ACTING }
+                session.stateData.submittedActions.filter {
+                    (it.status == ActionStatus.PENDING || it.status == ActionStatus.ACTING)
+                }.filter { action ->
+                    // Filter based on phase to avoid expiring unrelated actions
+                    when (phaseType) {
+                        NightPhase.NIGHTMARE_ACTION -> {
+                            val player = session.getPlayer(action.actor)
+                            player?.roles?.contains("夢魘") == true
+                        }
+                        NightPhase.WOLF_YOUNGER_BROTHER_ACTION -> {
+                            val player = session.getPlayer(action.actor)
+                            player?.roles?.contains("狼弟") == true
+                        }
+                        NightPhase.WEREWOLF_VOTING -> false // Handled separately by group vote logic
+                        else -> true // ROLE_ACTIONS or generic cleanup
+                    }
+                }
 
             if (pendingActions.isNotEmpty()) {
                 pendingActions.forEach { action ->
@@ -334,7 +368,7 @@ class ActionUIServiceImpl(
                         )
                         val target = eligible.randomOrNull()
                         if (target != null) {
-                            session.getPlayer(playerId)?.channel?.sendMessage("⏱️ **時間到！** 已為你隨機選擇目標。")
+                            session.getPlayer(playerId)?.channel?.sendMessage("⏱️ **時間到！** 已為你隨機選擇目標 **玩家$target**。")
                                 ?.queue()
                             log.info("Auto-submitting mandatory action ${mandatoryAction.actionId} for player $playerId due to timeout")
                             session.validateAndSubmitAction(
@@ -396,17 +430,36 @@ class ActionUIServiceImpl(
 
         val timeUntilExpiry = expiry - now
         if (timeUntilExpiry in 29000..31000) {
+            val phaseType = session.stateData.phaseType
             val pendingActions =
-                session.stateData.submittedActions.filter { it.status == ActionStatus.PENDING || it.status == ActionStatus.ACTING }
+                session.stateData.submittedActions.filter {
+                    (it.status == ActionStatus.PENDING || it.status == ActionStatus.ACTING)
+                }.filter { action ->
+                    // Filter based on phase to avoid reminding unrelated actors
+                    when (phaseType) {
+                        NightPhase.NIGHTMARE_ACTION -> {
+                            val player = session.getPlayer(action.actor)
+                            player?.roles?.contains("夢魘") == true
+                        }
+                        NightPhase.WOLF_YOUNGER_BROTHER_ACTION -> {
+                            val player = session.getPlayer(action.actor)
+                            player?.roles?.contains("狼弟") == true
+                        }
+                        NightPhase.WEREWOLF_VOTING -> false // Handled manually or via separate logic
+                        else -> true // ROLE_ACTIONS or generic cleanup
+                    }
+                }
             pendingActions.forEach { action ->
                 val availableActions = session.getAvailableActionsForPlayer(action.actor, roleRegistry)
                 val isWolfBrotherAction =
                     availableActions.any { it.actionId == ActionDefinitionId.WOLF_YOUNGER_BROTHER_EXTRA_KILL }
+                val isNightmareAction =
+                    availableActions.any { it.actionId == ActionDefinitionId.NIGHTMARE_FEAR }
 
-                val msg = if (isWolfBrotherAction) {
-                    "⚠️ **提醒**: 還剩 **30秒**！若未發動攻擊，你將會 **自殺**！"
-                } else {
-                    "⚠️ **提醒**: 還剩 **30秒** 需要選擇行動或跳過，否則將視為放棄"
+                val msg = when {
+                    isWolfBrotherAction -> "⚠️ **提醒**: 還剩 **30秒**！若未發動攻擊，你將會 **自殺**！"
+                    isNightmareAction -> "⚠️ **提醒**: 還剩 **30秒**！若未選擇目標，系統將為你 **隨機選擇** 一名玩家進行恐懼！"
+                    else -> "⚠️ **提醒**: 還剩 **30秒** 需要選擇行動或跳過，否則將視為放棄"
                 }
 
                 session.getPlayer(action.actor)?.channel?.sendMessage(msg)?.queue()

@@ -36,8 +36,15 @@ enum class ActionDefinitionId(val actionName: String) {
     MERCHANT_POISON("毒藥 (黑市商人版)"),
     MERCHANT_GUN("獵槍 (黑市商人版)"),
 
+    // Dream Weaver Actions
+    DREAM_WEAVER_LINK("攝夢"),
+
+    // Nightmare Actions
+    NIGHTMARE_FEAR("恐懼"),
+
     // System Actions
     DEATH_RESOLUTION("結算"),
+    DREAM_DEATH("夢亡"),
     DEATH("死亡");
 
     companion object {

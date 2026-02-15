@@ -49,6 +49,29 @@ class WolfKing(@Transient private val revengeAction: WolfKingRevengeAction) : Ba
 }
 
 @Component
+class DreamWeaver(
+    @Transient private val linkAction: DreamWeaverLinkAction
+) : BaseRole("攝夢人", Camp.GOD) {
+    override fun getActions(): List<RoleAction> = listOf(linkAction)
+
+    override fun onDeath(context: RoleEventContext) {
+        // Linked death logic will be handled in DeathResolutionAction mainly,
+        // but we might need to trigger immediate death if night is over?
+        // For simplicity, Dream Weaver death processing is usually done at night end or day transition.
+        // Rule: "If Dream Weaver dies at night, the Sleepwalker dies too."
+        // This is best handled in DeathResolutionAction to avoid circular dependencies or complex event triggers during death.
+    }
+}
+
+@Component
+class Nightmare(
+    @Transient private val fearAction: NightmareFearAction,
+    @Transient private val killAction: WerewolfKillAction
+) : BaseRole("夢魘", Camp.WEREWOLF) {
+    override fun getActions(): List<RoleAction> = listOf(fearAction, killAction)
+}
+
+@Component
 class Villager : BaseRole("平民", Camp.VILLAGER)
 
 @Component

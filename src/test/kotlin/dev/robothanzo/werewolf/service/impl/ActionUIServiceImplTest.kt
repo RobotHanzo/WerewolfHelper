@@ -10,6 +10,7 @@ import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.NightManager
+import dev.robothanzo.werewolf.service.RoleEventService
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
@@ -33,6 +34,9 @@ class ActionUIServiceImplTest {
 
     @Mock
     private lateinit var roleActionExecutor: RoleActionExecutor
+
+    @Mock
+    private lateinit var roleEventService: RoleEventService
 
     @Mock
     private lateinit var mockChannel: TextChannel
@@ -104,8 +108,10 @@ class ActionUIServiceImplTest {
 
         // Setup static service access
         WerewolfApplication.gameSessionService = gameSessionService
+        WerewolfApplication.nightManager = nightManager
+        WerewolfApplication.roleEventService = roleEventService
 
-        actionUIService = ActionUIServiceImpl(nightManager, roleRegistry, roleActionExecutor)
+        actionUIService = ActionUIServiceImpl(nightManager, roleRegistry, roleActionExecutor, roleEventService)
     }
 
     @Test

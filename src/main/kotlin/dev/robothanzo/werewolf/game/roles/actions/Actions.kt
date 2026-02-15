@@ -24,6 +24,16 @@ class WerewolfKillAction : BaseRoleAction(
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
         if (targetId == SKIP_TARGET_ID) return accumulatedState
 
+        // Nightmare Check: If any alive wolf is feared, the kill fails
+        val fearedId = session.stateData.nightmareFearTargets[session.day]
+        if (fearedId != null) {
+            val fearedPlayer = session.getPlayer(fearedId)
+            if (fearedPlayer?.wolf == true) {
+                session.addLog(LogType.SYSTEM, "狼人陣營今晚無法行兇，因為隊友 ${fearedPlayer.nickname} 處於恐懼狀態")
+                return accumulatedState
+            }
+        }
+
         accumulatedState.deaths.getOrPut(DeathCause.WEREWOLF) { mutableListOf() }.add(targetId)
         return accumulatedState
     }
@@ -86,8 +96,8 @@ class WolfYoungerBrotherExtraKillAction : BaseRoleAction(
     override fun isAvailable(session: Session, actor: Int): Boolean {
         if (!super.isAvailable(session, actor)) return false
 
-        // Available if this specific player was flagged for revenge after Wolf Brother's death
-        return session.stateData.wolfBrotherAwakenedPlayerId == actor
+        // Available if Wolf Brother died TODAY (this night is the revenge night)
+        return session.stateData.wolfBrotherDiedDay == session.day
     }
 }
 
@@ -321,6 +331,30 @@ class DeathResolutionAction : BaseRoleAction(
         val doubleProtected = werewolfTargets
             .filter { it in accumulatedState.saved }
             .filter { it in accumulatedState.protectedPlayers }
+
+        // Dream Weaver Logic
+        val currentSleepwalkerId = session.stateData.dreamWeaverTargets[session.day]
+        val prevSleepwalkerId = session.stateData.dreamWeaverTargets[session.day - 1]
+        val dreamWeaverId = session.alivePlayers().values.find { it.roles.contains("攝夢人") }?.id
+
+        // 1. Dream Weaver Immunity: Sleepwalker is immune to night damage (except Dream Weaver's own effects)
+        if (currentSleepwalkerId != null) {
+             deaths.values.forEach { it.removeIf { id -> id == currentSleepwalkerId } }
+        }
+
+        // 2. Dream Weaver Consecutive Death
+        if (currentSleepwalkerId != null && currentSleepwalkerId == prevSleepwalkerId) {
+            deaths.getOrPut(DeathCause.DREAM_WEAVER) { mutableListOf() }.add(currentSleepwalkerId)
+        }
+
+        // 3. Dream Weaver Linked Death
+        // Check if Dream Weaver is dying tonight
+        if (dreamWeaverId != null && currentSleepwalkerId != null) {
+            val isDreamWeaverDying = deaths.values.flatten().contains(dreamWeaverId)
+            if (isDreamWeaverDying) {
+                 deaths.getOrPut(DeathCause.DREAM_WEAVER) { mutableListOf() }.add(currentSleepwalkerId)
+            }
+        }
 
         accumulatedState.saved.forEach { savedId ->
             if (deaths.values.any { it.contains(savedId) }) {

@@ -4,6 +4,8 @@ import club.minnced.discord.webhook.WebhookClient
 import club.minnced.discord.webhook.send.WebhookMessageBuilder
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.ActionDefinitionId
+import dev.robothanzo.werewolf.game.model.ActionStatus
 import dev.robothanzo.werewolf.game.model.NightPhase
 import dev.robothanzo.werewolf.game.model.WolfMessage
 import dev.robothanzo.werewolf.service.GameSessionService
@@ -54,7 +56,7 @@ class MessageListener : ListenerAdapter() {
                 firstRole.contains("白狼王") ||
                 firstRole.contains("血月使者") ||
                 firstRole.contains("惡靈騎士") ||
-                firstRole.contains("夢魘") ||
+                (firstRole.contains("夢魘") && (session.day > 1 || session.stateData.submittedActions.any { it.actor == player.id && it.actionDefinitionId == ActionDefinitionId.NIGHTMARE_FEAR && (it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.SKIPPED || it.status == ActionStatus.PROCESSED) })) ||
                 (roles.contains("狼弟") && !session.isCharacterAlive("狼兄") &&
                         (session.stateData.wolfBrotherDiedDay == null || session.stateData.wolfBrotherDiedDay!! < session.day ||
                         (session.stateData.phaseType?.let { it.order > NightPhase.WOLF_YOUNGER_BROTHER_ACTION.order }

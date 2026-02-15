@@ -9,9 +9,10 @@ import org.springframework.data.annotation.Transient
  * Represents the sub-phases of the night.
  */
 enum class NightPhase(val order: Int) {
-    WOLF_YOUNGER_BROTHER_ACTION(0),
-    WEREWOLF_VOTING(1),
-    ROLE_ACTIONS(2)
+    NIGHTMARE_ACTION(0),
+    WOLF_YOUNGER_BROTHER_ACTION(1),
+    WEREWOLF_VOTING(2),
+    ROLE_ACTIONS(3)
 }
 
 enum class ActionTiming {
@@ -132,6 +133,12 @@ data class GameStateData(
 
     @Schema(example = "{\"1\": [{\"actor\": 1, \"actionDefinitionId\": \"WEREWOLF_KILL\", \"targets\": [2]}]}")
     var executedActions: MutableMap<Int, MutableList<RoleActionInstance>> = mutableMapOf(), // day -> List of executed actions
+
+    @Schema(description = "Map of Dream Weaver targets per day (Day -> TargetId)")
+    var dreamWeaverTargets: MutableMap<Int, Int> = mutableMapOf(),
+
+    @Schema(description = "Map of Nightmare fear targets per day (Day -> TargetId)")
+    var nightmareFearTargets: MutableMap<Int, Int> = mutableMapOf(),
 
     // Wolf features, these are rotated daily (in game day, as the final wolf kill is applied at death announcement and stored into executedActions)
     @Schema(example = "{\"WEREWOLF_KILL\": {\"actionId\": \"WEREWOLF_KILL\", \"finished\": false}}")
