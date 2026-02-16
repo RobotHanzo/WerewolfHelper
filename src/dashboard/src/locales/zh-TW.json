@@ -138,7 +138,8 @@
     "speech": "發言流程",
     "voting": "放逐投票",
     "votingPhase": "放逐投票階段",
-    "sheriffElectionPhase": "警長選舉階段"
+    "sheriffElectionPhase": "警長選舉階段",
+    "judgeDecision": "法官裁決"
   },
   "players": {
     "title": "玩家",
@@ -293,6 +294,15 @@
   "voice": {
     "muteAll": "全體靜音",
     "unmuteAll": "全體解除靜音"
+  },
+  "judge": {
+    "decisionTitle": "遊戲結束判定",
+    "decisionDescription": "系統偵測到遊戲可能已經結束。身為法官，請確認狀況並決定是否結束遊戲。",
+    "endGame": "結束遊戲",
+    "endGameHint": "開放所有麥克風與權限",
+    "continueGame": "繼續遊戲",
+    "continueGameHint": "繼續進行下一階段",
+    "decisionResult": "判定結果"
   },
   "admin": {
     "assignJudge": "指派法官",

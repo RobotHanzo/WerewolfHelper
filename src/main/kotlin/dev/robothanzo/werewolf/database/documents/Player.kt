@@ -206,6 +206,11 @@ data class Player(
             session.spectatorTextChannel?.sendMessage(message)?.queue()
             // Trigger Replay Generation
             Replay.upsertFromSession(session, WerewolfApplication.replayRepository)
+
+            // Trigger Judge Decision
+            session.stateData.pendingNextStep = session.currentState
+            session.stateData.gameEndReason = result.reason
+            WerewolfApplication.gameStateService.startStep(session, "JUDGE_DECISION")
         }
 
         if (alive) {

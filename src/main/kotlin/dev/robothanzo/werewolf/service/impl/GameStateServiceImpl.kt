@@ -102,6 +102,17 @@ class GameStateServiceImpl(
             session.addLog(LogType.SYSTEM, "進入第 ${session.day} 天")
         }
 
+        // Check for Game End
+        // We only check if we are NOT already in JUDGE_DECISION (to avoid loops if we came from there and chose continue)
+
+        val endResult = session.hasEnded(null)
+        if (endResult != Session.Result.NOT_ENDED) {
+            session.stateData.pendingNextStep = nextId
+            session.stateData.gameEndReason = endResult.reason
+            startStep(session, "JUDGE_DECISION")
+            return
+        }
+
         startStep(session, nextId)
     }
 

@@ -297,6 +297,52 @@ class ButtonListener : ListenerAdapter() {
 
                 return
             }
+
+            "end_game_confirm" -> {
+                event.deferReply(true).queue()
+                WerewolfApplication.gameSessionService.withLockedSession(event.guild!!.idLong) { session ->
+                    if (!dev.robothanzo.werewolf.utils.CmdUtils.isAdmin(event)) {
+                        event.hook.editOriginal(":x: 只有法官可以執行此操作").queue()
+                        return@withLockedSession
+                    }
+
+                    val result = WerewolfApplication.gameStateService.handleInput(
+                        session,
+                        mapOf("action" to "end_game_confirm")
+                    )
+
+                    if (result["success"] == true) {
+                        event.hook.editOriginal(":white_check_mark: 指令已確認").queue()
+                        WerewolfApplication.gameSessionService.broadcastSessionUpdate(session)
+                    } else {
+                        event.hook.editOriginal(":x: 操作失敗").queue()
+                    }
+                }
+                return
+            }
+
+            "continue_game" -> {
+                event.deferReply(true).queue()
+                WerewolfApplication.gameSessionService.withLockedSession(event.guild!!.idLong) { session ->
+                    if (!dev.robothanzo.werewolf.utils.CmdUtils.isAdmin(event)) {
+                        event.hook.editOriginal(":x: 只有法官可以執行此操作").queue()
+                        return@withLockedSession
+                    }
+
+                    val result = WerewolfApplication.gameStateService.handleInput(
+                        session,
+                        mapOf("action" to "continue_game")
+                    )
+
+                    if (result["success"] == true) {
+                        event.hook.editOriginal(":white_check_mark: 遊戲繼續").queue()
+                        WerewolfApplication.gameSessionService.broadcastSessionUpdate(session)
+                    } else {
+                        event.hook.editOriginal(":x: 操作失敗").queue()
+                    }
+                }
+                return
+            }
         }
 
         if (!customId.startsWith("vote")) return

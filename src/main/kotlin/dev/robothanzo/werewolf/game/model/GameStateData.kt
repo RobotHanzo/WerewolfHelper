@@ -162,6 +162,12 @@ data class GameStateData(
 
     @Schema(description = "Start time of the game")
     var gameStartTime: Long = 0,
+
+    @Schema(description = "The next step ID pending judge approval when game end condition is met")
+    var pendingNextStep: String? = null,
+
+    @Schema(description = "The reason for game end, if detected")
+    var gameEndReason: String? = null
 ) {
     // --- Transient fields for UI state synchronization ---
     @Transient

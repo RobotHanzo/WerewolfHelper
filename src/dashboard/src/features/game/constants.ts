@@ -6,4 +6,5 @@ export const GAME_STEPS = [
   { id: 'DEATH_ANNOUNCEMENT', key: 'steps.deathAnnouncement' },
   { id: 'SPEECH_PHASE', key: 'steps.speech' },
   { id: 'VOTING_PHASE', key: 'steps.voting' },
+  { id: 'JUDGE_DECISION', key: 'steps.judgeDecision' },
 ] as const;

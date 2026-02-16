@@ -91,15 +91,20 @@ class GameController(
         @PathVariable guildId: String,
         @RequestBody body: GameRequests.StateActionRequest
     ): ResponseEntity<ApiResponse> {
-        val session = gameSessionService.getSession(guildId.toLong())
-            .orElseThrow { Exception("Session not found") }
+        var responseResult: Map<String, Any> = mapOf()
+        gameSessionService.withLockedSession(guildId.toLong()) { session ->
+            // Construct map as expected by service
+            val actionMap: MutableMap<String, Any> = mutableMapOf("action" to body.action)
+            body.data?.let { actionMap.putAll(it) }
 
-        // Construct map as expected by service
-        val actionMap: MutableMap<String, Any> = mutableMapOf("action" to body.action)
-        body.data?.let { actionMap.putAll(it) }
+            val result = gameStateService.handleInput(session, actionMap)
+            responseResult = result
 
-        val result = gameStateService.handleInput(session, actionMap)
-        return ResponseEntity.ok(StateActionResponse(result))
+            if (result["success"] == true) {
+                gameSessionService.broadcastSessionUpdate(session)
+            }
+        }
+        return ResponseEntity.ok(StateActionResponse(responseResult))
     }
 
     // --- Players ---

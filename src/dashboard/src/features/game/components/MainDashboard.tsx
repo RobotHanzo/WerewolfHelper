@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Mic, Play, Shuffle, SkipForward, Skull, StepForward, Sun, Users } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle,
+  Mic,
+  Play,
+  Shuffle,
+  SkipForward,
+  Skull,
+  StepForward,
+  Sun,
+  Users,
+} from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { useMutation } from '@tanstack/react-query';
 import {
@@ -7,6 +18,7 @@ import {
   nextStateMutation,
   setStateMutation,
   startGameMutation,
+  stateActionMutation,
 } from '@/api/@tanstack/react-query.gen';
 import { Player, Session } from '@/api/types.gen';
 import { SpeechManager } from '@/features/speech/components/SpeechManager';
@@ -39,10 +51,11 @@ export const MainDashboard = ({
   const nextState = useMutation(nextStateMutation());
   const startGame = useMutation(startGameMutation());
   const assignRoles = useMutation(assignRolesMutation());
+  const stateAction = useMutation(stateActionMutation());
 
   const steps = useMemo(
     () =>
-      GAME_STEPS.map((step) => ({
+      GAME_STEPS.filter((step) => step.id !== 'JUDGE_DECISION').map((step) => ({
         id: step.id,
         name: t(step.key),
       })),
@@ -135,6 +148,19 @@ export const MainDashboard = ({
     setIsWorking(true);
     try {
       await assignRoles.mutateAsync({ path: { guildId: guildId } });
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const handleJudgeDecision = async (action: 'end_game_confirm' | 'continue_game') => {
+    if (readonly || isWorking) return;
+    setIsWorking(true);
+    try {
+      await stateAction.mutateAsync({
+        path: { guildId: guildId },
+        body: { action },
+      });
     } finally {
       setIsWorking(false);
     }
@@ -352,6 +378,64 @@ export const MainDashboard = ({
                 />
               )
             )}
+          </div>
+        );
+
+      case 'JUDGE_DECISION':
+        return (
+          <div className="animate-in fade-in duration-300">
+            <div className="p-6 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
+              <div className="flex items-center gap-3 mb-4">
+                <AlertTriangle className="w-8 h-8 text-amber-600 dark:text-amber-500" />
+                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                  {t('judge.decisionTitle', 'Game End Detected')}
+                </h3>
+              </div>
+
+              {(session.stateData as any).gameEndReason && (
+                <div className="mb-4 p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                  <span className="font-semibold text-slate-900 dark:text-slate-100 mr-2">
+                    {t('judge.decisionResult', 'Result')}:
+                  </span>
+                  <span className="text-amber-600 dark:text-amber-400 font-bold">
+                    {(session.stateData as any).gameEndReason}
+                  </span>
+                </div>
+              )}
+
+              <p className="text-base text-slate-700 dark:text-slate-300 mb-6 leading-relaxed">
+                {t(
+                  'judge.decisionDescription',
+                  'The system has detected a potential game end condition. As the Judge, please verify the situation and decide whether to end the game or continue.'
+                )}
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button
+                  onClick={() => handleJudgeDecision('end_game_confirm')}
+                  disabled={readonly || isWorking}
+                  className="p-4 rounded-xl bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold text-lg disabled:opacity-50 transition-all shadow-lg hover:shadow-red-500/20 flex flex-col items-center gap-2"
+                >
+                  <Skull className="w-8 h-8" />
+                  <span>{t('judge.endGame', 'End Game')}</span>
+                  <span className="text-xs font-normal opacity-80">
+                    {t('judge.endGameHint', 'Open all mics & permissions')}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => handleJudgeDecision('continue_game')}
+                  disabled={readonly || isWorking}
+                  className="p-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-lg disabled:opacity-50 transition-all shadow-lg hover:shadow-emerald-500/20 flex flex-col items-center gap-2"
+                >
+                  <CheckCircle className="w-8 h-8" />
+                  <span>{t('judge.continueGame', 'Continue Game')}</span>
+                  <span className="text-xs font-normal opacity-80">
+                    {t('judge.continueGameHint', 'Proceed to next step')}
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
         );
 
