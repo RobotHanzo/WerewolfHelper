@@ -39,6 +39,7 @@ class ActionUIServiceImpl(
 
             // Send action prompt to player's channel
             val actionText = buildString {
+                appendLine(player.member?.asMention)
                 appendLine("🎭 **選擇行動**")
                 appendLine()
                 appendLine("⏱️ ${timeoutSeconds}秒內必須選擇，否則視為放棄")
