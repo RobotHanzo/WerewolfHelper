@@ -294,11 +294,10 @@ fun Session.validateAndSubmitAction(
         val executionResult = roleActionExecutor.executeActionInstance(this, action)
 
         // Handle immediate deaths if any (e.g. Hunter revenge)
-        for ((_, deaths) in executionResult.deaths) {
+        for ((cause, deaths) in executionResult.deaths) {
             for (userId in deaths) {
-                // If it's a death trigger, it shouldn't allow last words for the target
-                // as per user requirement: "kill that player as well (no last words)"
-                WerewolfApplication.gameActionService.markPlayerDead(this, userId, false)
+                val player = this.getPlayer(userId) ?: continue
+                player.died(cause, false)
             }
         }
 

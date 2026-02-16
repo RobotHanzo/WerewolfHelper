@@ -426,6 +426,40 @@ abstract class DarkMerchantTradeAction(
         }
         return accumulatedState
     }
+
+    override fun eligibleTargets(
+        session: Session,
+        actor: Int,
+        alivePlayers: List<Int>,
+        accumulatedState: ActionExecutionResult
+    ): List<Int> {
+        return alivePlayers.filter { it != actor }
+    }
+
+    override fun isAvailable(session: Session, actor: Int): Boolean {
+        // 1. Check if ANY Dark Merchant action was EXECUTED in the past.
+        // If the merchant has already traded once (successfully or not), they cannot trade again.
+        val prefix = PredefinedRoles.DARK_MERCHANT_TRADE_PREFIX
+        val historicalUses = session.stateData.executedActions.values.flatten().any {
+            it.actor == actor && it.actionDefinitionId.toString().startsWith(prefix)
+        }
+        if (historicalUses) return false
+
+        // 2. Check if ANOTHER Dark Merchant action is currently SUBMITTED.
+        // This ensures that within the same night, if they have already selected one type (and it's submitted),
+        // they cannot select a different type unless they cancel the first one (if UI supports it) or update the same type.
+        // We allow checking 'isAvailable' for the SAME actionId to allow updates/re-submissions of the same type.
+        val otherSubmitted = session.stateData.submittedActions.any {
+            it.actor == actor &&
+                it.actionDefinitionId.toString().startsWith(prefix) &&
+                it.actionDefinitionId != this.actionId &&
+                (it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.PROCESSED)
+        }
+
+        if (otherSubmitted) return false
+
+        return super.isAvailable(session, actor)
+    }
 }
 
 @Component

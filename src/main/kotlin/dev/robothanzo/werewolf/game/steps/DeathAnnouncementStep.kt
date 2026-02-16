@@ -9,7 +9,8 @@ import dev.robothanzo.werewolf.game.model.ActionStatus
 import dev.robothanzo.werewolf.game.model.ActionTiming
 import dev.robothanzo.werewolf.game.model.RoleEventType
 import dev.robothanzo.werewolf.game.model.resolveNightActions
-import dev.robothanzo.werewolf.service.GameActionService
+import dev.robothanzo.werewolf.game.roles.RoleRegistry
+import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.GameStateService
 import dev.robothanzo.werewolf.utils.CmdUtils
@@ -19,9 +20,8 @@ import org.springframework.stereotype.Component
 
 @Component
 class DeathAnnouncementStep(
-    private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry,
-    private val gameActionService: GameActionService,
-    private val roleActionExecutor: dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor,
+    private val roleRegistry: RoleRegistry,
+    private val roleActionExecutor: RoleActionExecutor,
     @param:Lazy
     private val gameSessionService: GameSessionService
 ) : GameStep, RoleEventListener {
@@ -49,17 +49,15 @@ class DeathAnnouncementStep(
 
             // Process deaths - mark players as dead based on resolution result
             val allDeaths = mutableSetOf<Int>()
+            val causes = ArrayList(resolutionResult.deaths.keys)
+            causes.shuffle() // Shuffle causes to randomize death order for fairness in announcements
 
-            for ((deathCause, deaths) in resolutionResult.deaths) {
-                for (userId in deaths) {
+            for (cause in causes) {
+                for (userId in resolutionResult.deaths[cause] ?: emptyList()) {
+                    val player = lockedSession.getPlayer(userId)
+                    player?.died(cause, allowLastWords = lockedSession.day == 1)
                     allDeaths.add(userId)
                 }
-            }
-
-            // Mark players as dead
-            for (userId in allDeaths) {
-                // For day 1, allow last words so player can speak during death announcement
-                gameActionService.markPlayerDead(lockedSession, userId, lockedSession.day == 1)
             }
 
             lockedSession.stateData.deadPlayers = allDeaths.toList()

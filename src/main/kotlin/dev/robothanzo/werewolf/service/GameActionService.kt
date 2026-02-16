@@ -1,7 +1,6 @@
 package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.DeathCause
 
 /**
  * Service for performing game-related actions such as resetting the game,
@@ -18,20 +17,6 @@ interface GameActionService {
      */
     @Throws(Exception::class)
     fun resetGame(session: Session, statusCallback: (String) -> Unit, progressCallback: (Int) -> Unit)
-
-    /**
-     * Marks a player as dead in the game session.
-     *
-     * @param session        the session containing the player
-     * @param playerId       the ID of the player to mark as dead
-     * @param allowLastWords whether the player is allowed to give last words
-     */
-    fun markPlayerDead(
-        session: Session,
-        playerId: Int,
-        allowLastWords: Boolean,
-        cause: DeathCause = DeathCause.UNKNOWN
-    )
 
     /**
      * Revives a player in the game session.

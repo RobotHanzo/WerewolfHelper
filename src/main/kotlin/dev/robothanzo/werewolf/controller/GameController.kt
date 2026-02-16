@@ -1,8 +1,12 @@
 package dev.robothanzo.werewolf.controller
 
-import dev.robothanzo.werewolf.controller.dto.*
+import dev.robothanzo.werewolf.controller.dto.ApiResponse
+import dev.robothanzo.werewolf.controller.dto.GameRequests
+import dev.robothanzo.werewolf.controller.dto.GuildMembersResponse
+import dev.robothanzo.werewolf.controller.dto.StateActionResponse
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.UserRole
+import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.security.annotations.CanManageGuild
 import dev.robothanzo.werewolf.security.annotations.CanViewGuild
 import dev.robothanzo.werewolf.service.*
@@ -246,7 +250,8 @@ class GameController(
     ): ResponseEntity<ApiResponse> {
         val session = gameSessionService.getSession(guildId.toLong())
             .orElseThrow { Exception("Session not found") }
-        gameActionService.markPlayerDead(session, playerId, lastWords)
+        val player = session.getPlayer(playerId) ?: throw Exception("Player not found")
+        player.died(DeathCause.UNKNOWN, lastWords)
         return ResponseEntity.ok(ApiResponse.ok(message = "Player marked as dead"))
     }
 
