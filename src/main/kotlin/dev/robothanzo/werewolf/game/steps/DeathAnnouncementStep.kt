@@ -62,8 +62,9 @@ class DeathAnnouncementStep(
                 gameActionService.markPlayerDead(lockedSession, userId, lockedSession.day == 1)
             }
 
-            // Store tonight's deaths in stateData for frontend display
             lockedSession.stateData.deadPlayers = allDeaths.toList()
+            lockedSession.addLog(LogType.SYSTEM, "天亮了")
+            lockedSession.courtTextChannel?.sendMessage("# **:sunny: 天亮了**")?.queue()
 
             // Create public death announcement (without revealing causes)
             if (allDeaths.isNotEmpty()) {
@@ -81,11 +82,6 @@ class DeathAnnouncementStep(
                 lockedSession.addLog(LogType.SYSTEM, "昨晚 $deathList 死亡")
             } else {
                 lockedSession.courtTextChannel?.sendMessage("**:angel: 昨晚是平安夜**")?.queue()
-            }
-
-            // Announce good morning on day 2+
-            if (lockedSession.day > 1) {
-                lockedSession.addLog(LogType.SYSTEM, "早上好，各位玩家")
             }
 
             // Set initial end time based on triggers
