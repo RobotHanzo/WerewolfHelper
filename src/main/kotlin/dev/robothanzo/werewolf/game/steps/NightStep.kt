@@ -14,6 +14,7 @@ import dev.robothanzo.werewolf.service.GameStateService
 import dev.robothanzo.werewolf.service.SpeechService
 import dev.robothanzo.werewolf.utils.CmdUtils
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
@@ -30,7 +31,7 @@ class NightStep(
     private val gameSessionService: GameSessionService
 ) : GameStep, RoleEventListener {
     private val phaseSignals =
-        java.util.concurrent.ConcurrentHashMap<Long, CompletableDeferred<Unit>>()
+        java.util.concurrent.ConcurrentHashMap<Long, Channel<Unit>>()
 
     override fun getInterestedEvents() = listOf(RoleEventType.ACTION_PROCESSED)
 
@@ -40,7 +41,7 @@ class NightStep(
         metadata: Map<String, Any>
     ) {
         if (eventType == RoleEventType.ACTION_PROCESSED) {
-            phaseSignals[session.guildId]?.complete(Unit)
+            phaseSignals[session.guildId]?.trySend(Unit)
         }
     }
 
@@ -341,8 +342,11 @@ class NightStep(
         sendGenericReminders: Boolean = true,
         isFinished: () -> Boolean
     ) {
-        val signal = CompletableDeferred<Unit>()
-        phaseSignals[guildId] = signal
+        val channel = Channel<Unit>(Channel.CONFLATED)
+        phaseSignals[guildId] = channel
+
+        val startTime = System.currentTimeMillis()
+        val endTime = startTime + timeoutSeconds * 1000L
 
         val reminderTask = if (sendGenericReminders) {
             CmdUtils.schedule({
@@ -352,22 +356,27 @@ class NightStep(
             }, 30000)
         } else null
 
-        val timeoutTask = CmdUtils.schedule({
-            signal.complete(Unit)
-        }, timeoutSeconds * 1000L)
-
         // Wait until finished or timeout
-        while (!isFinished() && !signal.isCompleted) {
-            try {
-                withTimeoutOrNull(5000) { signal.await() }
-            } catch (_: Exception) {
-                // Ignore and re-check isFinished
-            }
-        }
+        // We use a loop to re-check the condition because multiple actions might be processed
+        // before the phase is truly finished.
+        try {
+            while (!isFinished()) {
+                val now = System.currentTimeMillis()
+                if (now >= endTime) break
 
-        reminderTask?.cancel()
-        timeoutTask.cancel()
-        phaseSignals.remove(guildId)
+                val remaining = endTime - now
+                // Wait for a pulse signal or 5 seconds fallback poll
+                withTimeoutOrNull(minOf(remaining, 5000L)) {
+                    channel.receive()
+                }
+            }
+        } catch (e: Exception) {
+            log.error("Error in waitForPhaseWithReminders for guild $guildId", e)
+        } finally {
+            reminderTask?.cancel()
+            phaseSignals.remove(guildId)
+            channel.close()
+        }
     }
 
     private fun allWolvesVoted(guildId: Long): Boolean {

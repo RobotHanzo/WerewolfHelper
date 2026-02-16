@@ -125,7 +125,10 @@ class ActionUIServiceImpl(
             targetPlayers.filter { it.id in eligibleTargetIds }.forEach {
                 selectMenu.addOption(it.nickname, it.id.toString())
             }
-            selectMenu.addOption("跳過", SKIP_TARGET_ID.toString())
+
+            if (actionDef?.isOptional != false) {
+                selectMenu.addOption("跳過", SKIP_TARGET_ID.toString())
+            }
 
             val actionText = buildString {
                 appendLine("🐺 **狼人投票**")
