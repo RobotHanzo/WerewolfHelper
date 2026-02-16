@@ -91,8 +91,10 @@ abstract class AbstractPoll(
             sendVoteResult(channel, message, resultEmbed, lockedSession)
 
             if (winners.size == 1) {
-                onSingleWinner(winners.first(), channel, message, lockedSession)
-                finishedCallback?.invoke()
+                val handled = onSingleWinner(winners.first(), channel, message, lockedSession)
+                if (!handled) {
+                    finishedCallback?.invoke()
+                }
             } else {
                 if (allowPK) {
                     onPKTie(winners, channel, message, lockedSession)
@@ -115,7 +117,18 @@ abstract class AbstractPoll(
 
     open fun onPrepareResultEmbed(winners: List<Candidate>, embed: EmbedBuilder) {}
 
-    open fun onSingleWinner(winner: Candidate, channel: GuildMessageChannel, message: Message?, session: Session) {}
+    /**
+     * Called when a single winner is determined.
+     * @return true if the subclass handled the finishedCallback logic (e.g. for async events), false otherwise.
+     */
+    open fun onSingleWinner(
+        winner: Candidate,
+        channel: GuildMessageChannel,
+        message: Message?,
+        session: Session
+    ): Boolean {
+        return false
+    }
 
     open fun onPKTie(winners: List<Candidate>, channel: GuildMessageChannel, message: Message?, session: Session) {}
 

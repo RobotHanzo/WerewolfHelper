@@ -6,6 +6,9 @@ import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import dev.robothanzo.werewolf.game.model.Role as GameRole
 
@@ -297,7 +300,15 @@ fun Session.validateAndSubmitAction(
         for ((cause, deaths) in executionResult.deaths) {
             for (userId in deaths) {
                 val player = this.getPlayer(userId) ?: continue
-                player.died(cause, false)
+                // Handle immediate deaths if any (e.g. Hunter revenge)
+                @OptIn(DelicateCoroutinesApi::class)
+                GlobalScope.launch {
+                    try {
+                        player.processDeath(cause, false)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
             }
         }
 

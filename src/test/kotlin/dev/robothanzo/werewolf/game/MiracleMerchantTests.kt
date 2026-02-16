@@ -40,8 +40,7 @@ class MiracleMerchantTests {
         whenever(mockChannel.sendMessage(any<String>())).thenReturn(mockMessageAction)
 
         // Mock withLockedSession to just execute the block
-        whenever(mockGameSessionService.withLockedSession<Any>(any(), any())).thenAnswer { invocation ->
-            val block = invocation.arguments[1] as (Session) -> Any
+        whenever(mockGameSessionService.withLockedSession<Any>(any(), any())).thenAnswer { _ ->
             // We don't have the session instance easily available here to pass to the block if it requires *the* session
             // But wait, addLog calls it with `this.guildId`. The block receives a session.
             // If we are strictly unit testing, we can just execute the block with a dummy session or capture it.

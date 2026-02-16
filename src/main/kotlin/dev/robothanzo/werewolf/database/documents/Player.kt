@@ -8,11 +8,11 @@ import dev.robothanzo.werewolf.game.model.ActionTiming
 import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.game.model.RoleEventContext
 import dev.robothanzo.werewolf.game.model.RoleEventType
+import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 import io.swagger.v3.oas.annotations.media.Schema
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeout
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Role
@@ -22,6 +22,7 @@ import org.bson.codecs.pojo.annotations.BsonIgnore
 import org.springframework.data.annotation.Transient
 import java.awt.Color
 import java.text.DecimalFormat
+import kotlin.coroutines.resume
 import dev.robothanzo.werewolf.game.model.Role as GameRole
 
 data class Player(
@@ -108,18 +109,18 @@ data class Player(
         }
     }
 
-    fun died(cause: DeathCause = DeathCause.UNKNOWN, allowLastWords: Boolean = true) {
+    /**
+     * Marks the player as dead in the data model and logs the event.
+     * This method MUST be called within a locked session.
+     * It does NOT handle last words, police transfer, or death triggers.
+     */
+    fun markDead(cause: DeathCause = DeathCause.UNKNOWN) {
         val session = this.session ?: throw IllegalStateException("Player must be bound to a session")
-
-        val guild = session.guild
-            ?: throw Exception("Guild not found")
-
+        val guild = session.guild ?: throw Exception("Guild not found")
         var member = guild.getMemberById(user?.idLong ?: return)
         if (member == null) {
             member = guild.retrieveMemberById(user!!.idLong).complete()
         }
-
-        var lastWords = allowLastWords
 
         if (!alive) return
 
@@ -197,15 +198,12 @@ data class Player(
         val result = session.hasEnded(killedRole)
         if (result != Session.Result.NOT_ENDED) {
             val judgePing = "<@&" + (session.judgeRole?.idLong ?: 0) + "> "
-            if (result == Session.Result.WOLVES_DIED) {
-                session.spectatorTextChannel?.sendMessage(judgePing + "遊戲結束，**好**人獲勝，原因：" + result.reason)
-                    ?.queue()
+            val message = if (result == Session.Result.WOLVES_DIED) {
+                judgePing + "遊戲結束，**好**人獲勝，原因：" + result.reason
             } else {
-                session.spectatorTextChannel?.sendMessage(judgePing + "遊戲結束，**狼**人獲勝，原因：" + result.reason)
-                    ?.queue()
+                judgePing + "遊戲結束，**狼**人獲勝，原因：" + result.reason
             }
-            lastWords = false
-
+            session.spectatorTextChannel?.sendMessage(message)?.queue()
             // Trigger Replay Generation
             Replay.upsertFromSession(session, WerewolfApplication.replayRepository)
         }
@@ -218,53 +216,90 @@ data class Player(
 
             val remainingRoleName = if (remainingRoles.isEmpty()) "未知" else remainingRoles.first()
             channel?.sendMessage("因為你死了，所以你的角色變成了 $remainingRoleName")?.queue()
-            WerewolfApplication.gameSessionService.saveSession(session)
-
-            if (lastWords) {
-                WerewolfApplication.speechService.startLastWordsSpeech(
-                    guild,
-                    session.courtTextChannel?.idLong ?: 0,
-                    this
-                ) {
-                    transferPolice()
-                }
-            } else {
-                transferPolice()
-            }
-        } else {
-            // Fully dead
-            transferPolice()
         }
 
         WerewolfApplication.gameSessionService.saveSession(session)
     }
 
     /**
-     * Handles the killing of police role and transfers it to another player if applicable.
+     * Suspending function to handle the interactive parts of death:
+     * Last Words -> Police Transfer -> Death Triggers -> Discord Role update.
+     * This MUST be called OUTSIDE of a locked session to allow for user interaction.
      */
-    fun transferPolice() {
-        if (police)
-            session?.let {
-                WerewolfApplication.policeService.transferPolice(it, it.guild, this) {
-                    discordDeath()
-                    promptDeathTrigger()
+    suspend fun runDeathEvents(allowLastWords: Boolean = true) {
+        val session = this.session ?: throw IllegalStateException("Player must be bound to a session")
+        val guild = session.guild ?: return
+
+        // Wait a bit for the internal state to be fully consistent/propagated if needed
+        // (Though marking dead is sync and done before this)
+
+        // 1. Last Words
+        if (allowLastWords) {
+            // We wrap the callback-based service in suspendCancellableCoroutine to wait for it.
+            suspendCancellableCoroutine<Unit> { cont ->
+                WerewolfApplication.speechService.startLastWordsSpeech(
+                    guild,
+                    session.courtTextChannel?.idLong ?: 0,
+                    this
+                ) {
+                    if (cont.isActive) cont.resume(Unit)
                 }
             }
-        else {
+        }
+
+        // 2. Transfer Police and Death Triggers
+        transferPolice()
+    }
+
+    /**
+     * Convenience method to process a death entirely.
+     * WARNING: This attempts to acquire the lock for markDead, then releases it for runDeathEvents.
+     */
+    suspend fun processDeath(cause: DeathCause = DeathCause.UNKNOWN, allowLastWords: Boolean = true) {
+        val guildId = session?.guildId ?: return
+        WerewolfApplication.gameSessionService.withLockedSession(guildId) { lockedSession ->
+            val player = lockedSession.getPlayer(this.id) ?: return@withLockedSession
+            player.markDead(cause)
+        }
+        this.runDeathEvents(allowLastWords)
+    }
+
+    /**
+     * Handles the killing of police role and transfers it to another player if applicable.
+     */
+    suspend fun transferPolice() {
+        if (police) {
+            session?.let { s ->
+                suspendCancellableCoroutine<Unit> { cont ->
+                    WerewolfApplication.policeService.transferPolice(s, s.guild, this) {
+                        if (cont.isActive) cont.resume(Unit)
+                    }
+                }
+                discordDeath()
+                promptDeathTrigger()
+            }
+        } else {
             discordDeath()
             promptDeathTrigger()
         }
     }
 
-    private fun promptDeathTrigger() {
-        if (session != null) {
-            val roles = roles
-            val deathActions = roles.flatMap { roleName ->
+    private suspend fun promptDeathTrigger() {
+        val session = this.session ?: return
+
+        var deathActions: List<RoleAction> = emptyList()
+        val timeLeft = 30
+
+        // Locking briefly to check triggers availability
+        WerewolfApplication.gameSessionService.withLockedSession(session.guildId) { lockedSession ->
+            val p = lockedSession.getPlayer(id) ?: return@withLockedSession
+            val roles = p.roles
+            deathActions = roles.flatMap { roleName ->
                 val roleObj =
-                    session?.hydratedRoles?.get(roleName) ?: WerewolfApplication.roleRegistry.getRole(roleName)
+                    lockedSession.hydratedRoles[roleName] ?: WerewolfApplication.roleRegistry.getRole(roleName)
                 roleObj?.getActions()?.filter {
                     it.timing == ActionTiming.DEATH_TRIGGER && it.isAvailable(
-                        session!!,
+                        lockedSession,
                         id
                     )
                 } ?: emptyList()
@@ -272,75 +307,75 @@ data class Player(
 
             if (deathActions.isNotEmpty()) {
                 val actionName = deathActions.firstOrNull()?.actionName ?: "死亡技能"
-                actionSubmitted = false
-                channel?.sendMessage("你的 $actionName 已觸發！你可以選擇一名玩家帶走。")?.queue()
+                p.actionSubmitted = false
+                p.channel?.sendMessage("你的 $actionName 已觸發！你可以選擇一名玩家帶走。")?.queue()
 
                 WerewolfApplication.actionUIService.promptPlayerForAction(
-                    session!!.guildId,
-                    session!!,
+                    lockedSession.guildId,
+                    lockedSession,
                     id,
                     deathActions,
-                    30
+                    timeLeft
                 )
 
                 // Extend session duration if we are in DEATH_ANNOUNCEMENT step
-                WerewolfApplication.gameSessionService.withLockedSession(session!!.guildId) { sess ->
-                    if (sess.currentState == "DEATH_ANNOUNCEMENT") {
-                        val now = System.currentTimeMillis()
-                        sess.currentStepEndTime = maxOf(sess.currentStepEndTime, now + 30000L)
-                        WerewolfApplication.gameSessionService.broadcastSessionUpdate(sess)
+                if (lockedSession.currentState == "DEATH_ANNOUNCEMENT") {
+                    val now = System.currentTimeMillis()
+                    lockedSession.currentStepEndTime = maxOf(lockedSession.currentStepEndTime, now + (timeLeft * 1000L))
+                    WerewolfApplication.gameSessionService.broadcastSessionUpdate(lockedSession)
+                }
+            }
+        }
+
+        if (deathActions.isNotEmpty()) {
+            // Wait for action submission or timeout
+            try {
+                withTimeout((timeLeft * 1000L) + 2000L) { // +2s buffer
+                    // Poll for status
+                    while (true) {
+                        var isDone = false
+                        WerewolfApplication.gameSessionService.withLockedSession(session.guildId) { lockedSession ->
+                            val p = lockedSession.getPlayer(id)
+                            if (p == null || p.actionSubmitted) {
+                                isDone = true
+                            } else {
+                                // Check if actions consumed otherwise
+                                val stillAvailable = deathActions.any {
+                                    (lockedSession.stateData.playerOwnedActions[id]?.get(it.actionId.toString())
+                                        ?: 0) > 0
+                                }
+                                if (!stillAvailable) isDone = true
+                            }
+                        }
+                        if (isDone) break
+                        delay(1000)
                     }
                 }
-
-                // Safety timer and reminders
-                @OptIn(DelicateCoroutinesApi::class)
-                GlobalScope.launch {
-                    // 20s reminder (10s remaining)
-                    delay(20000)
-                    var alreadySubmitted = false
-                    WerewolfApplication.gameSessionService.withLockedSession(session!!.guildId) { lockedSession ->
-                        val p = lockedSession.getPlayer(this@Player.id) ?: return@withLockedSession
-                        alreadySubmitted = p.actionSubmitted || deathActions.none {
-                            (lockedSession.stateData.playerOwnedActions[p.id]?.get(it.actionId.toString()) ?: 0) > 0
-                        }
-                        if (!alreadySubmitted) {
-                            p.channel?.sendMessage("⚠️ **提醒**: 你的技能選擇還剩 **10秒**，請儘快做出選擇！")?.queue()
-                        }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                // Timeout logic - force expire if needed
+                WerewolfApplication.gameSessionService.withLockedSession(session.guildId) { lockedSession ->
+                    val p = lockedSession.getPlayer(id) ?: return@withLockedSession
+                    val stillAvailable = deathActions.any {
+                        (lockedSession.stateData.playerOwnedActions[p.id]?.get(it.actionId.toString()) ?: 0) > 0
                     }
-
-                    if (alreadySubmitted) return@launch
-
-                    // 10s later (at 30s) - Timeout
-                    delay(10000)
-                    WerewolfApplication.gameSessionService.withLockedSession(session!!.guildId) { lockedSession ->
-                        val p = lockedSession.getPlayer(this@Player.id) ?: return@withLockedSession
-                        val stillAvailable = deathActions.any {
-                            (lockedSession.stateData.playerOwnedActions[p.id]?.get(it.actionId.toString()) ?: 0) > 0
-                        }
-                        if (stillAvailable && !p.actionSubmitted) {
-                            p.channel?.sendMessage("⏱️ **時間到！** 你未能在規定時間內選擇目標，行動已取消。")?.queue()
-                            // Force consume trigger status to ensure discordDeath proceeds
-                            deathActions.forEach { action ->
-                                lockedSession.stateData.playerOwnedActions[p.id]?.remove(action.actionId.toString())
-                                // Mark as processed so it's not detected as an "active" trigger anymore
-                                lockedSession.stateData.submittedActions.find {
-                                    it.actor == p.id && it.actionDefinitionId == action.actionId
-                                }?.status = dev.robothanzo.werewolf.game.model.ActionStatus.PROCESSED
-                            }
-
-                            // Trigger completion check for potential early step advancement
-                            if (lockedSession.currentState == "DEATH_ANNOUNCEMENT") {
-                                (WerewolfApplication.gameStateService.getCurrentStep(lockedSession) as? dev.robothanzo.werewolf.game.steps.DeathAnnouncementStep)?.checkAdvance(
-                                    lockedSession,
-                                    WerewolfApplication.gameStateService
-                                )
-                            }
-
-                            p.discordDeath()
+                    if (stillAvailable && !p.actionSubmitted) {
+                        p.channel?.sendMessage("⏱️ **時間到！** 你未能在規定時間內選擇目標，行動已取消。")?.queue()
+                        // Force consume trigger
+                        deathActions.forEach { action ->
+                            lockedSession.stateData.playerOwnedActions[p.id]?.remove(action.actionId.toString())
+                            lockedSession.stateData.submittedActions.find {
+                                it.actor == p.id && it.actionDefinitionId == action.actionId
+                            }?.status = dev.robothanzo.werewolf.game.model.ActionStatus.PROCESSED
                         }
                     }
                 }
             }
+        }
+
+        // Ensure final death state (spectator role)
+        WerewolfApplication.gameSessionService.withLockedSession(session.guildId) { lockedSession ->
+            val p = lockedSession.getPlayer(id) ?: return@withLockedSession
+            p.discordDeath()
         }
     }
 

@@ -16,6 +16,9 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.springframework.context.annotation.Lazy
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -251,8 +254,17 @@ class GameController(
         val session = gameSessionService.getSession(guildId.toLong())
             .orElseThrow { Exception("Session not found") }
         val player = session.getPlayer(playerId) ?: throw Exception("Player not found")
-        player.died(DeathCause.UNKNOWN, lastWords)
-        return ResponseEntity.ok(ApiResponse.ok(message = "Player marked as dead"))
+
+        @OptIn(DelicateCoroutinesApi::class)
+        GlobalScope.launch {
+            try {
+                player.processDeath(DeathCause.UNKNOWN, lastWords)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        return ResponseEntity.ok(ApiResponse.ok(message = "Player death processing started"))
     }
 
     @Operation(summary = "Revive Player", description = "Revives a dead player.")
