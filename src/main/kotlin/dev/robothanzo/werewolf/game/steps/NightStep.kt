@@ -507,7 +507,9 @@ internal object NightSequence {
                 for (player in lockedSession.alivePlayers().values) {
                     val pid = player.id
 
-                    var actions = lockedSession.getAvailableActionsForPlayer(pid, step.roleRegistry)
+                    // Fetch actions ignoring fear so we can tell if they WOULD have had actions
+                    var actions =
+                        lockedSession.getAvailableActionsForPlayer(pid, step.roleRegistry, ignoreEffect = true)
                     if (player.wolf) actions = actions.filter { it.actionId != ActionDefinitionId.WEREWOLF_KILL }
                     if (player.roles.contains("夢魘")) actions =
                         actions.filter { it.actionId != ActionDefinitionId.NIGHTMARE_FEAR }
@@ -519,6 +521,7 @@ internal object NightSequence {
                             )?.queue()
                             continue
                         }
+
                         actors.add(pid)
                         step.actionUIService.promptPlayerForAction(guildId, lockedSession, pid, actions, 60)
                     }

@@ -14,7 +14,11 @@ import dev.robothanzo.werewolf.game.model.Role as GameRole
 
 private val log = LoggerFactory.getLogger("SessionExtensions")
 
-fun Session.getAvailableActionsForPlayer(playerId: Int, roleRegistry: RoleRegistry): List<RoleAction> {
+fun Session.getAvailableActionsForPlayer(
+    playerId: Int,
+    roleRegistry: RoleRegistry,
+    ignoreEffect: Boolean = false
+): List<RoleAction> {
     val player = getPlayer(playerId) ?: return emptyList()
 
     val actions = mutableListOf<RoleAction>()
@@ -24,7 +28,7 @@ fun Session.getAvailableActionsForPlayer(playerId: Int, roleRegistry: RoleRegist
         val roleObj: GameRole? = hydratedRoles[roleName] ?: roleRegistry.getRole(roleName)
         if (roleObj != null) {
             for (action in roleObj.getActions()) {
-                if (isActionAvailable(playerId, action.actionId, roleRegistry)) {
+                if (isActionAvailable(playerId, action.actionId, roleRegistry, ignoreEffect)) {
                     actions.add(action)
                 }
             }
@@ -37,7 +41,7 @@ fun Session.getAvailableActionsForPlayer(playerId: Int, roleRegistry: RoleRegist
             val actionId = ActionDefinitionId.fromString(actionIdStr)
             if (actionId != null) {
                 val action = roleRegistry.getAction(actionId)
-                if (action != null && isActionAvailable(playerId, actionId, roleRegistry)) {
+                if (action != null && isActionAvailable(playerId, actionId, roleRegistry, ignoreEffect)) {
                     actions.add(action)
                 }
             }
@@ -50,7 +54,8 @@ fun Session.getAvailableActionsForPlayer(playerId: Int, roleRegistry: RoleRegist
 fun Session.isActionAvailable(
     playerId: Int,
     actionDefinitionId: ActionDefinitionId,
-    roleRegistry: RoleRegistry
+    roleRegistry: RoleRegistry,
+    ignoreEffect: Boolean = false
 ): Boolean {
     val action = roleRegistry.getAction(actionDefinitionId) ?: return false
     val player = getPlayer(playerId) ?: return false
@@ -73,9 +78,11 @@ fun Session.isActionAvailable(
     val isNightPhase = currentState.contains("NIGHT", ignoreCase = true)
 
     // Nightmare Fear Check: Feared players cannot use skills at night
-    val fearedId = stateData.nightmareFearTargets[day]
-    if (fearedId == playerId && isNightPhase) {
-        return false
+    if (!ignoreEffect) {
+        val fearedId = stateData.nightmareFearTargets[day]
+        if (fearedId == playerId && isNightPhase) {
+            return false
+        }
     }
 
     // Filter out actions that don't match current timing
