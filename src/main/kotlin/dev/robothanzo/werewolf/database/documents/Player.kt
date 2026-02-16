@@ -13,12 +13,14 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import org.bson.codecs.pojo.annotations.BsonIgnore
 import org.springframework.data.annotation.Transient
+import java.awt.Color
 import java.text.DecimalFormat
 import dev.robothanzo.werewolf.game.model.Role as GameRole
 
@@ -181,8 +183,15 @@ data class Player(
                 )
             }
 
-            val roleMention = if (!session.settings.hiddenRoleOnDeath) " ($killedRole)" else ""
-            session.courtTextChannel?.sendMessage("**:skull: " + member.asMention + " 已死亡$roleMention**")?.queue()
+            val embed = EmbedBuilder()
+                .setTitle("玩家${ID_FORMAT.format(id)} 死亡")
+                .setDescription("**:skull: " + member.asMention + " 已死亡**")
+                .setColor(Color.RED)
+                .setThumbnail(member.user.avatarUrl)
+            if (!session.settings.hiddenRoleOnDeath) {
+                embed.addField("死亡角色", killedRole, false)
+            }
+            session.courtTextChannel?.sendMessageEmbeds(embed.build())?.queue()
         }
 
         val result = session.hasEnded(killedRole)
