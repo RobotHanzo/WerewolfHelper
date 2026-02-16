@@ -25,6 +25,11 @@ class GameStateServiceImplTest {
         on { name } doReturn "警長競選"
         on { getDurationSeconds(any()) } doReturn 30
     }
+    private val dayStep: GameStep = mock {
+        on { id } doReturn "DAY_PHASE"
+        on { name } doReturn "天亮了"
+        on { getDurationSeconds(any()) } doReturn 5
+    }
     private val setupStep: GameStep = mock {
         on { id } doReturn "SETUP"
         on { name } doReturn "遊戲設置"
@@ -36,7 +41,7 @@ class GameStateServiceImplTest {
     fun setUp() {
         WerewolfApplication.gameSessionService = sessionService
         WerewolfApplication.jda = jda
-        gameStateService = GameStateServiceImpl(sessionService, listOf(step1, step2, setupStep))
+        gameStateService = GameStateServiceImpl(sessionService, listOf(step1, step2, setupStep, dayStep))
 
         // Mock withLockedSession(Long, (Session) -> T)
         whenever(sessionService.withLockedSession(any<Long>(), any<(Session) -> Any?>())).thenAnswer { invocation ->
@@ -83,7 +88,7 @@ class GameStateServiceImplTest {
     }
 
     @Test
-    fun `nextStep from NIGHT_PHASE moves to SHERIFF_ELECTION on day 0`() {
+    fun `nextStep from NIGHT_PHASE moves to DAY_PHASE on day 0`() {
         val session = Session().apply {
             guildId = 123L
             currentState = "NIGHT_PHASE"
@@ -92,11 +97,11 @@ class GameStateServiceImplTest {
 
         gameStateService.nextStep(session)
 
-        assertEquals("SHERIFF_ELECTION", session.currentState)
+        assertEquals("DAY_PHASE", session.currentState)
     }
 
     @Test
-    fun `nextStep from NIGHT_PHASE skips SHERIFF_ELECTION on day 1`() {
+    fun `nextStep from NIGHT_PHASE moves to DAY_PHASE on day 1`() {
         val deathStep: GameStep = mock {
             on { id } doReturn "DEATH_ANNOUNCEMENT"
             on { name } doReturn "公布亡者"
@@ -111,8 +116,7 @@ class GameStateServiceImplTest {
 
         gameStateService.nextStep(session)
 
-        assertEquals("DEATH_ANNOUNCEMENT", session.currentState)
-        assertEquals(2, session.day)
+        assertEquals("DAY_PHASE", session.currentState)
     }
 
     @Test
@@ -141,6 +145,39 @@ class GameStateServiceImplTest {
 
         gameStateService.handleInput(session, input)
 
+        assertEquals("DAY_PHASE", session.currentState)
+    }
+
+    @Test
+    fun `nextStep from DAY_PHASE moves to SHERIFF_ELECTION on day 0`() {
+        val session = Session().apply {
+            guildId = 123L
+            currentState = "DAY_PHASE"
+            day = 0
+        }
+
+        gameStateService.nextStep(session)
+
         assertEquals("SHERIFF_ELECTION", session.currentState)
+    }
+
+    @Test
+    fun `nextStep from DAY_PHASE skips SHERIFF_ELECTION on day 1`() {
+        val deathStep: GameStep = mock {
+            on { id } doReturn "DEATH_ANNOUNCEMENT"
+            on { name } doReturn "公布亡者"
+        }
+        gameStateService.registerStep(deathStep)
+
+        val session = Session().apply {
+            guildId = 123L
+            currentState = "DAY_PHASE"
+            day = 1
+        }
+
+        gameStateService.nextStep(session)
+
+        assertEquals("DEATH_ANNOUNCEMENT", session.currentState)
+        assertEquals(2, session.day)
     }
 }

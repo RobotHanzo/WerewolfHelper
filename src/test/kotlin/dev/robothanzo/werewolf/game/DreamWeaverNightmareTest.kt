@@ -214,8 +214,8 @@ class DreamWeaverNightmareTest {
     }
 
     @Test
-    fun testNightmareActionIsCompulsory() {
-        val action = dev.robothanzo.werewolf.game.roles.actions.NightmareFearAction()
-        assertFalse(action.isOptional, "Nightmare action should be compulsory")
+    fun testDreamWeaverActionIsCompulsory() {
+        val action = dev.robothanzo.werewolf.game.roles.actions.DreamWeaverLinkAction()
+        assertFalse(action.isOptional, "Dream Weaver action should be compulsory")
     }
 }
