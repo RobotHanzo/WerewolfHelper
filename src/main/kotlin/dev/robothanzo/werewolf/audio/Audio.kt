@@ -1,9 +1,11 @@
 package dev.robothanzo.werewolf.audio
 
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler
+import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
 import dev.robothanzo.werewolf.WerewolfApplication
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import org.slf4j.LoggerFactory
@@ -12,12 +14,35 @@ import java.util.*
 object Audio {
     private val log = LoggerFactory.getLogger(Audio::class.java)
 
-    fun VoiceChannel.play(resource: Resource) {
+    fun VoiceChannel.play(resource: Resource, onFinished: (() -> Unit)? = null) {
         val resourcePath = "sounds/$resource.mp3"
         log.info("Attempting to play audio resource: {} in channel: {}", resourcePath, this.name)
         try {
             val audioManager = this.guild.audioManager
             val player = WerewolfApplication.playerManager.createPlayer()
+
+            if (onFinished != null) {
+                player.addListener(object : AudioEventAdapter() {
+                    override fun onTrackEnd(
+                        player: com.sedmelluq.discord.lavaplayer.player.AudioPlayer,
+                        track: AudioTrack,
+                        endReason: AudioTrackEndReason
+                    ) {
+                        if (endReason.mayStartNext) {
+                            onFinished()
+                        }
+                    }
+
+                    override fun onTrackException(
+                        player: com.sedmelluq.discord.lavaplayer.player.AudioPlayer,
+                        track: AudioTrack,
+                        exception: FriendlyException
+                    ) {
+                        log.error("Track exception for audio resource: {}. Error: {}", resourcePath, exception.message)
+                        onFinished()
+                    }
+                })
+            }
 
             // Always set/update the sending handler to the player we just created for this clip
             audioManager.sendingHandler = AudioPlayerSendHandler(player)
@@ -36,25 +61,29 @@ object Audio {
 
                     override fun playlistLoaded(playlist: AudioPlaylist) {
                         log.debug("Playlist loaded (unexpected for single clip): {}", resourceName(resource))
+                        onFinished?.invoke()
                     }
 
                     override fun noMatches() {
                         log.warn("No matches found for audio resource: {}", resourcePath)
+                        onFinished?.invoke()
                     }
 
                     override fun loadFailed(exception: FriendlyException) {
                         log.error("Load failed for audio resource: {}. Error: {}", resourcePath, exception.message)
+                        onFinished?.invoke()
                     }
                 })
         } catch (e: Exception) {
             log.error("Error while trying to play sound resource: {}", resourcePath, e)
+            onFinished?.invoke()
         }
     }
 
     private fun resourceName(resource: Resource): String = resource.toString()
 
     enum class Resource {
-        EXPEL_POLL, POLICE_ENROLL, POLICE_POLL, TIMER_ENDED, ENROLL_10S_REMAINING, POLL_10S_REMAINING, TIMER_30S_REMAINING;
+        EXPEL_POLL, MORNING, POLICE_ENROLL, POLICE_POLL, TIMER_ENDED, ENROLL_10S_REMAINING, POLL_10S_REMAINING, TIMER_30S_REMAINING;
 
         override fun toString(): String {
             return super.toString().lowercase(Locale.ROOT)

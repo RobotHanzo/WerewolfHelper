@@ -69,8 +69,6 @@ class DeathAnnouncementStep(
             }
 
             lockedSession.stateData.deadPlayers = allDeaths.toList()
-            lockedSession.addLog(LogType.SYSTEM, "天亮了")
-            lockedSession.courtTextChannel?.sendMessage("# **:sunny: 天亮了**")?.queue()
 
             // Create public death announcement (without revealing causes)
             if (allDeaths.isNotEmpty()) {
