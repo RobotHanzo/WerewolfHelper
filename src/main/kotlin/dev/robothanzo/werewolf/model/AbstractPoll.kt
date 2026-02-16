@@ -1,9 +1,11 @@
 package dev.robothanzo.werewolf.model
 
+import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.audio.Audio
 import dev.robothanzo.werewolf.audio.Audio.play
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
+import dev.robothanzo.werewolf.game.model.HistoricalPollRecord
 import dev.robothanzo.werewolf.utils.MsgUtils
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Message
@@ -66,7 +68,7 @@ abstract class AbstractPoll(
         poll10sTask?.cancel()
         pollFinishTask?.cancel()
 
-        dev.robothanzo.werewolf.WerewolfApplication.gameSessionService.withLockedSession(guildId) { lockedSession ->
+        WerewolfApplication.gameSessionService.withLockedSession(guildId) { lockedSession ->
             val winners = getWinners(null)
 
             if (winners.isEmpty()) {
@@ -76,7 +78,7 @@ abstract class AbstractPoll(
             }
 
             // Record poll results for replay
-            val pollRecord = dev.robothanzo.werewolf.game.model.HistoricalPollRecord(
+            val pollRecord = HistoricalPollRecord(
                 day = lockedSession.day,
                 title = title,
                 votes = candidates.values.associate { it.player.id to it.electors.toList() }
@@ -106,7 +108,7 @@ abstract class AbstractPoll(
 
     // Hooks for subclasses to customize behavior
     open fun on10sRemaining(channel: GuildMessageChannel) {
-        dev.robothanzo.werewolf.WerewolfApplication.gameSessionService.getSession(guildId).ifPresent {
+        WerewolfApplication.gameSessionService.getSession(guildId).ifPresent {
             it.courtVoiceChannel?.play(Audio.Resource.POLL_10S_REMAINING)
         }
     }
@@ -139,19 +141,21 @@ abstract class AbstractPoll(
     fun sendVoteResult(channel: GuildMessageChannel, message: Message?, resultEmbed: EmbedBuilder, session: Session) {
         val voted = mutableListOf<Long>()
 
-        candidates.values.forEach { candidate ->
-            candidate.player.user?.let { user ->
-                voted.addAll(candidate.electors)
-                resultEmbed.addField(
-                    candidate.player.nickname + " (" + user.name + ")",
-                    candidate.getElectorsAsMention().joinToString("、"), false
-                )
+        candidates.values
+            .filter { !it.quit }
+            .forEach { candidate ->
+                candidate.player.user?.let { user ->
+                    voted.addAll(candidate.electors)
+                    resultEmbed.addField(
+                        candidate.player.nickname + " (" + user.name + ")",
+                        candidate.getElectorsAsMention().joinToString("、"), false
+                    )
+                }
             }
-        }
 
         val discarded = mutableListOf<String>()
         for (player in session.alivePlayers().values) {
-            if (player.user?.idLong != null && !voted.contains(player.user?.idLong)) {
+            if (isEligibleVoter(player) && !voted.contains(player.user?.idLong)) {
                 discarded.add("<@!" + player.user?.idLong + ">")
             }
         }
