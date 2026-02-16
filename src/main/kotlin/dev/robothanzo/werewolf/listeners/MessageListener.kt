@@ -4,7 +4,6 @@ import club.minnced.discord.webhook.WebhookClient
 import club.minnced.discord.webhook.send.WebhookMessageBuilder
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.ActionDefinitionId
 import dev.robothanzo.werewolf.game.model.NightPhase
 import dev.robothanzo.werewolf.game.model.WolfMessage
 import dev.robothanzo.werewolf.service.GameSessionService
@@ -49,17 +48,17 @@ class MessageListener : ListenerAdapter() {
 
         val firstRole = roles.filterNot { player.deadRoles.contains(it) }.firstOrNull() ?: return false
         return firstRole.contains("狼人") ||
-                roles.contains("狼兄") ||
-                firstRole.contains("狼王") ||
-                firstRole.contains("狼美人") ||
-                firstRole.contains("白狼王") ||
-                firstRole.contains("血月使者") ||
-                firstRole.contains("惡靈騎士") ||
-            (firstRole.contains("夢魘") && (session.day > 1 || session.stateData.submittedActions.any { it.actor == player.id && it.actionDefinitionId == ActionDefinitionId.NIGHTMARE_FEAR && it.status.executed })) ||
-                (roles.contains("狼弟") && !session.isCharacterAlive("狼兄") &&
-                        (session.stateData.wolfBrotherDiedDay == null || session.stateData.wolfBrotherDiedDay!! < session.day ||
-                        (session.stateData.phaseType?.let { it.order > NightPhase.WOLF_YOUNGER_BROTHER_ACTION.order }
-                            ?: false)))
+            roles.contains("狼兄") ||
+            firstRole.contains("狼王") ||
+            firstRole.contains("狼美人") ||
+            firstRole.contains("白狼王") ||
+            firstRole.contains("血月使者") ||
+            firstRole.contains("惡靈騎士") ||
+            (firstRole.contains("夢魘") && (session.day > 1 || session.stateData.phaseType?.let { it > NightPhase.NIGHTMARE_ACTION } == true)) ||
+            (roles.contains("狼弟") && !session.isCharacterAlive("狼兄") &&
+                (session.stateData.wolfBrotherDiedDay == null || session.stateData.wolfBrotherDiedDay!! < session.day ||
+                    (session.stateData.phaseType?.let { it > NightPhase.WOLF_YOUNGER_BROTHER_ACTION }
+                        ?: false)))
     }
 
     override fun onMessageReceived(event: MessageReceivedEvent) {
@@ -102,7 +101,7 @@ class MessageListener : ListenerAdapter() {
                         .setContent(event.message.contentRaw)
                         .setUsername(
                             (if (isJudgeChannel) "法官頻道" else player.nickname) +
-                                    " (" + event.author.name + ")"
+                                " (" + event.author.name + ")"
                         )
                         .setAvatarUrl(event.author.avatarUrl)
                         .build()
