@@ -213,7 +213,7 @@ fun Session.resolveNightActions(
 
     // Mark as PROCESSED or remove from submitted list
     stateData.submittedActions.removeIf {
-        it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.SKIPPED || it.status == ActionStatus.PROCESSED
+        it.status.executed
     }
 
     return NightResolutionResult(

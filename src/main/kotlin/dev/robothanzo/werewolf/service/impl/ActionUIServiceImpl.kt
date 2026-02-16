@@ -61,8 +61,7 @@ class ActionUIServiceImpl(
 
             // Only look for non-finalized actions to reuse
             var actionInstance = session.stateData.submittedActions.find {
-                it.actor == playerId && it.status != ActionStatus.SUBMITTED &&
-                    it.status != ActionStatus.SKIPPED && it.status != ActionStatus.PROCESSED
+                it.actor == playerId && !it.status.executed
             }
 
             if (actionInstance == null) {

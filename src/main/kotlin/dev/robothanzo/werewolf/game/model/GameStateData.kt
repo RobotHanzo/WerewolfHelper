@@ -36,7 +36,15 @@ enum class ActionStatus {
     ACTING, // 2-1. when an action has been selected but not the targets
     SUBMITTED, // 3. when the action is fully submitted
     SKIPPED, // 2-2. when the action is skipped
-    PROCESSED // 4. when the action has been executed during death announcement
+    PROCESSED; // 4. when the action has been executed during death announcement
+
+    /**
+     * Returns true if the action is considered "executed" or "finalized" for the current phase.
+     * This includes [SUBMITTED], [SKIPPED], and [PROCESSED] states.
+     * Useful for checking if a player has completed their turn.
+     */
+    val executed: Boolean
+        get() = this == SUBMITTED || this == SKIPPED || this == PROCESSED
 }
 
 const val SKIP_TARGET_ID = -1

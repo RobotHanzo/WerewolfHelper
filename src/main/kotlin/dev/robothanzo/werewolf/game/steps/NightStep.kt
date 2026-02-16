@@ -253,11 +253,7 @@ internal object NightSequence {
                 val session = step.gameSessionService.getSession(guildId).orElse(null) ?: return@waitForCondition true
                 if (session.stateData.phaseType != NightPhase.NIGHTMARE_ACTION) return@waitForCondition true
                 val nmAction = session.stateData.submittedActions.find { it.actorRole == "夢魘" }
-                nmAction != null && (
-                    nmAction.status == ActionStatus.SUBMITTED ||
-                        nmAction.status == ActionStatus.SKIPPED ||
-                        nmAction.status == ActionStatus.PROCESSED
-                    )
+                nmAction != null && nmAction.status.executed
             }
             return !finishedEarly
         }
@@ -317,11 +313,7 @@ internal object NightSequence {
                 val session = step.gameSessionService.getSession(guildId).orElse(null) ?: return@waitForCondition true
                 if (session.stateData.phaseType != NightPhase.WOLF_YOUNGER_BROTHER_ACTION) return@waitForCondition true
                 val ybAction = session.stateData.submittedActions.find { it.actorRole == "狼弟" }
-                ybAction != null && (
-                    ybAction.status == ActionStatus.SUBMITTED ||
-                        ybAction.status == ActionStatus.SKIPPED ||
-                        ybAction.status == ActionStatus.PROCESSED
-                    )
+                ybAction != null && ybAction.status.executed
             }
             return !finishedEarly
         }
@@ -537,9 +529,7 @@ internal object NightSequence {
             val finishedEarly = step.waitForCondition(guildId, 60) {
                 step.gameSessionService.withLockedSession(guildId) { session ->
                     session.stateData.submittedActions.all {
-                        it.status == ActionStatus.SUBMITTED ||
-                            it.status == ActionStatus.SKIPPED ||
-                            it.status == ActionStatus.PROCESSED
+                        it.status.executed
                     }
                 }
             }
