@@ -543,9 +543,12 @@ class MerchantPoisonAction : BaseRoleAction(
 class MerchantGunAction : BaseRoleAction(
     actionId = ActionDefinitionId.MERCHANT_GUN,
     priority = PredefinedRoles.HUNTER_PRIORITY + 1,
-    timing = ActionTiming.NIGHT,
+    timing = ActionTiming.DEATH_TRIGGER,
     usageLimit = 1
 ) {
+    override val isImmediate: Boolean
+        get() = true
+
     override fun execute(
         session: Session,
         action: RoleActionInstance,
@@ -553,7 +556,29 @@ class MerchantGunAction : BaseRoleAction(
     ): ActionExecutionResult {
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
         accumulatedState.deaths.getOrPut(DeathCause.HUNTER_REVENGE) { mutableListOf() }.add(targetId)
+
+        // Consume the granted action
+        session.stateData.playerOwnedActions[action.actor]?.remove(actionId.toString())
+
         return accumulatedState
+    }
+
+    override fun eligibleTargets(
+        session: Session,
+        actor: Int,
+        alivePlayers: List<Int>,
+        accumulatedState: ActionExecutionResult
+    ): List<Int> {
+        return if (isAvailable(session, actor)) alivePlayers else emptyList()
+    }
+
+    override fun onDeath(session: Session, actor: Int, cause: DeathCause) {
+        if (cause == DeathCause.POISON) {
+            // If poisoned, lose the gun (remove from owned actions) and notify
+            session.stateData.playerOwnedActions[actor]?.remove(actionId.toString())
+            session.getPlayer(actor)?.channel?.sendMessage("🧪 **你被女巫毒死了**！你感到身體虛弱，無法使用商人贈予的獵槍。")
+                ?.queue()
+        }
     }
 }
 
