@@ -3,6 +3,7 @@ package dev.robothanzo.werewolf.commands
 import dev.robothanzo.jda.interactions.annotations.slash.Command
 import dev.robothanzo.jda.interactions.annotations.slash.Subcommand
 import dev.robothanzo.werewolf.WerewolfApplication
+import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.game.model.DeathCause
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 
@@ -36,8 +37,8 @@ class Game {
             }
 
             // Execute detonation
-            session.addLog(dev.robothanzo.werewolf.database.documents.LogType.SYSTEM, "${player.nickname} 選擇自爆")
-            player.died(DeathCause.EXPEL, allowLastWords = false)
+            session.addLog(LogType.SYSTEM, "${player.nickname} 選擇自爆")
+            player.died(DeathCause.EXPEL, allowLastWords = true)
 
             // End the current phase (usually day speech)
             WerewolfApplication.gameStateService.nextStep(session)
