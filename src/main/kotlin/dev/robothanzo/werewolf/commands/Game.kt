@@ -39,6 +39,11 @@ class Game {
                 return@withLockedSession
             }
 
+            if (player.roles.contains("夢魘")) {
+                event.hook.editOriginal(":x: 夢魘不可自爆").queue()
+                return@withLockedSession
+            }
+
             // Execute detonation
             session.addLog(LogType.SYSTEM, "${player.nickname} 選擇自爆")
             player.markDead(DeathCause.EXPEL)

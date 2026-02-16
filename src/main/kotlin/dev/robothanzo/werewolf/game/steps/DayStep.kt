@@ -2,7 +2,6 @@ package dev.robothanzo.werewolf.game.steps
 
 import dev.robothanzo.werewolf.audio.Audio
 import dev.robothanzo.werewolf.audio.Audio.play
-import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.service.GameSessionService
@@ -24,7 +23,6 @@ class DayStep(
         // Unmute everyone? Or keep muted for police election?
         // Usually day start = announcement, then specific phases handle muting
         speechService.setAllMute(session.guildId, true) // Ensure silence for announcement
-        session.addLog(LogType.SYSTEM, "天亮了")
         session.courtTextChannel?.sendMessage("# **:sunny: 天亮了**")?.queue()
         session.courtVoiceChannel?.play(Audio.Resource.MORNING) {
             gameSessionService.withLockedSession(session.guildId) { lockedSession ->

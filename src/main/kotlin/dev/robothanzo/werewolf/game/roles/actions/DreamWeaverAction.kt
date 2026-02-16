@@ -37,4 +37,13 @@ class DreamWeaverLinkAction : BaseRoleAction(
 
         return null
     }
+
+    override fun eligibleTargets(
+        session: Session,
+        actor: Int,
+        alivePlayers: List<Int>,
+        accumulatedState: ActionExecutionResult
+    ): List<Int> {
+        return alivePlayers.filter { it != actor }
+    }
 }

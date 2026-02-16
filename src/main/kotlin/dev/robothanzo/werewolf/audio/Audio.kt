@@ -83,7 +83,10 @@ object Audio {
     private fun resourceName(resource: Resource): String = resource.toString()
 
     enum class Resource {
-        EXPEL_POLL, MORNING, POLICE_ENROLL, POLICE_POLL, TIMER_ENDED, ENROLL_10S_REMAINING, POLL_10S_REMAINING, TIMER_30S_REMAINING;
+        MORNING, NIGHT,
+        EXPEL_POLL, POLL_10S_REMAINING,
+        ENROLL_10S_REMAINING, POLICE_ENROLL, POLICE_POLL,
+        TIMER_ENDED, TIMER_30S_REMAINING;
 
         override fun toString(): String {
             return super.toString().lowercase(Locale.ROOT)

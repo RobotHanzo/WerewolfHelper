@@ -120,6 +120,11 @@ interface RoleAction {
         // Usage limit check
         if (!isAvailable(session, actor)) return "已達到使用限制"
 
+        // Skip handling
+        if (targets.contains(SKIP_TARGET_ID)) {
+            return if (isOptional) null else "此行動為必選，無法跳過"
+        }
+
         // Target count check
         if (targetCount > 0 && targets.size != targetCount) return "無效的目標數量"
 

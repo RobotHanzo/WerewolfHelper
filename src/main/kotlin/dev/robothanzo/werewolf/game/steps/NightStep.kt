@@ -1,5 +1,7 @@
 package dev.robothanzo.werewolf.game.steps
 
+import dev.robothanzo.werewolf.audio.Audio
+import dev.robothanzo.werewolf.audio.Audio.play
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
@@ -57,6 +59,8 @@ class NightStep(
         gameSessionService.withLockedSession(guildId) { session ->
             // Mute everyone
             speechService.setAllMute(guildId, true)
+            session.courtTextChannel?.sendMessage("# **:crescent_moon: 天黑請閉眼**")?.queue()
+            session.courtVoiceChannel?.play(Audio.Resource.NIGHT)
 
             // Reset night data
             session.stateData.submittedActions.clear()

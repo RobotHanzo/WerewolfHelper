@@ -199,15 +199,23 @@ class GuardProtectAction : BaseRoleAction(
     priority = PredefinedRoles.GUARD_PRIORITY,
     timing = ActionTiming.NIGHT
 ) {
+    private fun getLastProtectedId(session: Session): Int? {
+        if (session.day <= 1) return null
+        val lastDayActions = session.stateData.executedActions[session.day - 1] ?: return null
+        return lastDayActions.find {
+            it.actionDefinitionId == ActionDefinitionId.GUARD_PROTECT
+        }?.targets?.firstOrNull()?.takeIf { it != SKIP_TARGET_ID }
+    }
+
     override fun execute(
         session: Session,
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
-        val lastProtected = session.stateData.lastGuardProtectedId
+        val lastProtected = getLastProtectedId(session)
 
-        if (lastProtected == targetId && session.day > 1) return accumulatedState
+        if (lastProtected == targetId) return accumulatedState
 
         accumulatedState.protectedPlayers.add(targetId)
         return accumulatedState
@@ -219,12 +227,25 @@ class GuardProtectAction : BaseRoleAction(
         alivePlayers: List<Int>,
         accumulatedState: ActionExecutionResult
     ): List<Int> {
-        val lastProtected = session.stateData.lastGuardProtectedId
-        return if (lastProtected != null && session.day > 1) {
+        val lastProtected = getLastProtectedId(session)
+        return if (lastProtected != null) {
             alivePlayers.filter { it != lastProtected }
         } else {
             alivePlayers
         }
+    }
+
+    override fun validate(session: Session, actor: Int, targets: List<Int>): String? {
+        val baseError = super.validate(session, actor, targets)
+        if (baseError != null) return baseError
+
+        val targetId = targets.firstOrNull()
+        val lastProtected = getLastProtectedId(session)
+
+        if (targetId != null && targetId == lastProtected) {
+            return "不能連續兩晚守護同一個人"
+        }
+        return null
     }
 }
 
