@@ -8,6 +8,7 @@ import dev.robothanzo.werewolf.model.ExpelPoll
 import dev.robothanzo.werewolf.model.ExpelSession
 import dev.robothanzo.werewolf.service.ExpelService
 import dev.robothanzo.werewolf.utils.MsgUtils
+import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -106,14 +107,14 @@ class ExpelServiceImpl : ExpelService {
         val embedBuilder = poll.buildResultEmbed("驅逐投票").apply {
             setDescription("30秒後立刻計票，請加快手速!\n若要改票可直接按下要改成的對象\n若要改為棄票需按下原本投給的使用者")
         }
-        val buttons = mutableListOf<net.dv8tion.jda.api.components.buttons.Button>()
+        val buttons = mutableListOf<Button>()
         poll.candidates.values
             .sortedWith(Candidate.getComparator())
             .forEach { player ->
                 val user = channel.guild.getMemberById(player.player.user?.idLong ?: 0L)
                 if (user != null) {
                     buttons.add(
-                        net.dv8tion.jda.api.components.buttons.Button.danger(
+                        Button.danger(
                             "voteExpel" + player.player.id,
                             player.player.nickname + " (" + user.user.name + ")"
                         )

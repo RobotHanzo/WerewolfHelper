@@ -1,5 +1,7 @@
 package dev.robothanzo.werewolf.game.steps
 
+import dev.robothanzo.werewolf.audio.Audio
+import dev.robothanzo.werewolf.audio.Audio.play
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
@@ -14,6 +16,7 @@ import dev.robothanzo.werewolf.service.GameStateService
 import dev.robothanzo.werewolf.service.SpeechService
 import dev.robothanzo.werewolf.utils.CmdUtils
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
@@ -31,7 +34,7 @@ class NightStep(
     internal val gameSessionService: GameSessionService
 ) : GameStep, RoleEventListener {
     internal val phaseSignals =
-        java.util.concurrent.ConcurrentHashMap<Long, CompletableDeferred<Unit>>()
+        java.util.concurrent.ConcurrentHashMap<Long, Channel<Unit>>()
 
     override fun getInterestedEvents() = listOf(RoleEventType.ACTION_PROCESSED)
 
@@ -41,7 +44,7 @@ class NightStep(
         metadata: Map<String, Any>
     ) {
         if (eventType == RoleEventType.ACTION_PROCESSED) {
-            phaseSignals[session.guildId]?.complete(Unit)
+            phaseSignals[session.guildId]?.trySend(Unit)
         }
     }
 
@@ -57,6 +60,8 @@ class NightStep(
         gameSessionService.withLockedSession(guildId) { session ->
             // Mute everyone
             speechService.setAllMute(guildId, true)
+            session.courtTextChannel?.sendMessage("# **:crescent_moon: 天黑請閉眼**")?.queue()
+            session.courtVoiceChannel?.play(Audio.Resource.NIGHT)
 
             // Reset night data
             session.stateData.submittedActions.clear()
@@ -222,7 +227,7 @@ internal object NightSequence {
                         val startTime = System.currentTimeMillis()
                         lockedSession.stateData.phaseStartTime = startTime
                         lockedSession.stateData.phaseEndTime = startTime + 60_000 // 60s
-                        
+
                         step.actionUIService.promptPlayerForAction(
                             guildId,
                             lockedSession,
@@ -285,7 +290,7 @@ internal object NightSequence {
                         val startTime = System.currentTimeMillis()
                         lockedSession.stateData.phaseStartTime = startTime
                         lockedSession.stateData.phaseEndTime = startTime + 60_000 // 60s
-                        
+
                         step.actionUIService.promptPlayerForAction(
                             guildId,
                             lockedSession,
@@ -335,7 +340,7 @@ internal object NightSequence {
         override val phase = NightPhase.WEREWOLF_VOTING
         override suspend fun execute(step: NightStep, guildId: Long): Boolean {
             val session = step.gameSessionService.getSession(guildId).orElseThrow()
-            
+
             // Nightmare Check
             val fearedId = session.stateData.nightmareFearTargets[session.day]
             val isAnyWolfFeared = fearedId != null && session.getPlayer(fearedId)?.wolf == true
@@ -395,12 +400,12 @@ internal object NightSequence {
         override val phase = NightPhase.WEREWOLF_VOTING
         override suspend fun execute(step: NightStep, guildId: Long): Boolean {
              step.gameSessionService.withLockedSession(guildId) { currentSession ->
-                 val groupState = step.actionUIService.getGroupState(currentSession, PredefinedRoles.WEREWOLF_KILL) 
-                 
+                 val groupState = step.actionUIService.getGroupState(currentSession, PredefinedRoles.WEREWOLF_KILL)
+
                  val isFinished = groupState?.electorates?.all { electorateId ->
                     groupState.votes.any { it.voterId == electorateId && it.targetId != null }
                  } ?: true
-                 
+
                  if (!isFinished) {
                      groupState?.electorates?.forEach { pid ->
                          if (groupState.votes.none { it.voterId == pid }) {
@@ -546,7 +551,7 @@ internal object NightSequence {
             return false
         }
     }
-    
+
     val TASKS = listOf(
         NightmareStart,
         NightmareWait,

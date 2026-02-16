@@ -2,7 +2,6 @@ package dev.robothanzo.werewolf.service.impl
 
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.service.GameSessionService
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -22,17 +21,6 @@ class GameActionServiceImplTest {
     @BeforeEach
     fun setUp() {
         gameActionService = GameActionServiceImpl(gameSessionService)
-    }
-
-    @Test
-    fun `markPlayerDead calls player died method`() {
-        val session: Session = mock()
-        val player: Player = mock()
-        whenever(session.getPlayer(1)).thenReturn(player)
-
-        gameActionService.markPlayerDead(session, 1, true, DeathCause.WEREWOLF)
-
-        verify(player).died(DeathCause.WEREWOLF, true)
     }
 
     @Test

@@ -348,7 +348,7 @@ class RoleActionTests {
             val result = action.execute(session, guardAction, ActionExecutionResult())
 
             // Should protect on day 1 even if same as last night
-            // Note: If Action logic 'day > 0' blocks it, this assertion fails. 
+            // Note: If Action logic 'day > 0' blocks it, this assertion fails.
             // We assume Day 1 logic allows it or day check handles day=1.
             assertTrue(result.protectedPlayers.contains(targetId))
         }
@@ -977,6 +977,65 @@ class RoleActionTests {
             val availableActions = testSession.getAvailableActionsForPlayer(villagerId, roleRegistry)
 
             assertTrue(availableActions.any { it.actionId == ActionDefinitionId.MERCHANT_SEER_CHECK })
+        }
+
+        @Test
+        @DisplayName("Dark Merchant cannot trade with self")
+        fun testCannotTradeWithSelf() {
+            val merchantId = 1
+            val merchant = createPlayer(merchantId, 101L, listOf("黑市商人"))
+            testSession.players[merchantId.toString()] = merchant
+
+            // Check eligible targets
+            val eligible =
+                tradeAction.eligibleTargets(testSession, merchantId, listOf(merchantId), ActionExecutionResult())
+            assertFalse(eligible.contains(merchantId))
+        }
+
+        @Test
+        @DisplayName("Dark Merchant actions are mutually exclusive")
+        fun testMutualExclusion() {
+            val merchantId = 1
+            // Setup player owned actions logic is not needed for isAvailable calc of the merchant himself usually,
+            // unless it's death trigger. Dark Merchant is NIGHT timing.
+
+            // 1. If one action is executed history, others are unavailable
+            val executedAction = RoleActionInstance(
+                actor = merchantId,
+                actorRole = "黑市商人",
+                actionDefinitionId = ActionDefinitionId.DARK_MERCHANT_TRADE_POISON, // different type from tradeAction (SEER)
+                targets = mutableListOf(2),
+                submittedBy = ActionSubmissionSource.PLAYER,
+                status = ActionStatus.PROCESSED
+            )
+            testSession.stateData.executedActions[1] = mutableListOf(executedAction)
+
+            assertFalse(
+                tradeAction.isAvailable(testSession, merchantId),
+                "Should be unavailable if Poison trade was executed"
+            )
+
+            // Reset
+            testSession.stateData.executedActions.clear()
+
+            // 2. If one action is currently submitted, others are unavailable
+            val submittedAction = RoleActionInstance(
+                actor = merchantId,
+                actorRole = "黑市商人",
+                actionDefinitionId = ActionDefinitionId.DARK_MERCHANT_TRADE_GUN, // different from SEER
+                targets = mutableListOf(2),
+                submittedBy = ActionSubmissionSource.PLAYER,
+                status = ActionStatus.SUBMITTED
+            )
+            testSession.stateData.submittedActions.add(submittedAction)
+
+            assertFalse(
+                tradeAction.isAvailable(testSession, merchantId),
+                "Should be unavailable if Gun trade is submitted"
+            )
+
+            // 3. Ensure 'isAvailable' logic relies on prefix logic primarily for exclusion
+            // (The usage limit check in super would also block it if it was the SAME action, but here we test DIFFERENT action)
         }
     }
 

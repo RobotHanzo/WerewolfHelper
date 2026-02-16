@@ -39,6 +39,7 @@ class ActionUIServiceImpl(
 
             // Send action prompt to player's channel
             val actionText = buildString {
+                appendLine(player.member?.asMention)
                 appendLine("🎭 **選擇行動**")
                 appendLine()
                 appendLine("⏱️ ${timeoutSeconds}秒內必須選擇，否則視為放棄")
@@ -124,7 +125,10 @@ class ActionUIServiceImpl(
             targetPlayers.filter { it.id in eligibleTargetIds }.forEach {
                 selectMenu.addOption(it.nickname, it.id.toString())
             }
-            selectMenu.addOption("跳過", SKIP_TARGET_ID.toString())
+
+            if (actionDef?.isOptional != false) {
+                selectMenu.addOption("跳過", SKIP_TARGET_ID.toString())
+            }
 
             val actionText = buildString {
                 appendLine("🐺 **狼人投票**")

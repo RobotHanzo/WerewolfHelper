@@ -53,7 +53,7 @@ class SessionPlayerTest {
         player.roles = mutableListOf("狼人", "平民")
         assertEquals(2, player.roles.size)
         assertEquals("狼人", player.roles[0])
-        assertEquals("平民", player.roles!![1])
+        assertEquals("平民", player.roles[1])
     }
 
     @Test
@@ -61,7 +61,7 @@ class SessionPlayerTest {
         player.roles = mutableListOf("狼人", "平民")
         player.deadRoles = mutableListOf("狼人")
         assertEquals(1, player.deadRoles.size)
-        assertEquals(/* expected = */ "狼人", /* actual = */ player.deadRoles!![0])
+        assertEquals(/* expected = */ "狼人", /* actual = */ player.deadRoles[0])
     }
 
     @Test

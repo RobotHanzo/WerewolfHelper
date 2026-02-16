@@ -3,7 +3,6 @@ package dev.robothanzo.werewolf.service.impl
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.game.model.GameStateData
 import dev.robothanzo.werewolf.game.model.RoleEventContext
 import dev.robothanzo.werewolf.game.model.RoleEventType
@@ -102,16 +101,6 @@ class GameActionServiceImpl(
 
         progressCallback(100)
         statusCallback("操作完成。")
-    }
-
-    override fun markPlayerDead(
-        session: Session,
-        playerId: Int,
-        allowLastWords: Boolean,
-        cause: DeathCause
-    ) {
-        val player = session.getPlayer(playerId) ?: throw RuntimeException("Player not found")
-        player.died(cause, allowLastWords)
     }
 
     override fun revivePlayer(session: Session, playerId: Int) {

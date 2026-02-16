@@ -9,19 +9,22 @@ import dev.robothanzo.werewolf.game.model.ActionStatus
 import dev.robothanzo.werewolf.game.model.ActionTiming
 import dev.robothanzo.werewolf.game.model.RoleEventType
 import dev.robothanzo.werewolf.game.model.resolveNightActions
-import dev.robothanzo.werewolf.service.GameActionService
+import dev.robothanzo.werewolf.game.roles.RoleRegistry
+import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.GameStateService
 import dev.robothanzo.werewolf.utils.CmdUtils
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 
 @Component
 class DeathAnnouncementStep(
-    private val roleRegistry: dev.robothanzo.werewolf.game.roles.RoleRegistry,
-    private val gameActionService: GameActionService,
-    private val roleActionExecutor: dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor,
+    private val roleRegistry: RoleRegistry,
+    private val roleActionExecutor: RoleActionExecutor,
     @param:Lazy
     private val gameSessionService: GameSessionService
 ) : GameStep, RoleEventListener {
@@ -42,6 +45,7 @@ class DeathAnnouncementStep(
 
     override fun onStart(session: Session, service: GameStateService) {
         val guildId = session.guildId
+        val deadPlayerIds = mutableListOf<Int>()
 
         gameSessionService.withLockedSession(guildId) { lockedSession ->
             // Resolve all pending night actions and get deaths
@@ -49,20 +53,21 @@ class DeathAnnouncementStep(
 
             // Process deaths - mark players as dead based on resolution result
             val allDeaths = mutableSetOf<Int>()
+            val causes = ArrayList(resolutionResult.deaths.keys)
+            causes.shuffle() // Shuffle causes to randomize death order for fairness in announcements
 
-            for ((deathCause, deaths) in resolutionResult.deaths) {
-                for (userId in deaths) {
-                    allDeaths.add(userId)
+            for (cause in causes) {
+                for (userId in resolutionResult.deaths[cause] ?: emptyList()) {
+                    val player = lockedSession.getPlayer(userId)
+                    if (player != null) {
+                        player.markDead(cause)
+                        // Capture ID for async event processing
+                        deadPlayerIds.add(userId)
+                        allDeaths.add(userId)
+                    }
                 }
             }
 
-            // Mark players as dead
-            for (userId in allDeaths) {
-                // For day 1, allow last words so player can speak during death announcement
-                gameActionService.markPlayerDead(lockedSession, userId, lockedSession.day == 1)
-            }
-
-            // Store tonight's deaths in stateData for frontend display
             lockedSession.stateData.deadPlayers = allDeaths.toList()
 
             // Create public death announcement (without revealing causes)
@@ -80,23 +85,45 @@ class DeathAnnouncementStep(
 
                 lockedSession.addLog(LogType.SYSTEM, "昨晚 $deathList 死亡")
             } else {
-                lockedSession.courtTextChannel?.sendMessage("**:angel: 昨晚是平安夜**")?.queue()
+                lockedSession.courtTextChannel?.sendMessage("# **:angel: 昨晚是平安夜**")?.queue()
             }
 
-            // Announce good morning on day 2+
-            if (lockedSession.day > 1) {
-                lockedSession.addLog(LogType.SYSTEM, "早上好，各位玩家")
-            }
-
-            // Set initial end time based on triggers
+            // Set initial end time based on triggers (can be updated by triggers later)
+            // We set a base time, but the async process will control the flow mostly.
             val duration = getDurationSeconds(lockedSession)
             lockedSession.currentStepEndTime = System.currentTimeMillis() + (duration * 1000L)
 
-            log.info("Death announcement started for guild $guildId. Deaths: $allDeaths, Duration: ${duration}s")
+            log.info("Death announcement started for guild $guildId. Deaths: $allDeaths")
             gameSessionService.broadcastSessionUpdate(lockedSession)
         }
 
-        // Schedule tasks for potential advancement (one-shot fallbacks)
+        // Launch async death processing
+        @OptIn(DelicateCoroutinesApi::class)
+        GlobalScope.launch {
+            for (playerId in deadPlayerIds) {
+                // Fetch fresh player/session to ensure valid state for events
+                val currentSession = gameSessionService.getSession(guildId).orElse(null) ?: continue
+                val player = currentSession.getPlayer(playerId)
+                if (player != null) {
+                    // Only allow last words for first day or specific config
+                    val allowLastWords = currentSession.day == 1
+                    try {
+                        player.runDeathEvents(allowLastWords)
+                    } catch (e: Exception) {
+                        log.error("Error running death events for player $playerId", e)
+                    }
+                }
+            }
+
+            // Once all events are done, check if we can advance
+            gameSessionService.withLockedSession(guildId) { lockedSession ->
+                // Force update end time to now to allow checkAdvance to proceed if triggers are done
+                // Or just let checkAdvance decide based on its logic (triggers empty)
+                checkAdvance(lockedSession, service)
+            }
+        }
+
+        // Schedule tasks for potential advancement (one-shot fallbacks in case async hangs or something)
         // Task 1: Minimum display time (10s as requested)
         CmdUtils.schedule({
             gameSessionService.withLockedSession(guildId) { currentSession ->
@@ -104,14 +131,14 @@ class DeathAnnouncementStep(
             }
         }, 10000)
 
-        // Task 2: Maximum duration
+        // Task 2: Maximum duration (backup timeout)
         val duration = getDurationSeconds(session)
         if (duration > 10) {
             CmdUtils.schedule({
                 gameSessionService.withLockedSession(guildId) { currentSession ->
                     checkAdvance(currentSession, service)
                 }
-            }, duration * 1000L + 500) // Small buffer
+            }, duration * 1000L + 5000) // Small buffer
         }
     }
 

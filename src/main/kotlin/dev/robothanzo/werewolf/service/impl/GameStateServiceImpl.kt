@@ -24,6 +24,7 @@ class GameStateServiceImpl(
     // Simple robust ordered flow for now, can be made dynamic later
     private val gameFlow = listOf(
         "NIGHT_PHASE",
+        "DAY_PHASE",
         "SHERIFF_ELECTION", // Day 1 only
         "DEATH_ANNOUNCEMENT",
         "SPEECH_PHASE",

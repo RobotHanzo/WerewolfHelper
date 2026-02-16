@@ -1,7 +1,9 @@
 package dev.robothanzo.werewolf.game.roles.actions
 
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.*
+import dev.robothanzo.werewolf.game.model.ActionDefinitionId
+import dev.robothanzo.werewolf.game.model.ActionTiming
+import dev.robothanzo.werewolf.game.model.RoleActionInstance
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import org.springframework.stereotype.Component
 
@@ -10,7 +12,6 @@ class NightmareFearAction : BaseRoleAction(
     actionId = ActionDefinitionId.NIGHTMARE_FEAR,
     priority = PredefinedRoles.NIGHTMARE_PRIORITY,
     timing = ActionTiming.NIGHT,
-    isOptional = false,
     isImmediate = true
 ) {
     override fun execute(

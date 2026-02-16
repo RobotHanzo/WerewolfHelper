@@ -1,8 +1,12 @@
 package dev.robothanzo.werewolf.controller
 
-import dev.robothanzo.werewolf.controller.dto.*
+import dev.robothanzo.werewolf.controller.dto.ApiResponse
+import dev.robothanzo.werewolf.controller.dto.GameRequests
+import dev.robothanzo.werewolf.controller.dto.GuildMembersResponse
+import dev.robothanzo.werewolf.controller.dto.StateActionResponse
 import dev.robothanzo.werewolf.database.documents.LogType
 import dev.robothanzo.werewolf.database.documents.UserRole
+import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.security.annotations.CanManageGuild
 import dev.robothanzo.werewolf.security.annotations.CanViewGuild
 import dev.robothanzo.werewolf.service.*
@@ -12,6 +16,9 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.springframework.context.annotation.Lazy
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -246,8 +253,18 @@ class GameController(
     ): ResponseEntity<ApiResponse> {
         val session = gameSessionService.getSession(guildId.toLong())
             .orElseThrow { Exception("Session not found") }
-        gameActionService.markPlayerDead(session, playerId, lastWords)
-        return ResponseEntity.ok(ApiResponse.ok(message = "Player marked as dead"))
+        val player = session.getPlayer(playerId) ?: throw Exception("Player not found")
+
+        @OptIn(DelicateCoroutinesApi::class)
+        GlobalScope.launch {
+            try {
+                player.processDeath(DeathCause.UNKNOWN, lastWords)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        return ResponseEntity.ok(ApiResponse.ok(message = "Player death processing started"))
     }
 
     @Operation(summary = "Revive Player", description = "Revives a dead player.")

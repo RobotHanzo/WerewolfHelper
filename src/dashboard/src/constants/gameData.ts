@@ -190,6 +190,13 @@ export const GAME_ROLES: Record<string, GameEntityConfig> = {
     translationKey: 'roles.labels.DARK_MERCHANT',
     camp: 'GOD',
   },
+  MIRACLE_MERCHANT: {
+    id: 'MIRACLE_MERCHANT',
+    color: '#f59e0b', // Amber-500
+    icon: ShoppingBag,
+    translationKey: 'roles.labels.MIRACLE_MERCHANT',
+    camp: 'GOD',
+  },
   HIDDEN: {
     id: 'HIDDEN',
     color: '#64748b', // Slate-500
@@ -254,6 +261,12 @@ export const GAME_ACTIONS: Record<string, GameEntityConfig> = {
     icon: ShoppingBag,
     translationKey: 'roles.actions.DARK_MERCHANT_TRADE',
   },
+  MIRACLE_MERCHANT_TRADE_GUARD: {
+    id: 'MIRACLE_MERCHANT_TRADE_GUARD',
+    color: '#f59e0b',
+    icon: Shield,
+    translationKey: 'roles.actions.MIRACLE_MERCHANT_TRADE_GUARD',
+  },
   MERCHANT_SEER_CHECK: {
     id: 'MERCHANT_SEER_CHECK',
     color: '#06b6d4',
@@ -271,6 +284,12 @@ export const GAME_ACTIONS: Record<string, GameEntityConfig> = {
     color: '#ec4899',
     icon: Crosshair,
     translationKey: 'roles.actions.MERCHANT_GUN',
+  },
+  MERCHANT_GUARD_PROTECT: {
+    id: 'MERCHANT_GUARD_PROTECT',
+    color: '#f59e0b',
+    icon: Shield,
+    translationKey: 'roles.actions.MERCHANT_GUARD_PROTECT',
   },
   DREAM_WEAVER_LINK: {
     id: 'DREAM_WEAVER_LINK',
@@ -321,6 +340,7 @@ export const getRoleConfig = (roleName: string): GameEntityConfig => {
   if (roleName.includes('魔術師')) return GAME_ROLES.MAGICIAN;
   if (roleName.includes('平民') || roleName.includes('村民')) return GAME_ROLES.VILLAGER;
   if (roleName.includes('黑市')) return GAME_ROLES.DARK_MERCHANT;
+  if (roleName.includes('奇蹟')) return GAME_ROLES.MIRACLE_MERCHANT;
   if (roleName.includes('複製')) return GAME_ROLES.CLONE;
 
   return GAME_ROLES.HIDDEN;

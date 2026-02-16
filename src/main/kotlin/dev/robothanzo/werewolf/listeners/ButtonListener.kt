@@ -122,13 +122,15 @@ class ButtonListener : ListenerAdapter() {
                             )
                         }.toMutableList()
 
-                        // Add Skip button
-                        targetButtons.add(
-                            net.dv8tion.jda.api.components.buttons.Button.danger(
-                                "selectTarget:$SKIP_TARGET_ID",
-                                "跳過"
+                        // Add Skip button if optional
+                        if (action.isOptional) {
+                            targetButtons.add(
+                                net.dv8tion.jda.api.components.buttons.Button.danger(
+                                    "selectTarget:$SKIP_TARGET_ID",
+                                    "跳過"
+                                )
                             )
-                        )
+                        }
                         val message =
                             event.hook.sendMessage(targetMessage)
                                 .setComponents(

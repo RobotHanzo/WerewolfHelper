@@ -181,21 +181,6 @@ data class GameStateData(
             submittedActions.find { it.actionDefinitionId == ActionDefinitionId.WEREWOLF_KILL && it.status == ActionStatus.SUBMITTED }?.targets?.firstOrNull()
 
     /**
-     * Finds the target ID protected by the guard in the previous night.
-     */
-    val lastGuardProtectedId: Int?
-        get() {
-            // Find in current submitted actions (if it was the previous phase) or latest executed actions
-            val currentGuardAction =
-                submittedActions.find { it.actionDefinitionId == ActionDefinitionId.GUARD_PROTECT && it.status == ActionStatus.SUBMITTED }
-            if (currentGuardAction != null) return currentGuardAction.targets.firstOrNull()
-
-            // Sort days descending and look for the most recent guard action
-            val lastNightActions = executedActions.entries.maxByOrNull { it.key }?.value
-            return lastNightActions?.find { it.actionDefinitionId == ActionDefinitionId.GUARD_PROTECT }?.targets?.firstOrNull()
-        }
-
-    /**
      * Finds the day the Wolf Brother died.
      */
     val wolfBrotherDiedDay: Int?

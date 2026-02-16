@@ -288,6 +288,14 @@ class PoliceServiceImpl(
 
                     // Use session helper to announce end of speeches
                     session.courtTextChannel?.sendMessage("政見發表結束，參選人有20秒進行退選，20秒後自動開始投票")
+                        ?.setComponents(
+                            ActionRow.of(
+                                Button.danger(
+                                    "enrollPolice",
+                                    "退選警長"
+                                )
+                            )
+                        ) // Re-use the enroll button for unenrollment since the logic is similar and we distinguish by state
                         ?.queue()
 
                     CmdUtils.schedule({ next(guildId) }, 20000)

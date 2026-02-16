@@ -1,7 +1,9 @@
 package dev.robothanzo.werewolf.game.roles.actions
 
 import dev.robothanzo.werewolf.database.documents.Session
-import dev.robothanzo.werewolf.game.model.*
+import dev.robothanzo.werewolf.game.model.ActionDefinitionId
+import dev.robothanzo.werewolf.game.model.ActionTiming
+import dev.robothanzo.werewolf.game.model.RoleActionInstance
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import org.springframework.stereotype.Component
 
@@ -9,7 +11,8 @@ import org.springframework.stereotype.Component
 class DreamWeaverLinkAction : BaseRoleAction(
     actionId = ActionDefinitionId.DREAM_WEAVER_LINK,
     priority = PredefinedRoles.DREAM_WEAVER_PRIORITY,
-    timing = ActionTiming.NIGHT
+    timing = ActionTiming.NIGHT,
+    isOptional = false
 ) {
     override fun execute(
         session: Session,
@@ -33,5 +36,14 @@ class DreamWeaverLinkAction : BaseRoleAction(
         if (targetId == actor) return "攝夢人不能選擇自己"
 
         return null
+    }
+
+    override fun eligibleTargets(
+        session: Session,
+        actor: Int,
+        alivePlayers: List<Int>,
+        accumulatedState: ActionExecutionResult
+    ): List<Int> {
+        return alivePlayers.filter { it != actor }
     }
 }
