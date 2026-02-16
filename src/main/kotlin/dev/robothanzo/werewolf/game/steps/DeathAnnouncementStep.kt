@@ -85,7 +85,7 @@ class DeathAnnouncementStep(
 
                 lockedSession.addLog(LogType.SYSTEM, "昨晚 $deathList 死亡")
             } else {
-                lockedSession.courtTextChannel?.sendMessage("**:angel: 昨晚是平安夜**")?.queue()
+                lockedSession.courtTextChannel?.sendMessage("# **:angel: 昨晚是平安夜**")?.queue()
             }
 
             // Set initial end time based on triggers (can be updated by triggers later)
