@@ -66,12 +66,6 @@ class PoliceServiceImpl(
             return
         }
 
-        // Verify message ID to prevent clicking old enrollment buttons
-        if (policeSession.message?.idLong != event.messageIdLong) {
-            event.hook.editOriginal(":x: 這是舊的按鈕，請使用最新的提示").queue()
-            return
-        }
-
         val player = event.member?.player() ?: run {
             event.hook.editOriginal(":x: 你不是玩家").queue()
             return
