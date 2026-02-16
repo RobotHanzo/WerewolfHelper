@@ -391,7 +391,7 @@ class DeathResolutionAction : BaseRoleAction(
     }
 }
 
-abstract class DarkMerchantTradeAction(
+abstract class BaseMerchantTradeAction(
     actionId: ActionDefinitionId,
     private val skillType: ActionDefinitionId
 ) : BaseRoleAction(
@@ -409,9 +409,13 @@ abstract class DarkMerchantTradeAction(
         val target = session.getPlayer(targetId) ?: return accumulatedState
 
         val isWolf = target.wolf
+        val actorPlayer = session.getPlayer(action.actor)
+        // Simple heuristic to get role name, or default to "黑市商人"
+        val roleName = if (actorPlayer?.roles?.contains("奇蹟商人") == true) "奇蹟商人" else "黑市商人"
+
         if (isWolf) {
             accumulatedState.deaths.getOrPut(DeathCause.TRADED_WITH_WOLF) { mutableListOf() }.add(action.actor)
-            session.addLog(LogType.SYSTEM, "黑市商人與狼人交易，不幸出局")
+            session.addLog(LogType.SYSTEM, "${roleName}與狼人交易，不幸出局")
             return accumulatedState
         } else {
             skillType.let { id ->
@@ -419,10 +423,10 @@ abstract class DarkMerchantTradeAction(
                 playerActions[id.toString()] = 1
             }
 
-            target.channel?.sendMessage("🎁 **你收到了黑市商人的禮物**！\n你獲得了技能：**${skillType.actionName}**\n你可以在**下一晚**開始使用它。")
+            target.channel?.sendMessage("🎁 **你收到了${roleName}的禮物**！\n你獲得了技能：**${skillType.actionName}**\n你可以在**下一晚**開始使用它。")
                 ?.queue()
 
-            session.addLog(LogType.SYSTEM, "黑市商人交易成功，將技能 $skillType 贈予了玩家 $targetId")
+            session.addLog(LogType.SYSTEM, "${roleName}交易成功，將技能 $skillType 贈予了玩家 $targetId")
         }
         return accumulatedState
     }
@@ -437,22 +441,22 @@ abstract class DarkMerchantTradeAction(
     }
 
     override fun isAvailable(session: Session, actor: Int): Boolean {
-        // 1. Check if ANY Dark Merchant action was EXECUTED in the past.
-        // If the merchant has already traded once (successfully or not), they cannot trade again.
-        val prefix = PredefinedRoles.DARK_MERCHANT_TRADE_PREFIX
-        val historicalUses = session.stateData.executedActions.values.flatten().any {
-            it.actor == actor && it.actionDefinitionId.toString().startsWith(prefix)
+        // 1. Check if ANY Merchant action was EXECUTED in the past.
+        val executedActions = session.stateData.executedActions.values.flatten()
+        val hasTraded = executedActions.any {
+            it.actor == actor && (
+                it.actionDefinitionId.toString().startsWith("DARK_MERCHANT_TRADE_") ||
+                    it.actionDefinitionId.toString().startsWith("MIRACLE_MERCHANT_TRADE_")
+                )
         }
-        if (historicalUses) return false
+        if (hasTraded) return false
 
-        // 2. Check if ANOTHER Dark Merchant action is currently SUBMITTED.
-        // This ensures that within the same night, if they have already selected one type (and it's submitted),
-        // they cannot select a different type unless they cancel the first one (if UI supports it) or update the same type.
-        // We allow checking 'isAvailable' for the SAME actionId to allow updates/re-submissions of the same type.
+        // 2. Check if ANOTHER Merchant action is currently SUBMITTED.
         val otherSubmitted = session.stateData.submittedActions.any {
             it.actor == actor &&
-                it.actionDefinitionId.toString().startsWith(prefix) &&
                 it.actionDefinitionId != this.actionId &&
+                (it.actionDefinitionId.toString().startsWith("DARK_MERCHANT_TRADE_") ||
+                    it.actionDefinitionId.toString().startsWith("MIRACLE_MERCHANT_TRADE_")) &&
                 (it.status == ActionStatus.SUBMITTED || it.status == ActionStatus.PROCESSED)
         }
 
@@ -461,6 +465,11 @@ abstract class DarkMerchantTradeAction(
         return super.isAvailable(session, actor)
     }
 }
+
+abstract class DarkMerchantTradeAction(
+    actionId: ActionDefinitionId,
+    skillType: ActionDefinitionId
+) : BaseMerchantTradeAction(actionId, skillType)
 
 @Component
 class DarkMerchantTradeSeerAction : DarkMerchantTradeAction(
@@ -475,6 +484,11 @@ class DarkMerchantTradePoisonAction : DarkMerchantTradeAction(
 @Component
 class DarkMerchantTradeGunAction : DarkMerchantTradeAction(
     ActionDefinitionId.DARK_MERCHANT_TRADE_GUN, ActionDefinitionId.MERCHANT_GUN
+)
+
+@Component
+class MiracleMerchantTradeGuardAction : BaseMerchantTradeAction(
+    ActionDefinitionId.MIRACLE_MERCHANT_TRADE_GUARD, ActionDefinitionId.MERCHANT_GUARD_PROTECT
 )
 
 @Component
@@ -539,6 +553,24 @@ class MerchantGunAction : BaseRoleAction(
     ): ActionExecutionResult {
         val targetId = action.targets.firstOrNull() ?: return accumulatedState
         accumulatedState.deaths.getOrPut(DeathCause.HUNTER_REVENGE) { mutableListOf() }.add(targetId)
+        return accumulatedState
+    }
+}
+
+@Component
+class MerchantGuardProtectAction : BaseRoleAction(
+    actionId = ActionDefinitionId.MERCHANT_GUARD_PROTECT,
+    priority = PredefinedRoles.GUARD_PRIORITY + 1,
+    timing = ActionTiming.NIGHT,
+    usageLimit = 1
+) {
+    override fun execute(
+        session: Session,
+        action: RoleActionInstance,
+        accumulatedState: ActionExecutionResult
+    ): ActionExecutionResult {
+        val targetId = action.targets.firstOrNull() ?: return accumulatedState
+        accumulatedState.protectedPlayers.add(targetId)
         return accumulatedState
     }
 }

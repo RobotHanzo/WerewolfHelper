@@ -32,9 +32,13 @@ enum class ActionDefinitionId(val actionName: String) {
     DARK_MERCHANT_TRADE_GUN("交易 (獵人獵槍)"),
 
     // Merchant Gift Actions
-    MERCHANT_SEER_CHECK("查驗 (黑市商人版)"),
-    MERCHANT_POISON("毒藥 (黑市商人版)"),
-    MERCHANT_GUN("獵槍 (黑市商人版)"),
+    MERCHANT_SEER_CHECK("查驗 (商人贈予)"),
+    MERCHANT_POISON("毒藥 (商人贈予)"),
+    MERCHANT_GUN("獵槍 (商人贈予)"),
+    MERCHANT_GUARD_PROTECT("守衛 (商人贈予)"),
+
+    // Miracle Merchant Actions
+    MIRACLE_MERCHANT_TRADE_GUARD("交易 (守衛守護)"),
 
     // Dream Weaver Actions
     DREAM_WEAVER_LINK("攝夢"),

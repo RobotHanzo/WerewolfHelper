@@ -112,15 +112,29 @@ class WolfYoungerBrother(
     override fun getActions(): List<RoleAction> = listOf(killAction, extraKillAction)
 }
 
+abstract class BaseMerchant(
+    name: String,
+    camp: Camp
+) : BaseRole(name, camp) {
+    override fun onDeath(context: RoleEventContext) {
+        // Nothing special on death for now
+    }
+}
+
 @Component
 class DarkMerchant(
     @Transient private val tradeSeerAction: DarkMerchantTradeSeerAction,
     @Transient private val tradePoisonAction: DarkMerchantTradePoisonAction,
     @Transient private val tradeGunAction: DarkMerchantTradeGunAction
-) : BaseRole("黑市商人", Camp.GOD) {
+) : BaseMerchant("黑市商人", Camp.GOD) {
     override fun getActions(): List<RoleAction> = listOf(tradeSeerAction, tradePoisonAction, tradeGunAction)
+}
 
-    override fun onDeath(context: RoleEventContext) {
-        // Nothing special on death for now
-    }
+@Component
+class MiracleMerchant(
+    @Transient private val tradeSeerAction: DarkMerchantTradeSeerAction,
+    @Transient private val tradePoisonAction: DarkMerchantTradePoisonAction,
+    @Transient private val tradeGuardAction: MiracleMerchantTradeGuardAction
+) : BaseMerchant("奇蹟商人", Camp.GOD) {
+    override fun getActions(): List<RoleAction> = listOf(tradeSeerAction, tradePoisonAction, tradeGuardAction)
 }
