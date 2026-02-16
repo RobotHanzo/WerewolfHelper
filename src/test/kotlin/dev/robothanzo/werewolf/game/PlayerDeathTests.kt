@@ -68,6 +68,7 @@ class PlayerDeathTests {
 
         WerewolfApplication.jda = mockJda
         WerewolfApplication.gameSessionService = gameSessionService
+        WerewolfApplication.gameStateService = mock() // Fix: Initialize gameStateService
         WerewolfApplication.speechService = speechService
         WerewolfApplication.policeService = policeService
         WerewolfApplication.roleRegistry = roleRegistry

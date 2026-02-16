@@ -1,6 +1,7 @@
 package dev.robothanzo.werewolf.service.impl
 
 import dev.robothanzo.werewolf.WerewolfApplication
+import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.service.GameSessionService
@@ -34,6 +35,10 @@ class GameStateServiceImplTest {
         on { id } doReturn "SETUP"
         on { name } doReturn "遊戲設置"
     }
+    private val judgeStep: GameStep = mock {
+        on { id } doReturn "JUDGE_DECISION"
+        on { name } doReturn "法官裁決"
+    }
 
     private lateinit var gameStateService: GameStateServiceImpl
 
@@ -41,7 +46,7 @@ class GameStateServiceImplTest {
     fun setUp() {
         WerewolfApplication.gameSessionService = sessionService
         WerewolfApplication.jda = jda
-        gameStateService = GameStateServiceImpl(sessionService, listOf(step1, step2, setupStep, dayStep))
+        gameStateService = GameStateServiceImpl(sessionService, listOf(step1, step2, setupStep, dayStep, judgeStep))
 
         // Mock withLockedSession(Long, (Session) -> T)
         whenever(sessionService.withLockedSession(any<Long>(), any<(Session) -> Any?>())).thenAnswer { invocation ->
@@ -50,6 +55,12 @@ class GameStateServiceImplTest {
             val session = Session().apply { this.guildId = guildId }
             block(session)
         }
+    }
+
+    private fun addAlivePlayers(session: Session) {
+        session.addPlayer(Player(id = 1, roles = mutableListOf("狼人")).apply { this.session = session })
+        session.addPlayer(Player(id = 2, roles = mutableListOf("平民")).apply { this.session = session })
+        session.addPlayer(Player(id = 3, roles = mutableListOf("女巫")).apply { this.session = session })
     }
 
     @Test
@@ -68,6 +79,7 @@ class GameStateServiceImplTest {
     @Test
     fun `startStep ends current step and starts new one`() {
         val session = Session().apply { guildId = 123L; currentState = "SETUP" }
+        addAlivePlayers(session)
 
         gameStateService.startStep(session, "NIGHT_PHASE")
 
@@ -81,6 +93,7 @@ class GameStateServiceImplTest {
     @Test
     fun `nextStep from SETUP moves to NIGHT_PHASE`() {
         val session = Session().apply { guildId = 123L; currentState = "SETUP" }
+        addAlivePlayers(session) // Ensure game doesn't end immediately
 
         gameStateService.nextStep(session)
 
@@ -94,6 +107,7 @@ class GameStateServiceImplTest {
             currentState = "NIGHT_PHASE"
             day = 0
         }
+        addAlivePlayers(session)
 
         gameStateService.nextStep(session)
 
@@ -113,6 +127,7 @@ class GameStateServiceImplTest {
             currentState = "NIGHT_PHASE"
             day = 1
         }
+        addAlivePlayers(session)
 
         gameStateService.nextStep(session)
 
@@ -139,6 +154,7 @@ class GameStateServiceImplTest {
             currentState = "NIGHT_PHASE"
             day = 0
         }
+        addAlivePlayers(session)
         val input = mapOf("action" to "vote")
         val output = mapOf("success" to true, "votingEnded" to true)
         whenever(step1.handleInput(session, input)).thenReturn(output)
@@ -155,6 +171,7 @@ class GameStateServiceImplTest {
             currentState = "DAY_PHASE"
             day = 0
         }
+        addAlivePlayers(session)
 
         gameStateService.nextStep(session)
 
@@ -174,6 +191,7 @@ class GameStateServiceImplTest {
             currentState = "DAY_PHASE"
             day = 1
         }
+        addAlivePlayers(session)
 
         gameStateService.nextStep(session)
 

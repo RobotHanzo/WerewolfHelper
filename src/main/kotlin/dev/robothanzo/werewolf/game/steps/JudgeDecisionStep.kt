@@ -87,14 +87,7 @@ class JudgeDecisionStep : GameStep {
         // 1. Open all mics in Court Voice
         courtVoice?.let { vc ->
             // Unmute everyone currently connected
-            vc.members.forEach { member ->
-                try {
-                    guild.mute(member, false).queue()
-                } catch (_: Exception) {
-                }
-            }
-
-            // Update permission to allow speaking for @everyone or the player role
+            vc.members.forEach { guild.mute(it, false).queue() }
             val everyone = guild.publicRole
             vc.upsertPermissionOverride(everyone).grant(Permission.VOICE_SPEAK).queue()
         }
