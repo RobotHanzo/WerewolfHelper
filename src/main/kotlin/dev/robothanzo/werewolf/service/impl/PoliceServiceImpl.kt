@@ -326,12 +326,11 @@ class PoliceServiceImpl(
     }
 
     override fun interrupt(guildId: Long, triggerCallback: Boolean) {
-        val policeSession = sessions.remove(guildId)
-        if (policeSession != null) {
-            cancelPollTasks(policeSession)
-            policeSession.session.courtTextChannel?.sendMessage("警長投票已終止")?.queue()
+        sessions.remove(guildId)?.let {
+            cancelPollTasks(it)
+            it.session.courtTextChannel?.sendMessage("警長投票已終止")?.queue()
             if (triggerCallback) {
-                policeSession.finishedCallback?.invoke()
+                it.finishedCallback?.invoke()
             }
         }
     }

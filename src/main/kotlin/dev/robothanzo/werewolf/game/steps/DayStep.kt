@@ -7,6 +7,7 @@ import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.GameStateService
 import dev.robothanzo.werewolf.service.SpeechService
+import dev.robothanzo.werewolf.utils.CmdUtils
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 
@@ -25,11 +26,14 @@ class DayStep(
         speechService.setAllMute(session.guildId, true) // Ensure silence for announcement
         session.courtTextChannel?.sendMessage("# **:sunny: 天亮了**")?.queue()
         session.courtVoiceChannel?.play(Audio.Resource.MORNING) {
-            gameSessionService.withLockedSession(session.guildId) { lockedSession ->
-                if (lockedSession.currentState == id) {
-                    service.nextStep(lockedSession)
+            // Audio is ~7s, add 3s delay to make total ~10s
+            CmdUtils.schedule({
+                gameSessionService.withLockedSession(session.guildId) { lockedSession ->
+                    if (lockedSession.currentState == id) {
+                        service.nextStep(lockedSession)
+                    }
                 }
-            }
+            }, 3000L)
         }
     }
 
@@ -38,7 +42,7 @@ class DayStep(
     }
 
     override fun getDurationSeconds(session: Session): Int {
-        return 41 // 40s for discussion + 1s buffer before next phase starts
+        return 10
     }
 
     override fun handleInput(session: Session, input: Map<String, Any>): Map<String, Any> {

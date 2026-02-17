@@ -56,6 +56,12 @@ class JudgeDecisionStep : GameStep {
         when (action) {
             "end_game_confirm" -> {
                 performEndGame(session)
+
+                // Finalize state change to SETUP so UI updates
+                session.stateData.pendingNextStep = null
+                session.stateData.gameEndReason = null
+                WerewolfApplication.gameStateService.startStep(session, "SETUP")
+
                 return mapOf("success" to true)
             }
 
@@ -106,26 +112,26 @@ class JudgeDecisionStep : GameStep {
             vc.upsertPermissionOverride(everyone).grant(Permission.VOICE_SPEAK).queue()
         }
 
-        // 2. Grant Court/Off-court permissions (Read/Write) to everyone
-        // "開放法院、場外的發言和閱讀權限給所有人" -> Everyone can read/speak in Court Text and Spectator Text?
-        // Usually "Off-court" means Spectator channel.
+        // 2. Grant permissions (Read/Write) to everyone
 
-        val publicRole = guild.publicRole
-
-        courtText?.upsertPermissionOverride(publicRole)
+        courtText?.upsertPermissionOverride(guild.publicRole)
             ?.grant(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND)
             ?.queue()
 
-        spectatorText?.upsertPermissionOverride(publicRole)
+        session.spectatorRole?.let { courtText?.upsertPermissionOverride(it) }
+            ?.grant(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND)
+            ?.queue()
+
+        spectatorText?.upsertPermissionOverride(guild.publicRole)
             ?.grant(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND)
             ?.queue()
 
         // 3. "開放死人旁觀語音發言權限" -> Dead players (Spectator Role) can speak.
         // Already covered by granting @everyone VOICE_SPEAK in court voice?
         // Just to be sure, let's explicitly grant it to Spectator Role if exists
-        val spectatorRole = session.spectatorRole
-        if (spectatorRole != null && courtVoice != null) {
-            courtVoice.upsertPermissionOverride(spectatorRole).grant(Permission.VOICE_SPEAK).queue()
+        val specRole = session.spectatorRole
+        if (specRole != null && courtVoice != null) {
+            courtVoice.upsertPermissionOverride(specRole).grant(Permission.VOICE_SPEAK).queue()
         }
     }
 }

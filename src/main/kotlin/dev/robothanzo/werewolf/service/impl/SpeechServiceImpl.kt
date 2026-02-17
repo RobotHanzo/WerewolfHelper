@@ -347,19 +347,15 @@ class SpeechServiceImpl(
     }
 
     override fun interruptSession(guildId: Long, triggerCallback: Boolean) {
-        val speechSession = speechSessions[guildId]
-        if (speechSession != null) {
-            val guild = WerewolfApplication.jda.getGuildById(guildId)
-            if (guild != null) {
-                val session = gameSessionService.getSession(guildId).getOrNull()
-                session?.courtTextChannel?.sendMessage("法官已強制終止發言流程")?.queue()
+        speechSessions.remove(guildId)?.let {
+            gameSessionService.getSession(guildId).getOrNull()?.let {
+                it.courtTextChannel?.sendMessage("法官已強制終止發言流程")?.queue()
             }
 
-            speechSession.order.clear()
-            stopCurrentSpeaker(speechSession)
-            speechSessions.remove(guildId)
+            it.order.clear()
+            stopCurrentSpeaker(it)
             if (triggerCallback) {
-                speechSession.finishedCallback?.invoke()
+                it.finishedCallback?.invoke()
             }
         }
     }

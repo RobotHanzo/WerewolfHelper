@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRoleAddEvent
+import net.dv8tion.jda.api.events.session.ReadyEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -18,6 +19,19 @@ class GuildJoinListener(
     private val gameSessionService: dev.robothanzo.werewolf.service.GameSessionService
 ) : ListenerAdapter() {
     private val log = LoggerFactory.getLogger(GuildJoinListener::class.java)
+
+    override fun onReady(event: ReadyEvent) {
+        log.info("JDA Ready, syncing {} guilds with sessions...", event.jda.guilds.size)
+        val allSessions = gameSessionService.getAllSessions()
+        val joinedGuildIds = event.jda.guilds.map { it.idLong }.toSet()
+
+        allSessions.forEach { session ->
+            if (!joinedGuildIds.contains(session.guildId)) {
+                log.info("Deleting stale session for guild {} (not in joined guilds)", session.guildId)
+                cleanupGuild(session.guildId)
+            }
+        }
+    }
 
     override fun onGuildJoin(event: GuildJoinEvent) {
         log.info("Bot joined guild: {} ({})", event.guild.name, event.guild.id)
@@ -32,8 +46,14 @@ class GuildJoinListener(
 
     override fun onGuildLeave(event: GuildLeaveEvent) {
         log.info("Bot left guild: {}", event.guild.id)
-        gameSessionService.deleteSession(event.guild.idLong)
-        WerewolfApplication.speechService.interruptSession(event.guild.idLong)
+        cleanupGuild(event.guild.idLong)
+    }
+
+    private fun cleanupGuild(guildId: Long) {
+        gameSessionService.deleteSession(guildId)
+        WerewolfApplication.speechService.interruptSession(guildId)
+        WerewolfApplication.policeService.interrupt(guildId)
+        WerewolfApplication.expelService.endExpelPoll(guildId)
     }
 
     private fun checkAndSetup(guild: Guild) {

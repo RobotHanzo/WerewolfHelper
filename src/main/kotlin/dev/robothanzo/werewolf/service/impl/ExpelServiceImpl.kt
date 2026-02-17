@@ -36,7 +36,6 @@ class ExpelServiceImpl : ExpelService {
 
     override fun endExpelPoll(guildId: Long) {
         sessions.remove(guildId)
-        // remove any running poll instances as well
         polls.remove(guildId)
         log.info("Ended expel poll for guild {}", guildId)
     }
