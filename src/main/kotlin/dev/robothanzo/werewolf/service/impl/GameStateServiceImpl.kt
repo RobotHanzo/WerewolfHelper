@@ -95,6 +95,15 @@ class GameStateServiceImpl(
             nextId = gameFlow[nextIdx]
         }
 
+        // Skip voting and jump to night if detonation occurred
+        if ((nextId == "SPEECH_PHASE" || nextId == "VOTING_PHASE") && session.stateData.detonatedThisDay) {
+            // If detonated, go straight to night
+            while (nextId != "NIGHT_PHASE") {
+                nextIdx = (nextIdx + 1) % gameFlow.size
+                nextId = gameFlow[nextIdx]
+            }
+        }
+
         // Handle cycles (Day increment at sunrise)
         if (nextId == "DEATH_ANNOUNCEMENT") {
             session.day += 1

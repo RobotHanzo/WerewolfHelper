@@ -213,6 +213,14 @@ data class GameStateData(
      */
     val ghostRiderReflected: Boolean
         get() = executedActions.values.flatten().any { it.actionDefinitionId == ActionDefinitionId.GHOST_RIDER_REFLECT }
+
+    /**
+     * Whether a wolf has detonated this day.
+     * Derived from submitted actions (self-healing/cleared at night start).
+     */
+    @get:BsonIgnore
+    val detonatedThisDay: Boolean
+        get() = submittedActions.any { it.actionDefinitionId == ActionDefinitionId.WOLF_DETONATE }
 }
 
 /**

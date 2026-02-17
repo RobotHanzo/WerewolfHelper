@@ -44,9 +44,26 @@ class Game {
                 return@withLockedSession
             }
 
+            if (session.currentState == "NIGHT_PHASE" || session.currentState == "SETUP") {
+                event.hook.editOriginal(":x: 目前階段不允許自爆").queue()
+                return@withLockedSession
+            }
+
             // Execute detonation
             session.addLog(LogType.SYSTEM, "${player.nickname} 選擇自爆")
             player.markDead(DeathCause.DETONATE)
+
+            // Record detonation as a virtual action to support computed properties
+            session.stateData.submittedActions.add(
+                dev.robothanzo.werewolf.game.model.RoleActionInstance(
+                    actor = player.id,
+                    actorRole = (player.roles.find { it.contains("狼") } ?: "狼人"),
+                    actionDefinitionId = dev.robothanzo.werewolf.game.model.ActionDefinitionId.WOLF_DETONATE,
+                    targets = arrayListOf(),
+                    submittedBy = dev.robothanzo.werewolf.game.model.ActionSubmissionSource.SYSTEM,
+                    status = dev.robothanzo.werewolf.game.model.ActionStatus.SUBMITTED
+                )
+            )
 
             // Launch async death events (Last Words etc)
             @OptIn(DelicateCoroutinesApi::class)
@@ -63,7 +80,8 @@ class Game {
             // End the current phase (usually day speech)
             WerewolfApplication.gameStateService.nextStep(session)
 
-            event.hook.editOriginal(":boom: ${player.nickname} 已自爆，進入黑夜").queue()
+            session.courtTextChannel?.sendMessage(":boom: **${player.nickname} 選擇了自爆！** 進入黑夜。")?.queue()
+            event.hook.editOriginal(":white_check_mark: 自爆成功").queue()
         }
     }
 }

@@ -9,6 +9,7 @@ enum class ActionDefinitionId(val actionName: String) {
     // Werewolf Actions
     WEREWOLF_KILL("擊殺"),
     WOLF_YOUNGER_BROTHER_EXTRA_KILL("狼弟復仇刀"),
+    WOLF_DETONATE("自爆"),
 
     // Witch Actions
     WITCH_ANTIDOTE("解藥"),
