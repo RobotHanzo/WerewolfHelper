@@ -14,7 +14,6 @@ import dev.robothanzo.werewolf.service.ActionUIService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.GameStateService
 import dev.robothanzo.werewolf.service.SpeechService
-import dev.robothanzo.werewolf.utils.CmdUtils
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Lazy
@@ -150,33 +149,27 @@ class NightStep(
 
     // --- Wait Helper ---
     internal suspend fun waitForCondition(guildId: Long, durationSeconds: Int, condition: () -> Boolean): Boolean {
-        val signal = CompletableDeferred<Unit>()
-        phaseSignals[guildId] = signal
+        val timeoutAt = System.currentTimeMillis() + durationSeconds * 1000L
 
-        val timeoutTask = CmdUtils.schedule({
-            signal.complete(Unit)
-        }, durationSeconds * 1000L)
+        while (System.currentTimeMillis() < timeoutAt) {
+            if (condition()) return true
 
-        // Check condition loop
-        val checkJob = nightScope.launch {
-            while (isActive) {
-                if (condition()) {
-                    signal.complete(Unit)
-                    break
+            val signal = CompletableDeferred<Unit>()
+            phaseSignals[guildId] = signal
+
+            val remainingMs = timeoutAt - System.currentTimeMillis()
+            if (remainingMs <= 0) break
+
+            try {
+                // Wait for either onEvent (signal) or 1 second poll via timeout
+                withTimeout(minOf(remainingMs, 1000L)) {
+                    signal.await()
                 }
-                delay(1000)
+            } catch (_: Exception) {
+                // Ignore timeout (which acts as a poll) or other exceptions, loop and re-check condition
+            } finally {
+                phaseSignals.remove(guildId)
             }
-        }
-
-        try {
-            withTimeout((durationSeconds + 5) * 1000L) { // Safety timeout
-                signal.await()
-            }
-        } catch (_: Exception) {
-        } finally {
-            timeoutTask.cancel()
-            checkJob.cancel()
-            phaseSignals.remove(guildId)
         }
 
         return condition()
