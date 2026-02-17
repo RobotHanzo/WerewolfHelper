@@ -265,91 +265,65 @@ class GuardProtectAction : BaseRoleAction(
     }
 }
 
+abstract class AbstractRevengeAction(
+    actionId: ActionDefinitionId,
+    priority: Int,
+    private val deathCause: DeathCause,
+) : BaseRoleAction(
+    actionId = actionId,
+    priority = priority,
+    timing = ActionTiming.DEATH_TRIGGER,
+    usageLimit = 1
+) {
+    override val isImmediate: Boolean
+        get() = true
+
+    override fun execute(
+        session: Session,
+        action: RoleActionInstance,
+        accumulatedState: ActionExecutionResult
+    ): ActionExecutionResult {
+        val targetId = action.targets.firstOrNull() ?: return accumulatedState
+        accumulatedState.deaths.getOrPut(deathCause) { mutableListOf() }.add(targetId)
+
+        // Consume the granted action
+        session.stateData.playerOwnedActions[action.actor]?.remove(actionId.toString())
+
+        return accumulatedState
+    }
+
+    override fun eligibleTargets(
+        session: Session,
+        actor: Int,
+        alivePlayers: List<Int>,
+        accumulatedState: ActionExecutionResult
+    ): List<Int> {
+        return if (isAvailable(session, actor)) alivePlayers else emptyList()
+    }
+
+    override fun onDeath(session: Session, actor: Int, cause: DeathCause) {
+        if (!cause.preventsRevenge) {
+            session.stateData.playerOwnedActions.getOrPut(actor) { mutableMapOf() }[actionId.toString()] = 1
+        } else {
+            session.getPlayer(actor)?.channel?.sendMessage("⚠️ **你${cause.logMessage}**！你感到身體虛弱，無法發動技能。")
+                ?.queue()
+        }
+    }
+}
+
 @Component
-class HunterRevengeAction : BaseRoleAction(
+class HunterRevengeAction : AbstractRevengeAction(
     actionId = ActionDefinitionId.HUNTER_REVENGE,
     priority = PredefinedRoles.HUNTER_PRIORITY,
-    timing = ActionTiming.DEATH_TRIGGER,
-    usageLimit = 1
-) {
-    override val isImmediate: Boolean
-        get() = true
-
-    override fun execute(
-        session: Session,
-        action: RoleActionInstance,
-        accumulatedState: ActionExecutionResult
-    ): ActionExecutionResult {
-        val targetId = action.targets.firstOrNull() ?: return accumulatedState
-        accumulatedState.deaths.getOrPut(DeathCause.HUNTER_REVENGE) { mutableListOf() }.add(targetId)
-
-        // Consume the granted action
-        session.stateData.playerOwnedActions[action.actor]?.remove(actionId.toString())
-
-        return accumulatedState
-    }
-
-    override fun eligibleTargets(
-        session: Session,
-        actor: Int,
-        alivePlayers: List<Int>,
-        accumulatedState: ActionExecutionResult
-    ): List<Int> {
-        return if (isAvailable(session, actor)) alivePlayers else emptyList()
-    }
-
-    override fun onDeath(session: Session, actor: Int, cause: DeathCause) {
-        if (cause != DeathCause.POISON) {
-            session.stateData.playerOwnedActions.getOrPut(actor) { mutableMapOf() }[actionId.toString()] = 1
-        } else {
-            session.getPlayer(actor)?.channel?.sendMessage("🧪 **你被女巫毒死了**！你感到身體虛弱，無法帶走任何玩家。")
-                ?.queue()
-        }
-    }
-}
+    deathCause = DeathCause.HUNTER_REVENGE,
+)
 
 @Component
-class WolfKingRevengeAction : BaseRoleAction(
+class WolfKingRevengeAction : AbstractRevengeAction(
     actionId = ActionDefinitionId.WOLF_KING_REVENGE,
     priority = PredefinedRoles.HUNTER_PRIORITY,
-    timing = ActionTiming.DEATH_TRIGGER,
-    usageLimit = 1
-) {
-    override val isImmediate: Boolean
-        get() = true
-
-    override fun execute(
-        session: Session,
-        action: RoleActionInstance,
-        accumulatedState: ActionExecutionResult
-    ): ActionExecutionResult {
-        val targetId = action.targets.firstOrNull() ?: return accumulatedState
-        accumulatedState.deaths.getOrPut(DeathCause.WOLF_KING_REVENGE) { mutableListOf() }.add(targetId)
-
-        // Consume the granted action
-        session.stateData.playerOwnedActions[action.actor]?.remove(actionId.toString())
-
-        return accumulatedState
-    }
-
-    override fun eligibleTargets(
-        session: Session,
-        actor: Int,
-        alivePlayers: List<Int>,
-        accumulatedState: ActionExecutionResult
-    ): List<Int> {
-        return if (isAvailable(session, actor)) alivePlayers else emptyList()
-    }
-
-    override fun onDeath(session: Session, actor: Int, cause: DeathCause) {
-        if (cause != DeathCause.POISON) {
-            session.stateData.playerOwnedActions.getOrPut(actor) { mutableMapOf() }[actionId.toString()] = 1
-        } else {
-            session.getPlayer(actor)?.channel?.sendMessage("🧪 **你被女巫毒死了**！你感到身體虛弱，無法帶走任何玩家。")
-                ?.queue()
-        }
-    }
-}
+    deathCause = DeathCause.WOLF_KING_REVENGE,
+)
 
 @Component
 class DeathResolutionAction : BaseRoleAction(
@@ -376,7 +350,7 @@ class DeathResolutionAction : BaseRoleAction(
 
         // 1. Dream Weaver Immunity: Sleepwalker is immune to night damage (except Dream Weaver's own effects)
         if (currentSleepwalkerId != null) {
-             deaths.values.forEach { it.removeIf { id -> id == currentSleepwalkerId } }
+            deaths.values.forEach { it.removeIf { id -> id == currentSleepwalkerId } }
         }
 
         // 2. Dream Weaver Consecutive Death
@@ -389,7 +363,7 @@ class DeathResolutionAction : BaseRoleAction(
         if (dreamWeaverId != null && currentSleepwalkerId != null) {
             val isDreamWeaverDying = deaths.values.flatten().contains(dreamWeaverId)
             if (isDreamWeaverDying) {
-                 deaths.getOrPut(DeathCause.DREAM_WEAVER) { mutableListOf() }.add(currentSleepwalkerId)
+                deaths.getOrPut(DeathCause.DREAM_WEAVER) { mutableListOf() }.add(currentSleepwalkerId)
             }
         }
 
@@ -428,7 +402,7 @@ class DeathResolutionAction : BaseRoleAction(
     }
 }
 
-abstract class BaseMerchantTradeAction(
+abstract class AbstractMerchantTradeAction(
     actionId: ActionDefinitionId,
     private val skillType: ActionDefinitionId
 ) : BaseRoleAction(
@@ -506,7 +480,7 @@ abstract class BaseMerchantTradeAction(
 abstract class DarkMerchantTradeAction(
     actionId: ActionDefinitionId,
     skillType: ActionDefinitionId
-) : BaseMerchantTradeAction(actionId, skillType)
+) : AbstractMerchantTradeAction(actionId, skillType)
 
 @Component
 class DarkMerchantTradeSeerAction : DarkMerchantTradeAction(
@@ -524,7 +498,7 @@ class DarkMerchantTradeGunAction : DarkMerchantTradeAction(
 )
 
 @Component
-class MiracleMerchantTradeGuardAction : BaseMerchantTradeAction(
+class MiracleMerchantTradeGuardAction : AbstractMerchantTradeAction(
     ActionDefinitionId.MIRACLE_MERCHANT_TRADE_GUARD, ActionDefinitionId.MERCHANT_GUARD_PROTECT
 )
 

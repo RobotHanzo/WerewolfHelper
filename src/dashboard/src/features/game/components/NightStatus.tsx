@@ -17,7 +17,7 @@ import {
 import { Player, RoleActionInstance, Session, WolfMessage, WolfVote } from '@/api/types.gen';
 import { DiscordAvatar, DiscordName } from '@/components/DiscordUser';
 import { useTranslation } from '@/lib/i18n';
-import { getRoleConfig, getActionConfig } from '@/constants/gameData';
+import { getActionConfig, getRoleConfig } from '@/constants/gameData';
 
 // --- Types ---
 interface EnrichedActionStatus extends RoleActionInstance {
@@ -63,7 +63,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
     if (!session?.stateData) return null;
 
     const stateData = session.stateData as any;
-    const phaseType = stateData.phaseType || 'WEREWOLF_VOTING';
+    const phaseType = stateData.phaseType;
 
     // Werewolf Messages
     const werewolfMessages = (stateData.werewolfMessages || []) as WolfMessage[];
@@ -223,7 +223,6 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
   const lockThreshold = Math.floor(totalWolves / 2) + 1;
   const votePercentage = Math.round((maxVotes / totalWolves) * 100);
 
-
   const hasNightmare = useMemo(() => {
     return players.some((p) => p.roles?.some((r) => r.includes('夢魘')));
   }, [players]);
@@ -236,10 +235,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
     return nightStatus.actionStatuses.find((a) => a.actorRole.includes('狼弟'));
   }, [nightStatus.actionStatuses]);
 
-  const renderSpecialActionCard = (
-    action: RoleActionInstance | undefined,
-    roleId: string
-  ) => {
+  const renderSpecialActionCard = (action: RoleActionInstance | undefined, roleId: string) => {
     const roleConfig = getRoleConfig(roleId);
     const roleName = t(roleConfig.translationKey);
     const Icon = roleConfig.icon;
@@ -325,103 +321,99 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
               </div>
             </div>
 
-             {/* Action Flow Diagram */}
-             <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative">
-               {/* Connector Line (Desktop) */}
-               <div className="hidden md:block absolute top-1/2 left-20 right-20 h-0.5 bg-slate-200 dark:bg-slate-700 -z-10" />
+            {/* Action Flow Diagram */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative">
+              {/* Connector Line (Desktop) */}
+              <div className="hidden md:block absolute top-1/2 left-20 right-20 h-0.5 bg-slate-200 dark:bg-slate-700 -z-10" />
 
-               {/* Actor Node */}
-               <div className="flex flex-col items-center gap-4 z-10 w-full md:w-auto">
-                 <div className="w-28 h-28 rounded-full p-1 bg-white dark:bg-slate-800 shadow-xl ring-4 ring-slate-100 dark:ring-slate-800 relative group transition-transform hover:scale-105 duration-300">
+              {/* Actor Node */}
+              <div className="flex flex-col items-center gap-4 z-10 w-full md:w-auto">
+                <div className="w-28 h-28 rounded-full p-1 bg-white dark:bg-slate-800 shadow-xl ring-4 ring-slate-100 dark:ring-slate-800 relative group transition-transform hover:scale-105 duration-300">
+                  <div className="w-full h-full rounded-full overflow-hidden relative">
+                    <DiscordAvatar
+                      userId={String(actor?.userId)}
+                      guildId={guildId}
+                      avatarClassName="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-full" />
+                  </div>
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                    {t('nightStatus.actor')}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-slate-900 dark:text-white text-lg leading-tight">
+                    <DiscordName
+                      userId={String(actor?.userId)}
+                      guildId={guildId}
+                      fallbackName={actor?.nickname}
+                    />
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Icon / Status */}
+              <div className="flex flex-col items-center justify-center z-10 bg-white dark:bg-slate-900 px-4 py-2 rounded-full shadow-sm border border-slate-100 dark:border-slate-800">
+                <ActionIcon
+                  className={`w-8 h-8 ${isSubmitted ? 'text-green-500' : 'text-slate-300 dark:text-slate-600'}`}
+                />
+              </div>
+
+              {/* Target Node */}
+              <div className="flex flex-col items-center gap-4 z-10 w-full md:w-auto">
+                <div
+                  className={`w-28 h-28 rounded-full p-1 shadow-xl relative transition-all duration-300 flex items-center justify-center ${
+                    isSkipped
+                      ? 'bg-amber-50 border-4 border-amber-200 ring-4 ring-amber-100 dark:bg-amber-900/20 dark:border-amber-700 dark:ring-amber-900/10'
+                      : target
+                        ? 'bg-white dark:bg-slate-800 border-4 border-white dark:border-slate-700 ring-4 ring-slate-100 dark:ring-slate-800'
+                        : 'bg-slate-50 dark:bg-slate-800/50 border-4 border-dashed border-slate-300 dark:border-slate-700'
+                  }`}
+                >
+                  {isSkipped ? (
+                    <Ban className="w-12 h-12 text-amber-500" />
+                  ) : target ? (
                     <div className="w-full h-full rounded-full overflow-hidden relative">
                       <DiscordAvatar
-                        userId={String(actor?.userId)}
+                        userId={String(target.userId)}
                         guildId={guildId}
                         avatarClassName="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-full" />
                     </div>
-                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
-                      {t('nightStatus.actor')}
+                  ) : (
+                    <div className="text-5xl text-slate-300 dark:text-slate-600 font-thin animate-pulse">
+                      ?
                     </div>
-                 </div>
-                 <div className="text-center">
-                   <p className="font-bold text-slate-900 dark:text-white text-lg leading-tight">
-                     <DiscordName
-                       userId={String(actor?.userId)}
-                       guildId={guildId}
-                       fallbackName={actor?.nickname}
-                     />
-                   </p>
-                 </div>
-               </div>
+                  )}
 
-               {/* Action Icon / Status */}
-               <div className="flex flex-col items-center justify-center z-10 bg-white dark:bg-slate-900 px-4 py-2 rounded-full shadow-sm border border-slate-100 dark:border-slate-800">
-                 <ActionIcon
-                   className={`w-8 h-8 ${isSubmitted ? 'text-green-500' : 'text-slate-300 dark:text-slate-600'}`}
-                 />
-               </div>
-
-               {/* Target Node */}
-               <div className="flex flex-col items-center gap-4 z-10 w-full md:w-auto">
-                 <div
-                   className={`w-28 h-28 rounded-full p-1 shadow-xl relative transition-all duration-300 flex items-center justify-center ${
-                     isSkipped
-                       ? 'bg-amber-50 border-4 border-amber-200 ring-4 ring-amber-100 dark:bg-amber-900/20 dark:border-amber-700 dark:ring-amber-900/10'
-                       : target
-                         ? 'bg-white dark:bg-slate-800 border-4 border-white dark:border-slate-700 ring-4 ring-slate-100 dark:ring-slate-800'
-                         : 'bg-slate-50 dark:bg-slate-800/50 border-4 border-dashed border-slate-300 dark:border-slate-700'
-                   }`}
-                 >
-                   {isSkipped ? (
-                     <Ban className="w-12 h-12 text-amber-500" />
-                   ) : target ? (
-                     <div className="w-full h-full rounded-full overflow-hidden relative">
-                       <DiscordAvatar
-                         userId={String(target.userId)}
-                         guildId={guildId}
-                         avatarClassName="w-full h-full object-cover"
-                       />
-                       <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-full" />
-                     </div>
-                   ) : (
-                     <div className="text-5xl text-slate-300 dark:text-slate-600 font-thin animate-pulse">
-                       ?
-                     </div>
-                   )}
-
-                   {/* Target Label */}
-                   {(target || isSkipped) && (
-                     <div
-                       className={`absolute -bottom-2 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm text-white ${isSkipped ? 'bg-amber-600' : 'bg-slate-800'}`}
-                     >
-                       {t('nightStatus.target')}
-                     </div>
-                   )}
-                 </div>
-                 <div className="text-center min-h-[3rem] flex flex-col justify-center">
-                   <p className="font-bold text-slate-900 dark:text-white text-lg leading-tight">
-                     {isSkipped ? (
-                       <span className="text-amber-500 italic">
-                         {t('nightStatus.skipped')}
-                       </span>
-                     ) : target ? (
-                       <DiscordName
-                         userId={String(target.userId)}
-                         guildId={guildId}
-                         fallbackName={target.nickname}
-                       />
-                     ) : (
-                       <span className="text-slate-400 italic">
-                         {t('nightStatus.waiting')}
-                       </span>
-                     )}
-                   </p>
-                 </div>
-               </div>
-             </div>
-           </div>
+                  {/* Target Label */}
+                  {(target || isSkipped) && (
+                    <div
+                      className={`absolute -bottom-2 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm text-white ${isSkipped ? 'bg-amber-600' : 'bg-slate-800'}`}
+                    >
+                      {t('nightStatus.target')}
+                    </div>
+                  )}
+                </div>
+                <div className="text-center min-h-[3rem] flex flex-col justify-center">
+                  <p className="font-bold text-slate-900 dark:text-white text-lg leading-tight">
+                    {isSkipped ? (
+                      <span className="text-amber-500 italic">{t('nightStatus.skipped')}</span>
+                    ) : target ? (
+                      <DiscordName
+                        userId={String(target.userId)}
+                        guildId={guildId}
+                        fallbackName={target.nickname}
+                      />
+                    ) : (
+                      <span className="text-slate-400 italic">{t('nightStatus.waiting')}</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -437,7 +429,9 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
           </div>
           <div>
             <h1 className="font-bold text-lg tracking-tight">
-              {t(`nightStatus.phases.${nightStatus.phaseType}`)}
+              {nightStatus.phaseType
+                ? t(`nightStatus.phases.${nightStatus.phaseType}`)
+                : t('dashboard.nightPhase')}
             </h1>
           </div>
         </div>
@@ -458,7 +452,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
           >
             {t('nightStatus.tabs.wolfPhase')}
           </button>
-          
+
           {nightStatus.phaseType === 'WOLF_YOUNGER_BROTHER_ACTION' && (
             <button
               onClick={() => setActiveTab('wolf_brother')}
@@ -740,15 +734,10 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
             </div>
           )}
 
-          {activeTab === 'nightmare' && renderSpecialActionCard(
-            nightmareAction, 
-            'NIGHTMARE'
-          )}
+          {activeTab === 'nightmare' && renderSpecialActionCard(nightmareAction, 'NIGHTMARE')}
 
-          {activeTab === 'wolf_brother' && renderSpecialActionCard(
-            wolfBrotherAction, 
-            'WOLF_YOUNGER_BROTHER'
-          )}
+          {activeTab === 'wolf_brother' &&
+            renderSpecialActionCard(wolfBrotherAction, 'WOLF_YOUNGER_BROTHER')}
 
           {activeTab === 'actions' && (
             /* Role Actions Screen (Redesigned) */
@@ -851,7 +840,9 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
                     <span className="text-sm text-slate-400">
                       {t('nightStatus.actionsCompleted', {
                         completed: String(
-                          enrichedStatuses.filter((s) => s.status === 'SUBMITTED' || s.status === 'PROCESSED').length
+                          enrichedStatuses.filter(
+                            (s) => s.status === 'SUBMITTED' || s.status === 'PROCESSED'
+                          ).length
                         ),
                         total: String(enrichedStatuses.length),
                       })}
@@ -872,8 +863,8 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {enrichedStatuses.map((status, index) => {
                     const roleConfig = getRoleConfig(status.actorRole);
-                    const actionConfig = status.actionDefinitionId 
-                      ? getActionConfig(status.actionDefinitionId) 
+                    const actionConfig = status.actionDefinitionId
+                      ? getActionConfig(status.actionDefinitionId)
                       : null;
 
                     const isActing = status.status === 'ACTING';
@@ -958,7 +949,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
                               <div
                                 className="w-12 h-12 rounded-full border-2 p-0.5 mx-auto mb-2"
                                 style={{
-                                  borderColor: isSkipped ? '#f59e0b80' : `${roleConfig.color}80`
+                                  borderColor: isSkipped ? '#f59e0b80' : `${roleConfig.color}80`,
                                 }}
                               >
                                 {status.playerUserId ? (

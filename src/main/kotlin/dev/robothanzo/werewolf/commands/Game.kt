@@ -13,7 +13,7 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 @Command
 class Game {
     @Subcommand(description = "狼人自爆")
-    private fun detonate(event: SlashCommandInteractionEvent) {
+    fun detonate(event: SlashCommandInteractionEvent) {
         event.deferReply().queue()
         val guildId = event.guild?.idLong ?: return
 
@@ -46,7 +46,7 @@ class Game {
 
             // Execute detonation
             session.addLog(LogType.SYSTEM, "${player.nickname} 選擇自爆")
-            player.markDead(DeathCause.EXPEL)
+            player.markDead(DeathCause.DETONATE)
 
             // Launch async death events (Last Words etc)
             @OptIn(DelicateCoroutinesApi::class)

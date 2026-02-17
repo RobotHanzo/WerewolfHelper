@@ -66,8 +66,7 @@ class NightStep(
             session.stateData.wolfStates.clear()
             session.stateData.werewolfMessages.clear()
 
-            // Initialize night status. Start directly with Nightmare action phase implied.
-            session.stateData.phaseType = NightPhase.NIGHTMARE_ACTION
+            // Initialize night status.
             val now = System.currentTimeMillis()
             session.stateData.phaseStartTime = now
             session.stateData.phaseEndTime = now + 90_000 // Placeholder
@@ -259,13 +258,14 @@ internal object NightSequence {
             step.gameSessionService.withLockedSession(guildId) { session ->
                 step.actionUIService.cleanupExpiredPrompts(session)
                 session.addLog(LogType.SYSTEM, "夢魘行動階段結束")
+                session.stateData.phaseType = null
             }
             return false
         }
     }
 
     // 1. Wolf Younger Brother
-    object WolfBrotherStart : NightTask {
+    object WolfYoungerBrotherStart : NightTask {
         override val phase = NightPhase.WOLF_YOUNGER_BROTHER_ACTION
         override suspend fun execute(step: NightStep, guildId: Long): Boolean {
             return step.gameSessionService.withLockedSession(guildId) { lockedSession ->
@@ -299,7 +299,7 @@ internal object NightSequence {
         }
     }
 
-    object WolfBrotherWait : NightTask {
+    object WolfYoungerBrotherWait : NightTask {
         override val phase = NightPhase.WOLF_YOUNGER_BROTHER_ACTION
         override suspend fun execute(step: NightStep, guildId: Long): Boolean {
             val finishedEarly = step.waitForCondition(guildId, 60) {
@@ -312,13 +312,14 @@ internal object NightSequence {
         }
     }
 
-    object WolfBrotherCleanup : NightTask {
+    object WolfYoungerBrotherCleanup : NightTask {
         override val phase = NightPhase.WOLF_YOUNGER_BROTHER_ACTION
         override val isSkippable = false
         override suspend fun execute(step: NightStep, guildId: Long): Boolean {
             step.gameSessionService.withLockedSession(guildId) { session ->
                 step.actionUIService.cleanupExpiredPrompts(session)
                 session.addLog(LogType.SYSTEM, "狼弟行動階段結束")
+                session.stateData.phaseType = null
             }
             return false
         }
@@ -470,6 +471,7 @@ internal object NightSequence {
                     )
                 }
                 step.actionUIService.cleanupExpiredPrompts(session)
+                session.stateData.phaseType = null
             }
             return false
         }
@@ -537,6 +539,7 @@ internal object NightSequence {
             step.gameSessionService.withLockedSession(guildId) { session ->
                 step.actionUIService.cleanupExpiredPrompts(session)
                 session.addLog(LogType.SYSTEM, "角色行動階段結束")
+                session.stateData.phaseType = null
             }
             return false
         }
@@ -546,9 +549,9 @@ internal object NightSequence {
         NightmareStart,
         NightmareWait,
         NightmareCleanup,
-        WolfBrotherStart,
-        WolfBrotherWait,
-        WolfBrotherCleanup,
+        WolfYoungerBrotherStart,
+        WolfYoungerBrotherWait,
+        WolfYoungerBrotherCleanup,
         WerewolfVotingStart,
         WerewolfVotingWait,
         WerewolfVotingWarning,

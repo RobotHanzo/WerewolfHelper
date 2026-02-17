@@ -11,8 +11,17 @@ enum class DeathCause(val logMessage: String) {
     WOLF_KING_REVENGE("被狼王帶走"),
     DOUBLE_PROTECTION("同時受到女巫解藥與守衛守護而死亡"),
     EXPEL("被放逐"),
+    DETONATE("自爆"),
+    LINKED("殉情"),
+    BATTLED("被決鬥而死"),
     TRADED_WITH_WOLF("與狼人黑市交易技能而亡"),
     REFLECT("因攻擊惡靈騎士遭到反噬而死"),
     DREAM_WEAVER("死於夢中"),
-    UNKNOWN("死亡原因未知")
+    UNKNOWN("死亡原因未知");
+
+    val preventsRevenge: Boolean
+        get() = when (this) {
+            POISON, LINKED, BATTLED, DETONATE -> true
+            else -> false
+        }
 }
