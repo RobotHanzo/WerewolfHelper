@@ -72,6 +72,11 @@ class Nightmare(
 }
 
 @Component
+class GhostRider(@Transient private val killAction: WerewolfKillAction) : BaseRole("惡靈騎士", Camp.WEREWOLF) {
+    override fun getActions(): List<RoleAction> = listOf(killAction)
+}
+
+@Component
 class Villager : BaseRole("平民", Camp.VILLAGER)
 
 @Component

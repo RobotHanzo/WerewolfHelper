@@ -194,25 +194,6 @@ data class Player(
             }
             session.courtTextChannel?.sendMessageEmbeds(embed.build())?.queue()
         }
-
-        val result = session.hasEnded(killedRole)
-        if (result != Session.Result.NOT_ENDED) {
-            val judgePing = "<@&" + (session.judgeRole?.idLong ?: 0) + "> "
-            val message = if (result == Session.Result.WOLVES_DIED) {
-                judgePing + "遊戲結束，**好**人獲勝，原因：" + result.reason
-            } else {
-                judgePing + "遊戲結束，**狼**人獲勝，原因：" + result.reason
-            }
-            session.spectatorTextChannel?.sendMessage(message)?.queue()
-            // Trigger Replay Generation
-            Replay.upsertFromSession(session, WerewolfApplication.replayRepository)
-
-            // Trigger Judge Decision
-            session.stateData.pendingNextStep = session.currentState
-            session.stateData.gameEndReason = result.reason
-            WerewolfApplication.gameStateService.startStep(session, "JUDGE_DECISION")
-        }
-
         if (alive) {
             val remainingRoles = roles.toMutableList()
             deadRoles.forEach { deadRole ->

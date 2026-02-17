@@ -103,14 +103,16 @@ class GameStateServiceImpl(
         }
 
         // Check for Game End
-        // We only check if we are NOT already in JUDGE_DECISION (to avoid loops if we came from there and chose continue)
-
-        val endResult = session.hasEnded(null)
-        if (endResult != Session.Result.NOT_ENDED) {
-            session.stateData.pendingNextStep = nextId
-            session.stateData.gameEndReason = endResult.reason
-            startStep(session, "JUDGE_DECISION")
-            return
+        // We only check if we are NOT already in JUDGE_DECISION
+        // Defer game end check if we are heading into DEATH_ANNOUNCEMENT to allow resolution results to be shown.
+        if (nextId != "DEATH_ANNOUNCEMENT") {
+            val endResult = session.hasEnded(null)
+            if (endResult != Session.Result.NOT_ENDED) {
+                session.stateData.pendingNextStep = nextId
+                session.stateData.gameEndReason = endResult.reason
+                startStep(session, "JUDGE_DECISION")
+                return
+            }
         }
 
         startStep(session, nextId)

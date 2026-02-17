@@ -206,6 +206,13 @@ data class GameStateData(
 
     // For frontend display after death announcement only, shows who died last night
     var deadPlayers: List<Int> = emptyList()
+
+    /**
+     * Whether the Ghost Rider's reflection ability has been triggered.
+     * Derived from executed actions.
+     */
+    val ghostRiderReflected: Boolean
+        get() = executedActions.values.flatten().any { it.actionDefinitionId == ActionDefinitionId.GHOST_RIDER_REFLECT }
 }
 
 /**

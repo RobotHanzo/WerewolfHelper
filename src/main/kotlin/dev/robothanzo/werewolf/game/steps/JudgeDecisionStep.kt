@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.game.steps
 
 import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.LogType
+import dev.robothanzo.werewolf.database.documents.Replay
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.service.GameStateService
@@ -78,6 +79,19 @@ class JudgeDecisionStep : GameStep {
     private fun performEndGame(session: Session) {
         session.addLog(LogType.SYSTEM, "法官確認結束遊戲。")
         session.courtTextChannel?.sendMessage("✅ 遊戲結束，正在開放權限...")?.queue()
+
+        val result = session.hasEnded(null)
+        if (result != Session.Result.NOT_ENDED) {
+            val judgePing = "<@&" + (session.judgeRole?.idLong ?: 0) + "> "
+            val message = if (result == Session.Result.WOLVES_DIED) {
+                judgePing + "遊戲結束，**好**人獲勝，原因：" + result.reason
+            } else {
+                judgePing + "遊戲結束，**狼**人獲勝，原因：" + result.reason
+            }
+            session.spectatorTextChannel?.sendMessage(message)?.queue()
+            // Trigger Replay Generation
+            Replay.upsertFromSession(session, WerewolfApplication.replayRepository)
+        }
 
         val guild = session.guild ?: return
         val courtVoice = session.courtVoiceChannel

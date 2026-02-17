@@ -44,12 +44,22 @@ class WerewolfKillAction : BaseRoleAction(
         alivePlayers: List<Int>,
         accumulatedState: ActionExecutionResult
     ): List<Int> {
-        val targets = super.eligibleTargets(session, actor, alivePlayers, accumulatedState)
-        if (session.settings.allowWolfSelfKill) return targets
+        val baseTargets = super.eligibleTargets(session, actor, alivePlayers, accumulatedState)
 
-        return targets.filter { targetId ->
-            val targetPlayer = session.getPlayer(targetId)
-            targetPlayer?.wolf == false
+        return baseTargets.filter { targetId ->
+            val targetPlayer = session.getPlayer(targetId) ?: return@filter false
+
+            // Ghost Rider and Nightmare can NEVER be targeted by Wolf Kill
+            if (targetPlayer.roles.contains("惡靈騎士") || targetPlayer.roles.contains("夢魘")) {
+                return@filter false
+            }
+
+            // Other wolves depend on the setting
+            if (!session.settings.allowWolfSelfKill && targetPlayer.wolf) {
+                return@filter false
+            }
+
+            true
         }
     }
 
@@ -57,12 +67,18 @@ class WerewolfKillAction : BaseRoleAction(
         val baseError = super.validate(session, actor, targets)
         if (baseError != null) return baseError
 
-        if (!session.settings.allowWolfSelfKill) {
-            for (targetId in targets) {
-                val targetPlayer = session.getPlayer(targetId)
-                if (targetPlayer?.wolf == true) {
-                    return "不允許狼人自殺"
-                }
+        for (targetId in targets) {
+            val targetPlayer = session.getPlayer(targetId) ?: continue
+            // Ghost Rider cannot be targeted by Wolf Kill (cannot self-kill)
+            if (targetPlayer.roles.contains("惡靈騎士")) {
+                return "惡靈騎士不能自刀"
+            }
+            if (targetPlayer.roles.contains("夢魘")) {
+                return "夢魘不能自刀"
+            }
+
+            if (!session.settings.allowWolfSelfKill && targetPlayer.wolf) {
+                return "不允許狼人自殺"
             }
         }
         return null

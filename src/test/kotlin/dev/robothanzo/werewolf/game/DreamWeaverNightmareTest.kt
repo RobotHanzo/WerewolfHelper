@@ -218,4 +218,26 @@ class DreamWeaverNightmareTest {
         val action = dev.robothanzo.werewolf.game.roles.actions.DreamWeaverLinkAction()
         assertFalse(action.isOptional, "Dream Weaver action should be compulsory")
     }
+
+    @Test
+    fun testNightmareCannotSelfKill() {
+        // Setup specialized wolf kill action for testing
+        val wolfKillAction = dev.robothanzo.werewolf.game.roles.actions.WerewolfKillAction()
+
+        // NM is player 2
+        val actorId = 2
+        val alivePlayers = listOf(1, 2, 3, 4)
+
+        val eligibleTargets = wolfKillAction.eligibleTargets(session, actorId, alivePlayers, ActionExecutionResult())
+
+        // Nightmare (ID 2) should NOT be an eligible target for self-kill
+        assertFalse(eligibleTargets.contains(actorId), "Nightmare should not be able to target itself for wolf kill")
+
+        // Assert validation fails explicitly
+        val error = wolfKillAction.validate(session, actorId, listOf(actorId))
+        assertTrue(
+            error?.contains("夢魘不能自刀") == true,
+            "Validation should return correct error message for Nightmare self-kill"
+        )
+    }
 }

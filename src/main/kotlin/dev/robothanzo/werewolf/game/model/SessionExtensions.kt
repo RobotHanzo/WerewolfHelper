@@ -216,8 +216,27 @@ fun Session.resolveNightActions(
         it.status.executed
     }
 
+    val finalDeaths = executionResult.deaths.toMutableMap()
+    // Add Ghost Rider reflection deaths from history.
+    // Reflections triggered by immediate actions (like Seer) occur before the day increment at sunrise,
+    // while batch actions occur after. We check both current and previous day to be sure.
+    val reflectActions = mutableListOf<RoleActionInstance>()
+    stateData.executedActions[currentDay]?.let { actions -> reflectActions.addAll(actions.filter { it.actionDefinitionId == ActionDefinitionId.GHOST_RIDER_REFLECT }) }
+    if (currentDay > 0) {
+        stateData.executedActions[currentDay - 1]?.let { actions -> reflectActions.addAll(actions.filter { it.actionDefinitionId == ActionDefinitionId.GHOST_RIDER_REFLECT }) }
+    }
+
+    for (reflectAction in reflectActions) {
+        val reflectDeaths = finalDeaths.getOrPut(DeathCause.REFLECT) { mutableListOf() }
+        for (target in reflectAction.targets) {
+            if (!reflectDeaths.contains(target)) {
+                reflectDeaths.add(target)
+            }
+        }
+    }
+
     return NightResolutionResult(
-        deaths = executionResult.deaths,
+        deaths = finalDeaths,
         saved = executionResult.saved
     )
 }
@@ -304,7 +323,9 @@ fun Session.validateAndSubmitAction(
         val executionResult = roleActionExecutor.executeActionInstance(this, action)
 
         // Handle immediate deaths if any (e.g. Hunter revenge)
+        // Defer Ghost Rider reflection deaths to death announcement
         for ((cause, deaths) in executionResult.deaths) {
+            if (cause == DeathCause.REFLECT) continue
             for (userId in deaths) {
                 val player = this.getPlayer(userId) ?: continue
                 // Handle immediate deaths if any (e.g. Hunter revenge)

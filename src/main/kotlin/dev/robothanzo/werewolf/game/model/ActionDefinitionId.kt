@@ -46,6 +46,9 @@ enum class ActionDefinitionId(val actionName: String) {
     // Nightmare Actions
     NIGHTMARE_FEAR("恐懼"),
 
+    // Ghost Rider Actions
+    GHOST_RIDER_REFLECT("反傷"),
+
     // System Actions
     DEATH_RESOLUTION("結算"),
     DREAM_DEATH("夢亡"),
