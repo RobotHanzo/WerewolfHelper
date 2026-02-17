@@ -37,11 +37,22 @@ TypeScript/React frontend + JDA (Discord API) + MongoDB + WebSocket sync.
 - **Type Generation**: Run `yarn generate-api` after backend DTO changes to
   regenerate [types.gen.ts](src/dashboard/src/api/types.gen.ts)
 
+### UI Layout Strategy
+
+- **Sidebar-Centric Design**: The application uses a persistent `Sidebar` (
+  `src/dashboard/src/components/layout/Sidebar.tsx`) as the primary game status hub.
+    - Displays: Day count, game phase (Day/Night), step name, and countdown timer.
+    - Controls: Contains navigation and status indicators (e.g., "Current Speaker").
+- **Responsiveness**: Key views (like `NightStatus`) use dynamic height calculations (`calc(100vh - ...)` ) and internal
+  scrolling to ensure usability across mobile and desktop.
+
 ## Critical Patterns
 
 ### Data Model Hierarchy
 
 - **Session** (guild-scoped): Contains `players: Map<String, Player>`, `currentState`, `stateData`, game settings
+    - `stateData`: Stores transient but critical step data (e.g., `processedDeathPlayerIds` for robust death processing,
+      poll results) to ensure resilience against restarts.
 - **Player** (nested class in Session): `roles: List<String>`, `alive: Boolean`, `police`, identity flags (`jinBaoBao`,
   `duplicated`)
 - **Game Steps**: State machine uses step IDs like "SETUP", "NIGHT", "SPEECH", "VOTING" - managed by `GameStateService`

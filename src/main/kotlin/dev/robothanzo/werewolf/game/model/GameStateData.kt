@@ -207,6 +207,9 @@ data class GameStateData(
     // For frontend display after death announcement only, shows who died last night
     var deadPlayers: List<Int> = emptyList()
 
+    @Schema(description = "List of player IDs whose death events (last words, triggers) have been completed")
+    var processedDeathPlayerIds: MutableList<Int> = mutableListOf()
+
     /**
      * Whether the Ghost Rider's reflection ability has been triggered.
      * Derived from executed actions.

@@ -18,7 +18,6 @@ exhaustive way. It was assembled by statically scanning the dashboard source.
   - Back-to-login button
 - `/server/:guildId` (Main server dashboard)
   - `MainDashboard` (stage content + navigator)
-  - `GameHeader` (day, step, speaker, timer, actions)
   - Stage-specific content (see Stages section)
 - `/server/:guildId/players` — Player management grid (`PlayerCard` list)
 - `/server/:guildId/speech` — `SpeechManager` (speech management UI)

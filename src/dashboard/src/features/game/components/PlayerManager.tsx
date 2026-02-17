@@ -12,7 +12,6 @@ import { Player } from '@/api/types.gen';
 
 // Components
 import { Sidebar } from '@/components/layout/Sidebar';
-import { GameHeader } from './GameHeader';
 import { GameLog } from './GameLog';
 import { GameRoutes } from './GameRoutes';
 import { PlayerEditModal } from '@/features/players/components/PlayerEditModal';
@@ -176,24 +175,19 @@ export const PlayerManager = () => {
         onToggleSpectatorMode={toggleSpectatorSimulation}
         isSpectatorMode={isSpectatorSimulation}
         isConnected={isConnected}
+        dayCount={gameState.day}
+        timerSeconds={timerSeconds}
+        speech={(gameState as any).speech}
+        players={playersArray}
+        currentStep={gameState.currentState}
+        currentState={gameState.currentState}
+        guildId={guildId}
+        isManualStep={false}
       />
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <GameHeader
-          dayCount={gameState.day}
-          timerSeconds={timerSeconds}
-          onGlobalAction={handleGlobalAction}
-          speech={(gameState as any).speech}
-          players={playersArray}
-          readonly={user?.user?.role === 'SPECTATOR' || isSpectatorSimulation}
-          currentStep={gameState.currentState} // Assuming currentState for now, or use stateData if more specific
-          currentState={gameState.currentState}
-          guildId={guildId}
-          isManualStep={false} // Derive this if possible, or omit if not in SDK
-          hasAssignedRoles={gameState.hasAssignedRoles}
-        />
         <div className="flex-1 overflow-hidden relative flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-900/30">
           <div className="flex-1 overflow-y-auto scrollbar-hide p-4 md:p-8">
-            <div className="max-w-7xl mx-auto space-y-8">
+            <div className="max-w-7xl mx-auto space-y-8 h-full">
               {isGuildReady ? (
                 <>
                   <GameRoutes

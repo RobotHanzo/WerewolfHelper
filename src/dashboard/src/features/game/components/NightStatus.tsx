@@ -420,7 +420,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
   };
 
   return (
-    <div className="text-slate-800 dark:text-white font-['Spline_Sans'] min-h-screen flex flex-col overflow-hidden">
+    <div className="text-slate-800 dark:text-white font-['Spline_Sans'] h-full flex flex-col overflow-hidden">
       {/* Top Navigation */}
       <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center px-6 justify-between flex-shrink-0 z-20">
         <div className="flex items-center gap-4">
@@ -472,12 +472,14 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto p-6 relative overflow-x-hidden">
+      <main
+        className={`flex-1 p-6 relative overflow-x-hidden ${activeTab === 'werewolves' ? 'overflow-hidden' : 'overflow-y-auto'}`}
+      >
         <div className="max-w-7xl mx-auto relative z-10 space-y-8 h-full">
           {activeTab === 'werewolves' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full pb-20">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
               {/* LEFT COLUMN: Wolf Channel (Chat) */}
-              <section className="lg:col-span-7 flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden h-[600px] animate-in fade-in slide-in-from-left-4 duration-500">
+              <section className="lg:col-span-7 flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden h-full animate-in fade-in slide-in-from-left-4 duration-500">
                 {/* Chat Header */}
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
                   <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500 delay-150 fill-mode-both">
@@ -574,7 +576,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
               </section>
 
               {/* RIGHT COLUMN: Voting Results */}
-              <section className="lg:col-span-5 flex flex-col gap-6 h-[600px] animate-in fade-in slide-in-from-right-4 duration-500">
+              <section className="lg:col-span-5 flex flex-col gap-6 h-full animate-in fade-in slide-in-from-right-4 duration-500">
                 {/* Target Summary Card */}
                 <div className="bg-gradient-to-br from-[#3211d4] to-[#200a8a] rounded-2xl p-6 shadow-xl text-white relative overflow-hidden animate-in fade-in zoom-in-95 duration-700 fill-mode-both">
                   <div className="absolute top-0 right-0 opacity-10 transform translate-x-1/4 -translate-y-1/4">

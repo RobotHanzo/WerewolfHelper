@@ -235,6 +235,13 @@ data class Player(
 
         // 2. Transfer Police and Death Triggers
         transferPolice()
+
+        // 3. Mark as processed in session state to avoid re-processing in DeathAnnouncementStep
+        WerewolfApplication.gameSessionService.withLockedSession(session.guildId) { lockedSession ->
+            if (!lockedSession.stateData.processedDeathPlayerIds.contains(id)) {
+                lockedSession.stateData.processedDeathPlayerIds.add(id)
+            }
+        }
     }
 
     /**

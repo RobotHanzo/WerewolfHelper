@@ -98,16 +98,11 @@
     "save": "儲存"
   },
   "game": {
-    "lastWords": "遺言"
-  },
-  "gameHeader": {
-    "day": "天數",
-    "timer": "剩餘時間",
-    "startGame": "開始遊戲",
-    "nextPhase": "下一階段",
     "lastWords": "遺言",
-    "manageSpeech": "管理發言"
+    "day": "第 {day} 天",
+    "timer": "剩餘時間"
   },
+
   "dashboard": {
     "title": "遊戲總覽",
     "subtitle": "管理當前階段並快速跳轉",

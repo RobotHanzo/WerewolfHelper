@@ -204,11 +204,30 @@ class ActionUIServiceImpl(
             actionInstance.actionPromptId = null
             actionInstance.targetPromptId = null
 
-            // Execute immediate actions (e.g., Nightmare, Seer)
+            // Execute immediate actions (e.g., Nightmare, Seer, Hunter Revenge)
             val actionDef = roleRegistry.getAction(actionInstance.actionDefinitionId!!)
             if (actionDef?.isImmediate == true) {
-                roleActionExecutor.executeActionInstance(lockedSession, actionInstance)
+                val result = roleActionExecutor.executeActionInstance(lockedSession, actionInstance)
                 actionInstance.status = ActionStatus.PROCESSED
+
+                // Apply any deaths caused by this immediate action (e.g., Hunter revenge)
+                result.deaths.forEach { (cause, victimIds) ->
+                    victimIds.forEach { victimId ->
+                        val target = lockedSession.getPlayer(victimId)
+                        if (target != null && target.alive) {
+                            target.markDead(cause)
+
+                            // If we are in the death announcement phase, add to the displayed list
+                            if (lockedSession.currentState == "DEATH_ANNOUNCEMENT" &&
+                                !lockedSession.stateData.deadPlayers.contains(victimId)
+                            ) {
+                                val currentDead = lockedSession.stateData.deadPlayers.toMutableList()
+                                currentDead.add(victimId)
+                                lockedSession.stateData.deadPlayers = currentDead
+                            }
+                        }
+                    }
+                }
 
                 // Add to history if necessary (e.g. for replay or death triggers)
                 val currentDay = lockedSession.day

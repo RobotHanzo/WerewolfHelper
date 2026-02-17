@@ -161,6 +161,13 @@ class GameActionServiceImpl(
 
         val currentRoleName = if (remainingRoles.isEmpty()) "未知" else remainingRoles.first()
         player.role?.let { guild.addRoleToMember(member, it) }?.queue()
+
+        // Cleanup death tracking
+        session.stateData.processedDeathPlayerIds.remove(player.id)
+        if (session.stateData.deadPlayers.contains(player.id)) {
+            session.stateData.deadPlayers = session.stateData.deadPlayers.filter { it != player.id }
+        }
+
         player.channel?.sendMessage("因為你復活了，所以你的角色變成了 $currentRoleName")?.queue()
         gameSessionService.saveSession(session)
     }
