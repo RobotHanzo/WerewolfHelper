@@ -6,7 +6,9 @@ import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.DeathCause
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.service.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -208,5 +210,161 @@ class PlayerDeathTests {
             // For now, let's skip deep implementation of this test as it requires accurate mocking
             // of RoleRegistry structure which is complex.
         }
+    }
+
+    @Test
+    fun `test processCascadingDeaths handles concurrent deaths`() = runBlocking {
+        // Arrange
+        val player2 = Player(id = 2, userId = 67890L)
+        player2.session = session
+        session.addPlayer(player2)
+
+        // Mark both as dead initially (e.g. night kills)
+        // We mock markDead behavior by setting state manually since we are testing processCascadingDeaths loop
+        player.roles.clear()
+        player.deadRoles.add("Villager")
+
+        player2.roles.clear()
+        player2.deadRoles.add("Villager")
+
+        player.police = true
+        player2.police = true
+
+        // Mock runDeathEvents for both
+        doAnswer {
+            @Suppress("UNCHECKED_CAST")
+            val callback = it.arguments[3] as () -> Unit
+            // Simulate completion
+            callback.invoke()
+        }.whenever(speechService).startLastWordsSpeech(any(), any(), any(), any())
+
+        doAnswer {
+            @Suppress("UNCHECKED_CAST")
+            val callback = it.arguments[3] as () -> Unit
+            callback.invoke()
+        }.whenever(policeService).transferPolice(any(), any(), any(), any())
+
+        // Act
+        // Process starting from player 1
+        var finished = false
+        player.processCascadingDeaths {
+            finished = true
+        }
+
+        // Wait for coroutine to finish (since it uses GlobalScope.launch, we need to wait a bit or join)
+        // In unit tests with GlobalScope, it's tricky.
+        // Better approach: use a latch or simple delay loop in test waiting for 'finished'
+        withTimeout(5000) {
+            while (!finished) {
+                delay(100)
+            }
+        }
+
+        // Assert
+        // Verify runDeathEvents called for BOTH players
+        verify(speechService, times(2)).startLastWordsSpeech(any(), any(), any(), any())
+        verify(policeService, times(2)).transferPolice(any(), any(), any(), any())
+        assertTrue(session.stateData.processedDeathPlayerIds.contains(1), "Player 1 processed")
+        assertTrue(session.stateData.processedDeathPlayerIds.contains(2), "Player 2 processed")
+    }
+
+    @Test
+    fun `test processCascadingDeaths allows Last Words for all victims on Day 1`() = runBlocking {
+        // Arrange
+        session.day = 1
+        val player2 = Player(id = 2, userId = 67890L)
+        player2.session = session
+        session.addPlayer(player2)
+
+        // Player 1 dies, triggers Player 2 death
+        player.roles.clear(); player.deadRoles.add("Villager")
+        // Player 2 is alive initially
+        player2.roles.add("Villager")
+
+        // Mock runDeathEvents for Player 1: triggers Player 2 death
+        // We need to spy or mock Player.runDeathEvents, but Player is a final class / data class usually harder to spy.
+        // Instead, we verify the Session state interactions.
+        // But runDeathEvents is a method on Player.
+        // We can't easily mock `runDeathEvents` on a real object.
+        // However, we CAN mock the services called by runDeathEvents.
+
+        // Mock speech to verify it WAS called (meaning valid day 1 logic passed)
+        whenever(speechService.startLastWordsSpeech(any(), any(), any(), any())).thenAnswer {
+            // When player 1 speaks, we kill player 2 to simulate cascade (e.g. Hunter)
+            if (player2.alive) {
+                player2.markDead(DeathCause.HUNTER_REVENGE)
+            }
+            (it.arguments[3] as () -> Unit).invoke()
+        }
+
+        doAnswer { (it.arguments[3] as () -> Unit).invoke() }.whenever(policeService)
+            .transferPolice(any(), any(), any(), any())
+
+        // Act
+        var finished = false
+        player.processCascadingDeaths { finished = true }
+
+        withTimeout(5000) { while (!finished) delay(100) }
+
+        // Assert
+        // Expect startLastWordsSpeech called for BOTH players because it is Day 1
+        verify(speechService, times(2)).startLastWordsSpeech(any(), any(), any(), any())
+        assertFalse(player2.alive, "Player 2 should be dead")
+        assertTrue(session.stateData.processedDeathPlayerIds.contains(1))
+        assertTrue(session.stateData.processedDeathPlayerIds.contains(2))
+    }
+
+    @Test
+    fun `test processCascadingDeaths allows Last Words on Day 2`() = runBlocking {
+        // Arrange
+        session.day = 2
+
+        // Player 1 dies
+        player.roles.clear(); player.deadRoles.add("Villager")
+
+        // Mock acts
+        doAnswer {
+            @Suppress("UNCHECKED_CAST")
+            val callback = it.arguments[3] as () -> Unit
+            callback.invoke()
+        }.whenever(speechService).startLastWordsSpeech(any(), any(), any(), any())
+
+        doAnswer { (it.arguments[3] as () -> Unit).invoke() }.whenever(policeService)
+            .transferPolice(any(), any(), any(), any())
+
+        // Act
+        var finished = false
+        player.processCascadingDeaths { finished = true }
+
+        withTimeout(5000) { while (!finished) delay(100) }
+
+        // Assert
+        // Day 2 -> processCascadingDeaths sets allowLastWords = true (due to <= 2 relax)
+        verify(speechService, times(1)).startLastWordsSpeech(any(), any(), any(), any())
+        assertTrue(session.stateData.processedDeathPlayerIds.contains(1))
+    }
+
+    @Test
+    fun `test processCascadingDeaths NO Last Words on Day 3`() = runBlocking {
+        // Arrange
+        session.day = 3
+
+        // Player 1 dies
+        player.roles.clear(); player.deadRoles.add("Villager")
+
+        // Mock acts
+        doAnswer { (it.arguments[3] as () -> Unit).invoke() }.whenever(policeService)
+            .transferPolice(any(), any(), any(), any())
+
+        // Act
+        var finished = false
+        player.processCascadingDeaths { finished = true }
+
+        withTimeout(5000) { while (!finished) delay(100) }
+
+        // Assert
+        // Day 3 -> processCascadingDeaths sets allowLastWords = false
+        verify(speechService, never()).startLastWordsSpeech(any(), any(), any(), any())
+        assertTrue(session.stateData.processedDeathPlayerIds.contains(1))
     }
 }

@@ -10,9 +10,7 @@ import dev.robothanzo.werewolf.game.model.RoleEventContext
 import dev.robothanzo.werewolf.game.model.RoleEventType
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 import io.swagger.v3.oas.annotations.media.Schema
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.*
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Role
@@ -344,7 +342,7 @@ data class Player(
                         delay(1000)
                     }
                 }
-            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
                 // Timeout logic - force expire if needed
                 WerewolfApplication.gameSessionService.withLockedSession(session.guildId) { lockedSession ->
                     val p = lockedSession.getPlayer(id) ?: return@withLockedSession
@@ -397,6 +395,66 @@ data class Player(
             member?.let { it1 -> it.guild?.modifyMemberRoles(it1, it.spectatorRole) }?.queue()
             updateNickname()
             WerewolfApplication.gameSessionService.saveSession(it)
+        }
+    }
+
+    /**
+     * Orchestrates the entire death sequence, including this player and any subsequent deaths
+     * triggered by death events (e.g. Hunter shooting).
+     *
+     * @param onFinished Callback executed when ALL cascading deaths are resolved.
+     */
+    @OptIn(DelicateCoroutinesApi::class)
+    fun processCascadingDeaths(onFinished: () -> Unit) {
+        val session = this.session ?: return
+        val guildId = session.guildId
+
+        GlobalScope.launch {
+            try {
+                WerewolfApplication.gameSessionService.withLockedSession(guildId) { session ->
+                    session.stateData.deathProcessingInProgress = true
+                }
+
+                // 1. Process THIS player first
+                // On Day 1, everyone gets Last Words. On later days, usually only the first night death or similar.
+                // For simplicity, we respect the allowLastWords flag passed to runDeathEvents,
+                // but since this is the *entry point* for a death chain, we assume this player SHOULD get them
+                // or specific logic inside runDeathEvents/call sites handles it.
+                // For EXPEL/HUNTER cases on Day 1, they should get it.
+                val isDayOne = session.day <= 1
+                runDeathEvents(isDayOne)
+
+                // 2. Loop for others (Cascading Deaths)
+                while (true) {
+                    // Refresh session to get latest state
+                    val currentSession =
+                        WerewolfApplication.gameSessionService.getSession(guildId).orElse(null) ?: break
+
+                    // Find next unprocessed dead player
+                    // distinct from any specific logic, just "dead but not processed"
+                    val nextVictim = currentSession.players.values.firstOrNull {
+                        !it.alive && !currentSession.stateData.processedDeathPlayerIds.contains(it.id)
+                    } ?: break
+
+                    try {
+                        // All cascading victims on Day 1 get last words (Request: "players killed by hunter's skill on the first day")
+                        nextVictim.runDeathEvents(isDayOne)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        // Failsafe: mark processed so we don't loop forever
+                        WerewolfApplication.gameSessionService.withLockedSession(guildId) { s ->
+                            s.stateData.processedDeathPlayerIds.add(nextVictim.id)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                WerewolfApplication.gameSessionService.withLockedSession(guildId) { session ->
+                    session.stateData.deathProcessingInProgress = false
+                }
+                onFinished()
+            }
         }
     }
 

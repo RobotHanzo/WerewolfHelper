@@ -167,7 +167,10 @@ data class GameStateData(
     var pendingNextStep: String? = null,
 
     @Schema(description = "The reason for game end, if detected")
-    var gameEndReason: String? = null
+    var gameEndReason: String? = null,
+
+    @Schema(description = "Flag indicating if asynchronous death processing is currently active")
+    var deathProcessingInProgress: Boolean = false
 ) {
     // --- Transient fields for UI state synchronization ---
     @Transient

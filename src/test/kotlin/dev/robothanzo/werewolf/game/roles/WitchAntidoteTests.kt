@@ -17,7 +17,7 @@ class WitchAntidoteTests {
     @BeforeEach
     fun setup() {
         session = Session()
-        session.id = "test-session"
+        session.sessionId = "test-session"
         session.day = 1
 
         // Mock Roles

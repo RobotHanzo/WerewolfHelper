@@ -14,9 +14,6 @@ import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.GameStateService
 import dev.robothanzo.werewolf.utils.CmdUtils
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
@@ -97,82 +94,27 @@ class DeathAnnouncementStep(
             gameSessionService.broadcastSessionUpdate(lockedSession)
         }
 
-        // Launch async death processing
-        @OptIn(DelicateCoroutinesApi::class)
-        GlobalScope.launch {
-            while (true) {
-                // Fetch fresh session to check for new deaths
-                val currentSession = gameSessionService.getSession(guildId).orElse(null) ?: break
-
-                // Find players who are dead but haven't been processed yet
-                val toProcess = currentSession.players.values
-                    .filter { !it.alive && !currentSession.stateData.processedDeathPlayerIds.contains(it.id) }
-                    .sortedBy { it.id } // Consistent order
-
-                if (toProcess.isEmpty()) {
-                    // Check if there are any pending death triggers (someone still choosing their shot)
-                    val hasPendingTriggers = currentSession.stateData.submittedActions.any { instance ->
-                        val isUnprocessed =
-                            instance.status != ActionStatus.PROCESSED && instance.status != ActionStatus.SKIPPED
-                        val action = instance.actionDefinitionId?.let { roleRegistry.getAction(it) }
-                        action?.timing == ActionTiming.DEATH_TRIGGER && isUnprocessed
-                    }
-
-                    if (!hasPendingTriggers) break // No more deaths and no more pending shots
-
-                    kotlinx.coroutines.delay(1000) // Wait for user to take action
-                    continue
-                }
-
-                val player = toProcess.first()
-
-                // Only allow last words for first day
-                val allowLastWords = currentSession.day == 1
-                try {
-                    player.runDeathEvents(allowLastWords)
-
-                    // Mark as processed after everything (last words, triggers, etc) is done
-                    gameSessionService.withLockedSession(guildId) { lockedSession ->
-                        if (!lockedSession.stateData.processedDeathPlayerIds.contains(player.id)) {
-                            lockedSession.stateData.processedDeathPlayerIds.add(player.id)
-
-                            // Also ensure they are in the announced deadPlayers list for UI
-                            if (!lockedSession.stateData.deadPlayers.contains(player.id)) {
-                                val currentDead = lockedSession.stateData.deadPlayers.toMutableList()
-                                currentDead.add(player.id)
-                                lockedSession.stateData.deadPlayers = currentDead
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    log.error("Error running death events for player ${player.id}", e)
-                    // Still mark as processed to avoid infinite loop on error
-                    gameSessionService.withLockedSession(guildId) { it.stateData.processedDeathPlayerIds.add(player.id) }
-                }
-            }
-
-            // Once all events are done, check if we can advance
-            gameSessionService.withLockedSession(guildId) { lockedSession ->
-                checkAdvance(lockedSession, service)
-            }
+        // Delegate death processing to the first available dead player (if any)
+        // The processCascadingDeaths function will handle ALL unprocessed deaths in the session
+        val currentSession = gameSessionService.getSession(guildId).orElse(null)
+        val firstDead = currentSession?.players?.values?.sortedBy { it.id }?.firstOrNull {
+            !it.alive && !currentSession.stateData.processedDeathPlayerIds.contains(it.id)
         }
 
-        // Schedule tasks for potential advancement (one-shot fallbacks in case async hangs or something)
-        // Task 1: Minimum display time (10s as requested)
-        CmdUtils.schedule({
-            gameSessionService.withLockedSession(guildId) { currentSession ->
-                checkAdvance(currentSession, service)
+        if (firstDead != null) {
+            log.info("Starting death processing chain from player ${firstDead.id}")
+            firstDead.processCascadingDeaths {
+                log.info("All death events processed. Advancing step.")
+                service.nextStep(currentSession)
             }
-        }, 10000)
-
-        // Task 2: Maximum duration (backup timeout)
-        val duration = getDurationSeconds(session)
-        if (duration > 10) {
+        } else {
+            // No deaths to process, just wait for minimum duration then advance
+            log.info("No deaths to process in DeathAnnouncementStep. Scheduling advance.")
             CmdUtils.schedule({
-                gameSessionService.withLockedSession(guildId) { currentSession ->
-                    checkAdvance(currentSession, service)
+                gameSessionService.withLockedSession(guildId) { s ->
+                    service.nextStep(s)
                 }
-            }, duration * 1000L + 5000) // Small buffer
+            }, 10000)
         }
     }
 
@@ -211,8 +153,8 @@ class DeathAnnouncementStep(
             log.info("DeathAnnouncementStep timeout for guild ${session.guildId}. Advancing.")
             shouldAdvance = true
         } else if (now >= minTime) {
-            if (!hasActiveTriggers && !hasUnprocessedDeaths && !hasOngoingEvents) {
-                log.info("DeathAnnouncementStep early exit for guild ${session.guildId} (no active triggers/events). Advancing.")
+            if (!hasActiveTriggers && !hasUnprocessedDeaths && !hasOngoingEvents && !session.stateData.deathProcessingInProgress) {
+                log.info("DeathAnnouncementStep early exit for guild ${session.guildId} (no active triggers/events/processing). Advancing.")
                 shouldAdvance = true
             }
         }

@@ -51,6 +51,7 @@ class NightStep(
 
     private val log = LoggerFactory.getLogger(NightStep::class.java)
     internal val nightScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val orchestrationJobs = java.util.concurrent.ConcurrentHashMap<Long, Job>()
 
     override fun onStart(session: Session, service: GameStateService) {
         val guildId = session.guildId
@@ -100,11 +101,16 @@ class NightStep(
         }
 
         // Orchestrate the night phases
-        nightScope.launch {
+        orchestrationJobs[guildId]?.cancel()
+        orchestrationJobs[guildId] = nightScope.launch {
             try {
                 processNightPhases(guildId, service)
+            } catch (e: CancellationException) {
+                log.info("Night orchestration for guild $guildId was cancelled")
             } catch (e: Exception) {
                 log.error("Error during night orchestration for guild $guildId", e)
+            } finally {
+                orchestrationJobs.remove(guildId, coroutineContext[Job])
             }
         }
     }
@@ -175,12 +181,31 @@ class NightStep(
     }
 
     override fun onEnd(session: Session, service: GameStateService) {
+        val guildId = session.guildId
+        log.info("Ending NightStep for guild $guildId. Cleaning up state.")
+
+        // 1. Cancel orchestration coroutine
+        orchestrationJobs.remove(guildId)?.cancel()
+
+        // 2. Clear phase signals
+        phaseSignals.remove(guildId)
+
+        // 3. Cleanup UI prompts
         actionUIService.cleanupExpiredPrompts(session)
 
+        // 4. Clear transient night state
         session.stateData.phaseType = null
         session.stateData.phaseStartTime = 0
         session.stateData.phaseEndTime = 0
         session.stateData.wolfBrotherAwakenedPlayerId = null
+
+        // 5. Clear any PENDING or ACTING actions (Keep only SUBMITTED/SKIPPED/PROCESSED for resolution)
+        session.stateData.submittedActions.removeIf { !it.status.executed }
+
+        // 6. Clear wolf data
+        session.stateData.wolfStates.clear()
+        session.stateData.werewolfMessages.clear()
+
         gameSessionService.saveSession(session)
     }
 

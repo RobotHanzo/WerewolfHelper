@@ -5,9 +5,6 @@ import dev.robothanzo.werewolf.audio.Audio
 import dev.robothanzo.werewolf.audio.Audio.play
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.DeathCause
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel
@@ -45,34 +42,14 @@ class ExpelPoll(
         message: Message?,
         session: Session
     ): Boolean {
-        // Announce
         message?.reply("投票已結束，正在放逐玩家 <@!" + winner.player.user?.idLong + ">")?.queue()
-
-        // Sync mark death
         winner.player.markDead(DeathCause.EXPEL)
-
-        // Async process death events
-        @OptIn(DelicateCoroutinesApi::class)
-        GlobalScope.launch {
-            try {
-                // Must fetch fresh player session context or ensure it is valid
-                // Since this runs after sync markDead, session state is updated.
-                // We restart a coroutine flow for interaction
-                winner.player.runDeathEvents(true)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                // Execute the poll finished callback (advancing step etc)
-                // We must be careful about thread safety if callback touches session
-                // finishedCallback usually calls service.nextStep which locks session.
-                finishedCallback?.invoke()
-            }
+        winner.player.processCascadingDeaths {
+            finishedCallback?.invoke()
         }
-
-        // Finally remove poll registration
         WerewolfApplication.expelService.removePoll(guildId)
 
-        return true // We handle the callback
+        return true
     }
 
     override fun onPKTie(winners: List<Candidate>, channel: GuildMessageChannel, message: Message?, session: Session) {
