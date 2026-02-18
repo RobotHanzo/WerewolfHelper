@@ -1,9 +1,10 @@
 package dev.robothanzo.werewolf.game.steps
 
-import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.NightPhase
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
+import dev.robothanzo.werewolf.game.steps.tasks.NightmareWait
+import dev.robothanzo.werewolf.game.steps.tasks.WerewolfVotingWait
 import dev.robothanzo.werewolf.service.ActionUIService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.GameStateService
@@ -16,7 +17,6 @@ import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
@@ -40,7 +40,7 @@ class NightStepTest {
     fun `processNightPhases should skip skippable tasks when early completion occurs`() = runBlocking {
         // Arrange
         val step = NightStep(speechService, actionUIService, roleRegistry, roleActionExecutor, gameSessionService)
-        
+
         val executedTasks = mutableListOf<String>()
 
         val task1 = object : NightTask {
@@ -60,7 +60,7 @@ class NightStepTest {
                 return true
             }
         }
-        
+
         val task3 = object : NightTask {
             override val phase = NightPhase.WOLF_YOUNGER_BROTHER_ACTION
             override val isSkippable = true // explicit for clarify
@@ -83,7 +83,7 @@ class NightStepTest {
     fun `processNightPhases should NOT skip non-skippable tasks when early completion occurs`() = runBlocking {
         // Arrange
         val step = NightStep(speechService, actionUIService, roleRegistry, roleActionExecutor, gameSessionService)
-        
+
         val executedTasks = mutableListOf<String>()
 
         val task1 = object : NightTask {
@@ -103,7 +103,7 @@ class NightStepTest {
                 return true
             }
         }
-        
+
         val task3 = object : NightTask {
             override val phase = NightPhase.WOLF_YOUNGER_BROTHER_ACTION
             override suspend fun execute(step: NightStep, guildId: Long): Boolean {
@@ -125,7 +125,7 @@ class NightStepTest {
     fun `processNightPhases should continue execution (not skip) when task returns true (Timeout)`() = runBlocking {
         // Arrange
         val step = NightStep(speechService, actionUIService, roleRegistry, roleActionExecutor, gameSessionService)
-        
+
         val executedTasks = mutableListOf<String>()
 
         val task1 = object : NightTask {
@@ -158,7 +158,7 @@ class NightStepTest {
     fun `processNightPhases should handle exceptions gracefully and skip remaining skippable tasks`() = runBlocking {
         // Arrange
         val step = NightStep(speechService, actionUIService, roleRegistry, roleActionExecutor, gameSessionService)
-        
+
         val executedTasks = mutableListOf<String>()
 
         val task1 = object : NightTask {
@@ -178,7 +178,7 @@ class NightStepTest {
                 return true
             }
         }
-        
+
         val task3 = object : NightTask {
             override val phase = NightPhase.NIGHTMARE_ACTION
             override val isSkippable = false // Cleanup
@@ -204,7 +204,7 @@ class NightStepTest {
         val step = mock<NightStep>()
         whenever(step.waitForCondition(anyLong(), any(), any())).thenReturn(true) // Condition met early -> wait returns true
 
-        val task = NightSequence.NightmareWait
+        val task = NightmareWait
 
         // Act
         val result = task.execute(step, 1L)
@@ -222,7 +222,7 @@ class NightStepTest {
         val step = mock<NightStep>()
         whenever(step.waitForCondition(anyLong(), any(), any())).thenReturn(false) // Timeout -> wait returns false
 
-        val task = NightSequence.NightmareWait
+        val task = NightmareWait
 
         // Act
         val result = task.execute(step, 1L)
@@ -237,9 +237,9 @@ class NightStepTest {
     @Test
     fun `WerewolfVotingWait logic - Should return FALSE when finished EARLY (condition met)`() = runBlocking {
         val step = mock<NightStep>()
-        whenever(step.waitForCondition(anyLong(), any(), any())).thenReturn(true) 
+        whenever(step.waitForCondition(anyLong(), any(), any())).thenReturn(true)
 
-        val task = NightSequence.WerewolfVotingWait
+        val task = WerewolfVotingWait
         val result = task.execute(step, 1L)
 
         assertFalse(result, "Should return false (stop phase) if voting finished early")
@@ -250,7 +250,7 @@ class NightStepTest {
         val step = mock<NightStep>()
         whenever(step.waitForCondition(anyLong(), any(), any())).thenReturn(false)
 
-        val task = NightSequence.WerewolfVotingWait
+        val task = WerewolfVotingWait
         val result = task.execute(step, 1L)
 
         assertTrue(result, "Should return true (continue phase) if voting timed out")
