@@ -134,12 +134,6 @@ data class GameStateData(
     @Schema(example = "{\"1\": [{\"actor\": 1, \"actionDefinitionId\": \"WEREWOLF_KILL\", \"targets\": [2]}]}")
     var executedActions: MutableMap<Int, MutableList<RoleActionInstance>> = mutableMapOf(), // day -> List of executed actions
 
-    @Schema(description = "Map of Dream Weaver targets per day (Day -> TargetId)")
-    var dreamWeaverTargets: MutableMap<Int, Int> = mutableMapOf(),
-
-    @Schema(description = "Map of Nightmare fear targets per day (Day -> TargetId)")
-    var nightmareFearTargets: MutableMap<Int, Int> = mutableMapOf(),
-
     // Wolf features, these are rotated daily (in game day, as the final wolf kill is applied at death announcement and stored into executedActions)
     @Schema(example = "{\"WEREWOLF_KILL\": {\"actionId\": \"WEREWOLF_KILL\", \"finished\": false}}")
     var wolfStates: MutableMap<String, WolvesActionState> = mutableMapOf(), // actionId -> state
@@ -255,15 +249,10 @@ data class GameStateData(
     @get:BsonIgnore
     val magicianSwapTargets: Set<Int>
         get() {
-            val history = executedActions.values.flatten()
+            return executedActions.values.flatten()
                 .filter { it.actionDefinitionId == ActionDefinitionId.MAGICIAN_SWAP }
                 .flatMap { it.targets }
                 .toSet()
-            // current night's swap is also relevant for validation during the night
-            val current =
-                submittedActions.find { it.actionDefinitionId == ActionDefinitionId.MAGICIAN_SWAP }?.targets
-                    ?: emptyList()
-            return history + current
         }
 
     /**
@@ -274,6 +263,34 @@ data class GameStateData(
     fun getRealTarget(targetId: Int): Int {
         return nightlySwap[targetId] ?: targetId
     }
+
+    /**
+     * Map of Dream Weaver targets per day (Day -> TargetId).
+     * Computed from executed and submitted actions.
+     */
+    @get:BsonIgnore
+    val dreamWeaverTargets: Map<Int, Int>
+        get() {
+            return executedActions.mapNotNull { (day, actions) ->
+                val target = actions.find { it.actionDefinitionId == ActionDefinitionId.DREAM_WEAVER_LINK }
+                    ?.targets?.firstOrNull()
+                if (target != null) day to target else null
+            }.toMap()
+        }
+
+    /**
+     * Map of Nightmare fear targets per day (Day -> TargetId).
+     * Computed from executed actions.
+     */
+    @get:BsonIgnore
+    val nightmareFearTargets: Map<Int, Int>
+        get() {
+            return executedActions.mapNotNull { (day, actions) ->
+                val target = actions.find { it.actionDefinitionId == ActionDefinitionId.NIGHTMARE_FEAR }
+                    ?.targets?.firstOrNull()
+                if (target != null) day to target else null
+            }.toMap()
+        }
 }
 
 /**

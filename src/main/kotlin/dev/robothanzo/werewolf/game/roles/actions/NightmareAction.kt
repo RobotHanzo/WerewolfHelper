@@ -20,11 +20,6 @@ class NightmareFearAction : BaseRoleAction(
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
         if (action.targets.isEmpty()) return accumulatedState
-        val targetId = action.targets.firstOrNull() ?: return accumulatedState
-
-        // Record the fear target for this day
-        session.stateData.nightmareFearTargets[session.day] = targetId
-
         return accumulatedState
     }
 

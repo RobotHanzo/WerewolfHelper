@@ -177,9 +177,10 @@ class MagicianTests {
         // Verify message sent to Seer contains "Wolf" or equivalent logic
         // SeerCheckAction sends message: "${target.nickname} 是 **$resultText**"
         // Target is B (Wolf), so result text should be "狼人"
+        // But the NAME displayed should be A (the one they clicked), to confuse them or just reflect their action.
         verify(mockChannel).sendMessage(check<String> { msg ->
             assertTrue(msg.contains("狼人"), "Seer should see 'Wolf' result")
-            assertTrue(msg.contains(session.getPlayer(targetB)!!.nickname), "Message should refer to the REAL target")
+            assertTrue(msg.contains(session.getPlayer(targetA)!!.nickname), "Message should refer to the SELECTED target (A) name")
         })
     }
 

@@ -14,7 +14,7 @@ class MagicianSwapAction : BaseRoleAction(
     priority = PredefinedRoles.MAGICIAN_PRIORITY,
     timing = ActionTiming.NIGHT,
     targetCount = 2,
-    isOptional = false
+    isOptional = true
 ) {
     override fun execute(
         session: Session,
@@ -35,8 +35,8 @@ class MagicianSwapAction : BaseRoleAction(
         // Can swap any two players (including self, dead players? description says "exchange two players' numbers")
         // Usually Magician can swap anyone.
         // Constraint: "Each number can only be exchanged once."
-        val usedTargets = session.stateData.magicianSwapTargets
-        return session.players.keys.map { it.toInt() }.filter { it !in usedTargets }
+        // Allow selecting already-swapped targets so they can be deselected in UI
+        return session.players.keys.map { it.toInt() }
     }
 
     override fun validate(session: Session, actor: Int, targets: List<Int>): String? {

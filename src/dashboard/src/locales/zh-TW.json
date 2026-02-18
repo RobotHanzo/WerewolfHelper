@@ -53,7 +53,8 @@
       "MERCHANT_POISON": "毒藥 (商人贈予)",
       "MERCHANT_GUN": "獵槍 (商人贈予)",
       "DREAM_WEAVER_LINK": "攝夢",
-      "NIGHTMARE_FEAR": "恐懼"
+      "NIGHTMARE_FEAR": "恐懼",
+      "MAGICIAN_SWAP": "魔術師換人"
     },
     "timing": {
       "NIGHT": "夜晚",
@@ -189,6 +190,7 @@
   "roles": {
     "nightmare": "夢魘",
     "wolfYoungerBrother": "狼弟",
+    "magician": "魔術師",
     "title": "角色編輯",
     "role": "角色",
     "unknown": "未知身分",
@@ -536,7 +538,7 @@
     "processed": "已執行",
     "pending": "等待中",
     "actor": "執行者",
-    "target": "行動目標",
+    "target": "目標",
     "noVote": "未投票",
     "tabs": {
       "actions": "角色行動",
@@ -561,7 +563,8 @@
       "WEREWOLF_VOTING": "狼人投票",
       "ROLE_ACTIONS": "角色行動",
       "NIGHTMARE_ACTION": "夢魘行動",
-      "WOLF_YOUNGER_BROTHER_ACTION": "狼弟行動"
+      "WOLF_YOUNGER_BROTHER_ACTION": "狼弟行動",
+      "MAGICIAN_ACTION": "魔術師行動"
     }
   },
   "replays": {

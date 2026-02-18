@@ -103,7 +103,9 @@ class WolfYoungerBrotherExtraKillAction : BaseRoleAction(
     ): ActionExecutionResult {
         if (action.targets.isEmpty() || action.targets[0] == -1) return accumulatedState
 
-        accumulatedState.deaths.getOrPut(DeathCause.WEREWOLF) { mutableListOf() }.add(action.targets[0])
+        val rawTargetId = action.targets[0]
+        val targetId = session.stateData.getRealTarget(rawTargetId)
+        accumulatedState.deaths.getOrPut(DeathCause.WEREWOLF) { mutableListOf() }.add(targetId)
 
         // Clear flag after execution (though it will also be cleared at end of night)
         session.stateData.wolfBrotherAwakenedPlayerId = null
@@ -136,8 +138,11 @@ class SeerCheckAction(
         if (action.targets.isEmpty()) return accumulatedState
 
         val rawTargetId = action.targets[0]
-        val targetId = session.stateData.getRealTarget(rawTargetId)
+        val targetId = session.stateData.getRealTarget(rawTargetId) // for magician
         val target = session.getPlayer(targetId) ?: return accumulatedState
+        
+        // Use the player originally selected for the display message
+        val displayTarget = session.getPlayer(rawTargetId) ?: target
 
         val isWolfBrotherAlive = session.alivePlayers().values.any { it.roles.contains("狼兄") }
         val isYoungerBrother = target.roles.contains("狼弟")
@@ -152,7 +157,7 @@ class SeerCheckAction(
 
         val seerPlayer = session.getPlayer(action.actor)
         val resultText = if (isWolf) "狼人" else "好人"
-        seerPlayer?.channel?.sendMessage("🔮 **查驗結果**：${target.nickname} 是 **$resultText**")?.queue()
+        seerPlayer?.channel?.sendMessage("🔮 **查驗結果**：${displayTarget.nickname} 是 **$resultText**")?.queue()
 
         action.status = ActionStatus.PROCESSED
         return accumulatedState
@@ -234,10 +239,19 @@ class GuardProtectAction : BaseRoleAction(
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
-        val targetId = action.targets.firstOrNull() ?: return accumulatedState
-        val lastProtected = getLastProtectedId(session)
+        val rawTargetId = action.targets.firstOrNull() ?: return accumulatedState
+        val targetId = session.stateData.getRealTarget(rawTargetId)
 
-        if (lastProtected == targetId) return accumulatedState
+        // Note: Guard "cannot guard same person" rule check logic needs to consider if lastProtected was raw or real.
+        // Currently getLastProtectedId returns the RAW target from executedActions.
+        // The validate function uses the raw target check.
+        // For consistency, we might need to store the REAL target in executedActions or resolve it here.
+        // However, standard werewolf rules often say "cannot choose the same NUMBER".
+        // If the rule is "same NUMBER", then `getLastProtectedId` (raw) == `rawTargetId` check in validate is correct.
+        // But the PROTECTION should land on the REAL target.
+
+        val lastProtected = getLastProtectedId(session)
+        if (lastProtected == rawTargetId) return accumulatedState
 
         accumulatedState.protectedPlayers.add(targetId)
         return accumulatedState
@@ -423,7 +437,8 @@ abstract class AbstractMerchantTradeAction(
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
-        val targetId = action.targets.firstOrNull() ?: return accumulatedState
+        val rawTargetId = action.targets.firstOrNull() ?: return accumulatedState
+        val targetId = session.stateData.getRealTarget(rawTargetId)
         val target = session.getPlayer(targetId) ?: return accumulatedState
 
         val isWolf = target.wolf
@@ -524,8 +539,12 @@ class MerchantSeerCheckAction(
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
-        val targetId = action.targets.firstOrNull() ?: return accumulatedState
+        val rawTargetId = action.targets.firstOrNull() ?: return accumulatedState
+        val targetId = session.stateData.getRealTarget(rawTargetId)
         val target = session.getPlayer(targetId) ?: return accumulatedState
+
+        // Use the player originally selected for the display message
+        val displayTarget = session.getPlayer(rawTargetId) ?: target
 
         val isWolf = target.roles.any { role ->
             (session.hydratedRoles[role] ?: roleRegistry.getRole(role))?.camp == Camp.WEREWOLF
@@ -533,7 +552,7 @@ class MerchantSeerCheckAction(
 
         val seerPlayer = session.getPlayer(action.actor)
         val resultText = if (isWolf) "狼人" else "好人"
-        seerPlayer?.channel?.sendMessage("🔮 **查驗結果**：${target.nickname} 是 **$resultText**")?.queue()
+        seerPlayer?.channel?.sendMessage("🔮 **查驗結果**：${displayTarget.nickname} 是 **$resultText**")?.queue()
 
         return accumulatedState
     }
@@ -551,7 +570,8 @@ class MerchantPoisonAction : BaseRoleAction(
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
-        val targetId = action.targets.firstOrNull() ?: return accumulatedState
+        val rawTargetId = action.targets.firstOrNull() ?: return accumulatedState
+        val targetId = session.stateData.getRealTarget(rawTargetId)
         accumulatedState.deaths.getOrPut(DeathCause.POISON) { mutableListOf() }.add(targetId)
         return accumulatedState
     }
@@ -572,7 +592,8 @@ class MerchantGunAction : BaseRoleAction(
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
-        val targetId = action.targets.firstOrNull() ?: return accumulatedState
+        val rawTargetId = action.targets.firstOrNull() ?: return accumulatedState
+        val targetId = session.stateData.getRealTarget(rawTargetId)
         accumulatedState.deaths.getOrPut(DeathCause.HUNTER_REVENGE) { mutableListOf() }.add(targetId)
 
         // Consume the granted action
@@ -612,7 +633,8 @@ class MerchantGuardProtectAction : BaseRoleAction(
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
-        val targetId = action.targets.firstOrNull() ?: return accumulatedState
+        val rawTargetId = action.targets.firstOrNull() ?: return accumulatedState
+        val targetId = session.stateData.getRealTarget(rawTargetId)
         accumulatedState.protectedPlayers.add(targetId)
         return accumulatedState
     }

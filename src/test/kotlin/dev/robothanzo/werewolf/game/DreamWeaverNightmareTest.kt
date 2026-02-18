@@ -19,13 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension
 
 @ExtendWith(MockitoExtension::class)
 class DreamWeaverNightmareTest {
-
     private lateinit var session: Session
-    private lateinit var roleRegistry: RoleRegistry
-
-    @Mock
-    private lateinit var roleActionExecutor: RoleActionExecutor
-
     @Mock
     private lateinit var gameSessionService: GameSessionService
 
@@ -63,7 +57,7 @@ class DreamWeaverNightmareTest {
     @Test
     fun testWolfFearBlocksCamp() {
         // Nightmare (ID 2) fears the Wolf (ID 4)
-        session.stateData.nightmareFearTargets[1] = 4
+        addExecutedAction(session, 1, 1, ActionDefinitionId.NIGHTMARE_FEAR, listOf(4))
 
         // This is the logic used in NightStep to filter wolves
         val fearedId = session.stateData.nightmareFearTargets[session.day]
@@ -80,7 +74,7 @@ class DreamWeaverNightmareTest {
     @Test
     fun testDreamWeaverImmunity() {
         // Day 1: Dream Weaver links Villager
-        session.stateData.dreamWeaverTargets[1] = 3
+        addExecutedAction(session, 1, 1, ActionDefinitionId.DREAM_WEAVER_LINK, listOf(3))
 
         // Wolf kills Villager
         val executionResult = ActionExecutionResult()
@@ -104,12 +98,12 @@ class DreamWeaverNightmareTest {
     @Test
     fun testDreamWeaverConsecutiveDeath() {
         // Day 1: Dream Weaver links Villager (done in history)
-        session.stateData.dreamWeaverTargets[1] = 3
+        addExecutedAction(session, 1, 1, ActionDefinitionId.DREAM_WEAVER_LINK, listOf(3))
 
         // Day 2
         session.day = 2
         // Dream Weaver links Villager AGAIN
-        session.stateData.dreamWeaverTargets[2] = 3
+        addExecutedAction(session, 2, 1, ActionDefinitionId.DREAM_WEAVER_LINK, listOf(3))
 
         val executionResult = ActionExecutionResult()
 
@@ -131,7 +125,7 @@ class DreamWeaverNightmareTest {
     @Test
     fun testDreamWeaverLinkedDeath() {
         // Day 1: Dream Weaver links Villager
-        session.stateData.dreamWeaverTargets[1] = 3
+        addExecutedAction(session, 1, 1, ActionDefinitionId.DREAM_WEAVER_LINK, listOf(3))
 
         // Dream Weaver dies (e.g. Wolf kill)
         val executionResult = ActionExecutionResult()
@@ -157,7 +151,7 @@ class DreamWeaverNightmareTest {
     @Test
     fun testNightmareFearRestriction() {
         // Day 1 night: Nightmare fears Villager (ID 3)
-        session.stateData.nightmareFearTargets[1] = 3
+        addExecutedAction(session, 1, 1, ActionDefinitionId.NIGHTMARE_FEAR, listOf(3))
         session.currentState = "NIGHT_PHASE"
 
         // Villager tries to use skill? (e.g. if Villager was Seer)
@@ -169,8 +163,11 @@ class DreamWeaverNightmareTest {
         val seer = Player(id = 5).apply { roles.add("預言家") }
         session.addPlayer(seer)
 
+        // Clear previous actions to isolate test case
+        session.stateData.executedActions.clear()
+
         // Fear Seer
-        session.stateData.nightmareFearTargets[1] = 5
+        addExecutedAction(session, 1, 1, ActionDefinitionId.NIGHTMARE_FEAR, listOf(5))
 
         // Create a dummy Seer Action
         ActionDefinitionId.SEER_CHECK
@@ -185,8 +182,11 @@ class DreamWeaverNightmareTest {
         // I will trust the logic `if (fearedId == playerId && isNightPhase) return false` which is simple.
 
         // Instead, let's test Werewolf Kill restriction
+        // Clear previous actions to isolate test case
+        session.stateData.executedActions.clear()
+
         // Nightmare fears Wolf (ID 4)
-        session.stateData.nightmareFearTargets[1] = 4
+        addExecutedAction(session, 1, 1, ActionDefinitionId.NIGHTMARE_FEAR, listOf(4))
 
         // Helper to simulate Wolf Kill execution
         val killActionInstance = RoleActionInstance(
@@ -239,5 +239,17 @@ class DreamWeaverNightmareTest {
             error?.contains("夢魘不能自刀") == true,
             "Validation should return correct error message for Nightmare self-kill"
         )
+    }
+
+    private fun addExecutedAction(session: Session, day: Int, actor: Int, actionId: ActionDefinitionId, targets: List<Int>) {
+        val action = RoleActionInstance(
+            actor = actor,
+            actorRole = "", // Not needed for target tracking
+            actionDefinitionId = actionId,
+            targets = targets.toMutableList(),
+            submittedBy = ActionSubmissionSource.SYSTEM,
+            status = ActionStatus.PROCESSED
+        )
+        session.stateData.executedActions.getOrPut(day) { mutableListOf() }.add(action)
     }
 }
