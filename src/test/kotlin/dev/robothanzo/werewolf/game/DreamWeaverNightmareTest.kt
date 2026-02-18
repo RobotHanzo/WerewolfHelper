@@ -4,10 +4,8 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.*
-import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.roles.actions.ActionExecutionResult
 import dev.robothanzo.werewolf.game.roles.actions.DeathResolutionAction
-import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import dev.robothanzo.werewolf.service.GameSessionService
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -152,7 +150,7 @@ class DreamWeaverNightmareTest {
     fun testNightmareFearRestriction() {
         // Day 1 night: Nightmare fears Villager (ID 3)
         addExecutedAction(session, 1, 1, ActionDefinitionId.NIGHTMARE_FEAR, listOf(3))
-        session.currentState = "NIGHT_PHASE"
+        session.currentState = "NIGHT_STEP"
 
         // Villager tries to use skill? (e.g. if Villager was Seer)
         // Here we test SessionExtensions.isActionAvailable manually or mock logic

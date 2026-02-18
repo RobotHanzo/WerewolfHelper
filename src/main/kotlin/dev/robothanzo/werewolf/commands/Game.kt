@@ -44,7 +44,7 @@ class Game {
                 return@withLockedSession
             }
 
-            if (session.currentState == "NIGHT_PHASE" || session.currentState == "SETUP") {
+            if (session.currentState == "NIGHT_STEP" || session.currentState == "SETUP") {
                 event.hook.editOriginal(":x: 目前階段不允許自爆").queue()
                 return@withLockedSession
             }

@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap
 class VotingStep(
     private val expelService: ExpelService
 ) : GameStep() {
-    override val id = "VOTING_PHASE"
+    override val id = "VOTING_STEP"
     override val name = "放逐投票"
 
     override fun onStart(session: Session, service: GameStateService) {

@@ -958,7 +958,7 @@ class RoleActionTests {
             val villagerId = 2
             val villager = createPlayer(villagerId, 102L, listOf("平民"))
             testSession.players[villagerId.toString()] = villager
-            testSession.currentState = "NIGHT_PHASE"
+            testSession.currentState = "NIGHT_STEP"
 
             // Grant a gift
             testSession.stateData.playerOwnedActions[villagerId] = mutableMapOf(

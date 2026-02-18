@@ -23,12 +23,12 @@ class GameStateServiceImpl(
 
     // Simple robust ordered flow for now, can be made dynamic later
     private val gameFlow = listOf(
-        "NIGHT_PHASE",
-        "DAY_PHASE",
+        "NIGHT_STEP",
+        "DAY_STEP",
         "SHERIFF_ELECTION", // Day 1 only
         "DEATH_ANNOUNCEMENT",
-        "SPEECH_PHASE",
-        "VOTING_PHASE"
+        "SPEECH_STEP",
+        "VOTING_STEP"
     )
 
     override fun registerStep(step: GameStep) {
@@ -69,7 +69,7 @@ class GameStateServiceImpl(
             if (session.stateData.gameStartTime == 0L) {
                 session.stateData.gameStartTime = System.currentTimeMillis()
             }
-            startStep(session, "NIGHT_PHASE")
+            startStep(session, "NIGHT_STEP")
             return
         }
 
@@ -87,9 +87,9 @@ class GameStateServiceImpl(
         }
 
         // Skip voting and jump to night if detonation occurred
-        if ((nextId == "SPEECH_PHASE" || nextId == "VOTING_PHASE") && session.stateData.detonatedThisDay) {
+        if ((nextId == "SPEECH_STEP" || nextId == "VOTING_STEP") && session.stateData.detonatedThisDay) {
             // If detonated, go straight to night
-            while (nextId != "NIGHT_PHASE") {
+            while (nextId != "NIGHT_STEP") {
                 nextIdx = (nextIdx + 1) % gameFlow.size
                 nextId = gameFlow[nextIdx]
             }

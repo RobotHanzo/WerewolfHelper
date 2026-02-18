@@ -122,7 +122,7 @@ export const useGameActions = (
         }
       };
       performStart();
-    } else if (action === 'next_phase') {
+    } else if (action === 'next_step') {
       if (guildId) {
         // Use new API if available
         nextState

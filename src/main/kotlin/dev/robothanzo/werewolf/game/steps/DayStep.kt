@@ -18,7 +18,7 @@ class DayStep(
     @param:Lazy
     private val gameSessionService: GameSessionService
 ) : GameStep() {
-    override val id = "DAY_PHASE"
+    override val id = "DAY_STEP"
     override val name = "天亮了"
 
     override fun getEndTime(session: Session): Long {

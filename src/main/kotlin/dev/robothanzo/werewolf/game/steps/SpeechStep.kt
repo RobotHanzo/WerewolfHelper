@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component
 class SpeechStep(
     @param:Lazy private val speechService: SpeechService
 ) : GameStep() {
-    override val id = "SPEECH_PHASE"
+    override val id = "SPEECH_STEP"
     override val name = "發言流程"
 
     override fun getEndTime(session: Session): Long {

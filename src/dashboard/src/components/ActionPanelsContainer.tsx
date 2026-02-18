@@ -9,8 +9,8 @@ export function ActionPanelsContainer({ gameState }: ActionPanelsContainerProps)
   const { t } = useTranslation();
 
   // Check if current phase allows actions
-  const isNightPhase = gameState.currentState === 'NIGHT_PHASE';
-  const isSpeechPhase = gameState.currentState === 'SPEECH_PHASE';
+  const isNightPhase = gameState.currentState === 'NIGHT_STEP';
+  const isSpeechPhase = gameState.currentState === 'SPEECH_STEP';
   const allowsActions = isNightPhase || isSpeechPhase;
 
   if (!allowsActions) {

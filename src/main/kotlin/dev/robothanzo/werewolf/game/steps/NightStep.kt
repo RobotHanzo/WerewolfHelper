@@ -48,7 +48,7 @@ class NightStep(
         }
     }
 
-    override val id = "NIGHT_PHASE"
+    override val id = "NIGHT_STEP"
     override val name = "天黑請閉眼"
 
     private val log = LoggerFactory.getLogger(NightStep::class.java)

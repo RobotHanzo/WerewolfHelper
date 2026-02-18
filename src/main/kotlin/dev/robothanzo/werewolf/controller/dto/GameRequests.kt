@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 class GameRequests {
     @Schema(description = "Request to set the game state")
     data class StateSetRequest(
-        @Schema(description = "The ID/Name of the step to set", example = "NIGHT_PHASE")
+        @Schema(description = "The ID/Name of the step to set", example = "NIGHT_STEP")
         val stepId: String
     )
 

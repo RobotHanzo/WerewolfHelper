@@ -44,7 +44,7 @@ export interface GameState {
   speech?: SpeechState;
   police?: PoliceState;
   expel?: ExpelState;
-  currentState?: string; // New State Machine State (e.g. "SETUP", "NIGHT_PHASE")
+  currentState?: string; // New State Machine State (e.g. "SETUP", "NIGHT_STEP")
   currentStep?: string; // Display name
   stateData?: any;
   isManualStep?: boolean; // True if duration is -1 (manual advance)

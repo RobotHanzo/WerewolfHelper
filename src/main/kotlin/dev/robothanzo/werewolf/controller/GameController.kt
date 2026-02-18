@@ -466,7 +466,7 @@ class GameController(
             gameSessionService.saveSession(session)
 
             // Start the first step (Night Phase)
-            gameStateService.startStep(session, "NIGHT_PHASE")
+            gameStateService.startStep(session, "NIGHT_STEP")
 
             gameSessionService.broadcastSessionUpdate(session)
             ResponseEntity.ok(ApiResponse.ok(message = "Game started"))

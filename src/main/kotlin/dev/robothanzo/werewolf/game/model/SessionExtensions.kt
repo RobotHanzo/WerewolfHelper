@@ -352,7 +352,7 @@ fun Session.validateAndSubmitAction(
 
         // Record to history immediately if it's a death trigger or we're past night resolution
         val currentDay = day
-        if (actionDef.timing == ActionTiming.DEATH_TRIGGER || currentState != "NIGHT_PHASE") {
+        if (actionDef.timing == ActionTiming.DEATH_TRIGGER || currentState != "NIGHT_STEP") {
             val history = stateData.executedActions.getOrPut(currentDay) { mutableListOf() }
             if (!history.contains(action)) {
                 history.add(action)

@@ -74,7 +74,7 @@ class MessageListener : ListenerAdapter() {
                     isJudgeChannel
                 ) {
                     // Track werewolf messages during night phase for NightStatus
-                    if (session.currentState == "NIGHT_PHASE" && ::gameSessionService.isInitialized) {
+                    if (session.currentState == "NIGHT_STEP" && ::gameSessionService.isInitialized) {
                         gameSessionService.withLockedSession(session.guildId) { lockedSession ->
                             // Record if it's from the judge channel or the werewolf's own channel
                             val messagesList = lockedSession.stateData.werewolfMessages

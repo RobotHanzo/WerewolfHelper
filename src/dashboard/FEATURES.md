@@ -35,7 +35,7 @@ exhaustive way. It was assembled by statically scanning the dashboard source.
 - Next step / Skip stage
 - Stage-specific content and rendering:
   - SETUP: assign roles, start game
-  - NIGHT_PHASE: `NightStatus` (full night management UI)
+  - NIGHT_STEP: `NightStatus` (full night management UI)
     - **Overview header**
       - Night number, countdown timer, remaining time display (minute:second)
       - Phase-aware behavior (phase start/end times derived from session state)
@@ -73,10 +73,10 @@ exhaustive way. It was assembled by statically scanning the dashboard source.
       - Custom scrollbar styling for message lists
       - Animated transitions and slide/fade-in effects
       - Dark-theme friendly styling consistent with rest of dashboard
-  - DAY_PHASE: day overview
-  - SHERIFF_ELECTION / SPEECH_PHASE: `SpeechManager` integration
+  - DAY_STEP: day overview
+  - SHERIFF_ELECTION / SPEECH_STEP: `SpeechManager` integration
   - DEATH_ANNOUNCEMENT: dead players display, last words timer & progress
-  - VOTING_PHASE: `VoteStatus` (candidates, voters, timer)
+  - VOTING_STEP: `VoteStatus` (candidates, voters, timer)
 - Stage animation transitions and enter/exit animations
 
 ---

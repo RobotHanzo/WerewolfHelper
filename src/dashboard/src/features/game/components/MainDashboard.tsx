@@ -211,14 +211,14 @@ export const MainDashboard = ({
           </div>
         );
 
-      case 'NIGHT_PHASE':
+      case 'NIGHT_STEP':
         return (
           <div className="animate-in fade-in duration-300 h-full overflow-hidden">
             <NightStatus guildId={guildId} players={players} session={session} />
           </div>
         );
 
-      case 'DAY_PHASE':
+      case 'DAY_STEP':
         return (
           <div className="animate-in fade-in duration-300">
             <div className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
@@ -236,7 +236,7 @@ export const MainDashboard = ({
         );
 
       case 'SHERIFF_ELECTION':
-      case 'SPEECH_PHASE':
+      case 'SPEECH_STEP':
         const currentSpeech = (session.stateData as any)?.speech;
         const currentPolice = (session.stateData as any)?.police;
         return (
@@ -355,7 +355,7 @@ export const MainDashboard = ({
           </div>
         );
 
-      case 'VOTING_PHASE':
+      case 'VOTING_STEP':
         const currentExpel = (session.stateData as any)?.expel;
         const expelSpeech = (session.stateData as any)?.speech;
         return (
