@@ -7,14 +7,30 @@ import dev.robothanzo.werewolf.service.SpeechService
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 
+
 @Component
 class SpeechStep(
     @param:Lazy private val speechService: SpeechService
-) : GameStep {
+) : GameStep() {
     override val id = "SPEECH_PHASE"
     override val name = "發言流程"
 
+    override fun getEndTime(session: Session): Long {
+        val speechSession = speechService.getSpeechSession(session.guildId) ?: return super.getEndTime(session)
+        var totalRemainingMs = if (speechSession.currentSpeechEndTime > System.currentTimeMillis()) {
+            speechSession.currentSpeechEndTime - System.currentTimeMillis()
+        } else 0L
+
+        for (player in speechSession.order) {
+            val duration = if (player.police) 210 else 180
+            totalRemainingMs += duration * 1000L
+        }
+
+        return System.currentTimeMillis() + totalRemainingMs
+    }
+
     override fun onStart(session: Session, service: GameStateService) {
+        super.onStart(session, service)
         // Automatically start speech flow when entering this step
         speechService.startAutoSpeechFlow(session, session.courtTextChannel?.idLong ?: 0) {
             service.nextStep(session)

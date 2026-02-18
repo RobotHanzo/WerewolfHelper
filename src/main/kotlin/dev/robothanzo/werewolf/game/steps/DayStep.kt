@@ -11,16 +11,22 @@ import dev.robothanzo.werewolf.utils.CmdUtils
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 
+
 @Component
 class DayStep(
     private val speechService: SpeechService,
     @param:Lazy
     private val gameSessionService: GameSessionService
-) : GameStep {
+) : GameStep() {
     override val id = "DAY_PHASE"
     override val name = "天亮了"
 
+    override fun getEndTime(session: Session): Long {
+        return session.stateData.stepStartTime + 10_000L
+    }
+
     override fun onStart(session: Session, service: GameStateService) {
+        super.onStart(session, service)
         // Unmute everyone? Or keep muted for police election?
         // Usually day start = announcement, then specific phases handle muting
         speechService.setAllMute(session.guildId, true) // Ensure silence for announcement
@@ -39,10 +45,6 @@ class DayStep(
 
     override fun onEnd(session: Session, service: GameStateService) {
 
-    }
-
-    override fun getDurationSeconds(session: Session): Int {
-        return 10
     }
 
     override fun handleInput(session: Session, input: Map<String, Any>): Map<String, Any> {

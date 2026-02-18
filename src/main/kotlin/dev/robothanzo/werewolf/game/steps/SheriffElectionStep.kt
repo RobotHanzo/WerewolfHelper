@@ -5,25 +5,73 @@ import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
 import dev.robothanzo.werewolf.service.GameStateService
 import dev.robothanzo.werewolf.service.PoliceService
+import dev.robothanzo.werewolf.service.SpeechService
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 
 @Component
 class SheriffElectionStep(
     @param:Lazy
-    private val policeService: PoliceService
-) : GameStep {
+    private val policeService: PoliceService,
+    @param:Lazy
+    private val speechService: SpeechService
+) : GameStep() {
     override val id = "SHERIFF_ELECTION"
     override val name = "警長參選"
-    override fun getDurationSeconds(session: Session): Int {
-        return 30
-    }
 
     override fun onStart(session: Session, service: GameStateService) {
+        super.onStart(session, service)
         WerewolfApplication.jda.getGuildById(session.guildId) ?: return
         val channel = session.courtTextChannel ?: return
         policeService.startEnrollment(session, channel, null) {
             service.nextStep(session)
+        }
+    }
+
+    override fun getEndTime(session: Session): Long {
+        val policeSession = policeService.sessions[session.guildId] ?: return super.getEndTime(session)
+
+        return when (policeSession.state) {
+            dev.robothanzo.werewolf.model.PoliceSession.State.ENROLLMENT -> {
+                val base = policeSession.stageEndTime
+                val candidates = policeSession.candidates.size
+                if (candidates >= 2) {
+                    // Speech (c * 180) + Unenroll (20) + Vote (30)
+                    base + (candidates * 180 * 1000L) + 50000L
+                } else {
+                    base
+                }
+            }
+
+            dev.robothanzo.werewolf.model.PoliceSession.State.SPEECH -> {
+                val speechSession = speechService.getSpeechSession(session.guildId) ?: return System.currentTimeMillis()
+                // Current speaker end time + remaining speakers
+                val currentEnd = speechSession.currentSpeechEndTime
+                // remaining: speechSession.order
+                var remainingTime = 0
+                for (p in speechSession.order) {
+                    remainingTime += if (p.police) 210 else 180
+                }
+                currentEnd + (remainingTime * 1000L) + 50000L // + Unenroll (20) + Vote (30)
+            }
+
+            dev.robothanzo.werewolf.model.PoliceSession.State.UNENROLLMENT -> {
+                // If candidates > 1, add voting. Logic was: if remaining == 1, no voting.
+                // But quitEnrollment updates endTime.
+                // Here we calculate fresh.
+                val activeCandidates = policeSession.candidates.values.count { !it.quit }
+                if (activeCandidates > 1) {
+                    policeSession.stageEndTime + 30000L
+                } else {
+                    policeSession.stageEndTime
+                }
+            }
+
+            dev.robothanzo.werewolf.model.PoliceSession.State.VOTING -> {
+                policeSession.stageEndTime
+            }
+
+            else -> super.getEndTime(session)
         }
     }
 

@@ -93,7 +93,6 @@ class GameActionServiceImpl(
         session.hasAssignedRoles = false
         session.currentState = "SETUP"
         session.stateData = GameStateData()
-        session.currentStepEndTime = 0L
         session.day = 0
         session.addLog(LogType.GAME_RESET, "遊戲已重置", null)
 

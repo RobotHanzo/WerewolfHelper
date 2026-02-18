@@ -75,7 +75,6 @@ data class Session(
     // Game State Machine Fields
     var currentState: String = "SETUP", // Default to setup
     var stateData: GameStateData = GameStateData(),
-    var currentStepEndTime: Long = 0,
     var day: Int = 0,
 
     // Game Settings
@@ -83,6 +82,10 @@ data class Session(
 ) : Persistable<ObjectId>, Serializable {
     @Transient
     var hydratedRoles: MutableMap<String, GameRole> = HashMap()
+
+    /** Computed transiently before each broadcast — never persisted. */
+    val currentStepEndTime: Long
+        get() = WerewolfApplication.gameStateService.getStep(currentState)?.getEndTime(this) ?: 0L
 
     override fun getId(): ObjectId? = _id
     override fun isNew(): Boolean = _id == null

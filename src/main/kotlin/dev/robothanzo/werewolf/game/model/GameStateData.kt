@@ -8,12 +8,12 @@ import org.springframework.data.annotation.Transient
 /**
  * Represents the sub-phases of the night.
  */
-enum class NightPhase {
-    NIGHTMARE_ACTION,
-    WOLF_YOUNGER_BROTHER_ACTION,
-    MAGICIAN_ACTION,
-    WEREWOLF_VOTING,
-    ROLE_ACTIONS
+enum class NightPhase(val defaultDurationMs: Long) {
+    NIGHTMARE_ACTION(60_000L),
+    MAGICIAN_ACTION(60_000L),
+    WOLF_YOUNGER_BROTHER_ACTION(60_000L),
+    WEREWOLF_VOTING(90_000L),
+    ROLE_ACTIONS(60_000L)
 }
 
 enum class ActionTiming {

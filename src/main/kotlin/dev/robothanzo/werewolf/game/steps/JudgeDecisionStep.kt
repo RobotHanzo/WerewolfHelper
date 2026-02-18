@@ -14,11 +14,12 @@ import net.dv8tion.jda.api.components.buttons.Button
 import org.springframework.stereotype.Component
 
 @Component
-class JudgeDecisionStep : GameStep {
+class JudgeDecisionStep : GameStep() {
     override val id = "JUDGE_DECISION"
     override val name = "法官裁決"
 
     override fun onStart(session: Session, service: GameStateService) {
+        super.onStart(session, service)
         val result = session.hasEnded(null)
         val reason = result.reason
 

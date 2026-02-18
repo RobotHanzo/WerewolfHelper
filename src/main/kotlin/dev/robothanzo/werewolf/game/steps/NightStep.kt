@@ -10,6 +10,9 @@ import dev.robothanzo.werewolf.game.model.*
 import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
+import dev.robothanzo.werewolf.game.steps.tasks.MagicianCleanup
+import dev.robothanzo.werewolf.game.steps.tasks.MagicianStart
+import dev.robothanzo.werewolf.game.steps.tasks.MagicianWait
 import dev.robothanzo.werewolf.service.ActionUIService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.GameStateService
@@ -30,7 +33,7 @@ class NightStep(
     internal val roleActionExecutor: RoleActionExecutor,
     @param:Lazy
     internal val gameSessionService: GameSessionService
-) : GameStep, RoleEventListener {
+) : GameStep(), RoleEventListener {
     internal val phaseSignals =
         java.util.concurrent.ConcurrentHashMap<Long, CompletableDeferred<Unit>>()
 
@@ -54,6 +57,7 @@ class NightStep(
     private val orchestrationJobs = java.util.concurrent.ConcurrentHashMap<Long, Job>()
 
     override fun onStart(session: Session, service: GameStateService) {
+        super.onStart(session, service)
         val guildId = session.guildId
 
         gameSessionService.withLockedSession(guildId) { session ->
@@ -213,8 +217,89 @@ class NightStep(
         return mapOf("success" to false)
     }
 
-    override fun getDurationSeconds(session: Session): Int {
-        return 150
+    override fun getEndTime(session: Session): Long {
+        val now = System.currentTimeMillis()
+        val phaseType = session.stateData.phaseType
+        val phases = NightPhase.values()
+
+        // Determine where we are in the sequence.
+        val startIndex = if (phaseType != null) {
+            phases.indexOfFirst { it == phaseType }
+        } else {
+            // If phaseType is null, we are between phases.
+            // Find the first phase that hasn't been completed or skipped yet.
+            phases.indexOfFirst { p ->
+                when (p) {
+                    NightPhase.NIGHTMARE_ACTION -> {
+                        session.isCharacterAlive("夢魘") &&
+                            session.stateData.submittedActions.none { it.actorRole == "夢魘" && it.status.executed }
+                    }
+
+                    NightPhase.MAGICIAN_ACTION -> {
+                        session.isCharacterAlive("魔術師") &&
+                            session.stateData.submittedActions.none { it.actorRole == "魔術師" && it.status.executed }
+                    }
+
+                    NightPhase.WOLF_YOUNGER_BROTHER_ACTION -> {
+                        session.isCharacterAlive("狼弟") && session.stateData.wolfBrotherDiedDay != null &&
+                            session.stateData.submittedActions.none { it.actorRole == "狼弟" && it.status.executed }
+                    }
+
+                    NightPhase.WEREWOLF_VOTING -> {
+                        session.stateData.submittedActions.none { it.actionDefinitionId == ActionDefinitionId.WEREWOLF_KILL }
+                    }
+
+                    NightPhase.ROLE_ACTIONS -> true // Always the last catch-all
+                }
+            }
+        }
+
+        if (startIndex == -1) return now
+
+        var remainingTime = 0L
+
+        // 1. Current phase remaining time (if any)
+        if (phaseType != null && session.stateData.phaseEndTime > now) {
+            remainingTime += (session.stateData.phaseEndTime - now)
+        } else if (phaseType == null && startIndex >= 0) {
+            // If we are between phases and haven't started the next one yet,
+            // startIndex points to the next possible phase.
+            // include the full duration of the startIndex phase if it's possible.
+            val currentPhase = phases[startIndex]
+            val possible = when (currentPhase) {
+                NightPhase.NIGHTMARE_ACTION -> session.isCharacterAlive("夢魘")
+                NightPhase.MAGICIAN_ACTION -> session.isCharacterAlive("魔術師")
+                NightPhase.WOLF_YOUNGER_BROTHER_ACTION -> {
+                    session.isCharacterAlive("狼弟") && session.stateData.wolfBrotherDiedDay != null
+                }
+
+                NightPhase.WEREWOLF_VOTING -> true
+                NightPhase.ROLE_ACTIONS -> true
+            }
+            if (possible) {
+                remainingTime += currentPhase.defaultDurationMs
+            }
+        }
+
+        // 2. Estimated durations of all subsequent sub-phases
+        for (i in (startIndex + 1) until phases.size) {
+            val p = phases[i]
+            val possible = when (p) {
+                NightPhase.NIGHTMARE_ACTION -> session.isCharacterAlive("夢魘")
+                NightPhase.MAGICIAN_ACTION -> session.isCharacterAlive("魔術師")
+                NightPhase.WOLF_YOUNGER_BROTHER_ACTION -> {
+                    session.isCharacterAlive("狼弟") && session.stateData.wolfBrotherDiedDay != null
+                }
+
+                NightPhase.WEREWOLF_VOTING -> true
+                NightPhase.ROLE_ACTIONS -> true
+            }
+            if (possible) {
+                remainingTime += p.defaultDurationMs
+            }
+        }
+
+        return now + remainingTime
     }
 }
 
@@ -245,15 +330,16 @@ internal object NightSequence {
                     if (fearAction != null) {
                         lockedSession.stateData.phaseType = NightPhase.NIGHTMARE_ACTION
                         val startTime = System.currentTimeMillis()
+                        val durationMs = NightPhase.NIGHTMARE_ACTION.defaultDurationMs
                         lockedSession.stateData.phaseStartTime = startTime
-                        lockedSession.stateData.phaseEndTime = startTime + 60_000 // 60s
+                        lockedSession.stateData.phaseEndTime = startTime + durationMs
 
                         step.actionUIService.promptPlayerForAction(
                             guildId,
                             lockedSession,
                             nightmare.id,
                             listOf(fearAction),
-                            60
+                            (durationMs / 1000L).toInt()
                         )
                         return@withLockedSession true
                     }
@@ -266,7 +352,8 @@ internal object NightSequence {
     object NightmareWait : NightTask {
         override val phase = NightPhase.NIGHTMARE_ACTION
         override suspend fun execute(step: NightStep, guildId: Long): Boolean {
-            val finishedEarly = step.waitForCondition(guildId, 60) {
+            val durationSeconds = (NightPhase.NIGHTMARE_ACTION.defaultDurationMs / 1000L).toInt()
+            val finishedEarly = step.waitForCondition(guildId, durationSeconds) {
                 val session = step.gameSessionService.getSession(guildId).orElse(null) ?: return@waitForCondition true
                 if (session.stateData.phaseType != NightPhase.NIGHTMARE_ACTION) return@waitForCondition true
                 val nmAction = session.stateData.submittedActions.find { it.actorRole == "夢魘" }
@@ -306,15 +393,16 @@ internal object NightSequence {
                     if (extraKillAction != null) {
                         lockedSession.stateData.phaseType = NightPhase.WOLF_YOUNGER_BROTHER_ACTION
                         val startTime = System.currentTimeMillis()
+                        val durationMs = NightPhase.WOLF_YOUNGER_BROTHER_ACTION.defaultDurationMs
                         lockedSession.stateData.phaseStartTime = startTime
-                        lockedSession.stateData.phaseEndTime = startTime + 60_000 // 60s
+                        lockedSession.stateData.phaseEndTime = startTime + durationMs
 
                         step.actionUIService.promptPlayerForAction(
                             guildId,
                             lockedSession,
                             wolfYoungerBrother.id,
                             listOf(extraKillAction),
-                            60
+                            (durationMs / 1000L).toInt()
                         )
                         return@withLockedSession true
                     }
@@ -327,7 +415,8 @@ internal object NightSequence {
     object WolfYoungerBrotherWait : NightTask {
         override val phase = NightPhase.WOLF_YOUNGER_BROTHER_ACTION
         override suspend fun execute(step: NightStep, guildId: Long): Boolean {
-            val finishedEarly = step.waitForCondition(guildId, 60) {
+            val durationSeconds = (NightPhase.WOLF_YOUNGER_BROTHER_ACTION.defaultDurationMs / 1000L).toInt()
+            val finishedEarly = step.waitForCondition(guildId, durationSeconds) {
                 val session = step.gameSessionService.getSession(guildId).orElse(null) ?: return@waitForCondition true
                 if (session.stateData.phaseType != NightPhase.WOLF_YOUNGER_BROTHER_ACTION) return@waitForCondition true
                 val ybAction = session.stateData.submittedActions.find { it.actorRole == "狼弟" }
@@ -380,27 +469,29 @@ internal object NightSequence {
                 step.gameSessionService.withLockedSession(guildId) { lockedSession ->
                     lockedSession.stateData.phaseType = NightPhase.WEREWOLF_VOTING
                     lockedSession.stateData.phaseStartTime = System.currentTimeMillis()
+                    val durationMs = NightPhase.WEREWOLF_VOTING.defaultDurationMs
                     // Total time 90s usually (60s wait + 30s force) but UI prompt set to 90
                     step.actionUIService.promptGroupForAction(
                         guildId,
                         lockedSession,
                         PredefinedRoles.WEREWOLF_KILL,
                         werewolves,
-                        90
+                        (durationMs / 1000L).toInt()
                     )
-                    lockedSession.addLog(LogType.SYSTEM, "狼人進行討論投票，時限90秒")
-                    lockedSession.stateData.phaseEndTime = System.currentTimeMillis() + 90_000
+                    lockedSession.addLog(LogType.SYSTEM, "狼人進行討論投票，時限${(durationMs / 1000L).toInt()}秒")
+                    lockedSession.stateData.phaseEndTime = System.currentTimeMillis() + durationMs
                 }
                 return true
             }
             return false
         }
     }
-
     object WerewolfVotingWait : NightTask {
         override val phase = NightPhase.WEREWOLF_VOTING
         override suspend fun execute(step: NightStep, guildId: Long): Boolean {
-            val finishedEarly = step.waitForCondition(guildId, 60) {
+            // Werewolf voting wait is usually 60s (90s total duration - 30s force)
+            val durationSeconds = (NightPhase.WEREWOLF_VOTING.defaultDurationMs / 1000L).toInt() - 30
+            val finishedEarly = step.waitForCondition(guildId, durationSeconds) {
                 val session = step.gameSessionService.getSession(guildId).orElse(null) ?: return@waitForCondition true
                 val groupState = step.actionUIService.getGroupState(session, PredefinedRoles.WEREWOLF_KILL)
                     ?: return@waitForCondition true
@@ -509,8 +600,9 @@ internal object NightSequence {
             return step.gameSessionService.withLockedSession(guildId) { lockedSession ->
                 lockedSession.stateData.phaseType = NightPhase.ROLE_ACTIONS
                 val roleStartTime = System.currentTimeMillis()
+                val durationMs = NightPhase.ROLE_ACTIONS.defaultDurationMs
                 lockedSession.stateData.phaseStartTime = roleStartTime
-                lockedSession.stateData.phaseEndTime = roleStartTime + 60_000 // 60s
+                lockedSession.stateData.phaseEndTime = roleStartTime + durationMs
                 step.gameSessionService.broadcastSessionUpdate(lockedSession)
 
                 val actors = mutableListOf<Int>()
@@ -539,18 +631,24 @@ internal object NightSequence {
                         }
 
                         actors.add(pid)
-                        step.actionUIService.promptPlayerForAction(guildId, lockedSession, pid, actions, 60)
+                        step.actionUIService.promptPlayerForAction(
+                            guildId,
+                            lockedSession,
+                            pid,
+                            actions,
+                            (durationMs / 1000L).toInt()
+                        )
                     }
                 }
                 actors.isNotEmpty()
             }
         }
     }
-
     object RoleActionsWait : NightTask {
         override val phase = NightPhase.ROLE_ACTIONS
         override suspend fun execute(step: NightStep, guildId: Long): Boolean {
-            val finishedEarly = step.waitForCondition(guildId, 60) {
+            val durationSeconds = (NightPhase.ROLE_ACTIONS.defaultDurationMs / 1000L).toInt()
+            val finishedEarly = step.waitForCondition(guildId, durationSeconds) {
                 step.gameSessionService.withLockedSession(guildId) { session ->
                     session.stateData.submittedActions.all {
                         it.status.executed
@@ -578,9 +676,9 @@ internal object NightSequence {
         NightmareStart,
         NightmareWait,
         NightmareCleanup,
-        dev.robothanzo.werewolf.game.steps.tasks.MagicianStart,
-        dev.robothanzo.werewolf.game.steps.tasks.MagicianWait,
-        dev.robothanzo.werewolf.game.steps.tasks.MagicianCleanup,
+        MagicianStart,
+        MagicianWait,
+        MagicianCleanup,
         WolfYoungerBrotherStart,
         WolfYoungerBrotherWait,
         WolfYoungerBrotherCleanup,

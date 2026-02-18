@@ -460,9 +460,6 @@ class SpeechServiceImpl(
             speechSession.totalSpeechTime = time
             speechSession.currentSpeechEndTime = System.currentTimeMillis() + (time * 1000L)
 
-            // Update session timer to match TOTAL remaining time
-            val totalDuration = time + getTotalQueueDuration(speechSession.order)
-            session.currentStepEndTime = System.currentTimeMillis() + (totalDuration * 1000L)
             val t = thread(start = true) {
                 try {
                     player.user?.idLong?.let { userId ->

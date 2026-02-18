@@ -54,15 +54,6 @@ class GameStateServiceImpl(
         val nextStep = steps[stepId] ?: throw IllegalArgumentException("Unknown step: $stepId")
 
         session.currentState = stepId
-        session.stateData.stepStartTime = System.currentTimeMillis()
-
-        // Timer Logic
-        val duration = nextStep.getDurationSeconds(session)
-        if (duration > 0) {
-            session.currentStepEndTime = System.currentTimeMillis() + (duration * 1000)
-        } else {
-            session.currentStepEndTime = 0
-        }
 
         sessionService.saveSession(session)
 

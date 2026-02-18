@@ -10,14 +10,16 @@ import dev.robothanzo.werewolf.service.GameStateService
 import org.springframework.stereotype.Component
 import java.util.concurrent.ConcurrentHashMap
 
+
 @Component
 class VotingStep(
     private val expelService: ExpelService
-) : GameStep {
+) : GameStep() {
     override val id = "VOTING_PHASE"
     override val name = "放逐投票"
 
     override fun onStart(session: Session, service: GameStateService) {
+        super.onStart(session, service)
         startExpelPoll(session)
     }
 
@@ -48,8 +50,34 @@ class VotingStep(
         }
     }
 
-    override fun getDurationSeconds(session: Session): Int {
-        return 30
+    override fun getEndTime(session: Session): Long {
+        val guildId = session.guildId
+        val speechSession = WerewolfApplication.speechService.getSpeechSession(guildId)
+
+        // If there is a speech session during voting step, it's a PK speech.
+        // Include remaining speech time + 30s for the second vote.
+        if (speechSession != null) {
+            val currentEnd = if (speechSession.currentSpeechEndTime > System.currentTimeMillis()) {
+                speechSession.currentSpeechEndTime
+            } else {
+                System.currentTimeMillis()
+            }
+
+            var remainingMs = 0L
+            for (player in speechSession.order) {
+                remainingMs += (if (player.police) 210 else 180) * 1000L
+            }
+
+            return currentEnd + remainingMs + 30_000L
+        }
+
+        // Otherwise check the expel session for the current voting timer
+        val expelSession = expelService.getExpelSession(guildId)
+        if (expelSession != null) {
+            return expelSession.endTime
+        }
+
+        return session.stateData.stepStartTime + 30_000L
     }
 
     private fun startExpelPoll(session: Session) {
@@ -65,11 +93,11 @@ class VotingStep(
             .mapValues { Candidate(player = it.value, expelPK = true) }
 
         expelService.setPollCandidates(session.guildId, candidates.toMutableMap())
-        expelService.startExpelPoll(session, getDurationSeconds(session))
+        expelService.startExpelPoll(session, 30)
         session.addLog(LogType.EXPEL_POLL_STARTED, "放逐投票開始", null)
 
         // Delegate UI creation & scheduling to ExpelService
-        expelService.startExpelPollUI(session, channel, true, (getDurationSeconds(session) * 1000L)) {
+        expelService.startExpelPollUI(session, channel, true, 30_000L) {
             WerewolfApplication.gameStateService.nextStep(session)
         }
     }

@@ -7,27 +7,6 @@ import dev.robothanzo.werewolf.game.model.getAvailableActionsForPlayer
 import dev.robothanzo.werewolf.game.steps.NightStep
 import dev.robothanzo.werewolf.game.steps.NightTask
 
-// 0.5. Magician (Runs after Nightmare/Brother, before Dream Weaver/Wolves)
-// Actually Nightmare is 0. Magician should be early.
-// Let's check NightSequence in NightStep.kt.
-// Nightmare -> WolfBrother -> WerewolfVoting -> RoleActions
-// Magician should be before WerewolfVoting.
-// And Magician might affect Dream Weaver? Dream Weaver is in RoleActions.
-// Magician swap affects "actions targeting".
-// Dream Weaver links 2 players. If Magician swaps A and B. Dream Weaver links A.
-// Does it link B? Yes.
-// So Magician should happen before any action that targets.
-// Nightmare targets? "Nightmare Fear".
-// If Magician swaps A and B. Nightmare fears A.
-// Should B be feared?
-// Description says: "Magician exchanges... logic... when Wolf kills 1... Witch sees 1... Seer checks 1..."
-// It doesn't explicitly mention Nightmare. But generally swap affects all target-based actions.
-// HOWEVER, Magician acts "every night".
-// Nightmare acts at start of night.
-// If Magician acts simultaneously or after?
-// Usually Magician acts very early.
-// Let's place Magician tasks here.
-
 object MagicianStart : NightTask {
     override val phase = NightPhase.MAGICIAN_ACTION
     override suspend fun execute(step: NightStep, guildId: Long): Boolean {
@@ -43,15 +22,16 @@ object MagicianStart : NightTask {
                 if (swapAction != null) {
                     lockedSession.stateData.phaseType = NightPhase.MAGICIAN_ACTION
                     val startTime = System.currentTimeMillis()
+                    val durationMs = NightPhase.MAGICIAN_ACTION.defaultDurationMs
                     lockedSession.stateData.phaseStartTime = startTime
-                    lockedSession.stateData.phaseEndTime = startTime + 60_000 // 60s
+                    lockedSession.stateData.phaseEndTime = startTime + durationMs
 
                     step.actionUIService.promptPlayerForAction(
                         guildId,
                         lockedSession,
                         magician.id,
                         listOf(swapAction),
-                        60
+                        (durationMs / 1000L).toInt()
                     )
                     return@withLockedSession true
                 }
@@ -64,7 +44,8 @@ object MagicianStart : NightTask {
 object MagicianWait : NightTask {
     override val phase = NightPhase.MAGICIAN_ACTION
     override suspend fun execute(step: NightStep, guildId: Long): Boolean {
-        val finishedEarly = step.waitForCondition(guildId, 60) {
+        val durationSeconds = (NightPhase.MAGICIAN_ACTION.defaultDurationMs / 1000L).toInt()
+        val finishedEarly = step.waitForCondition(guildId, durationSeconds) {
             val session = step.gameSessionService.getSession(guildId).orElse(null) ?: return@waitForCondition true
             if (session.stateData.phaseType != NightPhase.MAGICIAN_ACTION) return@waitForCondition true
             val swapAction = session.stateData.submittedActions.find { it.actorRole == "魔術師" }

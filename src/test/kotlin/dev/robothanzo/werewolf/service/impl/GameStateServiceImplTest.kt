@@ -19,17 +19,17 @@ class GameStateServiceImplTest {
     private val step1: GameStep = mock {
         on { id } doReturn "NIGHT_PHASE"
         on { name } doReturn "天黑請閉眼"
-        on { getDurationSeconds(any()) } doReturn 60
+        on { getEndTime(any()) } doReturn (System.currentTimeMillis() + 60_000L)
     }
     private val step2: GameStep = mock {
         on { id } doReturn "SHERIFF_ELECTION"
         on { name } doReturn "警長競選"
-        on { getDurationSeconds(any()) } doReturn 30
+        on { getEndTime(any()) } doReturn (System.currentTimeMillis() + 30_000L)
     }
     private val dayStep: GameStep = mock {
         on { id } doReturn "DAY_PHASE"
         on { name } doReturn "天亮了"
-        on { getDurationSeconds(any()) } doReturn 5
+        on { getEndTime(any()) } doReturn (System.currentTimeMillis() + 5_000L)
     }
     private val setupStep: GameStep = mock {
         on { id } doReturn "SETUP"
@@ -47,6 +47,7 @@ class GameStateServiceImplTest {
         WerewolfApplication.gameSessionService = sessionService
         WerewolfApplication.jda = jda
         gameStateService = GameStateServiceImpl(sessionService, listOf(step1, step2, setupStep, dayStep, judgeStep))
+        WerewolfApplication.gameStateService = gameStateService
 
         // Mock withLockedSession(Long, (Session) -> T)
         whenever(sessionService.withLockedSession(any<Long>(), any<(Session) -> Any?>())).thenAnswer { invocation ->

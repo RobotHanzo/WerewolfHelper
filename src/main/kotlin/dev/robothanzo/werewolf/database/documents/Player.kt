@@ -309,12 +309,6 @@ data class Player(
                     timeLeft
                 )
 
-                // Extend session duration if we are in DEATH_ANNOUNCEMENT step
-                if (lockedSession.currentState == "DEATH_ANNOUNCEMENT") {
-                    val now = System.currentTimeMillis()
-                    lockedSession.currentStepEndTime = maxOf(lockedSession.currentStepEndTime, now + (timeLeft * 1000L))
-                    WerewolfApplication.gameSessionService.broadcastSessionUpdate(lockedSession)
-                }
             }
         }
 

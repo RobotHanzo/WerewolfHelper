@@ -24,7 +24,7 @@ class DeathAnnouncementStep(
     private val roleActionExecutor: RoleActionExecutor,
     @param:Lazy
     private val gameSessionService: GameSessionService
-) : GameStep, RoleEventListener {
+) : GameStep(), RoleEventListener {
     override val id = "DEATH_ANNOUNCEMENT"
     override val name = "宣布死訊"
     private val log = LoggerFactory.getLogger(DeathAnnouncementStep::class.java)
@@ -41,6 +41,7 @@ class DeathAnnouncementStep(
     }
 
     override fun onStart(session: Session, service: GameStateService) {
+        super.onStart(session, service)
         val guildId = session.guildId
         val deadPlayerIds = mutableListOf<Int>()
 
@@ -84,11 +85,6 @@ class DeathAnnouncementStep(
             } else {
                 lockedSession.courtTextChannel?.sendMessage("# **:angel: 昨晚是平安夜**")?.queue()
             }
-
-            // Set initial end time based on triggers (can be updated by triggers later)
-            // We set a base time, but the async process will control the flow mostly.
-            val duration = getDurationSeconds(lockedSession)
-            lockedSession.currentStepEndTime = System.currentTimeMillis() + (duration * 1000L)
 
             log.info("Death announcement started for guild $guildId. Deaths: $allDeaths")
             gameSessionService.broadcastSessionUpdate(lockedSession)
@@ -173,8 +169,7 @@ class DeathAnnouncementStep(
         return mapOf("success" to true)
     }
 
-    override fun getDurationSeconds(session: Session): Int {
-        // Use a persistent way to count active triggers
+    override fun getEndTime(session: Session): Long {
         val triggerCount = session.stateData.submittedActions.count { instance ->
             val isUnprocessed = instance.status != ActionStatus.PROCESSED && instance.status != ActionStatus.SKIPPED
 
@@ -187,6 +182,7 @@ class DeathAnnouncementStep(
             }
         }
 
-        return 10 + (triggerCount * 30)
+        val durationSeconds = 10 + (triggerCount * 30)
+        return session.stateData.stepStartTime + (durationSeconds * 1000L)
     }
 }

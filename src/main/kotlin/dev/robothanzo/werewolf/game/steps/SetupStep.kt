@@ -18,11 +18,12 @@ class SetupStep(
     @param:Lazy
     private val gameStateService: GameStateService,
     private val expelService: ExpelService
-) : GameStep {
+) : GameStep() {
     override val id = "SETUP"
     override val name = "遊戲設置"
 
     override fun onStart(session: Session, service: GameStateService) {
+        super.onStart(session, service)
         speechService.interruptSession(session.guildId)
         policeService.interrupt(session.guildId)
         expelService.removePoll(session.guildId)
@@ -63,7 +64,4 @@ class SetupStep(
         }
     }
 
-    override fun getDurationSeconds(session: Session): Int {
-        return -1 // Manual start
-    }
 }

@@ -4,38 +4,42 @@ import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.service.GameStateService
 
 /**
- * Interface for a step in the game (e.g., Night, Speech, Voting).
+ * Abstract class for a step in the game (e.g., Night, Speech, Voting).
+ * Handles common logic like start time tracking.
  */
-interface GameStep {
+abstract class GameStep {
     /**
      * The unique identifier for this step.
      */
-    val id: String
+    abstract val id: String
 
     /**
      * The human-readable name of this step (for display).
      */
-    val name: String
+    abstract val name: String
 
     /**
      * Called when the game enters this step.
+     * Records the start time by default.
      */
-    fun onStart(session: Session, service: GameStateService)
+    open fun onStart(session: Session, service: GameStateService) {
+        session.stateData.stepStartTime = System.currentTimeMillis()
+    }
 
     /**
      * Called when the game leaves this step.
      */
-    fun onEnd(session: Session, service: GameStateService)
+    open fun onEnd(session: Session, service: GameStateService) {}
 
     /**
      * Handles inputs from the judge or players specific to this step.
      * @return Result of the action (success/failure/message)
      */
-    fun handleInput(session: Session, input: Map<String, Any>): Map<String, Any>
+    abstract fun handleInput(session: Session, input: Map<String, Any>): Map<String, Any>
 
     /**
-     * Estimated duration in seconds for this step.
-     * Return -1 for indefinite (manual advance).
+     * Get the expected end time timestamp for this step.
+     * @return timestamp in ms, or 0 if indefinite.
      */
-    fun getDurationSeconds(session: Session): Int = -1
+    open fun getEndTime(session: Session): Long = 0L
 }

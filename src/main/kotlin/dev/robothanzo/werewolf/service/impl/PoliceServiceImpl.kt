@@ -89,16 +89,6 @@ class PoliceServiceImpl(
             if (player.alive) {
                 policeSession.candidates[player.id] = Candidate(player = player)
 
-                // Dynamic time adjustment: Only add extra phases when there are at least 2 candidates
-                val candidateCount = policeSession.candidates.size
-                if (candidateCount == 2) {
-                    // Add speech (2*180), unenroll (20), voting (30)
-                    session.currentStepEndTime += (2 * 180 + 20 + 30) * 1000L
-                } else if (candidateCount > 2) {
-                    // Each additional candidate adds 180s speech time
-                    session.currentStepEndTime += 180 * 1000L
-                }
-
                 event.hook.editOriginal(":white_check_mark: 已參選").queue()
 
                 val metadata = mutableMapOf<String, Any>()
@@ -134,14 +124,6 @@ class PoliceServiceImpl(
             if (policeSession.state.canEnroll()) { // ENROLLMENT -> Remove completely
                 policeSession.candidates.remove(playerId)
 
-                // Dynamic time adjustment: Reduce total duration
-                val candidateCount = policeSession.candidates.size
-                if (candidateCount == 1) {
-                    session.currentStepEndTime -= (2 * 180 + 20 + 30) * 1000L
-                } else if (candidateCount >= 2) {
-                    session.currentStepEndTime -= 180 * 1000L
-                }
-
                 val metadata: MutableMap<String, Any> = HashMap()
                 metadata["playerId"] = candidate.player.id
                 metadata["playerName"] = candidate.player.nickname
@@ -169,12 +151,6 @@ class PoliceServiceImpl(
             } else if (policeSession.state.canQuit()) { // UNENROLLMENT or SPEECH -> Mark quit
                 if (candidate.quit) return@withLockedSession true // Already quit
                 candidate.quit = true
-
-                // Dynamic time adjustment: If only one remains, the voting phase won't happen
-                val remainingCount = policeSession.candidates.values.count { !it.quit }
-                if (remainingCount == 1 && policeSession.state == PoliceSession.State.UNENROLLMENT) {
-                    session.currentStepEndTime -= 30000L
-                }
 
                 // Use session helper to announce cancel in court
                 session.courtTextChannel?.sendMessage(
@@ -241,7 +217,6 @@ class PoliceServiceImpl(
                     policeSession.stageEndTime = System.currentTimeMillis() + enrollmentDurationMs
 
                     // Initially set to only include enrollment time
-                    session.currentStepEndTime = policeSession.stageEndTime
                     policeSession.candidates.clear()
 
                     session.addLog(
@@ -312,7 +287,6 @@ class PoliceServiceImpl(
                     policeSession.state = PoliceSession.State.UNENROLLMENT
                     val unenrollDurationMs = 20000L
                     policeSession.stageEndTime = System.currentTimeMillis() + unenrollDurationMs
-                    session.currentStepEndTime = policeSession.stageEndTime + 30000L // 30s voting remains
 
                     // Use session helper to announce end of speeches
                     session.courtTextChannel?.sendMessage("政見發表結束，參選人有20秒進行退選，20秒後自動開始投票")
@@ -348,7 +322,6 @@ class PoliceServiceImpl(
                     policeSession.state = PoliceSession.State.VOTING
                     val votingDurationMs = 30000L
                     policeSession.stageEndTime = System.currentTimeMillis() + votingDurationMs
-                    session.currentStepEndTime = policeSession.stageEndTime
 
                     gameSessionService.broadcastSessionUpdate(session)
                     startVoting(channel, true, policeSession)
@@ -490,7 +463,6 @@ class PoliceServiceImpl(
             policeSession.state = PoliceSession.State.VOTING
             val pkVotingDurationMs = 30000L
             policeSession.stageEndTime = System.currentTimeMillis() + pkVotingDurationMs
-            policeSession.session.currentStepEndTime = policeSession.stageEndTime
             gameSessionService.broadcastSessionUpdate(policeSession.session)
             startVoting(channel, false, policeSession)
         }
