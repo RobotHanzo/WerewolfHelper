@@ -8,6 +8,7 @@ import {
   Settings2,
   Sun,
   Users,
+  X,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -38,6 +39,10 @@ interface SidebarProps {
   currentState?: string;
   guildId?: string;
   isManualStep?: boolean;
+
+  // Mobile
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -59,6 +64,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentState,
   guildId,
   isManualStep = false,
+  isOpen = false,
+  onClose,
 }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -86,15 +93,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isLobby = currentState === 'SETUP' || !currentState;
 
   return (
-    <aside className="w-full md:w-64 bg-slate-100 dark:bg-slate-950 border-r border-slate-300 dark:border-slate-800 flex flex-col shrink-0">
-      <div className="p-6 flex items-center gap-3 border-b border-slate-300 dark:border-slate-800">
-        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-          <Moon className="w-5 h-5 text-white" />
+    <aside
+      className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-100 dark:bg-slate-950 border-r border-slate-300 dark:border-slate-800 flex flex-col shrink-0 transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
+        isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+      }`}
+    >
+      <div className="p-6 flex items-center justify-between border-b border-slate-300 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <Moon className="w-5 h-5 text-white" />
+          </div>
+          <span className="font-bold text-lg text-slate-900 dark:text-slate-100 tracking-tight">
+            {t('app.title').split('助手')[0]}
+            <span className="text-indigo-500 dark:text-indigo-400">助手</span>
+          </span>
         </div>
-        <span className="font-bold text-lg text-slate-900 dark:text-slate-100 tracking-tight">
-          {t('app.title').split('助手')[0]}
-          <span className="text-indigo-500 dark:text-indigo-400">助手</span>
-        </span>
+        {/* Mobile Close Button */}
+        <button
+          onClick={onClose}
+          className="md:hidden p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       <div className="p-4 border-b border-slate-300 dark:border-slate-800 space-y-4">

@@ -4,3 +4,4 @@ build/
 /.env
 /libs
 bin/
+.kotlin/

@@ -88,9 +88,9 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIde
         </div>
       </header>
 
-      <div className="grid grid-cols-12 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 px-4 lg:px-0 pb-20">
         {/* Left Sidebar: Faction Statistics */}
-        <aside className="col-span-3 space-y-6">
+        <aside className="lg:col-span-3 space-y-6">
           <div className="flex items-center gap-2 text-slate-400 font-black text-sm uppercase tracking-[0.3em] mb-4">
             <Activity className="w-4 h-4" />
             <span>{t('spectator.factionStats')}</span>
@@ -154,12 +154,12 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIde
         </aside>
 
         {/* Main Content */}
-        <main className="col-span-9 space-y-12">
+        <main className="lg:col-span-9 space-y-8 lg:space-y-12">
           {/* Win Tracking Banner */}
-          <section className="bg-slate-900/30 border border-slate-800/50 rounded-3xl p-10 relative overflow-hidden backdrop-blur-md">
-            <div className="flex items-center justify-between gap-12">
+          <section className="bg-slate-900/30 border border-slate-800/50 rounded-3xl p-6 md:p-10 relative overflow-hidden backdrop-blur-md">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12">
               {/* Good Faction Progress */}
-              <div className="flex-1 space-y-5">
+              <div className="flex-1 space-y-5 w-full">
                 <div className="flex items-center justify-between text-xl font-black tracking-widest text-blue-400 uppercase">
                   <span>
                     {doubleIdentities && stats.jbbs > 0
@@ -183,7 +183,7 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIde
               </div>
 
               {/* Wolf Faction Progress */}
-              <div className="flex-1 space-y-5">
+              <div className="flex-1 space-y-5 w-full">
                 <div className="flex items-center justify-between text-xl font-black tracking-widest text-red-400 uppercase">
                   <span>{Math.round(winProgressWolves)}%</span>
                   <span>
@@ -216,7 +216,7 @@ export const SpectatorView: React.FC<SpectatorViewProps> = ({ players, doubleIde
               </div>
             </div>
 
-            <div className="grid grid-cols-6 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
               {players.map((player, idx) => (
                 <SpectatorPlayerCard key={player.id || idx} player={player} />
               ))}

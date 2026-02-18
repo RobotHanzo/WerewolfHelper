@@ -329,8 +329,8 @@ export const GameSettingsPage: React.FC = () => {
               <h2 className="text-xl">{t('settings.playerCount')}</h2>
             </div>
             <div className="bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
-              <div className="flex items-center justify-between gap-8">
-                <div className="space-y-1.5 flex-1">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-8">
+                <div className="space-y-1.5 flex-1 w-full">
                   <label className="text-lg font-bold text-slate-900 dark:text-slate-100 block">
                     {t('settings.totalPlayers')}
                   </label>
@@ -347,6 +347,7 @@ export const GameSettingsPage: React.FC = () => {
                   loading={updatingPlayerCount}
                   disabled={updatingPlayerCount}
                   variant="card"
+                  className="w-fit"
                 />
               </div>
 

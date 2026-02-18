@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MessageSquare, X } from 'lucide-react';
+import { Menu, MessageSquare, X } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { useAuth } from '@/features/auth/contexts/AuthContext';
 
@@ -37,6 +37,7 @@ export const PlayerManager = () => {
   const popupCloseTimeoutRef = useRef<number | null>(null);
   const [lastSeenLogCount, setLastSeenLogCount] = useState(0);
   const [isSpectatorSimulation, setIsSpectatorSimulation] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Business Logic Hooks
   const {
@@ -164,13 +165,43 @@ export const PlayerManager = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans flex flex-col md:flex-row overflow-hidden">
+      {/* Mobile Header */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          className="p-2 -ml-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+        <span className="font-bold text-lg text-slate-900 dark:text-slate-100">
+          {t('app.title').split('助手')[0]}
+          <span className="text-indigo-500 dark:text-indigo-400">助手</span>
+        </span>
+        <div className="w-10" /> {/* Spacer */}
+      </div>
+
       <Sidebar
         onLogout={logout}
-        onSettingsClick={() => navigate(`/server/${guildId}/settings`)}
-        onDashboardClick={() => navigate(`/server/${guildId}`)}
-        onPlayersClick={() => navigate(`/server/${guildId}/players`)}
-        onSpectatorClick={() => navigate(`/server/${guildId}/spectator`)}
-        onSpeechClick={() => navigate(`/server/${guildId}/speech`)}
+        onSettingsClick={() => {
+          navigate(`/server/${guildId}/settings`);
+          setIsSidebarOpen(false);
+        }}
+        onDashboardClick={() => {
+          navigate(`/server/${guildId}`);
+          setIsSidebarOpen(false);
+        }}
+        onPlayersClick={() => {
+          navigate(`/server/${guildId}/players`);
+          setIsSidebarOpen(false);
+        }}
+        onSpectatorClick={() => {
+          navigate(`/server/${guildId}/spectator`);
+          setIsSidebarOpen(false);
+        }}
+        onSpeechClick={() => {
+          navigate(`/server/${guildId}/speech`);
+          setIsSidebarOpen(false);
+        }}
         onSwitchServer={() => navigate('/')}
         onToggleSpectatorMode={toggleSpectatorSimulation}
         isSpectatorMode={isSpectatorSimulation}
@@ -183,7 +214,17 @@ export const PlayerManager = () => {
         currentState={gameState.currentState}
         guildId={guildId}
         isManualStep={false}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
+
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden animate-in fade-in duration-200"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         <div className="flex-1 overflow-hidden relative flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-900/30">
           <div className="flex-1 overflow-y-auto scrollbar-hide p-4 md:p-8">
@@ -330,7 +371,7 @@ export const PlayerManager = () => {
 
               if (playerSelectModal.type === 'ASSIGN_JUDGE') return !isJudge;
               if (playerSelectModal.type === 'DEMOTE_JUDGE') return isJudge;
-              if (playerSelectModal.type === 'FORCE_POLICE') return !!p.alive;
+              if (playerSelectModal.type === 'FORCE_POLICE') return p.alive;
               if (playerSelectModal.type === 'ADD_SPECTATOR')
                 return !isPlayer && !isJudge && !isSpectator;
               if (playerSelectModal.type === 'REMOVE_SPECTATOR') return isSpectator;

@@ -122,7 +122,8 @@
     "eliminated": "已死亡",
     "gameStageTitle": "遊戲階段",
     "nightPhase": "夜晚",
-    "day": "白天"
+    "day": "白天",
+    "gameControls": "遊戲控制"
   },
   "steps": {
     "setup": "遊戲設置",

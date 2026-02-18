@@ -7,9 +7,11 @@ import {
   Shuffle,
   SkipForward,
   Skull,
+  Settings2,
   StepForward,
   Sun,
   Users,
+  X,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { useMutation } from '@tanstack/react-query';
@@ -45,6 +47,7 @@ export const MainDashboard = ({
   const [transitionClass, setTransitionClass] = useState('stage-enter-forward');
   const [isStageAnimating, setIsStageAnimating] = useState(false);
   const [lastWordsTimeLeft, setLastWordsTimeLeft] = useState(0);
+  const [showMobileControls, setShowMobileControls] = useState(false);
 
   // Mutations
   const setState = useMutation(setStateMutation());
@@ -445,7 +448,15 @@ export const MainDashboard = ({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full h-full">
+    <div className="flex flex-col-reverse lg:grid lg:grid-cols-4 gap-6 w-full h-full p-4 lg:p-0">
+      {/* Mobile Toggle Button */}
+      <button
+        onClick={() => setShowMobileControls((prev) => !prev)}
+        className="lg:hidden fixed bottom-24 right-6 z-[100] p-4 rounded-full bg-slate-800 text-white shadow-xl shadow-slate-900/30 hover:bg-slate-700 transition-all active:scale-95"
+      >
+        {showMobileControls ? <X className="w-6 h-6" /> : <Settings2 className="w-6 h-6" />}
+      </button>
+
       {/* Left: Stage Content Area */}
       <div
         className={`lg:col-span-3 min-w-0 overflow-y-auto ${isStageAnimating ? 'scrollbar-hide' : ''}`}
@@ -458,8 +469,25 @@ export const MainDashboard = ({
       </div>
 
       {/* Right: Stage Navigator */}
-      <div className="space-y-4">
-        {/* Navigation Controls */}
+      <div
+        className={`fixed inset-0 z-50 lg:static lg:z-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm lg:bg-transparent lg:dark:bg-transparent lg:backdrop-blur-none transition-transform duration-300 ease-in-out ${
+          showMobileControls ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
+        }`}
+      >
+        <div className="h-full overflow-y-auto p-6 lg:p-0 lg:overflow-visible space-y-4 lg:sticky lg:top-0">
+          <div className="flex items-center justify-between lg:hidden mb-4">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              {t('dashboard.gameControls')}
+            </h3>
+            <button
+              onClick={() => setShowMobileControls(false)}
+              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Navigation Controls */}
         <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
             <StepForward className="w-4 h-4" />
@@ -523,6 +551,7 @@ export const MainDashboard = ({
           })}
         </div>
       </div>
+    </div>
     </div>
   );
 };
