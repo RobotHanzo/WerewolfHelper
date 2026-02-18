@@ -1,9 +1,9 @@
 version: 2
 updates:
     -   package-ecosystem: "gradle"
-    directory: "/"
-    schedule:
-      interval: "daily"
+        directory: "/"
+        schedule:
+            interval: "daily"
     -   package-ecosystem: "npm"
         directory: "/src/dashboard"
         schedule:
