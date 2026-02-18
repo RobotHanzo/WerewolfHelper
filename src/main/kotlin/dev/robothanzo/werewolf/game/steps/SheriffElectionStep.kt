@@ -15,6 +15,9 @@ class SheriffElectionStep(
 ) : GameStep {
     override val id = "SHERIFF_ELECTION"
     override val name = "警長參選"
+    override fun getDurationSeconds(session: Session): Int {
+        return 30
+    }
 
     override fun onStart(session: Session, service: GameStateService) {
         WerewolfApplication.jda.getGuildById(session.guildId) ?: return

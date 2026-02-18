@@ -58,137 +58,165 @@ class PoliceServiceImpl(
     override fun enrollPolice(event: ButtonInteractionEvent) {
         event.deferReply(true).queue()
         val guild = event.guild ?: return
-        val session = CmdUtils.getSession(guild) ?: return
+        val guildId = guild.idLong
 
-        val policeSession = sessions[guild.idLong]
-        if (policeSession == null) {
-            event.hook.editOriginal(":x: 無法參選，時間已到").queue()
-            return
-        }
+        gameSessionService.withLockedSession(guildId) { session ->
+            val policeSession = sessions[guildId]
+            if (policeSession == null) {
+                event.hook.editOriginal(":x: 無法參選，時間已到").queue()
+                return@withLockedSession
+            }
 
-        val player = event.member?.player() ?: run {
-            event.hook.editOriginal(":x: 你不是玩家").queue()
-            return
-        }
+            val player = event.member?.player() ?: run {
+                event.hook.editOriginal(":x: 你不是玩家").queue()
+                return@withLockedSession
+            }
 
-        if (policeSession.candidates.containsKey(player.id)) {
-            val result = quitEnrollment(guild.idLong, player.id)
-            event.hook.editOriginal(
-                if (result) ":white_check_mark: 已取消參選"
-                else ":x: 無法取消參選，投票已開始"
-            ).queue()
-            return
-        }
+            if (policeSession.candidates.containsKey(player.id)) {
+                val result = quitEnrollment(guildId, player.id)
+                event.hook.editOriginal(
+                    if (result) ":white_check_mark: 已取消參選"
+                    else ":x: 無法取消參選，投票已開始"
+                ).queue()
+                return@withLockedSession
+            }
 
-        if (!policeSession.state.canEnroll()) {
-            event.hook.editOriginal(":x: 無法參選，時間已到").queue()
-            return
-        }
+            if (!policeSession.state.canEnroll()) {
+                event.hook.editOriginal(":x: 無法參選，時間已到").queue()
+                return@withLockedSession
+            }
 
-        if (player.alive) {
-            policeSession.candidates[player.id] = Candidate(player = player)
-            event.hook.editOriginal(":white_check_mark: 已參選").queue()
+            if (player.alive) {
+                policeSession.candidates[player.id] = Candidate(player = player)
 
-            val metadata = mutableMapOf<String, Any>()
-            metadata["playerId"] = player.id
-            metadata["playerName"] = player.nickname
-            session.addLog(
-                LogType.POLICE_ENROLLED,
-                "${player.nickname} 已參選警長", metadata
-            )
+                // Dynamic time adjustment: Only add extra phases when there are at least 2 candidates
+                val candidateCount = policeSession.candidates.size
+                if (candidateCount == 2) {
+                    // Add speech (2*180), unenroll (20), voting (30)
+                    session.currentStepEndTime += (2 * 180 + 20 + 30) * 1000L
+                } else if (candidateCount > 2) {
+                    // Each additional candidate adds 180s speech time
+                    session.currentStepEndTime += 180 * 1000L
+                }
 
-            // Record for replay
-            session.stateData.policeEnrollmentHistory.add(
-                dev.robothanzo.werewolf.game.model.PoliceEnrollmentRecord(
-                    day = session.day,
-                    playerId = player.id,
-                    type = dev.robothanzo.werewolf.database.documents.ReplayEventType.POLICE_ENROLL,
-                    stage = dev.robothanzo.werewolf.database.documents.PoliceActionStage.ENROLLMENT
+                event.hook.editOriginal(":white_check_mark: 已參選").queue()
+
+                val metadata = mutableMapOf<String, Any>()
+                metadata["playerId"] = player.id
+                metadata["playerName"] = player.nickname
+                session.addLog(
+                    LogType.POLICE_ENROLLED,
+                    "${player.nickname} 已參選警長", metadata
                 )
-            )
 
-            gameSessionService.broadcastSessionUpdate(session)
-            return
+                // Record for replay
+                session.stateData.policeEnrollmentHistory.add(
+                    dev.robothanzo.werewolf.game.model.PoliceEnrollmentRecord(
+                        day = session.day,
+                        playerId = player.id,
+                        type = dev.robothanzo.werewolf.database.documents.ReplayEventType.POLICE_ENROLL,
+                        stage = dev.robothanzo.werewolf.database.documents.PoliceActionStage.ENROLLMENT
+                    )
+                )
+
+                gameSessionService.broadcastSessionUpdate(session)
+                return@withLockedSession
+            }
+            event.hook.editOriginal(":x: 你不是玩家").queue()
         }
-        event.hook.editOriginal(":x: 你不是玩家").queue()
     }
 
     override fun quitEnrollment(guildId: Long, playerId: Int): Boolean {
-        val policeSession = sessions[guildId] ?: return false
-        val candidate = policeSession.candidates[playerId] ?: return false
-        val session = policeSession.session
+        return gameSessionService.withLockedSession(guildId) { session ->
+            val policeSession = sessions[guildId] ?: return@withLockedSession false
+            val candidate = policeSession.candidates[playerId] ?: return@withLockedSession false
 
-        if (policeSession.state.canEnroll()) { // ENROLLMENT -> Remove completely
-            policeSession.candidates.remove(playerId)
+            if (policeSession.state.canEnroll()) { // ENROLLMENT -> Remove completely
+                policeSession.candidates.remove(playerId)
 
-            val metadata: MutableMap<String, Any> = HashMap()
-            metadata["playerId"] = candidate.player.id
-            metadata["playerName"] = candidate.player.nickname
-            session.addLog(
-                LogType.POLICE_UNENROLLED,
-                buildString {
-                    append(candidate.player.nickname)
-                    append(" 已取消參選警長")
-                }, metadata
-            )
+                // Dynamic time adjustment: Reduce total duration
+                val candidateCount = policeSession.candidates.size
+                if (candidateCount == 1) {
+                    session.currentStepEndTime -= (2 * 180 + 20 + 30) * 1000L
+                } else if (candidateCount >= 2) {
+                    session.currentStepEndTime -= 180 * 1000L
+                }
 
-            gameSessionService.broadcastSessionUpdate(session)
-
-            // Record for replay
-            session.stateData.policeEnrollmentHistory.add(
-                dev.robothanzo.werewolf.game.model.PoliceEnrollmentRecord(
-                    day = session.day,
-                    playerId = candidate.player.id,
-                    type = dev.robothanzo.werewolf.database.documents.ReplayEventType.POLICE_UNENROLLED,
-                    stage = dev.robothanzo.werewolf.database.documents.PoliceActionStage.ENROLLMENT
+                val metadata: MutableMap<String, Any> = HashMap()
+                metadata["playerId"] = candidate.player.id
+                metadata["playerName"] = candidate.player.nickname
+                session.addLog(
+                    LogType.POLICE_UNENROLLED,
+                    buildString {
+                        append(candidate.player.nickname)
+                        append(" 已取消參選警長")
+                    }, metadata
                 )
-            )
 
-            return true
-        } else if (policeSession.state.canQuit()) { // UNENROLLMENT or SPEECH -> Mark quit
-            if (candidate.quit) return true // Already quit
-            candidate.quit = true
+                gameSessionService.broadcastSessionUpdate(session)
 
-            // Use session helper to announce cancel in court
-            session.courtTextChannel?.sendMessage(
-                (candidate.player.user?.asMention ?: candidate.player.nickname) + " 已取消參選"
-            )?.queue()
+                // Record for replay
+                session.stateData.policeEnrollmentHistory.add(
+                    dev.robothanzo.werewolf.game.model.PoliceEnrollmentRecord(
+                        day = session.day,
+                        playerId = candidate.player.id,
+                        type = dev.robothanzo.werewolf.database.documents.ReplayEventType.POLICE_UNENROLLED,
+                        stage = dev.robothanzo.werewolf.database.documents.PoliceActionStage.ENROLLMENT
+                    )
+                )
 
-            val metadata = mutableMapOf<String, Any>()
-            metadata["playerId"] = candidate.player.id
-            metadata["playerName"] = candidate.player.nickname
-            session.addLog(
-                LogType.POLICE_UNENROLLED,
-                "${candidate.player.nickname} 已取消參選警長", metadata
-            )
+                return@withLockedSession true
+            } else if (policeSession.state.canQuit()) { // UNENROLLMENT or SPEECH -> Mark quit
+                if (candidate.quit) return@withLockedSession true // Already quit
+                candidate.quit = true
 
-            // If in speech phase, remove from order
-            if (policeSession.state == PoliceSession.State.SPEECH) {
-                val speechSession = speechService.getSpeechSession(guildId)
-                if (speechSession != null) {
-                    val wasCurrent = speechSession.lastSpeaker == playerId
-                    speechSession.order.removeIf { it.id == playerId }
-                    if (wasCurrent) {
-                        speechService.skipToNext(guildId)
+                // Dynamic time adjustment: If only one remains, the voting phase won't happen
+                val remainingCount = policeSession.candidates.values.count { !it.quit }
+                if (remainingCount == 1 && policeSession.state == PoliceSession.State.UNENROLLMENT) {
+                    session.currentStepEndTime -= 30000L
+                }
+
+                // Use session helper to announce cancel in court
+                session.courtTextChannel?.sendMessage(
+                    (candidate.player.user?.asMention ?: candidate.player.nickname) + " 已取消參選"
+                )?.queue()
+
+                val metadata = mutableMapOf<String, Any>()
+                metadata["playerId"] = candidate.player.id
+                metadata["playerName"] = candidate.player.nickname
+                session.addLog(
+                    LogType.POLICE_UNENROLLED,
+                    "${candidate.player.nickname} 已取消參選警長", metadata
+                )
+
+                // If in speech phase, remove from order
+                if (policeSession.state == PoliceSession.State.SPEECH) {
+                    val speechSession = speechService.getSpeechSession(guildId)
+                    if (speechSession != null) {
+                        val wasCurrent = speechSession.lastSpeaker == playerId
+                        speechSession.order.removeIf { it.id == playerId }
+                        if (wasCurrent) {
+                            speechService.skipToNext(guildId)
+                        }
                     }
                 }
-            }
 
-            gameSessionService.broadcastSessionUpdate(session)
+                gameSessionService.broadcastSessionUpdate(session)
 
-            // Record for replay
-            session.stateData.policeEnrollmentHistory.add(
-                dev.robothanzo.werewolf.game.model.PoliceEnrollmentRecord(
-                    day = session.day,
-                    playerId = candidate.player.id,
-                    type = dev.robothanzo.werewolf.database.documents.ReplayEventType.POLICE_UNENROLLED,
-                    stage = if (policeSession.state == PoliceSession.State.SPEECH) dev.robothanzo.werewolf.database.documents.PoliceActionStage.SPEECH else dev.robothanzo.werewolf.database.documents.PoliceActionStage.UNENROLLMENT
+                // Record for replay
+                session.stateData.policeEnrollmentHistory.add(
+                    dev.robothanzo.werewolf.game.model.PoliceEnrollmentRecord(
+                        day = session.day,
+                        playerId = candidate.player.id,
+                        type = dev.robothanzo.werewolf.database.documents.ReplayEventType.POLICE_UNENROLLED,
+                        stage = if (policeSession.state == PoliceSession.State.SPEECH) dev.robothanzo.werewolf.database.documents.PoliceActionStage.SPEECH else dev.robothanzo.werewolf.database.documents.PoliceActionStage.UNENROLLMENT
+                    )
                 )
-            )
 
-            return true
+                return@withLockedSession true
+            }
+            false
         }
-        return false
     }
 
     override fun next(guildId: Long) {
@@ -209,7 +237,11 @@ class PoliceServiceImpl(
             when (policeSession.state) {
                 PoliceSession.State.NONE -> {
                     policeSession.state = PoliceSession.State.ENROLLMENT
-                    policeSession.stageEndTime = System.currentTimeMillis() + 30000
+                    val enrollmentDurationMs = 30000L
+                    policeSession.stageEndTime = System.currentTimeMillis() + enrollmentDurationMs
+
+                    // Initially set to only include enrollment time
+                    session.currentStepEndTime = policeSession.stageEndTime
                     policeSession.candidates.clear()
 
                     session.addLog(
@@ -278,7 +310,9 @@ class PoliceServiceImpl(
 
                 PoliceSession.State.SPEECH -> {
                     policeSession.state = PoliceSession.State.UNENROLLMENT
-                    policeSession.stageEndTime = System.currentTimeMillis() + 20000
+                    val unenrollDurationMs = 20000L
+                    policeSession.stageEndTime = System.currentTimeMillis() + unenrollDurationMs
+                    session.currentStepEndTime = policeSession.stageEndTime + 30000L // 30s voting remains
 
                     // Use session helper to announce end of speeches
                     session.courtTextChannel?.sendMessage("政見發表結束，參選人有20秒進行退選，20秒後自動開始投票")
@@ -312,7 +346,9 @@ class PoliceServiceImpl(
                     }
 
                     policeSession.state = PoliceSession.State.VOTING
-                    policeSession.stageEndTime = System.currentTimeMillis() + 30000
+                    val votingDurationMs = 30000L
+                    policeSession.stageEndTime = System.currentTimeMillis() + votingDurationMs
+                    session.currentStepEndTime = policeSession.stageEndTime
 
                     gameSessionService.broadcastSessionUpdate(session)
                     startVoting(channel, true, policeSession)
@@ -452,7 +488,9 @@ class PoliceServiceImpl(
             newCandidates.values.map { it.player }
         ) {
             policeSession.state = PoliceSession.State.VOTING
-            policeSession.stageEndTime = System.currentTimeMillis() + 30000
+            val pkVotingDurationMs = 30000L
+            policeSession.stageEndTime = System.currentTimeMillis() + pkVotingDurationMs
+            policeSession.session.currentStepEndTime = policeSession.stageEndTime
             gameSessionService.broadcastSessionUpdate(policeSession.session)
             startVoting(channel, false, policeSession)
         }
