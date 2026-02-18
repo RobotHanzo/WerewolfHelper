@@ -12,7 +12,10 @@ object PredefinedRoles {
     const val POLICE_PRIORITY = 400
     const val DARK_MERCHANT_PRIORITY = 50
     const val DREAM_WEAVER_PRIORITY = 60 // Before wolves
+    const val MAGICIAN_PRIORITY = 40 // Before Dream Weaver and Wolves
     const val NIGHTMARE_PRIORITY = 0 // First thing at night
+
+    // Action IDs
 
     // Action IDs
     const val WEREWOLF_KILL = "WEREWOLF_KILL"

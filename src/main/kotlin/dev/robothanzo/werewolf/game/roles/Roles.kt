@@ -47,7 +47,6 @@ class WolfKing(@Transient private val revengeAction: WolfKingRevengeAction) : Ba
         revengeAction.onDeath(context.session, context.actorPlayerId, deathCause ?: DeathCause.UNKNOWN)
     }
 }
-
 @Component
 class DreamWeaver(
     @Transient private val linkAction: DreamWeaverLinkAction
@@ -70,6 +69,7 @@ class Nightmare(
 ) : BaseRole("夢魘", Camp.WEREWOLF) {
     override fun getActions(): List<RoleAction> = listOf(fearAction, killAction)
 }
+
 
 @Component
 class GhostRider(@Transient private val killAction: WerewolfKillAction) : BaseRole("惡靈騎士", Camp.WEREWOLF) {
@@ -143,3 +143,5 @@ class MiracleMerchant(
 ) : BaseMerchant("奇蹟商人", Camp.GOD) {
     override fun getActions(): List<RoleAction> = listOf(tradeSeerAction, tradePoisonAction, tradeGuardAction)
 }
+
+

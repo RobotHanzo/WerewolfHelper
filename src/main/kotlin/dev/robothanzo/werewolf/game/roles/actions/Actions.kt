@@ -21,8 +21,10 @@ class WerewolfKillAction : BaseRoleAction(
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
         if (action.targets.isEmpty()) return accumulatedState
-        val targetId = action.targets.firstOrNull() ?: return accumulatedState
-        if (targetId == SKIP_TARGET_ID) return accumulatedState
+        val rawTargetId = action.targets.firstOrNull() ?: return accumulatedState
+        if (rawTargetId == SKIP_TARGET_ID) return accumulatedState
+
+        val targetId = session.stateData.getRealTarget(rawTargetId)
 
         // Nightmare Check: If any alive wolf is feared, the kill fails
         val fearedId = session.stateData.nightmareFearTargets[session.day]
@@ -133,7 +135,8 @@ class SeerCheckAction(
     ): ActionExecutionResult {
         if (action.targets.isEmpty()) return accumulatedState
 
-        val targetId = action.targets[0]
+        val rawTargetId = action.targets[0]
+        val targetId = session.stateData.getRealTarget(rawTargetId)
         val target = session.getPlayer(targetId) ?: return accumulatedState
 
         val isWolfBrotherAlive = session.alivePlayers().values.any { it.roles.contains("狼兄") }
@@ -169,7 +172,9 @@ class WitchAntidoteAction : BaseRoleAction(
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
-        val targetId = action.targets.firstOrNull() ?: return accumulatedState
+        val rawTargetId = action.targets.firstOrNull() ?: return accumulatedState
+        val targetId = session.stateData.getRealTarget(rawTargetId)
+
         val werewolfKillList = accumulatedState.deaths[DeathCause.WEREWOLF] ?: emptyList()
 
         if (targetId !in werewolfKillList) return accumulatedState
@@ -203,7 +208,8 @@ class WitchPoisonAction : BaseRoleAction(
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
-        val targetId = action.targets.firstOrNull() ?: return accumulatedState
+        val rawTargetId = action.targets.firstOrNull() ?: return accumulatedState
+        val targetId = session.stateData.getRealTarget(rawTargetId)
         accumulatedState.deaths.getOrPut(DeathCause.POISON) { mutableListOf() }.add(targetId)
         return accumulatedState
     }
@@ -283,7 +289,8 @@ abstract class AbstractRevengeAction(
         action: RoleActionInstance,
         accumulatedState: ActionExecutionResult
     ): ActionExecutionResult {
-        val targetId = action.targets.firstOrNull() ?: return accumulatedState
+        val rawTargetId = action.targets.firstOrNull() ?: return accumulatedState
+        val targetId = session.stateData.getRealTarget(rawTargetId)
         accumulatedState.deaths.getOrPut(deathCause) { mutableListOf() }.add(targetId)
 
         // Consume the granted action

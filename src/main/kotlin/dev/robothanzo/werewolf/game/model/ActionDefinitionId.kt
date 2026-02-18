@@ -41,6 +41,9 @@ enum class ActionDefinitionId(val actionName: String) {
     // Miracle Merchant Actions
     MIRACLE_MERCHANT_TRADE_GUARD("交易 (守衛守護)"),
 
+    // Magician Actions
+    MAGICIAN_SWAP("交換"),
+
     // Dream Weaver Actions
     DREAM_WEAVER_LINK("攝夢"),
 

@@ -11,6 +11,7 @@ import org.springframework.data.annotation.Transient
 enum class NightPhase {
     NIGHTMARE_ACTION,
     WOLF_YOUNGER_BROTHER_ACTION,
+    MAGICIAN_ACTION,
     WEREWOLF_VOTING,
     ROLE_ACTIONS
 }
@@ -217,6 +218,10 @@ data class GameStateData(
      * Whether the Ghost Rider's reflection ability has been triggered.
      * Derived from executed actions.
      */
+    /**
+     * Whether the Ghost Rider's reflection ability has been triggered.
+     * Derived from executed actions.
+     */
     val ghostRiderReflected: Boolean
         get() = executedActions.values.flatten().any { it.actionDefinitionId == ActionDefinitionId.GHOST_RIDER_REFLECT }
 
@@ -227,6 +232,48 @@ data class GameStateData(
     @get:BsonIgnore
     val detonatedThisDay: Boolean
         get() = submittedActions.any { it.actionDefinitionId == ActionDefinitionId.WOLF_DETONATE }
+
+    // --- Magician Swap Logic ---
+
+    /**
+     * The swap pairing for the current night.
+     */
+    @get:BsonIgnore
+    val nightlySwap: Map<Int, Int>
+        get() {
+            val swapAction =
+                submittedActions.find { it.actionDefinitionId == ActionDefinitionId.MAGICIAN_SWAP && it.status.executed }
+            val targets = swapAction?.targets
+            if (targets == null || targets.size != 2) return emptyMap()
+            return mapOf(targets[0] to targets[1], targets[1] to targets[0])
+        }
+
+    /**
+     * Set of players who have been swapped by the Magician in previous nights (or tonight).
+     * Used to enforce "each number can only be swapped once" rule.
+     */
+    @get:BsonIgnore
+    val magicianSwapTargets: Set<Int>
+        get() {
+            val history = executedActions.values.flatten()
+                .filter { it.actionDefinitionId == ActionDefinitionId.MAGICIAN_SWAP }
+                .flatMap { it.targets }
+                .toSet()
+            // current night's swap is also relevant for validation during the night
+            val current =
+                submittedActions.find { it.actionDefinitionId == ActionDefinitionId.MAGICIAN_SWAP }?.targets
+                    ?: emptyList()
+            return history + current
+        }
+
+    /**
+     * Returns the "Real Target" after applying Magician's swap.
+     * If A and B are swapped, getRealTarget(A) -> B, getRealTarget(B) -> A.
+     * Otherwise returns original targetId.
+     */
+    fun getRealTarget(targetId: Int): Int {
+        return nightlySwap[targetId] ?: targetId
+    }
 }
 
 /**
