@@ -37,11 +37,11 @@ jobs:
                 if: always()
 
             -   name: Generate CTRF Report
-                run: npx ctrf junit build/test-results/test/**/*.xml
+                run: npx junit-to-ctrf build/test-results/test/**/*.xml
                 if: always()
 
             -   name: Publish Test Report
                 uses: ctrf-io/github-test-reporter@v1
                 with:
-                    report-path: 'ctrf-report.json'
+                    report-path: 'ctrf/ctrf-report.json'
                 if: always()
