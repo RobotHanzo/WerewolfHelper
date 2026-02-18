@@ -94,7 +94,7 @@ class HunterTests {
         assertFalse(session.stateData.playerOwnedActions[hunterPlayer.id]?.containsKey(ActionDefinitionId.HUNTER_REVENGE.toString()) == true)
         verify(mockChannel).sendMessage(check<String> { content ->
             assertTrue(content.contains("毒死"))
-            assertTrue(content.contains("無法帶走"))
+            assertTrue(content.contains("無法發動技能"))
         })
     }
 

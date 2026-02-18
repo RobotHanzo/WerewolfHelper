@@ -418,11 +418,10 @@ data class Player(
                 // 1. Process THIS player first
                 // On Day 1, everyone gets Last Words. On later days, usually only the first night death or similar.
                 // For simplicity, we respect the allowLastWords flag passed to runDeathEvents,
-                // but since this is the *entry point* for a death chain, we assume this player SHOULD get them
                 // or specific logic inside runDeathEvents/call sites handles it.
                 // For EXPEL/HUNTER cases on Day 1, they should get it.
-                val isDayOne = session.day <= 1
-                runDeathEvents(isDayOne)
+                val allowLastWords = session.day <= 1
+                runDeathEvents(allowLastWords)
 
                 // 2. Loop for others (Cascading Deaths)
                 while (true) {
@@ -437,8 +436,8 @@ data class Player(
                     } ?: break
 
                     try {
-                        // All cascading victims on Day 1 get last words (Request: "players killed by hunter's skill on the first day")
-                        nextVictim.runDeathEvents(isDayOne)
+                        // All cascading victims on Day 1 get last words
+                        nextVictim.runDeathEvents(allowLastWords)
                     } catch (e: Exception) {
                         e.printStackTrace()
                         // Failsafe: mark processed so we don't loop forever

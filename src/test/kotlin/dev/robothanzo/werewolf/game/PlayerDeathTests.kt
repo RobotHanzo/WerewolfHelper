@@ -315,7 +315,7 @@ class PlayerDeathTests {
     }
 
     @Test
-    fun `test processCascadingDeaths allows Last Words on Day 2`() = runBlocking {
+    fun `test processCascadingDeaths NO Last Words on Day 2`() = runBlocking {
         // Arrange
         session.day = 2
 
@@ -323,12 +323,6 @@ class PlayerDeathTests {
         player.roles.clear(); player.deadRoles.add("Villager")
 
         // Mock acts
-        doAnswer {
-            @Suppress("UNCHECKED_CAST")
-            val callback = it.arguments[3] as () -> Unit
-            callback.invoke()
-        }.whenever(speechService).startLastWordsSpeech(any(), any(), any(), any())
-
         doAnswer { (it.arguments[3] as () -> Unit).invoke() }.whenever(policeService)
             .transferPolice(any(), any(), any(), any())
 
@@ -339,8 +333,8 @@ class PlayerDeathTests {
         withTimeout(5000) { while (!finished) delay(100) }
 
         // Assert
-        // Day 2 -> processCascadingDeaths sets allowLastWords = true (due to <= 2 relax)
-        verify(speechService, times(1)).startLastWordsSpeech(any(), any(), any(), any())
+        // Day 2 -> processCascadingDeaths sets allowLastWords = false
+        verify(speechService, never()).startLastWordsSpeech(any(), any(), any(), any())
         assertTrue(session.stateData.processedDeathPlayerIds.contains(1))
     }
 
