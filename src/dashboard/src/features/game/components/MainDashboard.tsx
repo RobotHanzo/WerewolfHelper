@@ -4,10 +4,10 @@ import {
   CheckCircle,
   Mic,
   Play,
+  Settings2,
   Shuffle,
   SkipForward,
   Skull,
-  Settings2,
   StepForward,
   Sun,
   Users,
@@ -448,7 +448,7 @@ export const MainDashboard = ({
   };
 
   return (
-    <div className="flex flex-col-reverse lg:grid lg:grid-cols-4 gap-6 w-full h-full p-4 lg:p-0">
+    <div className="flex flex-col lg:grid lg:grid-cols-4 gap-6 w-full h-full p-4 lg:p-0">
       {/* Mobile Toggle Button */}
       <button
         onClick={() => setShowMobileControls((prev) => !prev)}
@@ -488,70 +488,70 @@ export const MainDashboard = ({
           </div>
 
           {/* Navigation Controls */}
-        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-            <StepForward className="w-4 h-4" />
-            {t('dashboard.stepNavigator')}
-          </div>
-          {currentId === 'SETUP' ? (
-            <div className="space-y-2">
-              {!session.hasAssignedRoles && (
-                <button
-                  onClick={handleAssignRoles}
-                  disabled={readonly || isWorking}
-                  className="w-full px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-                >
-                  <Shuffle className="w-4 h-4" />
-                  {t('dashboard.assignRoles')}
-                </button>
-              )}
-              <button
-                onClick={handleStartGame}
-                disabled={readonly || isWorking || !session.hasAssignedRoles}
-                className="w-full px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-              >
-                <Play className="w-4 h-4" />
-                {t('dashboard.startGame')}
-              </button>
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+              <StepForward className="w-4 h-4" />
+              {t('dashboard.stepNavigator')}
             </div>
-          ) : (
-            <button
-              onClick={handleNextStep}
-              disabled={readonly || isWorking}
-              className="w-full px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-            >
-              <SkipForward className="w-4 h-4" />
-              {t('dashboard.nextStep')}
-            </button>
-          )}
-        </div>
-
-        {/* Stage Buttons */}
-        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2">
-          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
-            {t('dashboard.allStages')}
-          </div>
-          {steps.map((step) => {
-            const active = step.id === currentId;
-            return (
+            {currentId === 'SETUP' ? (
+              <div className="space-y-2">
+                {!session.hasAssignedRoles && (
+                  <button
+                    onClick={handleAssignRoles}
+                    disabled={readonly || isWorking}
+                    className="w-full px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Shuffle className="w-4 h-4" />
+                    {t('dashboard.assignRoles')}
+                  </button>
+                )}
+                <button
+                  onClick={handleStartGame}
+                  disabled={readonly || isWorking || !session.hasAssignedRoles}
+                  className="w-full px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Play className="w-4 h-4" />
+                  {t('dashboard.startGame')}
+                </button>
+              </div>
+            ) : (
               <button
-                key={step.id}
-                onClick={() => handleSetStep(step.id)}
+                onClick={handleNextStep}
                 disabled={readonly || isWorking}
-                className={`w-full px-3 py-2 rounded-lg border text-sm font-medium transition-all disabled:opacity-50 ${
-                  active
-                    ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700 shadow-md'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
-                }`}
-                title={step.id}
+                className="w-full px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
               >
-                {step.name}
+                <SkipForward className="w-4 h-4" />
+                {t('dashboard.nextStep')}
               </button>
-            );
-          })}
+            )}
+          </div>
+
+          {/* Stage Buttons */}
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2">
+            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+              {t('dashboard.allStages')}
+            </div>
+            {steps.map((step) => {
+              const active = step.id === currentId;
+              return (
+                <button
+                  key={step.id}
+                  onClick={() => handleSetStep(step.id)}
+                  disabled={readonly || isWorking}
+                  className={`w-full px-3 py-2 rounded-lg border text-sm font-medium transition-all disabled:opacity-50 ${
+                    active
+                      ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700 shadow-md'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                  title={step.id}
+                >
+                  {step.name}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
-    </div>
     </div>
   );
 };
