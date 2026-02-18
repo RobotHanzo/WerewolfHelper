@@ -523,8 +523,12 @@ internal object NightSequence {
                     var actions =
                         lockedSession.getAvailableActionsForPlayer(pid, step.roleRegistry, ignoreEffect = true)
                     if (player.wolf) actions = actions.filter { it.actionId != ActionDefinitionId.WEREWOLF_KILL }
-                    if (player.roles.contains("夢魘")) actions =
-                        actions.filter { it.actionId != ActionDefinitionId.NIGHTMARE_FEAR }
+                    actions =
+                        actions.filter { action -> // we don't want to re-execute actions that were executed already at prior phases (e.g. wolf yb, nightmare and magician...etc)
+                            lockedSession.stateData.submittedActions.none {
+                                it.actor == pid && it.actionDefinitionId == action.actionId && it.status.executed
+                            }
+                        }
 
                     if (actions.isNotEmpty()) {
                         if (currentFearedId != null && currentFearedId == pid) {

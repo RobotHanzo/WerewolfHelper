@@ -32,11 +32,11 @@ class MagicianSwapAction : BaseRoleAction(
         alivePlayers: List<Int>,
         accumulatedState: ActionExecutionResult
     ): List<Int> {
-        // Can swap any two players (including self, dead players? description says "exchange two players' numbers")
-        // Usually Magician can swap anyone.
+        // Can swap any two alive players.
         // Constraint: "Each number can only be exchanged once."
-        // Allow selecting already-swapped targets so they can be deselected in UI
-        return session.players.keys.map { it.toInt() }
+        // We filter out players whose numbers have been swapped in previous nights.
+        val usedTargets = session.stateData.magicianSwapTargets
+        return alivePlayers.filter { it !in usedTargets }
     }
 
     override fun validate(session: Session, actor: Int, targets: List<Int>): String? {
