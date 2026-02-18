@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.game.steps
 
+import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.game.model.NightPhase
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
@@ -11,6 +12,7 @@ import dev.robothanzo.werewolf.service.GameStateService
 import dev.robothanzo.werewolf.service.SpeechService
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.ArgumentMatchers.anyLong
@@ -35,6 +37,15 @@ class NightStepTest {
     private lateinit var gameSessionService: GameSessionService
     @Mock
     private lateinit var gameStateService: GameStateService
+
+    @BeforeEach
+    fun setUp() {
+        WerewolfApplication.gameSessionService = gameSessionService
+        WerewolfApplication.gameStateService = gameStateService
+        WerewolfApplication.roleRegistry = roleRegistry
+        WerewolfApplication.roleActionExecutor = roleActionExecutor
+        WerewolfApplication.jda = mock()
+    }
 
     @Test
     fun `processNightPhases should skip skippable tasks when early completion occurs`() = runBlocking {
@@ -254,5 +265,52 @@ class NightStepTest {
         val result = task.execute(step, 1L)
 
         assertTrue(result, "Should return true (continue phase) if voting timed out")
+    }
+
+    @Test
+    fun `MagicianWait logic - Should return FALSE when finished EARLY`() = runBlocking {
+        val step = mock<NightStep>()
+        whenever(step.waitForCondition(anyLong(), any(), any())).thenReturn(true)
+        val task = dev.robothanzo.werewolf.game.steps.tasks.MagicianWait
+        val result = task.execute(step, 1L)
+        assertFalse(result)
+    }
+
+    @Test
+    fun `MagicianWait logic - Should return TRUE when TIMEOUT`() = runBlocking {
+        val step = mock<NightStep>()
+        whenever(step.waitForCondition(anyLong(), any(), any())).thenReturn(false)
+        val task = dev.robothanzo.werewolf.game.steps.tasks.MagicianWait
+        val result = task.execute(step, 1L)
+        assertTrue(result)
+    }
+
+    @Test
+    fun `WolfYoungerBrotherWait logic - Should return FALSE when finished EARLY`() = runBlocking {
+        val step = mock<NightStep>()
+        whenever(step.waitForCondition(anyLong(), any(), any())).thenReturn(true)
+        val task = dev.robothanzo.werewolf.game.steps.tasks.WolfYoungerBrotherWait
+        val result = task.execute(step, 1L)
+        assertFalse(result)
+    }
+
+    @Test
+    fun `WolfYoungerBrotherWait logic - Should return TRUE when TIMEOUT`() = runBlocking {
+        val step = mock<NightStep>()
+        whenever(step.waitForCondition(anyLong(), any(), any())).thenReturn(false)
+        val task = dev.robothanzo.werewolf.game.steps.tasks.WolfYoungerBrotherWait
+        val result = task.execute(step, 1L)
+        assertTrue(result)
+    }
+
+    @Test
+    fun `RoleActionsWait logic - Should return FALSE when finished EARLY`() = runBlocking {
+        val step = mock<NightStep>()
+        // Removed unnecessary stubbing of gameSessionService as waitForCondition is mocked
+        whenever(step.waitForCondition(anyLong(), any(), any())).thenReturn(true)
+
+        val task = dev.robothanzo.werewolf.game.steps.tasks.RoleActionsWait
+        val result = task.execute(step, 1L)
+        assertFalse(result)
     }
 }
