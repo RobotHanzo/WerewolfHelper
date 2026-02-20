@@ -271,25 +271,41 @@ data class GameStateData(
     @get:BsonIgnore
     val dreamWeaverTargets: Map<Int, Int>
         get() {
-            return executedActions.mapNotNull { (day, actions) ->
+            val result = executedActions.mapNotNull { (day, actions) ->
                 val target = actions.find { it.actionDefinitionId == ActionDefinitionId.DREAM_WEAVER_LINK }
                     ?.targets?.firstOrNull()
                 if (target != null) day to target else null
-            }.toMap()
+            }.toMap().toMutableMap()
+
+            submittedActions.find { it.actionDefinitionId == ActionDefinitionId.DREAM_WEAVER_LINK && it.status.executed }
+                ?.targets?.firstOrNull()?.let { target ->
+                    val currentDay = (executedActions.keys.maxOrNull() ?: 0) + 1
+                    result[currentDay] = target
+                }
+
+            return result
         }
 
     /**
      * Map of Nightmare fear targets per day (Day -> TargetId).
-     * Computed from executed actions.
+     * Computed from executed and submitted actions.
      */
     @get:BsonIgnore
     val nightmareFearTargets: Map<Int, Int>
         get() {
-            return executedActions.mapNotNull { (day, actions) ->
+            val result = executedActions.mapNotNull { (day, actions) ->
                 val target = actions.find { it.actionDefinitionId == ActionDefinitionId.NIGHTMARE_FEAR }
                     ?.targets?.firstOrNull()
                 if (target != null) day to target else null
-            }.toMap()
+            }.toMap().toMutableMap()
+
+            submittedActions.find { it.actionDefinitionId == ActionDefinitionId.NIGHTMARE_FEAR && it.status.executed }
+                ?.targets?.firstOrNull()?.let { target ->
+                    val currentDay = (executedActions.keys.maxOrNull() ?: 0) + 1
+                    result[currentDay] = target
+                }
+
+            return result
         }
 }
 
