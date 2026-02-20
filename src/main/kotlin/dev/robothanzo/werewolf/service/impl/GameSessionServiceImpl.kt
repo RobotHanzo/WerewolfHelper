@@ -170,10 +170,11 @@ class GameSessionServiceImpl(
         if (role == UserRole.JUDGE) {
             guild.addRoleToMember(member!!, judgeRole).complete()
         } else if (role == UserRole.SPECTATOR) {
-            guild.removeRoleFromMember(member!!, judgeRole).complete()
+            val wasJudge = member!!.roles.contains(judgeRole)
+            guild.removeRoleFromMember(member, judgeRole).complete()
 
             val spectatorRole = session.spectatorRole
-            if (spectatorRole != null) {
+            if (spectatorRole != null && !wasJudge) {
                 guild.addRoleToMember(member, spectatorRole).complete()
             }
         } else if (role == UserRole.PENDING || role == UserRole.BLOCKED) {
