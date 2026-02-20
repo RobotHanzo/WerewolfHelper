@@ -7,8 +7,11 @@ import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.*
 import dev.robothanzo.werewolf.model.Candidate
 import dev.robothanzo.werewolf.utils.CmdUtils
+import dev.robothanzo.werewolf.utils.MsgUtils
 import dev.robothanzo.werewolf.utils.isAdmin
 import dev.robothanzo.werewolf.utils.player
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.buttons.ButtonStyle
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
@@ -140,7 +143,7 @@ class ButtonListener : ListenerAdapter() {
                             val message =
                                 event.hook.sendMessage(targetMessage)
                                     .setComponents(
-                                        dev.robothanzo.werewolf.utils.MsgUtils.spreadButtonsAcrossActionRows(
+                                        MsgUtils.spreadButtonsAcrossActionRows(
                                             targetButtons
                                         )
                                     )
@@ -168,7 +171,7 @@ class ButtonListener : ListenerAdapter() {
                             val message =
                                 event.hook.sendMessage(targetMessage)
                                     .setComponents(
-                                        dev.robothanzo.werewolf.utils.MsgUtils.spreadButtonsAcrossActionRows(
+                                        MsgUtils.spreadButtonsAcrossActionRows(
                                             targetButtons
                                         )
                                     )
@@ -228,8 +231,29 @@ class ButtonListener : ListenerAdapter() {
                         val targetNames = targets.mapNotNull { session.getPlayer(it)?.nickname }.joinToString(", ")
                         event.hook.editOriginal(":white_check_mark: 已確認選擇目標：**$targetNames**").queue()
 
-                        // Disable buttons on the original message to prevent re-submission
-                        event.message.editMessageComponents(emptyList()).queue()
+                        // Disable buttons on the original message and keep the selection colors
+                        val updatedButtons = mutableListOf<net.dv8tion.jda.api.components.buttons.Button>()
+                        for (component in event.message.components) {
+                            if (component is ActionRow) {
+                                for (button in component.buttons) {
+                                    val buttonId = button.customId ?: ""
+                                    if (buttonId.startsWith("selectTarget:")) {
+                                        val tid = buttonId.split(":")[1].toIntOrNull()
+                                        val isSelected = tid != null && targets.contains(tid)
+                                        val style =
+                                            if (isSelected) ButtonStyle.SUCCESS else ButtonStyle.SECONDARY
+                                        updatedButtons.add(button.withStyle(style).asDisabled())
+                                    } else {
+                                        updatedButtons.add(button.asDisabled())
+                                    }
+                                }
+                            }
+                        }
+                        event.message.editMessageComponents(
+                            MsgUtils.spreadButtonsAcrossActionRows(
+                                updatedButtons
+                            )
+                        ).queue()
                     } else {
                         event.hook.editOriginal(":x: ${result["error"]}").queue()
                     }
@@ -310,17 +334,6 @@ class ButtonListener : ListenerAdapter() {
                     val actionDef =
                         WerewolfApplication.roleActionExecutor.getAction(actionId) ?: return@withLockedSession
 
-                    if (targetIdStr == SKIP_TARGET_ID.toString()) {
-                        // Skip Logic (Immediate)
-                        // ... (keep existing skip logic if needed, but usually skip is a separate button in multi-target)
-                        // Actually, if it's skip, we proceed as single target logic?
-                        // For now, let's assume skip is handled via separate skipAction button in prompt,
-                        // or we treat it as immediate submit.
-                        // But if we are in multi-target mode, maybe we have a "Skip" button in the toggle list?
-                        // Let's keep strict skip logic separate or immediate.
-                        return@withLockedSession
-                    }
-
                     val targetId = targetIdStr.toIntOrNull() ?: return@withLockedSession
 
                     if (actionDef.targetCount > 1) {
@@ -368,28 +381,57 @@ class ButtonListener : ListenerAdapter() {
                         )
 
                         event.hook.editOriginalComponents(
-                            dev.robothanzo.werewolf.utils.MsgUtils.spreadButtonsAcrossActionRows(newButtons)
+                            MsgUtils.spreadButtonsAcrossActionRows(newButtons)
                         ).queue()
 
                     } else {
                         // Single Target Logic (Immediate Submit)
-                        val target = session.getPlayer(targetId) ?: return@withLockedSession
-                        // ... (Existing logic)
+                        val isSkip = targetIdStr == SKIP_TARGET_ID.toString()
+                        val targetsToSubmit = if (isSkip) arrayListOf(SKIP_TARGET_ID) else arrayListOf(targetId)
+                        val targetStatus = if (isSkip) "跳過" else session.getPlayer(targetId)?.nickname ?: "Unknown"
+
+                        // If not skip, verify target exists
+                        if (!isSkip && session.getPlayer(targetId) == null) return@withLockedSession
+
                         val result = session.validateAndSubmitAction(
                             actionId,
                             player.id,
-                            arrayListOf(target.id),
-                            "PLAYER", // Assuming player for simplicity in this block
+                            targetsToSubmit,
+                            "PLAYER",
                             WerewolfApplication.roleRegistry,
                             WerewolfApplication.roleActionExecutor
                         )
+
                         if (result["success"] == true) {
                             WerewolfApplication.actionUIService.clearPrompt(session, player.id)
                             if (actionDef.allowMultiplePerPhase != true) player.actionSubmitted = true
 
-                            // Edit the message components to disable them or show success
-                            event.hook.editOriginalComponents(emptyList()).queue()
-                            event.hook.sendMessage(":white_check_mark: 已選擇 **${target.nickname}**").queue()
+                            // Update buttons: Selected green, others secondary, all disabled
+                            val updatedButtons = mutableListOf<net.dv8tion.jda.api.components.buttons.Button>()
+                            for (component in event.message.components) {
+                                if (component is ActionRow) {
+                                    for (button in component.buttons) {
+                                        val buttonId = button.customId ?: ""
+                                        if (buttonId.startsWith("selectTarget:")) {
+                                            val tid = buttonId.split(":")[1].toIntOrNull()
+                                            val isSelected = tid == (if (isSkip) SKIP_TARGET_ID else targetId)
+                                            val style =
+                                                if (isSelected) ButtonStyle.SUCCESS else ButtonStyle.SECONDARY
+                                            updatedButtons.add(button.withStyle(style).asDisabled())
+                                        } else {
+                                            updatedButtons.add(button.asDisabled())
+                                        }
+                                    }
+                                }
+                            }
+                            event.hook.editOriginalComponents(
+                                MsgUtils.spreadButtonsAcrossActionRows(
+                                    updatedButtons
+                                )
+                            ).queue()
+                            val msg =
+                                if (isSkip) ":white_check_mark: 已跳過行動" else ":white_check_mark: 已選擇 **$targetStatus**"
+                            event.hook.sendMessage(msg).queue()
                         } else {
                             event.hook.sendMessage(":x: ${result["error"]}").setEphemeral(true).queue()
                         }
@@ -401,7 +443,7 @@ class ButtonListener : ListenerAdapter() {
             "end_game_confirm" -> {
                 event.deferReply(true).queue()
                 WerewolfApplication.gameSessionService.withLockedSession(event.guild!!.idLong) { session ->
-                    if (!dev.robothanzo.werewolf.utils.CmdUtils.isAdmin(event)) {
+                    if (!CmdUtils.isAdmin(event)) {
                         event.hook.editOriginal(":x: 只有法官可以執行此操作").queue()
                         return@withLockedSession
                     }
@@ -424,7 +466,7 @@ class ButtonListener : ListenerAdapter() {
             "continue_game" -> {
                 event.deferReply(true).queue()
                 WerewolfApplication.gameSessionService.withLockedSession(event.guild!!.idLong) { session ->
-                    if (!dev.robothanzo.werewolf.utils.CmdUtils.isAdmin(event)) {
+                    if (!CmdUtils.isAdmin(event)) {
                         event.hook.editOriginal(":x: 只有法官可以執行此操作").queue()
                         return@withLockedSession
                     }
