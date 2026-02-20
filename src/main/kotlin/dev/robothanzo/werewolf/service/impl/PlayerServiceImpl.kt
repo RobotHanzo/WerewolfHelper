@@ -183,7 +183,7 @@ class PlayerServiceImpl(
                 throw Exception("你的身分順序已被鎖定")
 
             val roles = player.roles
-            if (roles == null || roles.size < 2)
+            if (roles.size < 2)
                 throw Exception("Not enough roles to switch")
 
             roles.let {

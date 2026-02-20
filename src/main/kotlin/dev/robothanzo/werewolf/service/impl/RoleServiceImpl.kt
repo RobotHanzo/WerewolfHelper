@@ -229,7 +229,7 @@ class RoleServiceImpl(
             val sortedPlayers = session.players.values.sortedBy { it.id }
 
             for (p in sortedPlayers) {
-                val rolesStr = ((p.roles?.joinToString("、") ?: "無") +
+                val rolesStr = ((p.roles.joinToString("、") ?: "無") +
                         (if (p.police) " (警長)" else "") +
                         if (p.jinBaoBao) " (金寶寶)" else if (p.duplicated) " (複製人)" else "")
                 summaryEmbed.addField(p.nickname, rolesStr, true)
