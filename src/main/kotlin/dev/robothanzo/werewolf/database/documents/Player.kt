@@ -399,7 +399,7 @@ data class Player(
      * @param onFinished Callback executed when ALL cascading deaths are resolved.
      */
     @OptIn(DelicateCoroutinesApi::class)
-    fun processCascadingDeaths(onFinished: () -> Unit) {
+    fun processCascadingDeaths(isExpelled: Boolean = false, onFinished: () -> Unit) {
         val session = this.session ?: return
         val guildId = session.guildId
 
@@ -410,31 +410,25 @@ data class Player(
                 }
 
                 // 1. Process THIS player first
-                // On Day 1, everyone gets Last Words. On later days, usually only the first night death or similar.
-                // For simplicity, we respect the allowLastWords flag passed to runDeathEvents,
-                // or specific logic inside runDeathEvents/call sites handles it.
-                // For EXPEL/HUNTER cases on Day 1, they should get it.
-                val allowLastWords = session.day <= 1
-                runDeathEvents(allowLastWords)
+                // On Day 1, everyone gets Last Words.
+                // Voted-out (expelled) players always get last words.
+                val allowFirstLastWords = isExpelled || session.day <= 1
+                runDeathEvents(allowFirstLastWords)
 
                 // 2. Loop for others (Cascading Deaths)
                 while (true) {
-                    // Refresh session to get latest state
                     val currentSession =
                         WerewolfApplication.gameSessionService.getSession(guildId).orElse(null) ?: break
-
-                    // Find next unprocessed dead player
-                    // distinct from any specific logic, just "dead but not processed"
                     val nextVictim = currentSession.players.values.firstOrNull {
                         !it.alive && !currentSession.stateData.processedDeathPlayerIds.contains(it.id)
                     } ?: break
 
                     try {
-                        // All cascading victims on Day 1 get last words
-                        nextVictim.runDeathEvents(allowLastWords)
+                        // Cascading victims (e.g. Hunter target) get last words on Day 1
+                        val allowNextLastWords = currentSession.day <= 1
+                        nextVictim.runDeathEvents(allowNextLastWords)
                     } catch (e: Exception) {
                         e.printStackTrace()
-                        // Failsafe: mark processed so we don't loop forever
                         WerewolfApplication.gameSessionService.withLockedSession(guildId) { s ->
                             s.stateData.processedDeathPlayerIds.add(nextVictim.id)
                         }

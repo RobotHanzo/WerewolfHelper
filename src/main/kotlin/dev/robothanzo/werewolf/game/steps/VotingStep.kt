@@ -53,9 +53,6 @@ class VotingStep(
     override fun getEndTime(session: Session): Long {
         val guildId = session.guildId
         val speechSession = WerewolfApplication.speechService.getSpeechSession(guildId)
-
-        // If there is a speech session during voting step, it's a PK speech.
-        // Include remaining speech time + 30s for the second vote.
         if (speechSession != null) {
             val currentEnd = if (speechSession.currentSpeechEndTime > System.currentTimeMillis()) {
                 speechSession.currentSpeechEndTime
@@ -68,16 +65,29 @@ class VotingStep(
                 remainingMs += (if (player.police) 210 else 180) * 1000L
             }
 
-            return currentEnd + remainingMs + 30_000L
+            // Estimate based on whether it's PK speech or Last Words
+            val speakerId = speechSession.lastSpeaker
+            val speaker = if (speakerId != null) session.getPlayer(speakerId) else null
+            val isLastWords = speaker != null && !speaker.alive
+
+            return if (isLastWords) {
+                // Current speaker is the only one
+                currentEnd
+            } else {
+                // PK flow: current + remaining + vote (30s) + expelled last words (180s)
+                currentEnd + remainingMs + 30_000L + 180_000L
+            }
         }
 
         // Otherwise check the expel session for the current voting timer
         val expelSession = expelService.getExpelSession(guildId)
         if (expelSession != null) {
-            return expelSession.endTime
+            // Baseline: voting time + 180s last words
+            return expelSession.endTime + 180_000L
         }
 
-        return session.stateData.stepStartTime + 30_000L
+        // Default fallback: current time + vote time + last words time
+        return session.stateData.stepStartTime + 30_000L + 180_000L
     }
 
     private fun startExpelPoll(session: Session) {

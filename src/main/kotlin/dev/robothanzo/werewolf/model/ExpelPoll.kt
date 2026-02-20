@@ -44,7 +44,7 @@ class ExpelPoll(
     ): Boolean {
         message?.reply("投票已結束，正在放逐玩家 <@!" + winner.player.user?.idLong + ">")?.queue()
         winner.player.markDead(DeathCause.EXPEL)
-        winner.player.processCascadingDeaths {
+        winner.player.processCascadingDeaths(isExpelled = true) {
             finishedCallback?.invoke()
         }
         WerewolfApplication.expelService.removePoll(guildId)

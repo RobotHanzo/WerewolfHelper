@@ -250,7 +250,7 @@ class ButtonListener : ListenerAdapter() {
                             }
                         }
                         event.message.editMessageComponents(
-                            MsgUtils.spreadButtonsAcrossActionRows(
+                            dev.robothanzo.werewolf.utils.MsgUtils.spreadButtonsAcrossActionRows(
                                 updatedButtons
                             )
                         ).queue()
@@ -408,24 +408,23 @@ class ButtonListener : ListenerAdapter() {
 
                             // Update buttons: Selected green, others secondary, all disabled
                             val updatedButtons = mutableListOf<net.dv8tion.jda.api.components.buttons.Button>()
-                            for (component in event.message.components) {
-                                if (component is ActionRow) {
-                                    for (button in component.buttons) {
-                                        val buttonId = button.customId ?: ""
+                            for (row in event.message.components) {
+                                if (row is ActionRow) {
+                                    for (b in row.buttons) {
+                                        val buttonId = b.customId ?: ""
                                         if (buttonId.startsWith("selectTarget:")) {
                                             val tid = buttonId.split(":")[1].toIntOrNull()
                                             val isSelected = tid == (if (isSkip) SKIP_TARGET_ID else targetId)
-                                            val style =
-                                                if (isSelected) ButtonStyle.SUCCESS else ButtonStyle.SECONDARY
-                                            updatedButtons.add(button.withStyle(style).asDisabled())
+                                            val style = if (isSelected) ButtonStyle.SUCCESS else ButtonStyle.SECONDARY
+                                            updatedButtons.add(b.withStyle(style).asDisabled())
                                         } else {
-                                            updatedButtons.add(button.asDisabled())
+                                            updatedButtons.add(b.asDisabled())
                                         }
                                     }
                                 }
                             }
                             event.hook.editOriginalComponents(
-                                MsgUtils.spreadButtonsAcrossActionRows(
+                                dev.robothanzo.werewolf.utils.MsgUtils.spreadButtonsAcrossActionRows(
                                     updatedButtons
                                 )
                             ).queue()
