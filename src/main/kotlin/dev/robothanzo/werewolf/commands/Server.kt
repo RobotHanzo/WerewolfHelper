@@ -5,6 +5,7 @@ import dev.robothanzo.jda.interactions.annotations.slash.Command
 import dev.robothanzo.jda.interactions.annotations.slash.Subcommand
 import dev.robothanzo.jda.interactions.annotations.slash.options.Option
 import dev.robothanzo.werewolf.WerewolfApplication
+import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.utils.CmdUtils
 import dev.robothanzo.werewolf.utils.MsgUtils
 import net.dv8tion.jda.api.EmbedBuilder
@@ -114,10 +115,10 @@ class Server {
             return
         }
 
-        val dashboardUrl = System.getenv().getOrDefault("DASHBOARD_URL", "http://localhost:5173")
-        val fullUrl = "$dashboardUrl/server/${guild.id}"
+        val dashboardUrl = CmdUtils.getSession(event)?.dashboardUrl
+            ?: "${Session.DASHBOARD_BASE_URL}/server/${guild.id}"
 
-        event.reply("管理面板連結：$fullUrl").setEphemeral(false).queue()
+        event.reply("管理面板連結：$dashboardUrl").setEphemeral(false).queue()
     }
 
     data class PendingSetup(

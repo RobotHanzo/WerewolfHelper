@@ -167,6 +167,8 @@ object SetupHelper {
         val courtChannel = session.courtTextChannel
         if (courtChannel != null) {
             session.courtTextChannel?.sendMessage("伺服器設定完成！請法官邀請玩家並開始遊戲。")?.queue()
+            session.judgeTextChannel?.sendMessage("伺服器設定完成！管理面板及遊戲控制連結：${session.dashboardUrl}")
+                ?.queue()
             try {
                 courtChannel.createInvite().setMaxUses(0).setMaxAge(0).queue { invite ->
                     val origin = WerewolfApplication.jda.getTextChannelById(config.originChannelId)

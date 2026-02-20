@@ -5,6 +5,7 @@ import dev.robothanzo.werewolf.controller.dto.ApiResponse
 import dev.robothanzo.werewolf.controller.dto.AuthData
 import dev.robothanzo.werewolf.controller.dto.AuthResponse
 import dev.robothanzo.werewolf.database.documents.AuthSession
+import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.database.documents.UserRole
 import dev.robothanzo.werewolf.utils.isAdmin
 import io.mokulu.discord.oauth.DiscordAPI
@@ -106,25 +107,23 @@ class AuthController {
                     }
 
                     session.setAttribute("user", authSession)
-                    response.sendRedirect(
-                        System.getenv().getOrDefault("DASHBOARD_URL", "http://localhost:5173") + "/server/" + state
-                    )
+                    response.sendRedirect("${Session.DASHBOARD_BASE_URL}/server/$state")
                 } catch (e: NumberFormatException) {
                     // Invalid guild ID format - redirect to server selection instead
                     log.warn("Invalid guild ID in OAuth state: {}", state)
                     authSession.role = UserRole.PENDING
                     session.setAttribute("user", authSession)
-                    response.sendRedirect(System.getenv().getOrDefault("DASHBOARD_URL", "http://localhost:5173") + "/")
+                    response.sendRedirect("${Session.DASHBOARD_BASE_URL}/")
                 } catch (e: Exception) {
                     log.warn("Failed to set initial guild info: {}", state, e)
                     authSession.role = UserRole.PENDING
                     session.setAttribute("user", authSession)
-                    response.sendRedirect(System.getenv().getOrDefault("DASHBOARD_URL", "http://localhost:5173") + "/")
+                    response.sendRedirect("${Session.DASHBOARD_BASE_URL}/")
                 }
             } else {
                 authSession.role = UserRole.PENDING
                 session.setAttribute("user", authSession)
-                response.sendRedirect(System.getenv().getOrDefault("DASHBOARD_URL", "http://localhost:5173") + "/")
+                response.sendRedirect("${Session.DASHBOARD_BASE_URL}/")
             }
         } catch (e: Exception) {
             log.error("Auth callback failed", e)

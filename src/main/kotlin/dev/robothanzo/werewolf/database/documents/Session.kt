@@ -282,4 +282,14 @@ data class Session(
         }
         return false
     }
+
+    companion object {
+        val DASHBOARD_BASE_URL: String
+            get() = System.getenv("DASHBOARD_URL")?.removeSuffix("/") ?: "http://localhost:5173"
+    }
+
+    @get:JsonIgnore
+    @get:Transient
+    val dashboardUrl: String
+        get() = "$DASHBOARD_BASE_URL/server/$guildId"
 }

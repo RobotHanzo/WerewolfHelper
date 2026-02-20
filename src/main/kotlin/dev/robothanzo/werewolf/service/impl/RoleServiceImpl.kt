@@ -218,10 +218,7 @@ class RoleServiceImpl(
             }
 
             // 5. Send Summary to Judge and Spectator Channels
-            val dashboardUrl = System.getenv().getOrDefault(
-                "DASHBOARD_URL",
-                "http://localhost:5173"
-            ) + "/server/" + guildId
+            val dashboardUrl = session.dashboardUrl
             val summaryEmbed = EmbedBuilder()
                 .setTitle("身分列表")
                 .setColor(MsgUtils.randomColor)
@@ -229,9 +226,9 @@ class RoleServiceImpl(
             val sortedPlayers = session.players.values.sortedBy { it.id }
 
             for (p in sortedPlayers) {
-                val rolesStr = ((p.roles.joinToString("、") ?: "無") +
+                val rolesStr = p.roles.joinToString("、").ifEmpty { "無" } +
                         (if (p.police) " (警長)" else "") +
-                        if (p.jinBaoBao) " (金寶寶)" else if (p.duplicated) " (複製人)" else "")
+                    if (p.jinBaoBao) " (金寶寶)" else if (p.duplicated) " (複製人)" else ""
                 summaryEmbed.addField(p.nickname, rolesStr, true)
             }
 
