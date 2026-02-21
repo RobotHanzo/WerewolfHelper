@@ -20,7 +20,6 @@ import { EnrichedActionStatus } from './night/types';
 import { MagicianActionCard } from './night/MagicianActionCard';
 import { StandardActionCard } from './night/StandardActionCard';
 
-
 interface NightStatusData {
   day: number;
   phaseType:
@@ -42,9 +41,15 @@ interface NightStatusProps {
   guildId?: string;
   players?: Player[];
   session?: Session;
+  viewDay?: number;
 }
 
-export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [], session }) => {
+export const NightStatus: React.FC<NightStatusProps> = ({
+  guildId,
+  players = [],
+  session,
+  viewDay,
+}) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<
     'werewolves' | 'actions' | 'nightmare' | 'wolf_brother' | 'magician'
@@ -52,32 +57,52 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
   const messageScrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Data Processing
+  const isHistoryView = viewDay !== undefined && viewDay < (session?.day || 1);
+  const targetDay = isHistoryView ? viewDay : session?.day || 0;
+
   const nightStatus = useMemo<NightStatusData | null>(() => {
     if (!session?.stateData) return null;
 
     const stateData = session.stateData as any;
-    const phaseType = stateData.phaseType;
 
-    // Werewolf Messages
+    let phaseType = stateData.phaseType;
+    let actionStatuses = (stateData.submittedActions || []) as RoleActionInstance[];
+    let werewolfVotes = (stateData.wolfStates?.['WEREWOLF_KILL']?.votes || []) as WolfVote[];
+
+    if (isHistoryView) {
+      phaseType = 'ROLE_ACTIONS'; // Default to actions view for history
+      actionStatuses = (stateData.executedActions?.[String(targetDay)] ||
+        []) as RoleActionInstance[];
+
+      // Reconstruct wolf votes from the executed WEREWOLF_KILL action to populate the UI correctly
+      const wolfKillAction = actionStatuses.find(
+        (a: any) => a.actionDefinitionId === 'WEREWOLF_KILL'
+      );
+      if (wolfKillAction) {
+        const targetId = wolfKillAction.targets?.[0];
+        const wolfPlayers = players.filter((p: Player) => p.wolf);
+        werewolfVotes = wolfPlayers.map((p) => ({
+          voterId: p.id,
+          targetId: targetId !== undefined && targetId !== null ? targetId : -1,
+        }));
+      } else {
+        werewolfVotes = [];
+      }
+    }
+
+    // Werewolf Messages remain global across nights
     const werewolfMessages = (stateData.werewolfMessages || []) as WolfMessage[];
 
-    // Werewolf Votes
-    const wolfState = stateData.wolfStates?.['WEREWOLF_KILL'];
-    const werewolfVotes = (wolfState?.votes || []) as WolfVote[];
-
-    // Action Statuses
-    const actionStatuses = (stateData.submittedActions || []) as RoleActionInstance[];
-
     return {
-      day: session.day || 0,
-      phaseType,
+      day: targetDay,
+      phaseType: phaseType || 'WEREWOLF_VOTING',
       startTime: stateData.phaseStartTime || Date.now(),
       endTime: stateData.phaseEndTime || Date.now() + 60000,
       werewolfMessages,
       werewolfVotes,
       actionStatuses,
     };
-  }, [session, players]);
+  }, [session, players, isHistoryView, targetDay]);
 
   // Helpers
   const getRemainingSeconds = (): number => {
@@ -129,10 +154,14 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
     const electorates = wolfState?.electorates || [];
 
     // Use electorates if available, otherwise fallback to all alive wolves
-    const votingWolfIds =
+    let votingWolfIds =
       electorates.length > 0
         ? electorates
         : players.filter((p: Player) => p.wolf && p.alive).map((p) => p.id);
+
+    if (isHistoryView && nightStatus.werewolfVotes.length > 0) {
+      votingWolfIds = nightStatus.werewolfVotes.map((v: any) => v.voterId);
+    }
 
     return votingWolfIds
       .map((voterId: number) => {
@@ -159,7 +188,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
         };
       })
       .sort((a: any, b: any) => Number(a.voterId) - Number(b.voterId));
-  }, [players, nightStatus.werewolfVotes, session, t]);
+  }, [players, nightStatus.werewolfVotes, session, t, isHistoryView]);
 
   const enrichedStatuses: EnrichedActionStatus[] = (nightStatus.actionStatuses || [])
     .filter((status) => !status.actorRole.includes('狼'))
@@ -231,7 +260,9 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
   }, [nightStatus.actionStatuses]);
 
   const hasMagician = useMemo(() => {
-    return players.some((p) => p.roles?.some((r) => r.includes('魔術師') || r.includes('MAGICIAN')));
+    return players.some((p) =>
+      p.roles?.some((r) => r.includes('魔術師') || r.includes('MAGICIAN'))
+    );
   }, [players]);
 
   const magicianAction = useMemo(() => {
@@ -239,10 +270,6 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
       (a) => a.actorRole.includes('魔術師') || a.actorRole.includes('MAGICIAN')
     );
   }, [nightStatus.actionStatuses]);
-
-
-
-
 
   return (
     <div className="text-slate-800 dark:text-white font-['Spline_Sans'] h-full flex flex-col overflow-hidden">
@@ -571,13 +598,13 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
           )}
 
           {activeTab === 'nightmare' && nightmareAction && (
-              <StandardActionCard
-                status={nightmareAction}
-                roleId="NIGHTMARE"
-                players={players}
-                guildId={guildId}
-                variant="large"
-              />
+            <StandardActionCard
+              status={nightmareAction}
+              roleId="NIGHTMARE"
+              players={players}
+              guildId={guildId}
+              variant="large"
+            />
           )}
 
           {activeTab === 'magician' && magicianAction && (
@@ -590,13 +617,13 @@ export const NightStatus: React.FC<NightStatusProps> = ({ guildId, players = [],
           )}
 
           {activeTab === 'wolf_brother' && wolfBrotherAction && (
-             <StandardActionCard
-                status={wolfBrotherAction}
-                roleId="WOLF_YOUNGER_BROTHER"
-                players={players}
-                guildId={guildId}
-                variant="large"
-             />
+            <StandardActionCard
+              status={wolfBrotherAction}
+              roleId="WOLF_YOUNGER_BROTHER"
+              players={players}
+              guildId={guildId}
+              variant="large"
+            />
           )}
 
           {activeTab === 'actions' && (

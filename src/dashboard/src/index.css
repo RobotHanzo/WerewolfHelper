@@ -145,6 +145,10 @@
   --tw-enter-scale: 0.95;
 }
 
+.zoom-out-95 {
+  --tw-exit-scale: 0.95;
+}
+
 .zoom-in-75 {
   --tw-enter-scale: 0.75;
 }

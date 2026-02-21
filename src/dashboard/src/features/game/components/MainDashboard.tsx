@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle,
+  History,
   Mic,
   Play,
   Settings2,
@@ -26,6 +27,7 @@ import { Player, Session } from '@/api/types.gen';
 import { SpeechManager } from '@/features/speech/components/SpeechManager';
 import { VoteStatus } from './VoteStatus';
 import { DiscordAvatar, DiscordName } from '@/components/DiscordUser';
+import { SelectMenu } from '@/components/ui/SelectMenu';
 import { NightStatus } from './NightStatus';
 import { GAME_STEPS } from '../constants';
 
@@ -48,6 +50,9 @@ export const MainDashboard = ({
   const [isStageAnimating, setIsStageAnimating] = useState(false);
   const [lastWordsTimeLeft, setLastWordsTimeLeft] = useState(0);
   const [showMobileControls, setShowMobileControls] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [isHistoryModalClosing, setIsHistoryModalClosing] = useState(false);
+  const [selectedHistoryDay, setSelectedHistoryDay] = useState(1);
 
   // Mutations
   const setState = useMutation(setStateMutation());
@@ -167,6 +172,14 @@ export const MainDashboard = ({
     } finally {
       setIsWorking(false);
     }
+  };
+
+  const handleCloseHistoryModal = () => {
+    setIsHistoryModalClosing(true);
+    setTimeout(() => {
+      setShowHistoryModal(false);
+      setIsHistoryModalClosing(false);
+    }, 200);
   };
 
   const renderStageContent = () => {
@@ -515,14 +528,28 @@ export const MainDashboard = ({
                 </button>
               </div>
             ) : (
-              <button
-                onClick={handleNextStep}
-                disabled={readonly || isWorking}
-                className="w-full px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-              >
-                <SkipForward className="w-4 h-4" />
-                {t('dashboard.nextStep')}
-              </button>
+              <div className="space-y-2">
+                <button
+                  onClick={handleNextStep}
+                  disabled={readonly || isWorking}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                >
+                  <SkipForward className="w-4 h-4" />
+                  {t('dashboard.nextStep')}
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedHistoryDay(Math.max(1, (session.day || 1) - 1));
+                    setShowHistoryModal(true);
+                    setIsHistoryModalClosing(false);
+                  }}
+                  disabled={(session.day || 1) <= 1}
+                  className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <History className="w-4 h-4" />
+                  {t('dashboard.browseNightHistory', 'Browse Night History')}
+                </button>
+              </div>
             )}
           </div>
 
@@ -552,6 +579,63 @@ export const MainDashboard = ({
           </div>
         </div>
       </div>
+
+      {showHistoryModal && (
+        <div
+          className={`fixed inset-0 z-[200] flex flex-col bg-slate-900/95 backdrop-blur-sm p-4 lg:p-12 duration-200 ${isHistoryModalClosing ? 'animate-out fade-out zoom-out-95' : 'animate-in fade-in zoom-in-95'}`}
+        >
+          <div className="absolute top-4 right-4 lg:top-8 lg:right-8">
+            <button
+              onClick={handleCloseHistoryModal}
+              className="p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all hover:scale-105 active:scale-95"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="flex flex-col h-full max-w-7xl mx-auto w-full">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="h-12 w-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/20 flex-shrink-0">
+                <History className="w-6 h-6" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight truncate">
+                  {t('dashboard.nightHistoryMode', 'Night History Browser')}
+                </h2>
+                <p className="text-slate-400 text-xs md:text-sm truncate">
+                  {t(
+                    'dashboard.nightHistoryDesc',
+                    'Reviewing executed actions from previous nights'
+                  )}
+                </p>
+              </div>
+
+              <div className="ml-auto flex items-center gap-3">
+                <SelectMenu
+                  value={selectedHistoryDay}
+                  onChange={(val) => setSelectedHistoryDay(Number(val))}
+                  options={Array.from(
+                    { length: Math.max(1, (session.day || 1) - 1) },
+                    (_, i) => i + 1
+                  ).map((day) => ({
+                    value: day,
+                    label: t('game.day', { day: String(day), defaultValue: `Day ${day}` }),
+                  }))}
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl relative">
+              <NightStatus
+                guildId={guildId}
+                players={players}
+                session={session}
+                viewDay={selectedHistoryDay}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
