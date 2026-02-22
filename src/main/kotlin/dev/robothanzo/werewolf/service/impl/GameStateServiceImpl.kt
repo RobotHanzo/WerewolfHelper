@@ -145,19 +145,18 @@ class GameStateServiceImpl(
         return result
     }
 
-    override fun pauseStep(session: Session) {
+    override fun pauseStep(session: Session, now: Long) {
         if (session.stateData.paused) return
         session.stateData.paused = true
-        session.stateData.pauseStartTime = System.currentTimeMillis()
+        session.stateData.pauseStartTime = now
         sessionService.saveSession(session)
         session.addLog(LogType.SYSTEM, "遊戲暫停")
         sessionService.broadcastSessionUpdate(session)
     }
 
-    override fun resumeStep(session: Session) {
+    override fun resumeStep(session: Session, now: Long) {
         if (!session.stateData.paused) return
         val pauseTime = session.stateData.pauseStartTime ?: return
-        val now = System.currentTimeMillis()
         val pausedDuration = now - pauseTime
 
         // shifting the start and end times by the duration the game was paused

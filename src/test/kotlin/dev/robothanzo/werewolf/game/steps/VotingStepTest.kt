@@ -78,4 +78,23 @@ class VotingStepTest {
 
         assertEquals(135792468L + 180_000L, result)
     }
+
+    @Test
+    fun `getEndTime should use pauseStartTime when paused and no speech`() {
+        val step = VotingStep(expelService)
+        val guildId = 123L
+        val pauseTime = 1000000L
+        val session = Session().apply {
+            this.guildId = guildId
+            stateData.paused = true
+            stateData.pauseStartTime = pauseTime
+        }
+
+        whenever(expelService.getExpelSession(guildId)).thenReturn(null)
+        whenever(speechService.getSpeechSession(guildId)).thenReturn(null)
+
+        val result = step.getEndTime(session)
+        // Default: effectiveNow + 30s vote + 180s last words
+        assertEquals(pauseTime + 30_000L + 180_000L, result)
+    }
 }

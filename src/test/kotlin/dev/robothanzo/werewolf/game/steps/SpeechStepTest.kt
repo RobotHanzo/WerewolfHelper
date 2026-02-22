@@ -8,6 +8,7 @@ import dev.robothanzo.werewolf.service.SpeechService
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -80,5 +81,27 @@ class SpeechStepTest {
 
         // Result should be approximately now + 10s.
         assertTrue(result >= now + 10000L)
+    }
+
+    @Test
+    fun `getEndTime should use pauseStartTime when paused`() {
+        val step = SpeechStep(speechService)
+        val guildId = 123L
+        val pauseTime = 1000000L
+        val session = Session().apply {
+            this.guildId = guildId
+            stateData.paused = true
+            stateData.pauseStartTime = pauseTime
+        }
+
+        val speechSession = mock<SpeechSession> {
+            on { currentSpeechEndTime } doReturn pauseTime + 5000L // 5s left
+            on { order } doReturn mutableListOf()
+        }
+
+        whenever(speechService.getSpeechSession(guildId)).thenReturn(speechSession)
+
+        val result = step.getEndTime(session)
+        assertEquals(pauseTime + 5000L, result)
     }
 }

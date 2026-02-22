@@ -67,4 +67,21 @@ class SheriffElectionStepTest {
 
         assertEquals(123456789L, result)
     }
+
+    @Test
+    fun `getEndTime should use pauseStartTime when paused and no session`() {
+        val step = SheriffElectionStep(policeService, speechService)
+        val guildId = 123L
+        val pauseTime = 1000000L
+        val session = Session().apply {
+            this.guildId = guildId
+            stateData.paused = true
+            stateData.pauseStartTime = pauseTime
+        }
+
+        whenever(policeService.sessions).thenReturn(emptyMap())
+
+        val result = step.getEndTime(session)
+        assertEquals(pauseTime, result)
+    }
 }

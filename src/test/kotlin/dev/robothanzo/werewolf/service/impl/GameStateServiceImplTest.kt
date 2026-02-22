@@ -4,6 +4,8 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.GameStep
+import dev.robothanzo.werewolf.game.model.NightPhase
+import dev.robothanzo.werewolf.game.model.SpeechStatus
 import dev.robothanzo.werewolf.service.GameSessionService
 import net.dv8tion.jda.api.JDA
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -207,5 +209,86 @@ class GameStateServiceImplTest {
 
         assertEquals("DEATH_ANNOUNCEMENT", session.currentState)
         assertEquals(2, session.day)
+    }
+
+    @Test
+    fun `pauseStep sets paused flag and pauseStartTime`() {
+        val session = Session().apply { guildId = 123L }
+        val now = 1000000L
+
+        gameStateService.pauseStep(session, now)
+
+        assertTrue(session.stateData.paused)
+        assertEquals(1000000L, session.stateData.pauseStartTime)
+        verify(sessionService).saveSession(session)
+        verify(sessionService).broadcastSessionUpdate(session)
+    }
+
+    @Test
+    fun `resumeStep adjusts timers correctly`() {
+        val startTime = System.currentTimeMillis() - 10000 // started 10s ago
+        val pauseTime = startTime + 5000 // paused 5s after start
+        val session = Session().apply {
+            guildId = 123L
+            stateData.paused = true
+            stateData.pauseStartTime = pauseTime
+            stateData.stepStartTime = startTime
+            stateData.phaseType = NightPhase.ROLE_ACTIONS
+            stateData.phaseStartTime = startTime
+            stateData.phaseEndTime = startTime + 60000
+        }
+
+        // Mock 2s pause
+        val now = pauseTime + 2000
+
+        gameStateService.resumeStep(session, now)
+
+        val expectedDuration = 2000L
+        assertEquals(startTime + expectedDuration, session.stateData.stepStartTime)
+        assertEquals(startTime + expectedDuration, session.stateData.phaseStartTime)
+        assertEquals(startTime + 60000 + expectedDuration, session.stateData.phaseEndTime)
+        assertTrue(!session.stateData.paused)
+        assertEquals(null, session.stateData.pauseStartTime)
+
+        verify(sessionService).saveSession(session)
+        verify(sessionService).broadcastSessionUpdate(session)
+    }
+
+    @Test
+    fun `resumeStep extends service end times`() {
+        val pauseTime = System.currentTimeMillis() - 5000
+        val session = Session().apply {
+            guildId = 123L
+            stateData.paused = true
+            stateData.pauseStartTime = pauseTime
+            stateData.speech = SpeechStatus(
+                isPaused = true,
+                currentSpeakerId = 1,
+                endTime = pauseTime + 10000,
+                order = listOf(),
+                totalTime = 60
+            )
+            stateData.police = dev.robothanzo.werewolf.game.model.PoliceStatus(
+                state = "VOTING",
+                stageEndTime = pauseTime + 10000,
+                candidates = listOf(),
+                allowEnroll = false,
+                allowUnEnroll = false
+            )
+            stateData.expel = dev.robothanzo.werewolf.game.model.ExpelStatus(
+                voting = true,
+                endTime = pauseTime + 10000,
+                candidates = listOf()
+            )
+        }
+
+        // Mock 1s pause
+        val now = pauseTime + 1000
+
+        gameStateService.resumeStep(session, now)
+
+        verify(speechService).extendSpeechEndTime(eq(123L), eq(1000L))
+        verify(policeService).extendPoliceStageEndTime(eq(123L), eq(1000L))
+        verify(expelService).extendExpelPollEndTime(eq(123L), eq(1000L))
     }
 }

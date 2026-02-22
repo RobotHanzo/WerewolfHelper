@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -57,5 +58,23 @@ class DayStepTest {
         verify(speechService).setAllMute(guildId, true)
         verify(textChannel).sendMessage("# **:sunny: 天亮了**")
         verify(messageAction).queue()
+    }
+
+    @Test
+    fun `getEndTime should return pauseStartTime + remaining when paused`() {
+        val dayStep = DayStep(speechService, gameSessionService)
+        val startTime = 1000000L
+        val pauseTime = 1005000L
+        val session = Session().apply {
+            stateData.paused = true
+            stateData.pauseStartTime = pauseTime
+            stateData.stepStartTime = startTime
+        }
+
+        // 10s total, 5s passed, 5s remaining. 
+        // Pause at 5s. effectiveNow = pauseTime.
+        // result = pauseTime + (startTime + 10000 - pauseTime) = startTime + 10000
+        val result = dayStep.getEndTime(session)
+        assertEquals(startTime + 10000L, result)
     }
 }
