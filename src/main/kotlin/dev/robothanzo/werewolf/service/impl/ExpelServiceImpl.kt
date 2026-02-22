@@ -36,7 +36,10 @@ class ExpelServiceImpl : ExpelService {
 
     override fun endExpelPoll(guildId: Long) {
         sessions.remove(guildId)
-        polls.remove(guildId)
+        polls.remove(guildId)?.let {
+            it.pollJob?.cancel()
+            it.pollJob = null
+        }
         log.info("Ended expel poll for guild {}", guildId)
     }
 
@@ -70,7 +73,10 @@ class ExpelServiceImpl : ExpelService {
     }
 
     override fun removePoll(guildId: Long) {
-        polls.remove(guildId)
+        polls.remove(guildId)?.let {
+            it.pollJob?.cancel()
+            it.pollJob = null
+        }
     }
 
     override fun startExpelPollUI(
@@ -159,5 +165,10 @@ class ExpelServiceImpl : ExpelService {
             endTime = expelSession?.endTime,
             candidates = candidates
         )
+    }
+    override fun extendExpelPollEndTime(guildId: Long, addedMillis: Long) {
+        sessions[guildId]?.let {
+            it.endTime += addedMillis
+        }
     }
 }

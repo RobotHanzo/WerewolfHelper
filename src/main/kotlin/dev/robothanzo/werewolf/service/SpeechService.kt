@@ -102,4 +102,9 @@ interface SpeechService {
     fun setAllMute(guildId: Long, mute: Boolean)
 
     fun getSpeechStatus(guildId: Long): SpeechStatus?
+
+    /**
+     * Extends the speech end time when resumed.
+     */
+    fun extendSpeechEndTime(guildId: Long, addedMillis: Long)
 }

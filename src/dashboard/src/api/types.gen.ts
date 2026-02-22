@@ -114,11 +114,11 @@ export type AuthSession = {
   guildId?: string;
   role?: 'JUDGE' | 'SPECTATOR' | 'PENDING' | 'BLOCKED';
   createdAt?: string;
-  isJudge: boolean;
-  isPrivileged: boolean;
-  isSpectator: boolean;
   isPending: boolean;
   isBlocked: boolean;
+  isSpectator: boolean;
+  isJudge: boolean;
+  isPrivileged: boolean;
 };
 
 export type BasicUserDto = {
@@ -158,6 +158,18 @@ export type DiscordIds = {
   owner: string;
 };
 
+export type ExpelCandidateDto = {
+  id: number;
+  quit: boolean;
+  voters: Array<string>;
+};
+
+export type ExpelStatus = {
+  voting: boolean;
+  endTime?: number;
+  candidates: Array<ExpelCandidateDto>;
+};
+
 export type GameSettings = {
   witchCanSaveSelf: boolean;
   allowWolfSelfKill: boolean;
@@ -165,7 +177,12 @@ export type GameSettings = {
 };
 
 export type GameStateData = {
-  phaseType?: 'WOLF_YOUNGER_BROTHER_ACTION' | 'WEREWOLF_VOTING' | 'ROLE_ACTIONS';
+  phaseType?:
+    | 'NIGHTMARE_ACTION'
+    | 'MAGICIAN_ACTION'
+    | 'WOLF_YOUNGER_BROTHER_ACTION'
+    | 'WEREWOLF_VOTING'
+    | 'ROLE_ACTIONS';
   phaseStartTime: number;
   phaseEndTime: number;
   playerOwnedActions: {
@@ -207,10 +224,52 @@ export type GameStateData = {
    * History of police badge transfers in this session
    */
   policeTransferHistory: Array<PoliceTransferRecord>;
+  /**
+   * Start time of the game
+   */
+  gameStartTime: number;
+  /**
+   * The next step ID pending judge approval when game end condition is met
+   */
+  pendingNextStep?: string;
+  /**
+   * The reason for game end, if detected
+   */
+  gameEndReason?: string;
+  /**
+   * Flag indicating if asynchronous death processing is currently active
+   */
+  deathProcessingInProgress: boolean;
+  /**
+   * Flag indicating if the game step is currently paused
+   */
+  paused: boolean;
+  /**
+   * Timestamp when the game was paused
+   */
+  pauseStartTime?: number;
+  speech?: SpeechStatus;
+  police?: PoliceStatus;
+  expel?: ExpelStatus;
   deadPlayers: Array<number>;
-  nightWolfKillTargetId?: number;
-  lastGuardProtectedId?: number;
+  /**
+   * List of player IDs whose death events (last words, triggers) have been completed
+   */
+  processedDeathPlayerIds: Array<number>;
+  nightlySwap: {
+    [key: string]: number;
+  };
+  ghostRiderReflected: boolean;
+  dreamWeaverTargets: {
+    [key: string]: number;
+  };
+  magicianSwapTargets: Array<number>;
   wolfBrotherDiedDay?: number;
+  nightmareFearTargets: {
+    [key: string]: number;
+  };
+  nightWolfKillTargetId?: number;
+  detonatedThisDay: boolean;
 };
 
 export type HistoricalPollRecord = {
@@ -286,12 +345,19 @@ export type Player = {
   userId?: string;
   roles: Array<string>;
   deadRoles: Array<string>;
+  nickname: string;
   alive: boolean;
   wolf: boolean;
-  nickname: string;
+};
+
+export type PoliceCandidateDto = {
+  id: number;
+  quit: boolean;
+  voters: Array<string>;
 };
 
 export type PoliceEnrollmentRecord = {
+  day: number;
   playerId: number;
   type:
     | 'DISCUSSION_START'
@@ -302,6 +368,15 @@ export type PoliceEnrollmentRecord = {
     | 'POLICE_UNENROLLED'
     | 'POLICE_TRANSFER';
   stage: 'ENROLLMENT' | 'SPEECH' | 'UNENROLLMENT';
+  timestamp: number;
+};
+
+export type PoliceStatus = {
+  state: string;
+  stageEndTime?: number;
+  allowEnroll: boolean;
+  allowUnEnroll: boolean;
+  candidates: Array<PoliceCandidateDto>;
 };
 
 export type PoliceTransferRecord = {
@@ -324,6 +399,7 @@ export type RoleAction = {
   actionId:
     | 'WEREWOLF_KILL'
     | 'WOLF_YOUNGER_BROTHER_EXTRA_KILL'
+    | 'WOLF_DETONATE'
     | 'WITCH_ANTIDOTE'
     | 'WITCH_POISON'
     | 'SEER_CHECK'
@@ -336,14 +412,21 @@ export type RoleAction = {
     | 'MERCHANT_SEER_CHECK'
     | 'MERCHANT_POISON'
     | 'MERCHANT_GUN'
+    | 'MERCHANT_GUARD_PROTECT'
+    | 'MIRACLE_MERCHANT_TRADE_GUARD'
+    | 'MAGICIAN_SWAP'
+    | 'DREAM_WEAVER_LINK'
+    | 'NIGHTMARE_FEAR'
+    | 'GHOST_RIDER_REFLECT'
     | 'DEATH_RESOLUTION'
+    | 'DREAM_DEATH'
     | 'DEATH';
-  timing: 'NIGHT' | 'DAY' | 'ANYTIME' | 'DEATH_TRIGGER';
-  requiresAliveTarget: boolean;
-  allowMultiplePerPhase: boolean;
-  actionName: string;
   usageLimit: number;
+  allowMultiplePerPhase: boolean;
+  requiresAliveTarget: boolean;
   targetCount: number;
+  actionName: string;
+  timing: 'NIGHT' | 'DAY' | 'ANYTIME' | 'DEATH_TRIGGER';
 };
 
 export type RoleActionInstance = {
@@ -352,6 +435,7 @@ export type RoleActionInstance = {
   actionDefinitionId?:
     | 'WEREWOLF_KILL'
     | 'WOLF_YOUNGER_BROTHER_EXTRA_KILL'
+    | 'WOLF_DETONATE'
     | 'WITCH_ANTIDOTE'
     | 'WITCH_POISON'
     | 'SEER_CHECK'
@@ -364,7 +448,14 @@ export type RoleActionInstance = {
     | 'MERCHANT_SEER_CHECK'
     | 'MERCHANT_POISON'
     | 'MERCHANT_GUN'
+    | 'MERCHANT_GUARD_PROTECT'
+    | 'MIRACLE_MERCHANT_TRADE_GUARD'
+    | 'MAGICIAN_SWAP'
+    | 'DREAM_WEAVER_LINK'
+    | 'NIGHTMARE_FEAR'
+    | 'GHOST_RIDER_REFLECT'
     | 'DEATH_RESOLUTION'
+    | 'DREAM_DEATH'
     | 'DEATH';
   targets: Array<number>;
   submittedBy: 'PLAYER' | 'JUDGE' | 'SYSTEM';
@@ -390,7 +481,6 @@ export type Session = {
   logs: Array<LogEntry>;
   currentState: string;
   stateData: GameStateData;
-  currentStepEndTime: number;
   day: number;
   settings: GameSettings;
   hydratedRoles: {
@@ -398,6 +488,7 @@ export type Session = {
   };
   id?: ObjectId;
   isNew: boolean;
+  currentStepEndTime: number;
 };
 
 export type SessionResponse = {
@@ -405,6 +496,15 @@ export type SessionResponse = {
   success: boolean;
   message?: string;
   error?: string;
+};
+
+export type SpeechStatus = {
+  order: Array<number>;
+  currentSpeakerId?: number;
+  endTime: number;
+  totalTime: number;
+  isPaused: boolean;
+  interruptVotes: Array<number>;
 };
 
 export type WolfMessage = {
@@ -486,13 +586,26 @@ export type ReplayListResponse = {
 };
 
 export type ReplayPlayer = {
-    id: number;
-    userId: number;
-    username: string;
-    avatarUrl: string;
-    initialRoles: Array<string>;
-    deathDay?: number;
-    deathCause?: 'WEREWOLF' | 'POISON' | 'HUNTER_REVENGE' | 'WOLF_KING_REVENGE' | 'DOUBLE_PROTECTION' | 'EXPEL' | 'TRADED_WITH_WOLF' | 'UNKNOWN';
+  id: number;
+  userId: number;
+  username: string;
+  avatarUrl: string;
+  initialRoles: Array<string>;
+  deathDay?: number;
+  deathCause?:
+    | 'WEREWOLF'
+    | 'POISON'
+    | 'HUNTER_REVENGE'
+    | 'WOLF_KING_REVENGE'
+    | 'DOUBLE_PROTECTION'
+    | 'EXPEL'
+    | 'DETONATE'
+    | 'LINKED'
+    | 'BATTLED'
+    | 'TRADED_WITH_WOLF'
+    | 'REFLECT'
+    | 'DREAM_WEAVER'
+    | 'UNKNOWN';
 };
 
 export type ReplayResponse = {
@@ -561,6 +674,60 @@ export type SetStateResponses = {
 };
 
 export type SetStateResponse = SetStateResponses[keyof SetStateResponses];
+
+export type ResumeStateData = {
+  body?: never;
+  path: {
+    guildId: string;
+  };
+  query?: never;
+  url: '/api/sessions/{guildId}/state/resume';
+};
+
+export type ResumeStateErrors = {
+  /**
+   * User does not have permission to manage this guild
+   */
+  403: ApiResponse;
+};
+
+export type ResumeStateError = ResumeStateErrors[keyof ResumeStateErrors];
+
+export type ResumeStateResponses = {
+  /**
+   * Game resumed successfully
+   */
+  200: ApiResponse;
+};
+
+export type ResumeStateResponse = ResumeStateResponses[keyof ResumeStateResponses];
+
+export type PauseStateData = {
+  body?: never;
+  path: {
+    guildId: string;
+  };
+  query?: never;
+  url: '/api/sessions/{guildId}/state/pause';
+};
+
+export type PauseStateErrors = {
+  /**
+   * User does not have permission to manage this guild
+   */
+  403: ApiResponse;
+};
+
+export type PauseStateError = PauseStateErrors[keyof PauseStateErrors];
+
+export type PauseStateResponses = {
+  /**
+   * Game paused successfully
+   */
+  200: ApiResponse;
+};
+
+export type PauseStateResponse = PauseStateResponses[keyof PauseStateResponses];
 
 export type NextStateData = {
   body?: never;

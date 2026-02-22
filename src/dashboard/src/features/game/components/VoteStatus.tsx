@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import { Gavel, Skull, Users } from 'lucide-react';
-import { Player } from '@/api/types.gen';
+import { Player, WolvesActionState } from '@/api/types.gen';
 import { useTranslation } from '@/lib/i18n';
 import { DiscordAvatar, DiscordName } from '@/components/DiscordUser';
 import { Timer } from '@/components/ui/Timer';
 
 interface VoteStatusProps {
-  candidates: { id: number; voters: string[] }[];
+  actionState?: WolvesActionState;
+  candidates?: { id: number; voters: string[] }[];
   totalVoters?: number;
   endTime?: number;
   players: Player[];
@@ -15,25 +16,63 @@ interface VoteStatusProps {
   subtitle?: string;
   onTimerExpired?: () => void;
   guildId?: string;
+  isPaused?: boolean;
+  pauseStartTime?: number;
 }
 
 export const VoteStatus: React.FC<VoteStatusProps> = ({
-  candidates,
-  totalVoters,
-  endTime,
+  actionState,
+  candidates: propCandidates,
+  totalVoters: propTotalVoters,
+  endTime: propEndTime,
   players,
   electorate,
   title,
   subtitle,
   guildId,
+  isPaused,
+  pauseStartTime,
 }) => {
   const { t } = useTranslation();
 
+  const candidates = useMemo(() => {
+    if (propCandidates) return propCandidates;
+    if (!actionState) return [];
+
+    // Group votes by target (or null/undefined for skip)
+    const targetVotes = new Map<number | undefined, number[]>();
+
+    // Initialize map for all possible candidates based on votes we've seen
+    actionState.votes.forEach((vote) => {
+      // Find the user ID for this voter
+      const voterPlayer = players.find((p) => p.id === vote.voterId);
+      if (!voterPlayer?.userId) return;
+
+      const votersList = targetVotes.get(vote.targetId) || [];
+      votersList.push(Number(voterPlayer.userId));
+      targetVotes.set(vote.targetId, votersList);
+    });
+
+    const candidateArray: { id: number; voters: string[] }[] = [];
+
+    targetVotes.forEach((voters, targetId) => {
+      if (targetId !== undefined && targetId !== null) {
+        candidateArray.push({
+          id: targetId,
+          voters: voters.map(String),
+        });
+      }
+    });
+
+    return candidateArray;
+  }, [actionState, propCandidates, players]);
+
   // Calculate total votes cast
-  const totalVotes = useMemo(
-    () => candidates.reduce((acc, c) => acc + c.voters.length, 0),
-    [candidates]
-  );
+  const totalVotes = actionState
+    ? actionState.votes.length || 0
+    : candidates.reduce((acc, c) => acc + c.voters.length, 0);
+  const totalVoters = actionState ? actionState.electorates.length : propTotalVoters;
+  const endTime = propEndTime; // We'll just use the prop for endTime if provided
 
   // Identify leading candidates (Suspects on Trial)
   const sortedCandidates = useMemo(() => {
@@ -67,7 +106,14 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
             )}
           </p>
         </div>
-        <Timer endTime={Number(endTime || 0)} label={t('vote.timeLeft', 'Time Remaining')} />
+        {endTime && (
+          <Timer
+            endTime={Number(endTime || 0)}
+            isPaused={isPaused}
+            pauseStartTime={pauseStartTime}
+            label={t('vote.timeLeft', 'Time Remaining')}
+          />
+        )}
       </div>
 
       {/* Suspects on Trial Section */}
@@ -239,7 +285,7 @@ export const VoteStatus: React.FC<VoteStatusProps> = ({
                                 }`}
               >
                 <div
-                  className={`size-14 rounded-xl overflow-hidden transition-all duration-500 
+                  className={`size-14 rounded-xl overflow-hidden transition-all duration-500
                                     ${
                                       votedFor
                                         ? 'ring-2 ring-[#3211d4]/30'

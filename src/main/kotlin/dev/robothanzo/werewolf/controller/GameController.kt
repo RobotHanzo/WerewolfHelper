@@ -71,6 +71,38 @@ class GameController(
         return ResponseEntity.ok(ApiResponse.ok(message = "Game state set to ${body.stepId}"))
     }
 
+    @Operation(summary = "Pause Game", description = "Pauses the current game step/phase.")
+    @ApiResponses(
+        value = [
+            SwaggerApiResponse(responseCode = "200", description = "Game paused successfully"),
+            SwaggerApiResponse(responseCode = "403", description = "User does not have permission to manage this guild")
+        ]
+    )
+    @PostMapping("/state/pause")
+    @CanManageGuild
+    fun pauseState(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
+        gameSessionService.withLockedSession(guildId.toLong()) { session ->
+            gameStateService.pauseStep(session)
+        }
+        return ResponseEntity.ok(ApiResponse.ok(message = "Game paused"))
+    }
+
+    @Operation(summary = "Resume Game", description = "Resumes the current game step/phase.")
+    @ApiResponses(
+        value = [
+            SwaggerApiResponse(responseCode = "200", description = "Game resumed successfully"),
+            SwaggerApiResponse(responseCode = "403", description = "User does not have permission to manage this guild")
+        ]
+    )
+    @PostMapping("/state/resume")
+    @CanManageGuild
+    fun resumeState(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
+        gameSessionService.withLockedSession(guildId.toLong()) { session ->
+            gameStateService.resumeStep(session)
+        }
+        return ResponseEntity.ok(ApiResponse.ok(message = "Game resumed"))
+    }
+
     @Operation(
         summary = "Execute State Action",
         description = "Performs a specific action within the current game state (e.g., voting)."

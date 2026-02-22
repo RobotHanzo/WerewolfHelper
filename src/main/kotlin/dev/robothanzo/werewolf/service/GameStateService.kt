@@ -11,4 +11,6 @@ interface GameStateService {
     fun handleInput(session: Session, input: Map<String, Any>): Map<String, Any>
     fun getAvailableSteps(): List<GameStep>
     fun getCurrentStep(session: Session): GameStep?
+    fun pauseStep(session: Session)
+    fun resumeStep(session: Session)
 }

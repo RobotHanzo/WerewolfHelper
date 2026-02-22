@@ -7,6 +7,7 @@ interface SpeakerCardProps {
   player: Player;
   endTime: number;
   isPaused?: boolean;
+  pauseStartTime?: number;
   t: any;
   readonly: boolean;
   onSkip?: () => void;
@@ -18,6 +19,7 @@ export const SpeakerCard = ({
   player,
   endTime,
   isPaused,
+  pauseStartTime,
   t,
   readonly,
   onSkip,
@@ -46,7 +48,13 @@ export const SpeakerCard = ({
         </div>
       </>
 
-      <Timer endTime={endTime} isPaused={isPaused} size="md" className="w-full justify-center" />
+      <Timer
+        endTime={endTime}
+        isPaused={isPaused}
+        pauseStartTime={pauseStartTime}
+        size="md"
+        className="w-full justify-center"
+      />
 
       {!readonly && (
         <div className="flex gap-2 w-full mt-4">

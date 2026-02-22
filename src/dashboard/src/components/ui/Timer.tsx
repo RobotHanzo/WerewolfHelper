@@ -16,6 +16,8 @@ interface TimerProps {
   size?: 'sm' | 'md' | 'lg';
   /** Whether the timer is currently paused */
   isPaused?: boolean;
+  /** Timestamp when the timer was paused */
+  pauseStartTime?: number;
 }
 
 export const Timer: React.FC<TimerProps> = ({
@@ -26,27 +28,29 @@ export const Timer: React.FC<TimerProps> = ({
   className = '',
   size = 'md',
   isPaused = false,
+  pauseStartTime,
 }) => {
   const [timeLeft, setTimeLeft] = useState<number>(0);
 
   const isWarning = timeLeft <= warnTime && timeLeft > 0;
 
   useEffect(() => {
-    if (!endTime || isPaused) {
-      if (!isPaused) setTimeLeft(0);
+    if (!endTime) {
+      setTimeLeft(0);
       return;
     }
 
     const tick = () => {
       const now = Date.now();
-      const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
+      const effectiveNow = isPaused && pauseStartTime ? pauseStartTime : now;
+      const remaining = Math.max(0, Math.ceil((endTime - effectiveNow) / 1000));
       setTimeLeft(remaining);
     };
 
     tick();
     const timer = setInterval(tick, 100);
     return () => clearInterval(timer);
-  }, [endTime, isPaused]);
+  }, [endTime, isPaused, pauseStartTime]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

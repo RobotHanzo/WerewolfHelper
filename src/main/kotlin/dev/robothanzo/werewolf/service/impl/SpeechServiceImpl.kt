@@ -348,8 +348,8 @@ class SpeechServiceImpl(
 
     override fun interruptSession(guildId: Long, triggerCallback: Boolean) {
         speechSessions.remove(guildId)?.let {
-            gameSessionService.getSession(guildId).getOrNull()?.let {
-                it.courtTextChannel?.sendMessage("法官已強制終止發言流程")?.queue()
+            gameSessionService.getSession(guildId).getOrNull()?.let { session ->
+                session.courtTextChannel?.sendMessage("法官已強制終止發言流程")?.queue()
             }
 
             it.order.clear()
@@ -483,16 +483,29 @@ class SpeechServiceImpl(
 
                 val voiceChannel = session.courtVoiceChannel
                 try {
-                    if (time > 30) {
-                        Thread.sleep((time - 30) * 1000L)
-                        if (!speechSession.shouldStopCurrentSpeaker) {
-                            voiceChannel?.play(Audio.Resource.TIMER_30S_REMAINING)
-                            Thread.sleep(30000)
+                    var remainingMs = time * 1000L
+                    var warned30s = false
+                    val stepMs = 500L
+
+                    while (remainingMs > 0) {
+                        if (speechSession.shouldStopCurrentSpeaker) break
+
+                        val currentSession = gameSessionService.getSession(guildId).orElse(null)
+                        if (currentSession?.stateData?.paused == true) {
+                            Thread.sleep(stepMs)
+                            continue
                         }
-                    } else {
-                        Thread.sleep(time * 1000L)
+
+                        Thread.sleep(stepMs)
+                        remainingMs -= stepMs
+
+                        if (time > 30 && !warned30s && remainingMs in 29000L..30500L) {
+                            voiceChannel?.play(Audio.Resource.TIMER_30S_REMAINING)
+                            warned30s = true
+                        }
                     }
-                    if (!speechSession.shouldStopCurrentSpeaker) {
+
+                    if (!speechSession.shouldStopCurrentSpeaker && remainingMs <= 0) {
                         voiceChannel?.play(Audio.Resource.TIMER_ENDED)
                         message.reply("計時結束").queue()
                         nextSpeaker(guildId)
@@ -505,7 +518,7 @@ class SpeechServiceImpl(
                     if (!speechSession.shouldStopCurrentSpeaker) {
                         ignored.printStackTrace()
                         voiceChannel?.play(Audio.Resource.TIMER_ENDED)
-                        message.reply("發言中斷（可能發言者離開或發生錯誤）").queue()
+                        message.reply("發言中斷（可能發生錯誤）").queue()
                         nextSpeaker(guildId)
                     }
                 }
@@ -534,6 +547,12 @@ class SpeechServiceImpl(
             isPaused = session.shouldStopCurrentSpeaker, // Or another dedicated flag if available
             interruptVotes = session.interruptVotes.toList()
         )
+    }
+
+    override fun extendSpeechEndTime(guildId: Long, addedMillis: Long) {
+        speechSessions[guildId]?.let {
+            it.currentSpeechEndTime += addedMillis
+        }
     }
 
     private fun getTotalQueueDuration(queue: List<Player>): Int {

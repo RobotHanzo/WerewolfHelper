@@ -10,40 +10,20 @@ import {
   startPoliceEnrollMutation,
   stateActionMutation,
 } from '@/api/@tanstack/react-query.gen';
-import { Player } from '@/api/types.gen';
+import { Player, PoliceStatus, SpeechStatus } from '@/api/types.gen';
 import { SpeakerCard } from './SpeakerCard';
 import { DiscordAvatar, DiscordName } from '@/components/DiscordUser';
 import { VoteStatus } from '@/features/game/components/VoteStatus';
 import { Timer } from '@/components/ui/Timer';
 
-// Local interfaces for states missing from SDK
-export interface SpeechState {
-  order: number[]; // List of Player IDs (internal IDs)
-  currentSpeakerId?: number | null;
-  endTime: number;
-  totalTime: number;
-  isPaused?: boolean;
-  interruptVotes?: number[];
-}
-
-export interface PoliceState {
-  state: 'NONE' | 'ENROLLMENT' | 'SPEECH' | 'UNENROLLMENT' | 'VOTING' | 'FINISHED';
-  stageEndTime?: number;
-  allowEnroll: boolean;
-  allowUnEnroll: boolean;
-  candidates: {
-    id: number; // Player ID (internal)
-    quit?: boolean;
-    voters: string[]; // List of User IDs (strings)
-  }[];
-}
-
 interface SpeechManagerProps {
-  speech?: SpeechState | null;
-  police?: PoliceState | null;
+  speech?: SpeechStatus | null;
+  police?: PoliceStatus | null;
   players: Player[];
   guildId: string;
   readonly?: boolean;
+  isPaused?: boolean;
+  pauseStartTime?: number;
 }
 
 export const SpeechManager = ({
@@ -52,6 +32,8 @@ export const SpeechManager = ({
   players,
   guildId,
   readonly = false,
+  isPaused,
+  pauseStartTime,
 }: SpeechManagerProps) => {
   const { t } = useTranslation();
 
@@ -112,7 +94,7 @@ export const SpeechManager = ({
       ? players.find((p) => p.id === currentSpeakerId)
       : null;
 
-  const isPaused = speech?.isPaused || false;
+  const isSpeechPaused = isPaused || speech?.isPaused || false;
   const speechEndTime = speech?.endTime ? Number(speech.endTime) : 0;
 
   // Special state where someone (usually police) is selecting the speech order
@@ -242,6 +224,8 @@ export const SpeechManager = ({
             title={t('steps.sheriffElectionPhase')}
             subtitle={t('speechManager.candidates')}
             guildId={guildId}
+            isPaused={isPaused}
+            pauseStartTime={pauseStartTime}
           />
         </div>
       </div>
@@ -321,6 +305,8 @@ export const SpeechManager = ({
                   label={
                     isUnenrollment ? t('speechManager.unenrollTime') : t('speechManager.enrollTime')
                   }
+                  isPaused={isPaused}
+                  pauseStartTime={pauseStartTime}
                 />
               </div>
             )}
@@ -464,7 +450,8 @@ export const SpeechManager = ({
                   <SpeakerCard
                     player={currentSpeaker}
                     endTime={speechEndTime}
-                    isPaused={isPaused}
+                    isPaused={isSpeechPaused}
+                    pauseStartTime={pauseStartTime}
                     t={t}
                     readonly={readonly}
                     onSkip={handleSkip}

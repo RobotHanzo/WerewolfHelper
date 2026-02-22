@@ -4,6 +4,7 @@ import {
   CheckCircle,
   History,
   Mic,
+  Pause,
   Play,
   Settings2,
   Shuffle,
@@ -122,7 +123,7 @@ export const MainDashboard = ({
   }, [speechEndTime, currentId]);
 
   const handleSetStep = async (stepId: string) => {
-    if (readonly || isWorking) return;
+    if (readonly || isWorking || (session.stateData as any)?.paused) return;
     setIsWorking(true);
     try {
       await setState.mutateAsync({ path: { guildId: guildId }, body: { stepId } });
@@ -132,7 +133,7 @@ export const MainDashboard = ({
   };
 
   const handleNextStep = async () => {
-    if (readonly || isWorking) return;
+    if (readonly || isWorking || (session.stateData as any)?.paused) return;
     setIsWorking(true);
     try {
       await nextState.mutateAsync({ path: { guildId: guildId } });
@@ -168,6 +169,30 @@ export const MainDashboard = ({
       await stateAction.mutateAsync({
         path: { guildId: guildId },
         body: { action },
+      });
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const handlePause = async () => {
+    if (readonly || isWorking) return;
+    setIsWorking(true);
+    try {
+      await fetch(`/api/sessions/${guildId}/state/pause`, {
+        method: 'POST',
+      });
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const handleResume = async () => {
+    if (readonly || isWorking) return;
+    setIsWorking(true);
+    try {
+      await fetch(`/api/sessions/${guildId}/state/resume`, {
+        method: 'POST',
       });
     } finally {
       setIsWorking(false);
@@ -383,14 +408,14 @@ export const MainDashboard = ({
             ) : (
               currentExpel && (
                 <VoteStatus
-                  candidates={currentExpel.candidates || []}
-                  endTime={currentExpel.endTime as any}
-                  totalVoters={players ? players.filter((p) => p.alive).length : undefined}
+                  actionState={currentExpel}
                   players={players || []}
                   electorate={players ? players.filter((p) => p.alive).map((p) => p.id) : undefined}
                   title={t('steps.votingPhase')}
                   subtitle={t('vote.suspectsOnTrial')}
                   guildId={guildId}
+                  isPaused={(session.stateData as any).paused}
+                  pauseStartTime={(session.stateData as any).pauseStartTime}
                 />
               )
             )}
@@ -529,14 +554,37 @@ export const MainDashboard = ({
               </div>
             ) : (
               <div className="space-y-2">
-                <button
-                  onClick={handleNextStep}
-                  disabled={readonly || isWorking}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-                >
-                  <SkipForward className="w-4 h-4" />
-                  {t('dashboard.nextStep')}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={(session.stateData as any).paused ? handleResume : handlePause}
+                    disabled={readonly || isWorking}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2 ${
+                      (session.stateData as any).paused
+                        ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm'
+                        : 'bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200'
+                    }`}
+                  >
+                    {(session.stateData as any).paused ? (
+                      <>
+                        <Play className="w-4 h-4" />
+                        {t('dashboard.resumeGame', 'Resume')}
+                      </>
+                    ) : (
+                      <>
+                        <Pause className="w-4 h-4" />
+                        {t('dashboard.pauseGame', 'Pause')}
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleNextStep}
+                    disabled={readonly || isWorking || (session.stateData as any)?.paused}
+                    className="flex-1 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <SkipForward className="w-4 h-4" />
+                    {t('dashboard.nextStep')}
+                  </button>
+                </div>
                 <button
                   onClick={() => {
                     setSelectedHistoryDay(Math.max(1, (session.day || 1) - 1));
@@ -564,7 +612,7 @@ export const MainDashboard = ({
                 <button
                   key={step.id}
                   onClick={() => handleSetStep(step.id)}
-                  disabled={readonly || isWorking}
+                  disabled={readonly || isWorking || (session.stateData as any)?.paused}
                   className={`w-full px-3 py-2 rounded-lg border text-sm font-medium transition-all disabled:opacity-50 ${
                     active
                       ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700 shadow-md'

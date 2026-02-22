@@ -54,11 +54,17 @@ import type {
   NextStateData,
   NextStateErrors,
   NextStateResponses,
+  PauseStateData,
+  PauseStateErrors,
+  PauseStateResponses,
   RemoveRoleData,
   RemoveRoleErrors,
   RemoveRoleResponses,
   ResetGameData,
   ResetGameResponses,
+  ResumeStateData,
+  ResumeStateErrors,
+  ResumeStateResponses,
   ReviveData,
   ReviveErrors,
   ReviveResponses,
@@ -161,6 +167,32 @@ export const setState = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options.headers,
     },
+  });
+
+/**
+ * Resume Game
+ *
+ * Resumes the current game step/phase.
+ */
+export const resumeState = <ThrowOnError extends boolean = false>(
+  options: Options<ResumeStateData, ThrowOnError>
+) =>
+  (options.client ?? client).post<ResumeStateResponses, ResumeStateErrors, ThrowOnError>({
+    url: '/api/sessions/{guildId}/state/resume',
+    ...options,
+  });
+
+/**
+ * Pause Game
+ *
+ * Pauses the current game step/phase.
+ */
+export const pauseState = <ThrowOnError extends boolean = false>(
+  options: Options<PauseStateData, ThrowOnError>
+) =>
+  (options.client ?? client).post<PauseStateResponses, PauseStateErrors, ThrowOnError>({
+    url: '/api/sessions/{guildId}/state/pause',
+    ...options,
   });
 
 /**

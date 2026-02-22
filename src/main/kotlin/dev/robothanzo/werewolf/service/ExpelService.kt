@@ -36,4 +36,12 @@ interface ExpelService {
      * Returns a UI-friendly ExpelStatus for the given guild, or null if no expel session/poll exists.
      */
     fun getExpelStatus(guildId: Long): ExpelStatus?
+
+    /**
+     * Extends the current expel poll end time (e.g. during a game pause).
+     *
+     * @param guildId the ID of the guild
+     * @param addedMillis the duration to add in milliseconds
+     */
+    fun extendExpelPollEndTime(guildId: Long, addedMillis: Long)
 }

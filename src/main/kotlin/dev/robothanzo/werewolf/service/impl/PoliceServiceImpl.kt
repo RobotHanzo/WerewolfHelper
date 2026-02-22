@@ -14,6 +14,10 @@ import dev.robothanzo.werewolf.service.TransferPoliceSession
 import dev.robothanzo.werewolf.utils.CmdUtils
 import dev.robothanzo.werewolf.utils.MsgUtils
 import dev.robothanzo.werewolf.utils.player
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
@@ -234,11 +238,26 @@ class PoliceServiceImpl(
                         .setComponents(ActionRow.of(Button.success("enrollPolice", "參選警長")))
                         .queue { msg -> policeSession.message = msg }
 
-                    CmdUtils.schedule({
-                        val vc10s = session.courtVoiceChannel
-                        vc10s?.play(Audio.Resource.ENROLL_10S_REMAINING)
-                    }, 20000)
-                    CmdUtils.schedule({ next(guildId) }, 30000)
+                    policeSession.pollJob = CoroutineScope(Dispatchers.Default).launch {
+                        var waitedMs = 0L
+                        var warned10s = false
+                        while (waitedMs < enrollmentDurationMs) {
+                            delay(500)
+                            val s = gameSessionService.getSession(guildId).orElse(null) ?: break
+                            if (sessions[guildId] != policeSession) break
+                            if (!s.stateData.paused) {
+                                waitedMs += 500
+                                if (!warned10s && waitedMs >= 20000) {
+                                    val vc10s = s.courtVoiceChannel
+                                    vc10s?.play(Audio.Resource.ENROLL_10S_REMAINING)
+                                    warned10s = true
+                                }
+                            }
+                        }
+                        if (waitedMs >= enrollmentDurationMs) {
+                            next(guildId)
+                        }
+                    }
                 }
 
                 PoliceSession.State.ENROLLMENT -> {
@@ -300,7 +319,20 @@ class PoliceServiceImpl(
                         ) // Re-use the enroll button for unenrollment since the logic is similar and we distinguish by state
                         ?.queue()
 
-                    CmdUtils.schedule({ next(guildId) }, 20000)
+                    policeSession.pollJob = CoroutineScope(Dispatchers.Default).launch {
+                        var waitedMs = 0L
+                        while (waitedMs < unenrollDurationMs) {
+                            delay(500)
+                            val s = gameSessionService.getSession(guildId).orElse(null) ?: break
+                            if (sessions[guildId] != policeSession) break
+                            if (!s.stateData.paused) {
+                                waitedMs += 500
+                            }
+                        }
+                        if (waitedMs >= unenrollDurationMs) {
+                            next(guildId)
+                        }
+                    }
                 }
 
                 PoliceSession.State.UNENROLLMENT -> {
@@ -384,13 +416,28 @@ class PoliceServiceImpl(
 
         policeSession.message = message
 
-        policeSession.poll10sTask = CmdUtils.schedule({
-            val vc = policeSession.session.courtVoiceChannel
-            vc?.play(Audio.Resource.POLL_10S_REMAINING)
-        }, 20000)
-        policeSession.pollFinishTask = CmdUtils.schedule({
-            finishVoting(channel, allowPK, policeSession)
-        }, 30000)
+        policeSession.pollJob = CoroutineScope(Dispatchers.Default).launch {
+            var waitedMs = 0L
+            var warned10s = false
+            val durationMs = 30000L
+            val guildId = policeSession.guildId
+            while (waitedMs < durationMs) {
+                delay(500)
+                val s = gameSessionService.getSession(guildId).orElse(null) ?: break
+                if (sessions[guildId] != policeSession) break
+                if (!s.stateData.paused) {
+                    waitedMs += 500
+                    if (!warned10s && waitedMs >= 20000) {
+                        val vcWarn = s.courtVoiceChannel
+                        vcWarn?.play(Audio.Resource.POLL_10S_REMAINING)
+                        warned10s = true
+                    }
+                }
+            }
+            if (waitedMs >= durationMs) {
+                finishVoting(channel, allowPK, policeSession)
+            }
+        }
     }
 
     private fun finishVoting(channel: GuildMessageChannel, allowPK: Boolean, policeSession: PoliceSession) {
@@ -469,10 +516,8 @@ class PoliceServiceImpl(
     }
 
     private fun cancelPollTasks(policeSession: PoliceSession) {
-        policeSession.poll10sTask?.cancel()
-        policeSession.poll10sTask = null
-        policeSession.pollFinishTask?.cancel()
-        policeSession.pollFinishTask = null
+        policeSession.pollJob?.cancel()
+        policeSession.pollJob = null
     }
 
     private fun setPolice(guildId: Long, playerId: Int) {
@@ -680,5 +725,10 @@ class PoliceServiceImpl(
                 )
             }
         )
+    }
+    override fun extendPoliceStageEndTime(guildId: Long, addedMillis: Long) {
+        sessions[guildId]?.let {
+            it.stageEndTime += addedMillis
+        }
     }
 }

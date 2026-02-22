@@ -29,7 +29,9 @@ class SheriffElectionStep(
     }
 
     override fun getEndTime(session: Session): Long {
-        val policeSession = policeService.sessions[session.guildId] ?: return super.getEndTime(session)
+        val now = System.currentTimeMillis()
+        val effectiveNow = if (session.stateData.paused) (session.stateData.pauseStartTime ?: now) else now
+        val policeSession = policeService.sessions[session.guildId] ?: return effectiveNow
 
         return when (policeSession.state) {
             dev.robothanzo.werewolf.model.PoliceSession.State.ENROLLMENT -> {
@@ -44,7 +46,7 @@ class SheriffElectionStep(
             }
 
             dev.robothanzo.werewolf.model.PoliceSession.State.SPEECH -> {
-                val speechSession = speechService.getSpeechSession(session.guildId) ?: return System.currentTimeMillis()
+                val speechSession = speechService.getSpeechSession(session.guildId) ?: return effectiveNow
                 // Current speaker end time + remaining speakers
                 val currentEnd = speechSession.currentSpeechEndTime
                 // remaining: speechSession.order
@@ -71,7 +73,7 @@ class SheriffElectionStep(
                 policeSession.stageEndTime
             }
 
-            else -> super.getEndTime(session)
+            else -> effectiveNow
         }
     }
 

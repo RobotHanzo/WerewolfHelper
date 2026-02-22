@@ -4,6 +4,7 @@ import dev.robothanzo.werewolf.WerewolfApplication
 import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.*
+import dev.robothanzo.werewolf.game.roles.PredefinedRoles
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.roles.actions.RoleAction
 import dev.robothanzo.werewolf.service.ActionUIService
@@ -68,7 +69,7 @@ class ActionUIServiceImpl(
                 actionInstance = RoleActionInstance(
                     actor = playerId,
                     actorRole = player.roles.firstOrNull() ?: "Unknown",
-                    actionDefinitionId = null,
+                    actionDefinitionId = if (availableActions.size == 1) availableActions[0].actionId else null,
                     targets = mutableListOf(),
                     submittedBy = ActionSubmissionSource.PLAYER,
                     status = ActionStatus.PENDING,
@@ -78,6 +79,9 @@ class ActionUIServiceImpl(
             } else {
                 actionInstance.status = ActionStatus.PENDING
                 actionInstance.actionPromptId = message?.idLong
+                if (availableActions.size == 1) {
+                    actionInstance.actionDefinitionId = availableActions[0].actionId
+                }
                 actionInstance.targets.clear()
             }
 
@@ -430,14 +434,8 @@ class ActionUIServiceImpl(
     }
 
     override fun sendReminders(guildId: Long, session: Session) {
-        val now = System.currentTimeMillis()
-        val expiry = session.stateData.phaseEndTime
-        if (expiry == 0L) return
-
-        val timeUntilExpiry = expiry - now
-        if (timeUntilExpiry in 29000..31000) {
-            val phaseType = session.stateData.phaseType
-            val pendingActions =
+        val phaseType = session.stateData.phaseType
+        val pendingActions =
                 session.stateData.submittedActions.filter {
                     (it.status == ActionStatus.PENDING || it.status == ActionStatus.ACTING)
                 }.filter { action ->
@@ -472,8 +470,21 @@ class ActionUIServiceImpl(
 
                 session.getPlayer(action.actor)?.channel?.sendMessage(msg)?.queue()
             }
-            log.info("Sent 30-second reminders to ${pendingActions.size} players in guild $guildId")
+
+        // Handle Group Werewolf Vote Reminders
+        if (phaseType == NightPhase.WEREWOLF_VOTING) {
+            val groupState = session.stateData.wolfStates[PredefinedRoles.WEREWOLF_KILL]
+            if (groupState != null && !groupState.finished) {
+                val eIds = groupState.electorates
+                eIds.forEach { pid ->
+                    if (groupState.votes.none { it.voterId == pid && it.targetId != null }) {
+                        session.getPlayer(pid)?.channel?.sendMessage("⏱️ **還剩30秒！** 請投票，否則視為跳過")?.queue()
+                    }
+                }
+            }
         }
+
+        log.info("Sent 30-second reminders to ${pendingActions.size} individual players in guild $guildId")
     }
 
     override fun clearPrompt(session: Session, playerId: Int) {

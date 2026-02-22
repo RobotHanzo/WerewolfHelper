@@ -25,8 +25,10 @@ import {
   muteAll,
   nextState,
   type Options,
+  pauseState,
   removeRole,
   resetGame,
+  resumeState,
   revive,
   reviveRole,
   selectGuild,
@@ -96,11 +98,17 @@ import type {
   NextStateData,
   NextStateError,
   NextStateResponse,
+  PauseStateData,
+  PauseStateError,
+  PauseStateResponse,
   RemoveRoleData,
   RemoveRoleError,
   RemoveRoleResponse,
   ResetGameData,
   ResetGameResponse,
+  ResumeStateData,
+  ResumeStateError,
+  ResumeStateResponse,
   ReviveData,
   ReviveError,
   ReviveResponse,
@@ -198,6 +206,60 @@ export const setStateMutation = (
   > = {
     mutationFn: async (fnOptions) => {
       const { data } = await setState({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Resume Game
+ *
+ * Resumes the current game step/phase.
+ */
+export const resumeStateMutation = (
+  options?: Partial<Options<ResumeStateData>>
+): UseMutationOptions<
+  ResumeStateResponse,
+  AxiosError<ResumeStateError>,
+  Options<ResumeStateData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    ResumeStateResponse,
+    AxiosError<ResumeStateError>,
+    Options<ResumeStateData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await resumeState({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Pause Game
+ *
+ * Pauses the current game step/phase.
+ */
+export const pauseStateMutation = (
+  options?: Partial<Options<PauseStateData>>
+): UseMutationOptions<PauseStateResponse, AxiosError<PauseStateError>, Options<PauseStateData>> => {
+  const mutationOptions: UseMutationOptions<
+    PauseStateResponse,
+    AxiosError<PauseStateError>,
+    Options<PauseStateData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await pauseState({
         ...options,
         ...fnOptions,
         throwOnError: true,

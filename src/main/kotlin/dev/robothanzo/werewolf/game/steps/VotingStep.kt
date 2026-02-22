@@ -51,13 +51,15 @@ class VotingStep(
     }
 
     override fun getEndTime(session: Session): Long {
+        val now = System.currentTimeMillis()
+        val effectiveNow = if (session.stateData.paused) (session.stateData.pauseStartTime ?: now) else now
         val guildId = session.guildId
         val speechSession = WerewolfApplication.speechService.getSpeechSession(guildId)
         if (speechSession != null) {
-            val currentEnd = if (speechSession.currentSpeechEndTime > System.currentTimeMillis()) {
+            val currentEnd = if (speechSession.currentSpeechEndTime > effectiveNow) {
                 speechSession.currentSpeechEndTime
             } else {
-                System.currentTimeMillis()
+                effectiveNow
             }
 
             var remainingMs = 0L
@@ -87,7 +89,7 @@ class VotingStep(
         }
 
         // Default fallback: current time + vote time + last words time
-        return session.stateData.stepStartTime + 30_000L + 180_000L
+        return effectiveNow + 30_000L + 180_000L
     }
 
     private fun startExpelPoll(session: Session) {

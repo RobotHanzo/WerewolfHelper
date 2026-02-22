@@ -11,6 +11,9 @@ import java.util.concurrent.ConcurrentHashMap
 @Service
 class GameStateServiceImpl(
     private val sessionService: GameSessionService,
+    @param:org.springframework.context.annotation.Lazy private val speechService: dev.robothanzo.werewolf.service.SpeechService,
+    @param:org.springframework.context.annotation.Lazy private val policeService: dev.robothanzo.werewolf.service.PoliceService,
+    @param:org.springframework.context.annotation.Lazy private val expelService: dev.robothanzo.werewolf.service.ExpelService,
     stepList: List<GameStep>
 ) : GameStateService {
 
@@ -48,6 +51,11 @@ class GameStateServiceImpl(
     }
 
     override fun startStep(session: Session, stepId: String) {
+        if (session.stateData.paused) {
+            session.addLog(LogType.SYSTEM, "遊戲暫停中，無法切換階段")
+            return
+        }
+
         val currentStep = steps[session.currentState]
         currentStep?.onEnd(session, this)
 
@@ -64,6 +72,11 @@ class GameStateServiceImpl(
     }
 
     override fun nextStep(session: Session) {
+        if (session.stateData.paused) {
+            session.addLog(LogType.SYSTEM, "遊戲暫停中，無法切換階段")
+            return
+        }
+
         val currentId = session.currentState
         if (currentId == "SETUP") {
             if (session.stateData.gameStartTime == 0L) {
@@ -130,5 +143,54 @@ class GameStateServiceImpl(
             }
         }
         return result
+    }
+
+    override fun pauseStep(session: Session) {
+        if (session.stateData.paused) return
+        session.stateData.paused = true
+        session.stateData.pauseStartTime = System.currentTimeMillis()
+        sessionService.saveSession(session)
+        session.addLog(LogType.SYSTEM, "遊戲暫停")
+        sessionService.broadcastSessionUpdate(session)
+    }
+
+    override fun resumeStep(session: Session) {
+        if (!session.stateData.paused) return
+        val pauseTime = session.stateData.pauseStartTime ?: return
+        val now = System.currentTimeMillis()
+        val pausedDuration = now - pauseTime
+
+        // shifting the start and end times by the duration the game was paused
+        session.stateData.stepStartTime += pausedDuration
+
+        if (session.stateData.phaseType != null) {
+            session.stateData.phaseStartTime += pausedDuration
+            session.stateData.phaseEndTime += pausedDuration
+        }
+
+        // Adjust specific step end times if needed (e.g. Speech Status, Expel Status, Police Status etc.)
+        session.stateData.speech?.let {
+            speechService.extendSpeechEndTime(session.guildId, pausedDuration)
+            session.stateData.speech = it.copy(endTime = it.endTime + pausedDuration)
+        }
+        session.stateData.police?.let {
+            if (it.stageEndTime != null) {
+                policeService.extendPoliceStageEndTime(session.guildId, pausedDuration)
+                session.stateData.police = it.copy(stageEndTime = it.stageEndTime + pausedDuration)
+            }
+        }
+        session.stateData.expel?.let {
+            if (it.endTime != null) {
+                expelService.extendExpelPollEndTime(session.guildId, pausedDuration)
+                session.stateData.expel = it.copy(endTime = it.endTime + pausedDuration)
+            }
+        }
+
+        session.stateData.paused = false
+        session.stateData.pauseStartTime = null
+
+        sessionService.saveSession(session)
+        session.addLog(LogType.SYSTEM, "遊戲繼續")
+        sessionService.broadcastSessionUpdate(session)
     }
 }

@@ -107,7 +107,10 @@ export const NightStatus: React.FC<NightStatusProps> = ({
   // Helpers
   const getRemainingSeconds = (): number => {
     if (!nightStatus) return 0;
-    return Math.max(0, Math.floor((nightStatus.endTime - Date.now()) / 1000));
+    const stateData = session?.stateData as any;
+    const effectiveNow =
+      stateData?.paused && stateData?.pauseStartTime ? stateData.pauseStartTime : Date.now();
+    return Math.max(0, Math.floor((nightStatus.endTime - effectiveNow) / 1000));
   };
 
   // Effects

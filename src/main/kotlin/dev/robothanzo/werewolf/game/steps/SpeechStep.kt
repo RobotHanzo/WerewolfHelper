@@ -16,9 +16,12 @@ class SpeechStep(
     override val name = "發言流程"
 
     override fun getEndTime(session: Session): Long {
+        val now = System.currentTimeMillis()
+        val effectiveNow = if (session.stateData.paused) (session.stateData.pauseStartTime ?: now) else now
         val speechSession = speechService.getSpeechSession(session.guildId) ?: return super.getEndTime(session)
-        var totalRemainingMs = if (speechSession.currentSpeechEndTime > System.currentTimeMillis()) {
-            speechSession.currentSpeechEndTime - System.currentTimeMillis()
+
+        var totalRemainingMs = if (speechSession.currentSpeechEndTime > effectiveNow) {
+            speechSession.currentSpeechEndTime - effectiveNow
         } else 0L
 
         for (player in speechSession.order) {
@@ -26,7 +29,7 @@ class SpeechStep(
             totalRemainingMs += duration * 1000L
         }
 
-        return System.currentTimeMillis() + totalRemainingMs
+        return effectiveNow + totalRemainingMs
     }
 
     override fun onStart(session: Session, service: GameStateService) {

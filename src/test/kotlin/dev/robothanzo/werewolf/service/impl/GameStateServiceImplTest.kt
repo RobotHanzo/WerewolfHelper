@@ -15,6 +15,9 @@ import org.mockito.kotlin.*
 class GameStateServiceImplTest {
 
     private val sessionService: GameSessionService = mock()
+    private val speechService: dev.robothanzo.werewolf.service.SpeechService = mock()
+    private val policeService: dev.robothanzo.werewolf.service.PoliceService = mock()
+    private val expelService: dev.robothanzo.werewolf.service.ExpelService = mock()
     private val jda: JDA = mock()
     private val step1: GameStep = mock {
         on { id } doReturn "NIGHT_STEP"
@@ -46,7 +49,13 @@ class GameStateServiceImplTest {
     fun setUp() {
         WerewolfApplication.gameSessionService = sessionService
         WerewolfApplication.jda = jda
-        gameStateService = GameStateServiceImpl(sessionService, listOf(step1, step2, setupStep, dayStep, judgeStep))
+        gameStateService = GameStateServiceImpl(
+            sessionService,
+            speechService,
+            policeService,
+            expelService,
+            listOf(step1, step2, setupStep, dayStep, judgeStep)
+        )
         WerewolfApplication.gameStateService = gameStateService
 
         // Mock withLockedSession(Long, (Session) -> T)

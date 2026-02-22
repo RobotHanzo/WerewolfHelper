@@ -112,6 +112,14 @@ interface PoliceService {
      * @return true if the player was successfully removed or marked as quit
      */
     fun quitEnrollment(guildId: Long, playerId: Int): Boolean
+
+    /**
+     * Extends the current police election stage end time (e.g. during a game pause).
+     *
+     * @param guildId the ID of the guild
+     * @param addedMillis the duration to add in milliseconds
+     */
+    fun extendPoliceStageEndTime(guildId: Long, addedMillis: Long)
 }
 
 data class TransferPoliceSession(

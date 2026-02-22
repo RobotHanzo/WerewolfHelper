@@ -68,45 +68,9 @@ object WerewolfVotingStart : WerewolfVotingTask {
 
 object WerewolfVotingWait : WerewolfVotingTask {
     override suspend fun execute(step: NightStep, guildId: Long): Boolean {
-        // Werewolf voting wait is usually 60s (90s total duration - 30s force)
-        val durationSeconds = (NightPhase.WEREWOLF_VOTING.defaultDurationMs / 1000L).toInt() - 30
+        // Use full duration (usually 90s)
+        val durationSeconds = (NightPhase.WEREWOLF_VOTING.defaultDurationMs / 1000L).toInt()
         val finishedEarly = step.waitForCondition(guildId, durationSeconds) {
-            val session = step.gameSessionService.getSession(guildId).orElse(null) ?: return@waitForCondition true
-            val groupState = step.actionUIService.getGroupState(session, PredefinedRoles.WEREWOLF_KILL)
-                ?: return@waitForCondition true
-            groupState.electorates.all { electorateId ->
-                groupState.votes.any { it.voterId == electorateId && it.targetId != null }
-            }
-        }
-        return !finishedEarly
-    }
-}
-
-object WerewolfVotingWarning : WerewolfVotingTask {
-    override suspend fun execute(step: NightStep, guildId: Long): Boolean {
-        step.gameSessionService.withLockedSession(guildId) { currentSession ->
-            val groupState = step.actionUIService.getGroupState(currentSession, PredefinedRoles.WEREWOLF_KILL)
-
-            val isFinished = groupState?.electorates?.all { electorateId ->
-                groupState.votes.any { it.voterId == electorateId && it.targetId != null }
-            } ?: true
-
-            if (!isFinished) {
-                groupState.electorates.forEach { pid ->
-                    if (groupState.votes.none { it.voterId == pid }) {
-                        currentSession.getPlayer(pid)?.channel?.sendMessage("⏱️ **還剩30秒！** 請投票，否則視為跳過")
-                            ?.queue()
-                    }
-                }
-            }
-        }
-        return true
-    }
-}
-
-object WerewolfVotingFinalWait : WerewolfVotingTask {
-    override suspend fun execute(step: NightStep, guildId: Long): Boolean {
-        val finishedEarly = step.waitForCondition(guildId, 30) {
             val session = step.gameSessionService.getSession(guildId).orElse(null) ?: return@waitForCondition true
             val groupState = step.actionUIService.getGroupState(session, PredefinedRoles.WEREWOLF_KILL)
                 ?: return@waitForCondition true

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from '@/lib/i18n';
 import { useWebSocket } from '@/lib/websocket';
-import { Session, AuthData as User } from '@/api/types.gen';
+import { AuthData as User, Session } from '@/api/types.gen';
 import { usePlayerContext } from '@/features/players/contexts/PlayerContext';
 import { useQuery } from '@tanstack/react-query';
 import { getSession } from '@/api/sdk.gen';
@@ -69,7 +69,13 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
     }
 
     const tick = () => {
-      const now = BigInt(Date.now());
+      const stateData = gameState.stateData as any;
+      const isPaused = stateData?.isPaused || stateData?.paused || false;
+      const pauseStartTime = stateData?.pauseStartTime
+        ? BigInt(stateData.pauseStartTime)
+        : undefined;
+
+      const now = isPaused && pauseStartTime ? pauseStartTime : BigInt(Date.now());
       const endTime = BigInt(gameState.currentStepEndTime);
       const diff = Number((endTime - now) / 1000n);
       setTimerSeconds(Math.max(0, diff));
@@ -78,7 +84,12 @@ export const useGameState = (guildId: string | undefined, user: User | null) => 
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [gameState?.currentStepEndTime]);
+  }, [
+    gameState?.currentStepEndTime,
+    (gameState?.stateData as any)?.isPaused,
+    (gameState?.stateData as any)?.paused,
+    (gameState?.stateData as any)?.pauseStartTime,
+  ]);
 
   // Initialize state from Query data
   useEffect(() => {

@@ -127,7 +127,9 @@
     "gameControls": "遊戲控制",
     "browseNightHistory": "瀏覽夜晚歷史",
     "nightHistoryMode": "夜晚經歷回顧",
-    "nightHistoryDesc": "檢視過往夜晚的執行紀錄來幫助推理"
+    "nightHistoryDesc": "檢視過往夜晚的執行紀錄來幫助推理",
+    "pauseGame": "暫停遊戲",
+    "resumeGame": "繼續遊戲"
   },
   "steps": {
     "setup": "遊戲設置",

@@ -19,6 +19,7 @@ class VotingStepTest {
     private val expelService: ExpelService = mock()
     private val speechService: SpeechService = mock()
     private val gameStateService: GameStateService = mock()
+    private val gameSessionService: dev.robothanzo.werewolf.service.GameSessionService = mock()
     private val jda: JDA = mock()
 
     @BeforeEach
@@ -26,7 +27,15 @@ class VotingStepTest {
         WerewolfApplication.expelService = expelService
         WerewolfApplication.speechService = speechService
         WerewolfApplication.gameStateService = gameStateService
+        WerewolfApplication.gameSessionService = gameSessionService
         WerewolfApplication.jda = jda
+
+        whenever(gameSessionService.withLockedSession(any<Long>(), any<(Session) -> Any?>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(Session) -> Any?>(1)
+            val guildId = invocation.getArgument<Long>(0)
+            val s = Session().apply { this.guildId = guildId }
+            block(s)
+        }
     }
 
     @Test
@@ -38,6 +47,7 @@ class VotingStepTest {
 
         val session = Session().apply {
             this.guildId = guildId
+            this.stateData = dev.robothanzo.werewolf.game.model.GameStateData()
             this.discordIDs.courtTextChannelId = 456L
         }
 
@@ -55,6 +65,7 @@ class VotingStepTest {
         val guildId = 123L
         val session = Session().apply {
             this.guildId = guildId
+            this.stateData = dev.robothanzo.werewolf.game.model.GameStateData()
         }
 
         val expelSession = mock<ExpelSession> {
@@ -65,6 +76,6 @@ class VotingStepTest {
 
         val result = step.getEndTime(session)
 
-        assertEquals(135792468L, result)
+        assertEquals(135792468L + 180_000L, result)
     }
 }

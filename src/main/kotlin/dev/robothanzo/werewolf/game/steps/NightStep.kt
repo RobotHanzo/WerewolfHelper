@@ -164,17 +164,29 @@ class NightStep(
     }
 
     internal suspend fun waitForCondition(guildId: Long, durationSeconds: Int, condition: () -> Boolean): Boolean {
-        val timeoutAt = System.currentTimeMillis() + durationSeconds * 1000L
+        var remainingMs = durationSeconds * 1000L
+        var localRemindersSent = false
 
-        while (System.currentTimeMillis() < timeoutAt) {
+        while (remainingMs > 0) {
+            val session = gameSessionService.getSession(guildId).orElse(null) ?: break
+
             if (condition()) return true
+
+            if (session.stateData.paused) {
+                // Poll every second until unpaused
+                delay(1000L)
+                continue
+            }
+
+            if (!localRemindersSent && remainingMs in 20000..31000) {
+                actionUIService.sendReminders(guildId, session)
+                localRemindersSent = true
+            }
 
             val signal = CompletableDeferred<Unit>()
             phaseSignals[guildId] = signal
 
-            val remainingMs = timeoutAt - System.currentTimeMillis()
-            if (remainingMs <= 0) break
-
+            val loopStart = System.currentTimeMillis()
             try {
                 // Wait for either onEvent (signal) or 1 second poll via timeout
                 withTimeout(minOf(remainingMs, 1000L)) {
@@ -185,6 +197,9 @@ class NightStep(
             } finally {
                 phaseSignals.remove(guildId)
             }
+
+            val elapsed = System.currentTimeMillis() - loopStart
+            remainingMs -= elapsed
         }
 
         return condition()
@@ -225,14 +240,15 @@ class NightStep(
 
     override fun getEndTime(session: Session): Long {
         val now = System.currentTimeMillis()
+        val effectiveNow = if (session.stateData.paused) (session.stateData.pauseStartTime ?: now) else now
         val phaseType = session.stateData.phaseType
         val queue = activeQueues[session.guildId] ?: return now
 
         var remainingTime = 0L
 
         // 1. Current phase remaining time (if any)
-        if (phaseType != null && session.stateData.phaseEndTime > now) {
-            remainingTime += (session.stateData.phaseEndTime - now)
+        if (phaseType != null && session.stateData.phaseEndTime > effectiveNow) {
+            remainingTime += (session.stateData.phaseEndTime - effectiveNow)
         }
 
         val futurePhases = queue.map { it.phase }
@@ -243,7 +259,7 @@ class NightStep(
             remainingTime += p.defaultDurationMs
         }
 
-        return now + remainingTime
+        return effectiveNow + remainingTime
     }
 }
 
@@ -267,8 +283,6 @@ internal object NightSequence {
         WolfYoungerBrotherCleanup,
         WerewolfVotingStart,
         WerewolfVotingWait,
-        WerewolfVotingWarning,
-        WerewolfVotingFinalWait,
         WerewolfVotingCleanup,
         RoleActionsStart,
         RoleActionsWait,

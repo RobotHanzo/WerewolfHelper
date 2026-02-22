@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.game.model
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import io.swagger.v3.oas.annotations.media.Schema
 import org.bson.codecs.pojo.annotations.BsonIgnore
 import org.springframework.data.annotation.Transient
@@ -78,7 +79,7 @@ data class WolfVote(
 )
 
 data class WolfMessage(
-  @get:Schema(type = "string")
+    @get:Schema(type = "string")
     val senderUserId: Long,
     val content: String,
     val timestamp: Long = System.currentTimeMillis()
@@ -165,21 +166,26 @@ data class GameStateData(
     var gameEndReason: String? = null,
 
     @Schema(description = "Flag indicating if asynchronous death processing is currently active")
-    var deathProcessingInProgress: Boolean = false
+    var deathProcessingInProgress: Boolean = false,
+
+    @Schema(description = "Flag indicating if the game step is currently paused")
+    @get:JsonProperty("paused")
+    @field:JsonProperty("paused")
+    var paused: Boolean = false,
+
+    @Schema(description = "Timestamp when the game was paused")
+    var pauseStartTime: Long? = null
 ) {
     // --- Transient fields for UI state synchronization ---
     @Transient
-    @get:Schema(hidden = true)
     @BsonIgnore
     var speech: SpeechStatus? = null
 
     @Transient
-    @get:Schema(hidden = true)
     @BsonIgnore
     var police: PoliceStatus? = null
 
     @Transient
-    @get:Schema(hidden = true)
     @BsonIgnore
     var expel: ExpelStatus? = null
 
@@ -325,6 +331,8 @@ data class SpeechStatus(
     val currentSpeakerId: Int?,
     val endTime: Long,
     val totalTime: Int,
+    @get:JsonProperty("isPaused")
+    @field:JsonProperty("isPaused")
     val isPaused: Boolean = false,
     val interruptVotes: List<Int> = emptyList()
 )

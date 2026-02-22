@@ -7,10 +7,10 @@ import dev.robothanzo.werewolf.database.documents.Player
 import dev.robothanzo.werewolf.database.documents.Session
 import dev.robothanzo.werewolf.game.model.HistoricalPollRecord
 import dev.robothanzo.werewolf.utils.MsgUtils
+import kotlinx.coroutines.*
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -25,8 +25,7 @@ abstract class AbstractPoll(
     var finishedCallback: (() -> Unit)? = null
 ) {
     val candidates: MutableMap<Int, Candidate> = ConcurrentHashMap()
-    var poll10sTask: TimerTask? = null
-    var pollFinishTask: TimerTask? = null
+    var pollJob: Job? = null
     var durationMillis: Long = 30000L
 
     /**
@@ -35,27 +34,30 @@ abstract class AbstractPoll(
      */
     open fun start(channel: GuildMessageChannel, allowPK: Boolean = false) {
         // cancel any existing tasks
-        poll10sTask?.cancel()
-        pollFinishTask?.cancel()
+        pollJob?.cancel()
 
-        if (durationMillis > 10000L) {
-            val t = Timer()
-            poll10sTask = object : TimerTask() {
-                override fun run() {
-                    on10sRemaining(channel)
+        pollJob = CoroutineScope(Dispatchers.Default).launch {
+            var waitedMs = 0L
+            var warned10s = false
+
+            while (waitedMs < durationMillis) {
+                delay(500)
+                val currentSession = WerewolfApplication.gameSessionService.getSession(guildId).orElse(null) ?: break
+
+                if (!currentSession.stateData.paused) {
+                    waitedMs += 500
+
+                    if (!warned10s && durationMillis > 10000L && waitedMs >= durationMillis - 10000L) {
+                        on10sRemaining(channel)
+                        warned10s = true
+                    }
                 }
             }
-            t.schedule(poll10sTask, durationMillis - 10000L)
-        }
 
-        val t2 = Timer()
-        pollFinishTask = object : TimerTask() {
-            override fun run() {
-                pollFinishTask = null
+            if (waitedMs >= durationMillis) {
                 finish(channel, allowPK)
             }
         }
-        t2.schedule(pollFinishTask, durationMillis)
     }
 
     /**
@@ -65,8 +67,8 @@ abstract class AbstractPoll(
      */
     open fun finish(channel: GuildMessageChannel, allowPK: Boolean = false, title: String = "投票") {
         // cancel any pending tasks
-        poll10sTask?.cancel()
-        pollFinishTask?.cancel()
+        pollJob?.cancel()
+        pollJob = null
 
         WerewolfApplication.gameSessionService.withLockedSession(guildId) { lockedSession ->
             val winners = getWinners(null)

@@ -114,7 +114,7 @@ export interface SpeechState {
   currentSpeakerId?: number;
   endTime: number;
   totalTime: number;
-  isPaused?: boolean;
+  paused?: boolean;
   interruptVotes?: number[];
 }
 

@@ -14,6 +14,7 @@ import dev.robothanzo.werewolf.game.roles.actions.RoleActionExecutor
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.GameStateService
 import dev.robothanzo.werewolf.utils.CmdUtils
+import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
@@ -100,22 +101,29 @@ class DeathAnnouncementStep(
         if (firstDead != null) {
             log.info("Starting death processing chain from player ${firstDead.id}")
             firstDead.processCascadingDeaths {
-                log.info("All death events processed. Advancing step.")
-                service.nextStep(currentSession)
+                log.info("All death events processed. Watchdog will advance soon.")
             }
-        } else {
-            // No deaths to process, just wait for minimum duration then advance
-            log.info("No deaths to process in DeathAnnouncementStep. Scheduling advance.")
-            CmdUtils.schedule({
-                gameSessionService.withLockedSession(guildId) { s ->
-                    service.nextStep(s)
+        }
+
+        // Monitor loop for auto-advancement (handles no-deaths case and pause/resume safety)
+        CoroutineScope(Dispatchers.Default).launch {
+            while (true) {
+                delay(1000)
+                val stillInStep = gameSessionService.withLockedSession(guildId) { lockedSession ->
+                    if (lockedSession.currentState == id) {
+                        checkAdvance(lockedSession, service)
+                        true
+                    } else {
+                        false
+                    }
                 }
-            }, 10000)
+                if (!stillInStep) break
+            }
         }
     }
 
     fun checkAdvance(session: Session, service: GameStateService) {
-        if (session.currentState != id) return
+        if (session.currentState != id || session.stateData.paused) return
 
         val now = System.currentTimeMillis()
         val minTime = session.stateData.stepStartTime + 10000L
