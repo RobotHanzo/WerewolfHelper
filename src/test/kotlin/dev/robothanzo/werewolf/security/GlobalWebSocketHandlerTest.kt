@@ -76,7 +76,7 @@ class GlobalWebSocketHandlerTest {
     @Test
     fun testHandlePing() {
         val payload = """{"type": "PING"}"""
-        whenever(session.sendMessage(any())).then { }
+        doNothing().whenever(session).sendMessage(any())
 
         handler.handleMessage(session, TextMessage(payload))
 
