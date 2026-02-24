@@ -37,7 +37,7 @@ class SessionControllerTest {
         MockitoAnnotations.openMocks(this)
         sessionController = SessionController(gameSessionService, identityUtils)
 
-        val mockJda = mock<JDA>()
+        val mockJda = mock(JDA::class.java)
         WerewolfApplication.jda = mockJda
     }
 
@@ -55,10 +55,10 @@ class SessionControllerTest {
         val user = AuthSession(userId = "user1", guildId = "123", role = UserRole.SPECTATOR)
         whenever(identityUtils.getCurrentUser()).thenReturn(Optional.of(user))
 
-        val guildMock = mock<Guild>()
+        val guildMock = mock(Guild::class.java)
         whenever(guildMock.name).thenReturn("Test Guild")
         whenever(guildMock.iconUrl).thenReturn("icon.png")
-        whenever(guildMock.getMemberById("user1")).thenReturn(mock<Member>())
+        whenever(guildMock.getMemberById("user1")).thenReturn(mock(Member::class.java))
 
         val session = Session(guildId = 123L)
         // We need to mock WerewolfApplication.jda.getGuildById(123L) to return guildMock
