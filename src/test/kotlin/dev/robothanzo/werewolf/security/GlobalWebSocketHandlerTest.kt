@@ -35,7 +35,7 @@ class GlobalWebSocketHandlerTest {
     @Test
     fun testConnectionEstablished_Success() {
         val user = AuthSession(userId = "user1", guildId = "123", role = UserRole.SPECTATOR)
-        whenever(session.attributes).thenReturn(mutableMapOf("user" to user))
+        whenever(session.attributes).thenReturn(mutableMapOf("user" to user) as Map<String, Any>)
         whenever(session.uri).thenReturn(URI("ws://localhost:8080/ws?guildId=123"))
 
         handler.afterConnectionEstablished(session)
@@ -45,7 +45,7 @@ class GlobalWebSocketHandlerTest {
 
     @Test
     fun testConnectionEstablished_NoUser() {
-        whenever(session.attributes).thenReturn(mutableMapOf())
+        whenever(session.attributes).thenReturn(mutableMapOf<String, Any>())
 
         handler.afterConnectionEstablished(session)
 
@@ -55,7 +55,7 @@ class GlobalWebSocketHandlerTest {
     @Test
     fun testConnectionEstablished_UnauthorizedRole() {
         val user = AuthSession(userId = "user1", guildId = "123", role = UserRole.PENDING)
-        whenever(session.attributes).thenReturn(mutableMapOf("user" to user))
+        whenever(session.attributes).thenReturn(mutableMapOf("user" to user) as Map<String, Any>)
 
         handler.afterConnectionEstablished(session)
 
@@ -65,7 +65,7 @@ class GlobalWebSocketHandlerTest {
     @Test
     fun testConnectionEstablished_GuildMismatch() {
         val user = AuthSession(userId = "user1", guildId = "123", role = UserRole.SPECTATOR)
-        whenever(session.attributes).thenReturn(mutableMapOf("user" to user))
+        whenever(session.attributes).thenReturn(mutableMapOf("user" to user) as Map<String, Any>)
         whenever(session.uri).thenReturn(URI("ws://localhost:8080/ws?guildId=456"))
 
         handler.afterConnectionEstablished(session)
@@ -76,7 +76,7 @@ class GlobalWebSocketHandlerTest {
     @Test
     fun testHandlePing() {
         val payload = """{"type": "PING"}"""
-        doNothing().whenever(session).sendMessage(any())
+        whenever(session.sendMessage(any())).then { }
 
         handler.handleMessage(session, TextMessage(payload))
 
@@ -89,14 +89,14 @@ class GlobalWebSocketHandlerTest {
     fun testBroadcastToGuild() {
         val user1 = AuthSession(userId = "user1", guildId = "123", role = UserRole.SPECTATOR)
         val session1 = mock(WebSocketSession::class.java)
-        whenever(session1.attributes).thenReturn(mutableMapOf("user" to user1))
+        whenever(session1.attributes).thenReturn(mutableMapOf("user" to user1) as Map<String, Any>)
         whenever(session1.uri).thenReturn(URI("ws://localhost/ws?guildId=123"))
         whenever(session1.isOpen).thenReturn(true)
         whenever(session1.id).thenReturn("s1")
 
         val user2 = AuthSession(userId = "user2", guildId = "456", role = UserRole.SPECTATOR)
         val session2 = mock(WebSocketSession::class.java)
-        whenever(session2.attributes).thenReturn(mutableMapOf("user" to user2))
+        whenever(session2.attributes).thenReturn(mutableMapOf("user" to user2) as Map<String, Any>)
         whenever(session2.uri).thenReturn(URI("ws://localhost/ws?guildId=456"))
         whenever(session2.isOpen).thenReturn(true)
         whenever(session2.id).thenReturn("s2")

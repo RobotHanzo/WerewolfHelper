@@ -15,9 +15,9 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
-import org.mockito.Mockito.mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus
 import java.util.*
@@ -37,7 +37,7 @@ class SessionControllerTest {
         MockitoAnnotations.openMocks(this)
         sessionController = SessionController(gameSessionService, identityUtils)
 
-        val mockJda = mock(JDA::class.java)
+        val mockJda = mock<JDA>()
         WerewolfApplication.jda = mockJda
     }
 
@@ -55,10 +55,10 @@ class SessionControllerTest {
         val user = AuthSession(userId = "user1", guildId = "123", role = UserRole.SPECTATOR)
         whenever(identityUtils.getCurrentUser()).thenReturn(Optional.of(user))
 
-        val guildMock = mock(Guild::class.java)
+        val guildMock = mock<Guild>()
         whenever(guildMock.name).thenReturn("Test Guild")
         whenever(guildMock.iconUrl).thenReturn("icon.png")
-        whenever(guildMock.getMemberById("user1")).thenReturn(mock(Member::class.java))
+        whenever(guildMock.getMemberById("user1")).thenReturn(mock<Member>())
 
         val session = Session(guildId = 123L)
         // We need to mock WerewolfApplication.jda.getGuildById(123L) to return guildMock
