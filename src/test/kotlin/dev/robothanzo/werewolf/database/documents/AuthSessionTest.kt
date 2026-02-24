@@ -37,11 +37,6 @@ class AuthSessionTest {
 
     @Test
     fun testUserRoleFromString() {
-        // Assuming UserRole has a fromString method or similar if you added it
-        // Based on the code I read, UserRole is an enum.
-        // Let's check if there is a fromString in the companion object.
-        // I read AuthSession.kt earlier and it had `fun fromString(role: String?): UserRole`.
-
         assertTrue(UserRole.fromString("JUDGE") == UserRole.JUDGE)
         assertTrue(UserRole.fromString("judge") == UserRole.JUDGE)
         assertTrue(UserRole.fromString("SPECTATOR") == UserRole.SPECTATOR)
