@@ -51,15 +51,6 @@ class AuthControllerTest {
         val memberMock = mock(Member::class.java)
         whenever(jda.getGuildById(123L)).thenReturn(guildMock)
         whenever(guildMock.getMemberById("user1")).thenReturn(memberMock)
-        // Assume isAdmin logic - isAdmin is an extension function, mocking it might be hard.
-        // It likely checks permissions.
-        // If it's an extension function, we cannot easily mock it unless we mock the Member interface completely
-        // and isAdmin calls member methods.
-        // dev.robothanzo.werewolf.utils.isAdmin checks member.hasPermission(Administrator) or is owner.
-
-        // However, isAdmin is an extension function.
-        // Let's assume it returns false for mock unless we configure it.
-        // But for this test, we just check if it returns OK.
 
         val response = authController.selectGuild(guildId, session)
 
