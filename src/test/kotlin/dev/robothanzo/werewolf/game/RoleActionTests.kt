@@ -971,6 +971,7 @@ class RoleActionTests {
             whenever(seerGiftAction.timing).thenReturn(ActionTiming.NIGHT)
             whenever(seerGiftAction.usageLimit).thenReturn(1)
             whenever(seerGiftAction.getUsageCount(any(), any())).thenReturn(0)
+            whenever(seerGiftAction.isAvailable(any(), any())).thenReturn(true)
 
             whenever(roleRegistry.getAction(ActionDefinitionId.MERCHANT_SEER_CHECK)).thenReturn(seerGiftAction)
 

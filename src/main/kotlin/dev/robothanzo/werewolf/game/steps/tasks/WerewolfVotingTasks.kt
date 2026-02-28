@@ -38,10 +38,10 @@ object WerewolfVotingStart : WerewolfVotingTask {
             return false
         }
 
-        val werewolves = session.players.values.filter { p ->
-            if (!p.alive || !p.wolf) return@filter false
-            if (p.roles.contains("狼弟") && session.isCharacterAlive("狼兄")) return@filter false
-            true
+        val werewolves = session.alivePlayers().values.filter { p ->
+            p.wolf &&
+                !(p.roles.contains("狼弟") && session.isCharacterAlive("狼兄")) &&
+                !(p.roles.contains("機械狼") && !session.isWolfMechanicInherited())
         }.map { it.id }.sorted()
 
         if (werewolves.isNotEmpty()) {

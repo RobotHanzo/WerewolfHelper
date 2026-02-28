@@ -169,12 +169,19 @@ export const GAME_ROLES: Record<string, GameEntityConfig> = {
     translationKey: 'roles.labels.BLOOD_MOON',
     camp: 'WEREWOLF',
   },
-  ROBOT_WOLF: {
-    id: 'ROBOT_WOLF',
+  WOLF_MECHANIC: {
+    id: 'WOLF_MECHANIC',
     color: '#dc2626', // Red-600
     icon: Zap,
-    translationKey: 'roles.labels.ROBOT_WOLF',
+    translationKey: 'roles.labels.WOLF_MECHANIC',
     camp: 'WEREWOLF',
+  },
+  PSYCHIC: {
+    id: 'PSYCHIC',
+    color: '#06b6d4', // Cyan-500
+    icon: Eye,
+    translationKey: 'roles.labels.PSYCHIC',
+    camp: 'GOD',
   },
   CLONE: {
     id: 'CLONE',
@@ -236,6 +243,12 @@ export const GAME_ACTIONS: Record<string, GameEntityConfig> = {
     color: '#06b6d4',
     icon: Search,
     translationKey: 'roles.actions.SEER_CHECK',
+  },
+  PSYCHIC_CHECK: {
+    id: 'PSYCHIC_CHECK',
+    color: '#06b6d4',
+    icon: Search,
+    translationKey: 'roles.actions.PSYCHIC_CHECK',
   },
   GUARD_PROTECT: {
     id: 'GUARD_PROTECT',
@@ -303,6 +316,42 @@ export const GAME_ACTIONS: Record<string, GameEntityConfig> = {
     icon: Ghost,
     translationKey: 'roles.actions.NIGHTMARE_FEAR',
   },
+  WOLF_MECHANIC_LEARN: {
+    id: 'WOLF_MECHANIC_LEARN',
+    color: '#dc2626',
+    icon: Zap,
+    translationKey: 'roles.actions.WOLF_MECHANIC_LEARN',
+  },
+  WOLF_MECHANIC_SEER_CHECK: {
+    id: 'WOLF_MECHANIC_SEER_CHECK',
+    color: '#06b6d4',
+    icon: Search,
+    translationKey: 'roles.actions.WOLF_MECHANIC_SEER_CHECK',
+  },
+  WOLF_MECHANIC_POISON: {
+    id: 'WOLF_MECHANIC_POISON',
+    color: '#a855f7',
+    icon: Pill,
+    translationKey: 'roles.actions.WOLF_MECHANIC_POISON',
+  },
+  WOLF_MECHANIC_GUARD_PROTECT: {
+    id: 'WOLF_MECHANIC_GUARD_PROTECT',
+    color: '#f59e0b',
+    icon: Shield,
+    translationKey: 'roles.actions.WOLF_MECHANIC_GUARD_PROTECT',
+  },
+  WOLF_MECHANIC_HUNTER_REVENGE: {
+    id: 'WOLF_MECHANIC_HUNTER_REVENGE',
+    color: '#ec4899',
+    icon: Crosshair,
+    translationKey: 'roles.actions.WOLF_MECHANIC_HUNTER_REVENGE',
+  },
+  WOLF_MECHANIC_EXTRA_KILL: {
+    id: 'WOLF_MECHANIC_EXTRA_KILL',
+    color: '#f87171',
+    icon: Flame,
+    translationKey: 'roles.actions.WOLF_MECHANIC_EXTRA_KILL',
+  },
   DEATH: {
     id: 'DEATH',
     color: '#6b7280',
@@ -325,8 +374,9 @@ export const getRoleConfig = (roleName: string): GameEntityConfig => {
   if (roleName.includes('石像鬼')) return GAME_ROLES.GARGOYLE;
   if (roleName.includes('惡靈騎士')) return GAME_ROLES.NIGHT_KNIGHT;
   if (roleName.includes('血月使者')) return GAME_ROLES.BLOOD_MOON;
-  if (roleName.includes('機械狼')) return GAME_ROLES.ROBOT_WOLF;
+  if (roleName.includes('機械狼')) return GAME_ROLES.WOLF_MECHANIC;
   if (roleName.includes('狼')) return GAME_ROLES.WEREWOLF;
+  if (roleName.includes('通靈師')) return GAME_ROLES.PSYCHIC;
   if (roleName.includes('預言')) return GAME_ROLES.SEER;
   if (roleName.includes('女巫')) return GAME_ROLES.WITCH;
   if (roleName.includes('守衛')) return GAME_ROLES.GUARD;

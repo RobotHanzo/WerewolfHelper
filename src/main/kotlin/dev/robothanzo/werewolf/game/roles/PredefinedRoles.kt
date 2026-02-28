@@ -7,13 +7,15 @@ object PredefinedRoles {
     const val WITCH_ANTIDOTE_PRIORITY = 200
     const val WITCH_POISON_PRIORITY = 210
     const val SEER_PRIORITY = 300
+    const val PSYCHIC_PRIORITY = 300 // Same as Seer
     const val GUARD_PRIORITY = 150
     const val HUNTER_PRIORITY = 250
     const val POLICE_PRIORITY = 400
     const val DARK_MERCHANT_PRIORITY = 50
+    const val NIGHTMARE_PRIORITY = 0 // First thing at night
+    const val WOLF_MECHANIC_PRIORITY = 50
     const val DREAM_WEAVER_PRIORITY = 60 // Before wolves
     const val MAGICIAN_PRIORITY = 40 // Before Dream Weaver and Wolves
-    const val NIGHTMARE_PRIORITY = 0 // First thing at night
 
     // Action IDs
 
@@ -22,6 +24,7 @@ object PredefinedRoles {
     const val WITCH_ANTIDOTE = "WITCH_ANTIDOTE"
     const val WITCH_POISON = "WITCH_POISON"
     const val SEER_CHECK = "SEER_CHECK"
+    const val PSYCHIC_CHECK = "PSYCHIC_CHECK"
     const val GUARD_PROTECT = "GUARD_PROTECT"
     const val HUNTER_REVENGE = "HUNTER_REVENGE"
     const val WOLF_KING_REVENGE = "WOLF_KING_REVENGE"
@@ -38,6 +41,14 @@ object PredefinedRoles {
     const val WOLF_YOUNGER_BROTHER_EXTRA_KILL = "WOLF_YOUNGER_BROTHER_EXTRA_KILL"
     const val DREAM_WEAVER_LINK = "DREAM_WEAVER_LINK"
     const val NIGHTMARE_FEAR = "NIGHTMARE_FEAR"
+
+    // Wolf Mechanic
+    const val WOLF_MECHANIC_LEARN = "WOLF_MECHANIC_LEARN"
+    const val WOLF_MECHANIC_SEER_CHECK = "WOLF_MECHANIC_SEER_CHECK"
+    const val WOLF_MECHANIC_POISON = "WOLF_MECHANIC_POISON"
+    const val WOLF_MECHANIC_GUARD_PROTECT = "WOLF_MECHANIC_GUARD_PROTECT"
+    const val WOLF_MECHANIC_HUNTER_REVENGE = "WOLF_MECHANIC_HUNTER_REVENGE"
+    const val WOLF_MECHANIC_EXTRA_KILL = "WOLF_MECHANIC_EXTRA_KILL"
 
     // Special death causes (legacy)
     const val DOUBLE_PROTECTION = "DOUBLE_PROTECTION"

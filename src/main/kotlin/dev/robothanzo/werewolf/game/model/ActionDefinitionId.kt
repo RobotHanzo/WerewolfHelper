@@ -11,12 +11,21 @@ enum class ActionDefinitionId(val actionName: String) {
     WOLF_YOUNGER_BROTHER_EXTRA_KILL("狼弟復仇刀"),
     WOLF_DETONATE("自爆"),
 
+    // Wolf Mechanic Actions
+    WOLF_MECHANIC_LEARN("學習"),
+    WOLF_MECHANIC_SEER_CHECK("查驗 (機械狼)"),
+    WOLF_MECHANIC_POISON("毒藥 (機械狼)"),
+    WOLF_MECHANIC_GUARD_PROTECT("守護 (機械狼)"),
+    WOLF_MECHANIC_HUNTER_REVENGE("開槍 (機械狼)"),
+    WOLF_MECHANIC_EXTRA_KILL("機械狼復仇刀"),
+
     // Witch Actions
     WITCH_ANTIDOTE("解藥"),
     WITCH_POISON("毒藥"),
 
-    // Seer Actions
+    // Seer & Psychic Actions
     SEER_CHECK("查驗"),
+    PSYCHIC_CHECK("查驗 (通靈師)"),
 
     // Guard Actions
     GUARD_PROTECT("守護"),

@@ -357,6 +357,11 @@ class ActionUIServiceImpl(
                             player?.roles?.contains("狼弟") == true
                         }
 
+                        NightPhase.WOLF_MECHANIC_ACTION -> {
+                            val player = session.getPlayer(action.actor)
+                            player?.roles?.contains("機械狼") == true || player?.roles?.contains("WOLF_MECHANIC") == true
+                        }
+
                         NightPhase.WEREWOLF_VOTING -> false // Handled separately by group vote logic
                         else -> true // ROLE_ACTIONS or generic cleanup
                     }
@@ -449,6 +454,11 @@ class ActionUIServiceImpl(
                         NightPhase.WOLF_YOUNGER_BROTHER_ACTION -> {
                             val player = session.getPlayer(action.actor)
                             player?.roles?.contains("狼弟") == true
+                        }
+
+                        NightPhase.WOLF_MECHANIC_ACTION -> {
+                            val player = session.getPlayer(action.actor)
+                            player?.roles?.contains("機械狼") == true || player?.roles?.contains("WOLF_MECHANIC") == true
                         }
 
                         NightPhase.WEREWOLF_VOTING -> false // Handled manually or via separate logic

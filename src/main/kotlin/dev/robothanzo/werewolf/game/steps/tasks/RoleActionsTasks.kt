@@ -35,7 +35,7 @@ object RoleActionsStart : RoleActionsTask {
                     actions.filter { action -> // we don't want to re-execute actions that were executed already at prior phases (e.g. wolf yb, nightmare and magician...etc)
                         lockedSession.stateData.submittedActions.none {
                             it.actor == pid && (it.actionDefinitionId == action.actionId || it.actionDefinitionId == null) && it.status.executed
-                        }
+                        } && !action.actionId.name.startsWith("WOLF_MECHANIC_")
                     }
 
                 if (actions.isNotEmpty()) {

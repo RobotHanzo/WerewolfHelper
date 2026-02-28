@@ -16,6 +16,11 @@ class Seer(@Transient private val checkAction: SeerCheckAction) : BaseRole("預�
 }
 
 @Component
+class Psychic(@Transient private val checkAction: PsychicCheckAction) : BaseRole("通靈師", Camp.GOD) {
+    override fun getActions(): List<RoleAction> = listOf(checkAction)
+}
+
+@Component
 class Witch(
     @Transient private val antidoteAction: WitchAntidoteAction,
     @Transient private val poisonAction: WitchPoisonAction

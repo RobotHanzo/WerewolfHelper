@@ -12,6 +12,7 @@ import org.springframework.data.annotation.Transient
 enum class NightPhase(val defaultDurationMs: Long) {
     NIGHTMARE_ACTION(60_000L),
     MAGICIAN_ACTION(60_000L),
+    WOLF_MECHANIC_ACTION(60_000L),
     WOLF_YOUNGER_BROTHER_ACTION(60_000L),
     WEREWOLF_VOTING(90_000L),
     ROLE_ACTIONS(60_000L)
@@ -144,6 +145,7 @@ data class GameStateData(
 
     @Schema(description = "Player ID of the Wolf Younger Brother if he is awakened this night")
     var wolfBrotherAwakenedPlayerId: Int? = null,
+
     @Schema(description = "Start time of the current game step")
     var stepStartTime: Long = 0,
 
@@ -311,6 +313,33 @@ data class GameStateData(
                     result[currentDay] = target
                 }
 
+            return result
+        }
+
+    @get:BsonIgnore
+    val wolfMechanicLearnDay: Map<Int, Int>
+        get() {
+            val result = mutableMapOf<Int, Int>()
+            executedActions.forEach { (day, actions) ->
+                actions.filter { it.actionDefinitionId == ActionDefinitionId.WOLF_MECHANIC_LEARN }
+                    .forEach { result[it.actor] = day }
+            }
+            submittedActions.filter { it.actionDefinitionId == ActionDefinitionId.WOLF_MECHANIC_LEARN && it.status.executed }
+                .forEach {
+                    val currentDay = (executedActions.keys.maxOrNull() ?: 0) + 1
+                    result[it.actor] = currentDay
+                }
+            return result
+        }
+
+    @get:BsonIgnore
+    val wolfMechanicLearnedPlayerId: Map<Int, Int>
+        get() {
+            val result = mutableMapOf<Int, Int>()
+            executedActions.values.flatten().filter { it.actionDefinitionId == ActionDefinitionId.WOLF_MECHANIC_LEARN }
+                .forEach { if (it.targets.isNotEmpty()) result[it.actor] = it.targets.first() }
+            submittedActions.filter { it.actionDefinitionId == ActionDefinitionId.WOLF_MECHANIC_LEARN && it.status.executed }
+                .forEach { if (it.targets.isNotEmpty()) result[it.actor] = it.targets.first() }
             return result
         }
 }

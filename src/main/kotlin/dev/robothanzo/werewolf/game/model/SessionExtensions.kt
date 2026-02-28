@@ -96,21 +96,14 @@ fun Session.isActionAvailable(
         }
     }
 
-    // Check usage limit
-    if (action.usageLimit == -1) {
-        return true
+    // Delegate to action's isAvailable method which may contain additional logic (like limits or role-specific checks)
+    if (!action.isAvailable(this, playerId)) {
+        return false
     }
 
-    val usage = getActionUsageCount(playerId, actionDefinitionId, roleRegistry)
-    if (usage >= action.usageLimit) return false
-
-    // Wolf Younger Brother extra kill logic
     val currentPlayer = getPlayer(playerId)
-    if (actionDefinitionId == ActionDefinitionId.WOLF_YOUNGER_BROTHER_EXTRA_KILL) {
-        // Delegate to action's isAvailable method which now contains the logic
-        return action.isAvailable(this, playerId)
-    }
 
+    // Wolf Younger Brother default kill logic
     if (actionDefinitionId == ActionDefinitionId.WEREWOLF_KILL && currentPlayer?.roles?.contains("狼弟") == true) {
         val isWolfBrotherAlive = alivePlayers().values.any { it.roles.contains("狼兄") }
         // Younger Brother only gets to kill if Brother is dead

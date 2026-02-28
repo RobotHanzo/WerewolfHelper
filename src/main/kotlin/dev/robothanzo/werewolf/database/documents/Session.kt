@@ -283,6 +283,33 @@ data class Session(
         return false
     }
 
+    fun isWolfMechanicInherited(): Boolean {
+        // Mechanic inherits the extra kill phase when all original wolves are dead.
+        val mainWolves = players.values.filter {
+            it.wolf &&
+                !it.roles.contains("機械狼") &&
+                !(it.roles.contains("狼弟") && isCharacterAlive("狼兄"))
+        }
+        val aliveMainWolves = mainWolves.any { it.alive }
+        return mainWolves.isNotEmpty() && !aliveMainWolves
+    }
+
+    /**
+     * Resolves the string role name learned by the Wolf Mechanic.
+     * Maps mechanic playerId -> learned role name
+     */
+    val wolfMechanicLearnedRole: Map<Int, String>
+        get() {
+            val result = mutableMapOf<Int, String>()
+            stateData.wolfMechanicLearnedPlayerId.forEach { (actor, targetId) ->
+                val target = getPlayer(targetId)
+                val targetRole =
+                    target?.roles?.firstOrNull { it !in target.deadRoles } ?: target?.roles?.firstOrNull() ?: "平民"
+                result[actor] = targetRole
+            }
+            return result
+        }
+
     companion object {
         val DASHBOARD_BASE_URL: String
             get() = System.getenv("DASHBOARD_URL")?.removeSuffix("/") ?: "http://localhost:5173"

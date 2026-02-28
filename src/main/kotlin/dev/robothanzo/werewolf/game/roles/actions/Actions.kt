@@ -140,24 +140,76 @@ class SeerCheckAction(
         val rawTargetId = action.targets[0]
         val targetId = session.stateData.getRealTarget(rawTargetId) // for magician
         val target = session.getPlayer(targetId) ?: return accumulatedState
-        
+
         // Use the player originally selected for the display message
         val displayTarget = session.getPlayer(rawTargetId) ?: target
 
         val isWolfBrotherAlive = session.alivePlayers().values.any { it.roles.contains("狼兄") }
         val isYoungerBrother = target.roles.contains("狼弟")
 
-        val isWolf = if (isYoungerBrother && isWolfBrotherAlive) {
-            false
+        val isWolf: Boolean
+        if (target.roles.contains("機械狼")) {
+            val learned = session.wolfMechanicLearnedRole[targetId]
+            // If inherited, exposed as wolf anyway
+            if (session.isWolfMechanicInherited()) {
+                isWolf = true
+            } else if (learned != null) {
+                // Determine if learned role is wolf faction
+                val learnedRoleDef = session.hydratedRoles[learned] ?: roleRegistry.getRole(learned)
+                isWolf = learnedRoleDef?.camp == Camp.WEREWOLF
+            } else {
+                // "沒學習他人被驗則是機械狼"
+                isWolf = true
+            }
+        } else if (isYoungerBrother && isWolfBrotherAlive) {
+            isWolf = false
         } else {
-            target.roles.any { role ->
+            isWolf = target.roles.any { role ->
                 (session.hydratedRoles[role] ?: roleRegistry.getRole(role))?.camp == Camp.WEREWOLF
             }
         }
 
-        val seerPlayer = session.getPlayer(action.actor)
         val resultText = if (isWolf) "狼人" else "好人"
+        val seerPlayer = session.getPlayer(action.actor)
         seerPlayer?.channel?.sendMessage("🔮 **查驗結果**：${displayTarget.nickname} 是 **$resultText**")?.queue()
+
+        action.status = ActionStatus.PROCESSED
+        return accumulatedState
+    }
+}
+
+@Component
+class PsychicCheckAction : BaseRoleAction(
+    actionId = ActionDefinitionId.PSYCHIC_CHECK,
+    priority = PredefinedRoles.PSYCHIC_PRIORITY,
+    timing = ActionTiming.NIGHT,
+    isImmediate = true
+) {
+    override fun execute(
+        session: Session,
+        action: RoleActionInstance,
+        accumulatedState: ActionExecutionResult
+    ): ActionExecutionResult {
+        if (action.targets.isEmpty()) return accumulatedState
+
+        val rawTargetId = action.targets[0]
+        val targetId = session.stateData.getRealTarget(rawTargetId) // Handle Magician swap
+        val target = session.getPlayer(targetId) ?: return accumulatedState
+
+        val displayTarget = session.getPlayer(rawTargetId) ?: target
+
+        val resultRoleName: String
+        if (target.roles.contains("機械狼")) {
+            val learned = session.wolfMechanicLearnedRole[targetId]
+            resultRoleName = learned ?: "機械狼"
+        } else {
+            resultRoleName =
+                target.roles.firstOrNull { it !in target.deadRoles } ?: target.roles.firstOrNull() ?: "平民"
+        }
+
+        val psychicPlayer = session.getPlayer(action.actor)
+        psychicPlayer?.channel?.sendMessage("🔮 **查驗結果**：${displayTarget.nickname} 的具體身分是 **$resultRoleName**")
+            ?.queue()
 
         action.status = ActionStatus.PROCESSED
         return accumulatedState

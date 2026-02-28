@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
@@ -55,6 +56,7 @@ class NightmareFearVerificationTests {
         val seerAction = mock<RoleAction>()
         whenever(seerAction.actionId).thenReturn(ActionDefinitionId.SEER_CHECK)
         whenever(seerAction.timing).thenReturn(ActionTiming.NIGHT)
+        whenever(seerAction.isAvailable(any(), any())).thenReturn(true)
         whenever(seerRole.getActions()).thenReturn(listOf(seerAction))
 
         whenever(roleRegistry.getAction(ActionDefinitionId.SEER_CHECK)).thenReturn(seerAction)
@@ -98,6 +100,7 @@ class NightmareFearVerificationTests {
         whenever(seerAction.actionId).thenReturn(ActionDefinitionId.SEER_CHECK)
         whenever(seerAction.timing).thenReturn(ActionTiming.NIGHT)
         whenever(seerAction.usageLimit).thenReturn(-1)
+        whenever(seerAction.isAvailable(any(), any())).thenReturn(true)
         whenever(seerRole.getActions()).thenReturn(listOf(seerAction))
 
         whenever(roleRegistry.getAction(ActionDefinitionId.SEER_CHECK)).thenReturn(seerAction)

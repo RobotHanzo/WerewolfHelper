@@ -26,6 +26,7 @@ interface NightStatusData {
     | 'WEREWOLF_VOTING'
     | 'ROLE_ACTIONS'
     | 'WOLF_YOUNGER_BROTHER_ACTION'
+    | 'WOLF_MECHANIC_ACTION'
     | 'NIGHTMARE_ACTION'
     | 'MAGICIAN_ACTION';
   startTime: number;
@@ -52,7 +53,7 @@ export const NightStatus: React.FC<NightStatusProps> = ({
 }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<
-    'werewolves' | 'actions' | 'nightmare' | 'wolf_brother' | 'magician'
+    'werewolves' | 'actions' | 'nightmare' | 'wolf_brother' | 'wolf_mechanic' | 'magician'
   >('werewolves');
   const messageScrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -128,6 +129,8 @@ export const NightStatus: React.FC<NightStatusProps> = ({
       setActiveTab('nightmare');
     } else if (type === 'WOLF_YOUNGER_BROTHER_ACTION') {
       setActiveTab('wolf_brother');
+    } else if (type === 'WOLF_MECHANIC_ACTION') {
+      setActiveTab('wolf_mechanic');
     } else if (type === 'MAGICIAN_ACTION') {
       setActiveTab('magician');
     } else {
@@ -262,6 +265,18 @@ export const NightStatus: React.FC<NightStatusProps> = ({
     return nightStatus.actionStatuses.find((a) => a.actorRole.includes('狼弟'));
   }, [nightStatus.actionStatuses]);
 
+  const hasWolfMechanic = useMemo(() => {
+    return players.some((p) =>
+      p.roles?.some((r) => r.includes('機械狼') || r.includes('WOLF_MECHANIC'))
+    );
+  }, [players]);
+
+  const wolfMechanicAction = useMemo(() => {
+    return nightStatus.actionStatuses.find(
+      (a) => a.actorRole.includes('機械狼') || a.actorRole.includes('WOLF_MECHANIC')
+    );
+  }, [nightStatus.actionStatuses]);
+
   const hasMagician = useMemo(() => {
     return players.some((p) =>
       p.roles?.some((r) => r.includes('魔術師') || r.includes('MAGICIAN'))
@@ -307,6 +322,15 @@ export const NightStatus: React.FC<NightStatusProps> = ({
               className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === 'nightmare' ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-300 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'}`}
             >
               {t('roles.nightmare')}
+            </button>
+          )}
+
+          {hasWolfMechanic && (
+            <button
+              onClick={() => setActiveTab('wolf_mechanic')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === 'wolf_mechanic' ? 'bg-white dark:bg-slate-700 text-red-600 dark:text-red-300 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'}`}
+            >
+              {t('roles.labels.WOLF_MECHANIC')}
             </button>
           )}
 
@@ -623,6 +647,16 @@ export const NightStatus: React.FC<NightStatusProps> = ({
             <StandardActionCard
               status={wolfBrotherAction}
               roleId="WOLF_YOUNGER_BROTHER"
+              players={players}
+              guildId={guildId}
+              variant="large"
+            />
+          )}
+
+          {activeTab === 'wolf_mechanic' && wolfMechanicAction && (
+            <StandardActionCard
+              status={wolfMechanicAction}
+              roleId="WOLF_MECHANIC"
               players={players}
               guildId={guildId}
               variant="large"
