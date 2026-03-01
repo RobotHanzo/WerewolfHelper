@@ -13,6 +13,8 @@ import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.Mock
+import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -20,12 +22,18 @@ import org.mockito.kotlin.whenever
 
 class JudgeDecisionStepTest {
 
-    private val gameStateService: GameStateService = mock()
-    private val jda: JDA = mock()
-    private val replayRepository: ReplayRepository = mock()
+    @Mock
+    private lateinit var gameStateService: GameStateService
+
+    @Mock
+    private lateinit var jda: JDA
+
+    @Mock
+    private lateinit var replayRepository: ReplayRepository
 
     @BeforeEach
     fun setUp() {
+        MockitoAnnotations.openMocks(this)
         WerewolfApplication.gameStateService = gameStateService
         WerewolfApplication.jda = jda
         WerewolfApplication.replayRepository = replayRepository
