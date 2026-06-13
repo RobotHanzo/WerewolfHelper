@@ -24,6 +24,7 @@ export interface GameSocketHandlers {
   onSnapshot: (snapshot: GameSnapshot) => void;
   onProgress?: (event: ProgressEvent) => void;
   onConnected: (connected: boolean) => void;
+  onPong?: () => void;
   /** Session expired / rejected — pop the re-login modal instead of reconnect-looping. */
   onExpired: () => void;
 }
@@ -68,8 +69,11 @@ export class GameSocket {
         this.handlers.onSnapshot(msg.snapshot);
       } else if (msg.type === "progress" && msg.percent != null && msg.line != null) {
         this.handlers.onProgress?.({ percent: msg.percent, line: msg.line, severity: msg.severity ?? "info" });
+      } else if (msg.type === "pong") {
+        this.handlers.onPong?.();
       }
     };
+
 
     ws.onclose = (event) => {
       this.stopHeartbeat();

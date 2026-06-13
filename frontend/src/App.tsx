@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { OctagonX, Eye } from "lucide-react";
+import { OctagonX, Eye, Server } from "lucide-react";
 
 import { api, ApiError } from "@/api/client";
 import { GameSocket } from "@/api/ws";
@@ -135,6 +135,7 @@ function ServerSurface() {
       onSnapshot: useGameStore.getState().applySnapshot,
       onProgress: useGameStore.getState().pushProgress,
       onConnected: useGameStore.getState().setConnected,
+      onPong: useGameStore.getState().incrementPongCount,
       onExpired: () => useGameStore.getState().setExpired(true),
     });
     socket.connect();
@@ -203,5 +204,15 @@ function LockoutRoute() {
 
 function BlockedRoute() {
   const { t } = useTranslation();
-  return <MessageScreen icon={<OctagonX size={40} />} title={t("blocked.title")} body={t("blocked.body")} />;
+  const navigate = useNavigate();
+  return (
+    <MessageScreen icon={<OctagonX size={40} />} title={t("blocked.title")} body={t("blocked.body")}>
+      <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+        <Button size="sm" onClick={() => navigate("/servers")}>
+          <Server size={14} />
+          {t("blocked.backToServers")}
+        </Button>
+      </div>
+    </MessageScreen>
+  );
 }

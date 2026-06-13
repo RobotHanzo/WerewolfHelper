@@ -207,7 +207,6 @@
 }
 .wh-live--on .wh-live__dot {
   background: var(--live-500);
-  animation: wh-breathe 2.4s var(--ease-in-out) infinite;
 }
 .wh-live--on {
   color: var(--live-500);
@@ -218,6 +217,35 @@
 .wh-live--off {
   color: var(--offline-500);
 }
+
+.wh-live__dot-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wh-live__pong-pulse {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-full);
+  background: var(--live-500);
+  pointer-events: none;
+  z-index: 1;
+  animation: wh-ping-pulse 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes wh-ping-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
 
 /* ---- ProgressBar ---- */
 .wh-progress {

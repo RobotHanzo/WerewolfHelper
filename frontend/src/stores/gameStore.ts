@@ -34,6 +34,7 @@ interface ProgressState {
 interface GameState {
   snapshot: GameSnapshot | null;
   connected: boolean;
+  pongCount: number;
   sessionExpired: boolean;
   changedSeats: Set<number>;
   unreadLogs: number;
@@ -42,6 +43,7 @@ interface GameState {
 
   applySnapshot: (snapshot: GameSnapshot) => void;
   setConnected: (connected: boolean) => void;
+  incrementPongCount: () => void;
   setExpired: (expired: boolean) => void;
   setLogPanelVisible: (visible: boolean) => void;
   markLogsRead: () => void;
@@ -56,6 +58,7 @@ interface GameState {
 export const useGameStore = create<GameState>((set, get) => ({
   snapshot: null,
   connected: false,
+  pongCount: 0,
   sessionExpired: false,
   changedSeats: new Set(),
   unreadLogs: 0,
@@ -76,7 +79,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
   },
 
-  setConnected: (connected) => set({ connected }),
+  setConnected: (connected) => set((s) => ({ connected, pongCount: connected ? s.pongCount : 0 })),
+  incrementPongCount: () => set((s) => ({ pongCount: s.pongCount + 1 })),
   setExpired: (sessionExpired) => set({ sessionExpired }),
   setLogPanelVisible: (logPanelVisible) => set((s) => ({ logPanelVisible, unreadLogs: logPanelVisible ? 0 : s.unreadLogs })),
   markLogsRead: () => set({ unreadLogs: 0 }),
@@ -102,5 +106,5 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (current) get().applySnapshot(fn(current));
   },
 
-  reset: () => set({ snapshot: null, changedSeats: new Set(), unreadLogs: 0, progress: null }),
+  reset: () => set({ snapshot: null, changedSeats: new Set(), unreadLogs: 0, progress: null, pongCount: 0 }),
 }));

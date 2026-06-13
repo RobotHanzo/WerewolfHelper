@@ -38,10 +38,27 @@ class GameWebSocketHandler(private val mapper: ObjectMapper) : TextWebSocketHand
         locks.remove(session.id)
     }
 
+    override fun handleTextMessage(session: WebSocketSession, message: TextMessage) {
+        try {
+            val node = mapper.readTree(message.payload)
+            if (node.get("type")?.asText() == "ping") {
+                val lock = locks[session.id] ?: return
+                synchronized(lock) {
+                    if (session.isOpen) {
+                        session.sendMessage(TextMessage(mapper.writeValueAsString(mapOf("type" to "pong"))))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            log.debug("WS handle text failed: {}", e.message)
+        }
+    }
+
     /** Broadcast a full snapshot to every client of [guildId]. */
     fun broadcastSnapshot(guildId: Long, snapshot: GameSnapshot) {
         send(guildId, mapOf("type" to "snapshot", "snapshot" to snapshot))
     }
+
 
     /** Stream a long-operation progress event (percent + log line) to the guild's clients. */
     fun broadcastProgress(guildId: Long, percent: Int, line: String, severity: String) {
