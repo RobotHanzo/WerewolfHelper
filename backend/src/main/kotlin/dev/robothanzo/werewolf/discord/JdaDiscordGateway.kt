@@ -115,17 +115,20 @@ class JdaDiscordGateway(
         }
 
     // ---- queries ----
-    override fun listMembers(guildId: Long): List<GuildMember> =
-        guild(guildId)?.members.orEmpty().map {
+    override fun listMembers(guildId: Long): List<GuildMember> {
+        val spectatorRoleId = session(guildId)?.discordIds?.spectatorRoleId
+        return guild(guildId)?.members.orEmpty().map {
             GuildMember(
                 it.idLong,
                 it.user.name,
                 it.effectiveName,
                 it.user.effectiveAvatarUrl,
                 it.user.isBot,
-                it.isOwner
+                it.isOwner,
+                spectator = spectatorRoleId != null && it.roles.any { r -> r.idLong == spectatorRoleId }
             )
         }
+    }
 
     override fun isOwner(guildId: Long, memberId: Long): Boolean = guild(guildId)?.ownerIdLong == memberId
 

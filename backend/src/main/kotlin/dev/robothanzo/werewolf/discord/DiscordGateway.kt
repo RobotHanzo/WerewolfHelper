@@ -10,6 +10,7 @@ data class GuildMember(
     val avatarUrl: String?,
     val bot: Boolean = false,
     val owner: Boolean = false,
+    val spectator: Boolean = false,
 )
 
 /** Which shared channel a message targets. */

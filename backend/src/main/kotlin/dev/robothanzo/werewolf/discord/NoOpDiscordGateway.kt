@@ -32,7 +32,7 @@ class NoOpDiscordGateway(
         GuildMember(1009L, "iota", "約塔", null),
         GuildMember(1010L, "kappa", "卡帕", null),
         GuildMember(1011L, "lambda", "蘭布達", null),
-        GuildMember(1012L, "mu", "繆", null)
+        GuildMember(1012L, "mu", "繆", null, spectator = true)
     )
     override fun isOwner(guildId: Long, memberId: Long): Boolean = false
     override fun canInteract(guildId: Long, memberId: Long): Boolean = true

@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.discord.NicknameService
+import dev.robothanzo.werewolf.domain.DashboardRole
 import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.domain.LogSeverity
 import dev.robothanzo.werewolf.domain.Phase
@@ -10,6 +11,7 @@ import dev.robothanzo.werewolf.game.assign.AssignmentService
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.win.WinConditionChecker
 import dev.robothanzo.werewolf.game.flow.GameScheduler
+import dev.robothanzo.werewolf.security.DashboardRoleService
 import org.springframework.stereotype.Service
 import kotlin.random.Random
 
@@ -28,12 +30,13 @@ class GameActionService(
     private val gateway: DiscordGateway,
     private val discordOps: DiscordOpsService,
     private val gameScheduler: GameScheduler,
+    private val roleService: DashboardRoleService,
 ) {
 
     /** Deal identities to the eligible (non-bot, non-owner, non-spectator) members. */
     fun assign(guildId: Long) = sessionService.mutate(guildId) { session ->
         val eligible = gateway.listMembers(guildId)
-            .filter { !it.bot && !it.owner }
+            .filter { !it.bot && !it.owner && !it.spectator && roleService.roleFor(guildId, it.id) != DashboardRole.JUDGE }
             .map { it.id }
             .ifEmpty { session.seats.mapNotNull { it.memberId } } // dev fallback to existing bindings
         assignment.assign(session, eligible, Random.Default)
