@@ -12,7 +12,7 @@ version = "1.0.0"
 
 repositories {
     mavenCentral()
-    maven("https://jitpack.io")
+//    maven("https://jitpack.io")
     maven("https://m2.dv8tion.net/releases")
 }
 
@@ -34,8 +34,8 @@ dependencies {
     // Discord
     implementation("net.dv8tion:JDA:6.3.0")
     implementation("club.minnced:discord-webhooks:0.8.4")
-    implementation("com.github.RobotHanzo:JDAInteractions:0.2.0")
-    implementation("com.github.Mokulu:discord-oauth2-api:1.0.4")
+//    implementation("com.github.RobotHanzo:JDAInteractions:0.2.0")
+//    implementation("com.github.Mokulu:discord-oauth2-api:1.0.4")
 
     // JDA Audio supplements
     implementation("dev.arbjerg:lavaplayer:2.2.6")
