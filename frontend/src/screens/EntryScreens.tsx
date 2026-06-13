@@ -120,7 +120,7 @@ export function LoginScreen({ onLogin }: { onLogin: () => void }) {
                       {auth.username}
                     </span>
                     <span style={{ fontSize: 12, color: "var(--text-muted)", letterSpacing: "0.05em" }}>
-                      {t("login.loggedInAs", { name: auth.username })}
+                      {t("login.loggedInAs", { name: `@${auth.username}` })}
                     </span>
                   </div>
                 </div>
@@ -319,8 +319,12 @@ export function ServerSelectScreen({
               whileHover={{ scale: 1.02, boxShadow: "var(--shadow-2)", borderColor: "var(--border-2)" }}
               whileTap={{ scale: 0.99 }}
             >
-              <span style={{ width: 52, height: 52, flex: "none", borderRadius: "var(--r-full)", background: "var(--surface-raised)", border: "1px solid var(--border-2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: "var(--text-secondary)" }}>
-                {sv.guildName.trim()[0] ?? "?"}
+              <span style={{ width: 52, height: 52, flex: "none", borderRadius: "var(--r-full)", background: "var(--surface-raised)", border: "1px solid var(--border-2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: "var(--text-secondary)", overflow: "hidden" }}>
+                {sv.guildIcon ? (
+                  <img src={sv.guildIcon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  sv.guildName.trim()[0] ?? "?"
+                )}
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: "block", fontSize: 16, fontWeight: 700 }}>{sv.guildName}</span>

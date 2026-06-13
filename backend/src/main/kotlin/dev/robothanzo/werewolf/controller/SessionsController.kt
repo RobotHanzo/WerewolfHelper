@@ -3,6 +3,7 @@ package dev.robothanzo.werewolf.controller
 import dev.robothanzo.werewolf.controller.dto.SessionSummary
 import dev.robothanzo.werewolf.controller.dto.SessionSummaryResponse
 import dev.robothanzo.werewolf.controller.dto.SnapshotResponse
+import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.domain.repo.GameSessionRepository
 import dev.robothanzo.werewolf.security.CurrentUser
 import dev.robothanzo.werewolf.security.DashboardRoleService
@@ -28,6 +29,7 @@ class SessionsController(
     private val snapshots: SnapshotService,
     private val currentUser: CurrentUser,
     private val roleService: DashboardRoleService,
+    private val discordGateway: DiscordGateway,
 ) {
 
     @Operation(summary = "List my game servers", description = "Game servers the logged-in user may view.")
@@ -40,8 +42,8 @@ class SessionsController(
             .map {
                 SessionSummary(
                     guildId = it.guildId.toString(),
-                    guildName = "狼人殺遊戲",
-                    guildIcon = null,
+                    guildName = discordGateway.getGuildName(it.guildId) ?: "狼人殺遊戲",
+                    guildIcon = discordGateway.getGuildIconUrl(it.guildId),
                     playerCount = it.playerCount,
                 )
             }

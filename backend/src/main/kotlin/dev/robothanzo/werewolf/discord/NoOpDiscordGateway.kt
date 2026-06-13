@@ -23,6 +23,8 @@ class NoOpDiscordGateway(
     override fun listMembers(guildId: Long): List<GuildMember> = emptyList()
     override fun isOwner(guildId: Long, memberId: Long): Boolean = false
     override fun canInteract(guildId: Long, memberId: Long): Boolean = true
+    override fun getGuildName(guildId: Long): String? = null
+    override fun getGuildIconUrl(guildId: Long): String? = null
 
     override suspend fun provisionGuild(session: GameSession) {
         log.info("[noop] provisionGuild {}", session.guildId)

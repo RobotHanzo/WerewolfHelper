@@ -14,15 +14,23 @@ import dev.robothanzo.werewolf.domain.Seat
 import dev.robothanzo.werewolf.domain.repo.GameSessionRepository
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.roles.RoleTag
+import dev.robothanzo.werewolf.ops.BulkItem
+import dev.robothanzo.werewolf.ops.BulkOperationEngine
+import dev.robothanzo.werewolf.ops.BulkPhase
+import dev.robothanzo.werewolf.ops.ProgressSink
+import dev.robothanzo.werewolf.websocket.GameWebSocketHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.audio.AudioModuleConfig
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.buttons.Button
+import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Icon
 import net.dv8tion.jda.api.entities.Member
-import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent
@@ -38,19 +46,10 @@ import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.Commands
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
-import net.dv8tion.jda.api.components.actionrow.ActionRow
-import net.dv8tion.jda.api.components.buttons.Button
-import net.dv8tion.jda.api.components.selections.StringSelectMenu
-import net.dv8tion.jda.api.audio.AudioModuleConfig
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.ChunkingFilter
 import net.dv8tion.jda.api.utils.MemberCachePolicy
 import net.dv8tion.jda.api.utils.cache.CacheFlag
-import dev.robothanzo.werewolf.ops.BulkItem
-import dev.robothanzo.werewolf.ops.BulkOperationEngine
-import dev.robothanzo.werewolf.ops.BulkPhase
-import dev.robothanzo.werewolf.ops.ProgressSink
-import dev.robothanzo.werewolf.websocket.GameWebSocketHandler
 import org.slf4j.LoggerFactory
 import java.awt.Color
 import java.io.File
@@ -64,7 +63,6 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class JdaDiscordGateway(
     properties: DiscordProperties,
-    private val nicknames: NicknameService,
     private val sessions: GameSessionRepository,
     private val roles: RoleRegistry,
     private val engine: BulkOperationEngine,
@@ -110,12 +108,23 @@ class JdaDiscordGateway(
     private fun guild(guildId: Long): Guild? = jda.getGuildById(guildId)
     private fun session(guildId: Long): GameSession? = sessions.findById(guildId).orElse(null)
     private fun member(guildId: Long, memberId: Long): Member? =
-        guild(guildId)?.let { g -> g.getMemberById(memberId) ?: runCatching { g.retrieveMemberById(memberId).complete() }.getOrNull() }
+        guild(guildId)?.let { g ->
+            g.getMemberById(memberId) ?: runCatching {
+                g.retrieveMemberById(memberId).complete()
+            }.getOrNull()
+        }
 
     // ---- queries ----
     override fun listMembers(guildId: Long): List<GuildMember> =
         guild(guildId)?.members.orEmpty().map {
-            GuildMember(it.idLong, it.user.name, it.effectiveName, it.user.effectiveAvatarUrl, it.user.isBot, it.isOwner)
+            GuildMember(
+                it.idLong,
+                it.user.name,
+                it.effectiveName,
+                it.user.effectiveAvatarUrl,
+                it.user.isBot,
+                it.isOwner
+            )
         }
 
     override fun isOwner(guildId: Long, memberId: Long): Boolean = guild(guildId)?.ownerIdLong == memberId
@@ -125,6 +134,9 @@ class JdaDiscordGateway(
         val m = member(guildId, memberId) ?: return false
         return g.selfMember.canInteract(m)
     }
+
+    override fun getGuildName(guildId: Long): String? = guild(guildId)?.name
+    override fun getGuildIconUrl(guildId: Long): String? = guild(guildId)?.iconUrl
 
     // ---- provisioning ----
     override suspend fun provisionGuild(session: GameSession) = withContext(Dispatchers.IO) {
@@ -136,11 +148,16 @@ class JdaDiscordGateway(
                 .setName("狼人殺伺服器")
                 .setDefaultNotificationLevel(Guild.NotificationLevel.MENTIONS_ONLY)
                 .complete()
-            javaClass.classLoader.getResourceAsStream("wolf.png")?.use { guild.manager.setIcon(Icon.from(it)).complete() }
+            javaClass.classLoader.getResourceAsStream("wolf.png")
+                ?.use { guild.manager.setIcon(Icon.from(it)).complete() }
         }.onFailure { log.warn("guild rename/icon failed: {}", it.message) }
 
         // Delete existing channels (per-item isolated).
-        guild.channels.forEach { ch -> runCatching { ch.delete().complete() }.onFailure { log.warn("delete {} failed: {}", ch.id, it.message) } }
+        guild.channels.forEach { ch ->
+            runCatching {
+                ch.delete().complete()
+            }.onFailure { log.warn("delete {} failed: {}", ch.id, it.message) }
+        }
 
         // Judge role (yellow, admin).
         val judgeRole = guild.createRole().setName("法官").setColor(Color.YELLOW).setHoisted(true)
@@ -184,7 +201,11 @@ class JdaDiscordGateway(
         session.discordIds.spectatorTextChannelId = spectatorText.idLong
 
         val judgeText = guild.createTextChannel("法官")
-            .addPermissionOverride(pub, emptyList(), listOf(Permission.VIEW_CHANNEL, Permission.USE_APPLICATION_COMMANDS))
+            .addPermissionOverride(
+                pub,
+                emptyList(),
+                listOf(Permission.VIEW_CHANNEL, Permission.USE_APPLICATION_COMMANDS)
+            )
             .addPermissionOverride(judgeRole, listOf(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND), emptyList())
             .complete()
         session.discordIds.judgeTextChannelId = judgeText.idLong
@@ -193,7 +214,14 @@ class JdaDiscordGateway(
     }
 
     private fun sink(guildId: Long): ProgressSink =
-        ProgressSink { percent, line, severity -> ws.broadcastProgress(guildId, percent, line, severity.name.lowercase()) }
+        ProgressSink { percent, line, severity ->
+            ws.broadcastProgress(
+                guildId,
+                percent,
+                line,
+                severity.name.lowercase()
+            )
+        }
 
     override suspend fun resizeGuild(session: GameSession, newCount: Int) = withContext(Dispatchers.IO) {
         val guild = guild(session.guildId) ?: error("guild ${session.guildId} not found")
@@ -255,14 +283,22 @@ class JdaDiscordGateway(
         val role = guild.createRole().setName(name).setColor(randomColor()).setHoisted(true).complete()
         seat.roleId = role.idLong
         val channel = guild.createTextChannel(name)
-            .addPermissionOverride(role, listOf(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND, Permission.USE_APPLICATION_COMMANDS), emptyList())
-            .addPermissionOverride(guild.publicRole, emptyList(), listOf(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND))
+            .addPermissionOverride(
+                role,
+                listOf(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND, Permission.USE_APPLICATION_COMMANDS),
+                emptyList()
+            )
+            .addPermissionOverride(
+                guild.publicRole,
+                emptyList(),
+                listOf(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND)
+            )
             .complete()
         seat.channelId = channel.idLong
 
-        val courtCh = session.discordIds.courtTextChannelId?.let { guild.getTextChannelById(it) }
-        val specCh = session.discordIds.spectatorTextChannelId?.let { guild.getTextChannelById(it) }
-        val judgeCh = session.discordIds.judgeTextChannelId?.let { guild.getTextChannelById(it) }
+        val courtCh = guild.getTextChannelById(session.discordIds.courtTextChannelId)
+        val specCh = guild.getTextChannelById(session.discordIds.spectatorTextChannelId)
+        val judgeCh = guild.getTextChannelById(session.discordIds.judgeTextChannelId)
         val globalChannels = listOfNotNull(courtCh, specCh, judgeCh)
         val minPosition = globalChannels.minOfOrNull { it.position }
         if (minPosition != null) {
@@ -359,10 +395,12 @@ class JdaDiscordGateway(
             override fun trackLoaded(track: AudioTrack) {
                 player.startTrack(track, false)
             }
+
             override fun playlistLoaded(playlist: AudioPlaylist) {}
             override fun noMatches() {
                 log.warn("audio cue {} not found", cue)
             }
+
             override fun loadFailed(e: FriendlyException) {
                 log.error("audio cue {} failed: {}", cue, e.message)
             }
@@ -372,16 +410,24 @@ class JdaDiscordGateway(
     /** Extract a bundled mp3 to a temp file so lavaplayer's local source can load it by path. */
     private fun extractSound(cue: SoundCue): File? = runCatching {
         val tmp = File.createTempFile("wh-", ".mp3").apply { deleteOnExit() }
-        javaClass.classLoader.getResourceAsStream(cue.resource)!!.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+        javaClass.classLoader.getResourceAsStream(cue.resource)!!
+            .use { input -> tmp.outputStream().use { input.copyTo(it) } }
         tmp
     }.getOrNull()
 
     // ---- wolf-chat relay (one cached webhook per channel) ----
-    override fun relayWolfChat(guildId: Long, fromSeat: Int, authorName: String, authorAvatar: String?, content: String) {
+    override fun relayWolfChat(
+        guildId: Long,
+        fromSeat: Int,
+        authorName: String,
+        authorAvatar: String?,
+        content: String
+    ) {
         val g = guild(guildId) ?: return
         val session = session(guildId) ?: return
         val sender = session.seat(fromSeat) ?: return
-        val message = WebhookMessageBuilder().setContent(content).setUsername(authorName).setAvatarUrl(authorAvatar).build()
+        val message =
+            WebhookMessageBuilder().setContent(content).setUsername(authorName).setAvatarUrl(authorAvatar).build()
 
         // Mirror to the other members of whichever relay group the sender belongs to.
         val wolfGroup = isWolfChat(sender)
@@ -422,9 +468,13 @@ class JdaDiscordGateway(
             }
             // From the judge channel → mirror to every wolf-team channel.
             if (event.channel.idLong == session.discordIds.judgeTextChannelId) {
-                val message = WebhookMessageBuilder().setContent(content).setUsername("法官頻道（$author）").setAvatarUrl(avatar).build()
+                val message =
+                    WebhookMessageBuilder().setContent(content).setUsername("法官頻道（$author）").setAvatarUrl(avatar)
+                        .build()
                 session.seats.filter { isWolfChat(it) && it.channelId != 0L }
-                    .forEach { event.guild.getTextChannelById(it.channelId)?.let { ch -> webhookFor(ch).send(message) } }
+                    .forEach {
+                        event.guild.getTextChannelById(it.channelId)?.let { ch -> webhookFor(ch).send(message) }
+                    }
             }
         }
     }
@@ -463,7 +513,7 @@ class JdaDiscordGateway(
         val g = guild(guildId) ?: return
         val session = session(guildId) ?: return
         val buttons = options.map { Button.danger("${InteractionIds.WOLF_VOTE}:${it.seat}", it.label) } +
-            Button.secondary("${InteractionIds.WOLF_VOTE}:${InteractionIds.SKIP}", "本夜不刀")
+                Button.secondary("${InteractionIds.WOLF_VOTE}:${InteractionIds.SKIP}", "本夜不刀")
         val rows = buttons.chunked(5).map { ActionRow.of(it) }
         voterSeats.forEach { seatNumber ->
             val seat = session.seat(seatNumber) ?: return@forEach
@@ -523,6 +573,7 @@ class JdaDiscordGateway(
                     event.getOption("players")!!.asInt,
                     event.getOption("double")?.asBoolean ?: false,
                 )
+
                 "delete" -> handler.onServerDelete(event.user.idLong, event.guild?.idLong ?: 0)
                 else -> "未知的指令"
             }
@@ -534,13 +585,15 @@ class JdaDiscordGateway(
     private inner class ComponentListener : ListenerAdapter() {
         override fun onButtonInteraction(event: ButtonInteractionEvent) {
             if (!event.componentId.startsWith(InteractionIds.PREFIX) || !event.isFromGuild) return
-            val reply = interactionHandler?.handle(event.guild!!.idLong, event.user.idLong, event.componentId, emptyList())
+            val reply =
+                interactionHandler?.handle(event.guild!!.idLong, event.user.idLong, event.componentId, emptyList())
             event.reply(reply?.ack ?: "已收到").setEphemeral(true).queue()
         }
 
         override fun onStringSelectInteraction(event: StringSelectInteractionEvent) {
             if (!event.componentId.startsWith(InteractionIds.PREFIX) || !event.isFromGuild) return
-            val reply = interactionHandler?.handle(event.guild!!.idLong, event.user.idLong, event.componentId, event.values)
+            val reply =
+                interactionHandler?.handle(event.guild!!.idLong, event.user.idLong, event.componentId, event.values)
             event.reply(reply?.ack ?: "已收到").setEphemeral(true).queue()
         }
     }

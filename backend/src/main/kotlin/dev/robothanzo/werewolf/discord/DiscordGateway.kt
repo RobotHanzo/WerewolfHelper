@@ -33,6 +33,8 @@ interface DiscordGateway {
     fun isOwner(guildId: Long, memberId: Long): Boolean
     /** Role-hierarchy preflight: can the bot actually act on this member? */
     fun canInteract(guildId: Long, memberId: Long): Boolean
+    fun getGuildName(guildId: Long): String?
+    fun getGuildIconUrl(guildId: Long): String?
 
     // --- provisioning (long-running; driven through the bulk engine) ---
     suspend fun provisionGuild(session: GameSession)
