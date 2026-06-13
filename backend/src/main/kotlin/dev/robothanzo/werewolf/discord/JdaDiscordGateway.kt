@@ -146,7 +146,7 @@ class JdaDiscordGateway(
 
         // Seat roles + private channels.
         ensureSeats(session)
-        session.seats.sortedBy { it.number }.forEach { seat -> provisionSeat(guild, seat) }
+        session.seats.sortedBy { it.number }.forEach { seat -> provisionSeat(guild, session, seat) }
 
         // Spectator role (brown) + per-seat-channel overrides.
         val spectatorRole = guild.createRole().setName("旁觀者").setColor(Color(0x65, 0x43, 0x21))
@@ -211,7 +211,7 @@ class JdaDiscordGateway(
         val seatsToAdd = missingSeatNumbers.map { n -> Seat(number = n) }
         val createItems = seatsToAdd.map { seat ->
             BulkItem("玩家${seat.paddedNumber} 配置") {
-                provisionSeat(guild, seat)
+                provisionSeat(guild, session, seat)
             }
         }
 
@@ -247,7 +247,7 @@ class JdaDiscordGateway(
         session.seats.sortBy { it.number }
     }
 
-    private fun provisionSeat(guild: Guild, seat: Seat) {
+    private fun provisionSeat(guild: Guild, session: GameSession, seat: Seat) {
         val name = "玩家${seat.paddedNumber}"
         val role = guild.createRole().setName(name).setColor(randomColor()).setHoisted(true).complete()
         seat.roleId = role.idLong
@@ -256,7 +256,22 @@ class JdaDiscordGateway(
             .addPermissionOverride(guild.publicRole, emptyList(), listOf(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND))
             .complete()
         seat.channelId = channel.idLong
+
+        val courtCh = session.discordIds.courtTextChannelId?.let { guild.getTextChannelById(it) }
+        val specCh = session.discordIds.spectatorTextChannelId?.let { guild.getTextChannelById(it) }
+        val judgeCh = session.discordIds.judgeTextChannelId?.let { guild.getTextChannelById(it) }
+        val globalChannels = listOfNotNull(courtCh, specCh, judgeCh)
+        val minPosition = globalChannels.minOfOrNull { it.position }
+        if (minPosition != null) {
+            runCatching {
+                guild.modifyTextChannelPositions()
+                    .selectPosition(channel)
+                    .moveTo(minPosition)
+                    .complete()
+            }.onFailure { log.warn("failed to move text channel position for ${name}: {}", it.message) }
+        }
     }
+
 
     private fun randomColor(): Color = Color(Color.HSBtoRGB(Math.random().toFloat(), 0.6f, 0.85f))
 

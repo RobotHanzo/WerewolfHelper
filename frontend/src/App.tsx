@@ -161,6 +161,8 @@ function JudgeRoute({ children }: { children: React.ReactNode }) {
 
 function ServersRoute() {
   const navigate = useNavigate();
+  const auth = useAuthStore((s) => s.auth);
+  const demo = useAuthStore((s) => s.demo);
   const [servers, setServers] = useState<SessionSummary[]>([]);
   const [state, setState] = useState<"loading" | "error" | "ok">("loading");
   const load = () => {
@@ -178,6 +180,14 @@ function ServersRoute() {
         }
       });
   };
+
+  // If the user is not authenticated (and not in demo mode), send them to login immediately.
+  useEffect(() => {
+    if (!demo && !auth) {
+      navigate("/login", { replace: true });
+    }
+  }, [auth, demo, navigate]);
+
   useEffect(load, []);
   return (
     <ServerSelectScreen

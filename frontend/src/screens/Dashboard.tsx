@@ -69,7 +69,16 @@ export function Dashboard() {
             {snapshot.speech.endsAt && <Countdown endsAt={snapshot.speech.endsAt} size="sm" />}
           </button>
         )}
-        {snapshot.timerEndsAt && <Countdown endsAt={snapshot.timerEndsAt} size="sm" />}
+        {snapshot.timerEndsAt && (
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Countdown endsAt={snapshot.timerEndsAt} size="sm" />
+            {!readOnly && (
+              <Button size="sm" variant="ghost" onClick={actions.stopTimer}>
+                {t("common.cancel")}
+              </Button>
+            )}
+          </span>
+        )}
         <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           {!readOnly && isLobby && (
             snapshot.assigned ? (
@@ -162,8 +171,8 @@ export function Dashboard() {
               </CommandGroup>
               <CommandGroup label={t("dashboard.group.voice")}>
                 <Button size="sm" variant="secondary" onClick={() => useUiStore.getState().setTimerOpen(true)}>{t("dashboard.cmd.timer")}</Button>
-                <Button size="sm" variant="secondary" onClick={() => useUiStore.getState().showToast(t("dashboard.cmd.muteAll"))}>{t("dashboard.cmd.muteAll")}</Button>
-                <Button size="sm" variant="secondary" onClick={() => useUiStore.getState().showToast(t("dashboard.cmd.unmuteAll"))}>{t("dashboard.cmd.unmuteAll")}</Button>
+                <Button size="sm" variant="secondary" onClick={actions.muteAll}>{t("dashboard.cmd.muteAll")}</Button>
+                <Button size="sm" variant="secondary" onClick={actions.unmuteAll}>{t("dashboard.cmd.unmuteAll")}</Button>
               </CommandGroup>
               <CommandGroup label={t("dashboard.group.admin")}>
                 <Button size="sm" variant="ghost" onClick={() => useUiStore.getState().openPicker("promote", t("picker.promote"))}>{t("dashboard.cmd.promote")}</Button>

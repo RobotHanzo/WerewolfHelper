@@ -73,6 +73,10 @@ export const api = {
   forcePolice: (g: string, seat: number) => post(`/sessions/${g}/police/force`, { seat }),
   transferPolice: (g: string, fromSeat: number, toSeat: number) =>
     post(`/sessions/${g}/police/transfer`, { fromSeat, toSeat }),
+  muteAll: (g: string) => post(`/sessions/${g}/voice/mute`),
+  unmuteAll: (g: string) => post(`/sessions/${g}/voice/unmute`),
+  startTimer: (g: string, seconds: number) => post(`/sessions/${g}/timer/start`, { seconds }),
+  stopTimer: (g: string) => post(`/sessions/${g}/timer/stop`),
 
   // settings
   setPlayerCount: (g: string, count: number) => post(`/sessions/${g}/settings/player-count`, { count }),

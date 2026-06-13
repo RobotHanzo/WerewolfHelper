@@ -9,6 +9,7 @@ import dev.robothanzo.werewolf.domain.Seat
 import dev.robothanzo.werewolf.game.assign.AssignmentService
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.win.WinConditionChecker
+import dev.robothanzo.werewolf.game.flow.GameScheduler
 import org.springframework.stereotype.Service
 import kotlin.random.Random
 
@@ -26,6 +27,7 @@ class GameActionService(
     private val nicknames: NicknameService,
     private val gateway: DiscordGateway,
     private val discordOps: DiscordOpsService,
+    private val gameScheduler: GameScheduler,
 ) {
 
     /** Deal identities to the eligible (non-bot, non-owner, non-spectator) members. */
@@ -119,8 +121,10 @@ class GameActionService(
         session.policeSeat = null
         session.phase = Phase.LOBBY
         session.day = 0
+        session.timerEndsAt = null
         sessionService.clearLogs(guildId)
         sessionService.log(guildId, LogSeverity.ACTION, "game.reset")
+        gameScheduler.cancelAll(guildId)
     }
 
     private fun checkWin(session: GameSession) {

@@ -15,7 +15,7 @@ export function Overlays({ guildId, demo }: { guildId: string; demo: boolean }) 
       <KillModal guildId={guildId} demo={demo} />
       <EditModal />
       <PickerModal guildId={guildId} demo={demo} />
-      <TimerModal />
+      <TimerModal guildId={guildId} demo={demo} />
       <ProgressOverlay />
       <SessionExpiredModal />
       <Toast />
@@ -122,11 +122,11 @@ function KillModal({ guildId, demo }: { guildId: string; demo: boolean }) {
   );
 }
 
-function TimerModal() {
+function TimerModal({ guildId, demo }: { guildId: string; demo: boolean }) {
   const { t } = useTranslation();
   const open = useUiStore((s) => s.timerOpen);
   const setOpen = useUiStore((s) => s.setTimerOpen);
-  const showToast = useUiStore((s) => s.showToast);
+  const actions = useGameActions(guildId, demo);
   const [min, setMin] = useState("1");
   const [sec, setSec] = useState("30");
   const presets = [30, 60, 90, 180];
@@ -150,7 +150,7 @@ function TimerModal() {
         </div>
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <Button variant="ghost" onClick={() => setOpen(false)}>{t("common.cancel")}</Button>
-          <Button variant="primary" onClick={() => { setOpen(false); showToast(t("timer.start")); }}>{t("timer.start")}</Button>
+          <Button variant="primary" onClick={() => { const totalSeconds = (parseInt(min) || 0) * 60 + (parseInt(sec) || 0); if (totalSeconds > 0) { actions.startTimer(totalSeconds); setOpen(false); } }}>{t("timer.start")}</Button>
         </div>
       </div>
     </Modal>

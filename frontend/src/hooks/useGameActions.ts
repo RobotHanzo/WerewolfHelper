@@ -295,6 +295,41 @@ export function useGameActions(guildId: string, demo: boolean) {
           void api.nextPhase(guildId);
         }
       },
+      muteAll: () => {
+        if (demo) {
+          useUiStore.getState().showToast(t("dashboard.cmd.muteAll"));
+        } else {
+          api.muteAll(guildId)
+            .then(() => useUiStore.getState().showToast(t("dashboard.cmd.muteAll")))
+            .catch(handleApiError);
+        }
+      },
+      unmuteAll: () => {
+        if (demo) {
+          useUiStore.getState().showToast(t("dashboard.cmd.unmuteAll"));
+        } else {
+          api.unmuteAll(guildId)
+            .then(() => useUiStore.getState().showToast(t("dashboard.cmd.unmuteAll")))
+            .catch(handleApiError);
+        }
+      },
+      startTimer: (seconds: number) => {
+        if (demo) {
+          patch((s) => ({
+            ...s,
+            timerEndsAt: Date.now() + seconds * 1000,
+          }));
+        } else {
+          api.startTimer(guildId, seconds).catch(handleApiError);
+        }
+      },
+      stopTimer: () => {
+        if (demo) {
+          patch((s) => ({ ...s, timerEndsAt: null }));
+        } else {
+          api.stopTimer(guildId).catch(handleApiError);
+        }
+      },
     };
   }, [guildId, demo, patch, openProgress, t]);
 }
