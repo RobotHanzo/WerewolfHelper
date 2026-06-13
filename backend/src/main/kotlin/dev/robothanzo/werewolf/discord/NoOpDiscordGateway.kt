@@ -20,7 +20,20 @@ class NoOpDiscordGateway(
 
     override val available: Boolean = false
 
-    override fun listMembers(guildId: Long): List<GuildMember> = emptyList()
+    override fun listMembers(guildId: Long): List<GuildMember> = listOf(
+        GuildMember(1001L, "alpha", "阿爾法", null),
+        GuildMember(1002L, "beta", "貝塔", null),
+        GuildMember(1003L, "gamma", "伽馬", null),
+        GuildMember(1004L, "delta", "德爾塔", null),
+        GuildMember(1005L, "epsilon", "伊普西隆", null),
+        GuildMember(1006L, "zeta", "截塔", null),
+        GuildMember(1007L, "eta", "艾塔", null),
+        GuildMember(1008L, "theta", "西塔", null),
+        GuildMember(1009L, "iota", "約塔", null),
+        GuildMember(1010L, "kappa", "卡帕", null),
+        GuildMember(1011L, "lambda", "蘭布達", null),
+        GuildMember(1012L, "mu", "繆", null)
+    )
     override fun isOwner(guildId: Long, memberId: Long): Boolean = false
     override fun canInteract(guildId: Long, memberId: Long): Boolean = true
     override fun getGuildName(guildId: Long): String? = null
@@ -108,6 +121,10 @@ class NoOpDiscordGateway(
 
     override fun grantJudgeRole(guildId: Long, memberId: Long) {
         log.debug("[noop] grantJudgeRole {}", memberId)
+    }
+
+    override fun revokeJudgeRole(guildId: Long, memberId: Long) {
+        log.debug("[noop] revokeJudgeRole {}", memberId)
     }
 
     override fun promptNightAction(

@@ -59,9 +59,49 @@ function PickerModal({ guildId, demo }: { guildId: string; demo: boolean }) {
   const showToast = useUiStore((s) => s.showToast);
   const seats = useGameStore((s) => s.snapshot?.seats);
   const [query, setQuery] = useState("");
+  const [members, setMembers] = useState<{ id: string; name: string; displayName: string; avatar: string | null }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setQuery("");
+  }, [picker]);
+
+  useEffect(() => {
+    if (!picker || picker.kind === "force-police") {
+      setMembers([]);
+      return;
+    }
+    if (demo) {
+      setMembers([
+        { id: "1", name: "user1", displayName: "玩家一", avatar: null },
+        { id: "2", name: "user2", displayName: "玩家二", avatar: null },
+        { id: "3", name: "user3", displayName: "玩家三", avatar: null },
+      ]);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    api.members(guildId, query, picker.kind)
+      .then((res) => {
+        if (active) {
+          setMembers(res);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [picker, query, guildId, demo]);
+
   const rows = (seats ?? [])
-    .filter((s) => !s.unassigned && (query === "" || s.displayName?.includes(query) || s.label.includes(query)))
+    .filter((s) => !s.unassigned && s.alive && (query === "" || s.displayName?.includes(query) || s.label.includes(query)))
     .slice(0, 25);
+
+  const hasItems = picker?.kind === "force-police" ? rows.length > 0 : members.length > 0;
 
   return (
     <Modal open={picker != null} onClose={close} width={400}>
@@ -70,19 +110,63 @@ function PickerModal({ guildId, demo }: { guildId: string; demo: boolean }) {
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 900 }}>{picker.title}</h2>
           <input className="wh-input" placeholder={t("common.search")} value={query} onChange={(e) => setQuery(e.target.value)} />
           <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: "50vh", overflowY: "auto" }}>
-            {rows.length === 0 && <span style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: 14 }}>{t("picker.empty")}</span>}
-            {rows.map((s) => (
-              <button
-                key={s.seat}
-                className="wh-card"
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", cursor: "pointer", textAlign: "left" }}
-                onClick={() => { void (demo || api.forcePolice(guildId, s.seat)); showToast(`${picker.title} · 玩家${s.label}`); close(); }}
-              >
-                <span className="mono" style={{ fontWeight: 700 }}>玩家{s.label}</span>
-                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{s.displayName}</span>
-                <span style={{ marginLeft: "auto", color: "var(--text-muted)" }}>→</span>
-              </button>
-            ))}
+            {loading && <span style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: 14 }}>{t("common.loading") || "載入中..."}</span>}
+            {!loading && !hasItems && <span style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: 14 }}>{t("picker.empty")}</span>}
+            {!loading && picker.kind === "force-police" ? (
+              rows.map((s) => (
+                <button
+                  key={s.seat}
+                  className="wh-card"
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", cursor: "pointer", textAlign: "left" }}
+                  onClick={() => {
+                    void (demo || api.forcePolice(guildId, s.seat));
+                    showToast(`${picker.title} · 玩家${s.label}`);
+                    close();
+                  }}
+                >
+                  <span className="mono" style={{ fontWeight: 700 }}>玩家{s.label}</span>
+                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{s.displayName}</span>
+                  <span style={{ marginLeft: "auto", color: "var(--text-muted)" }}>→</span>
+                </button>
+              ))
+            ) : (
+              members.map((m) => (
+                <button
+                  key={m.id}
+                  className="wh-card"
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", cursor: "pointer", textAlign: "left" }}
+                  onClick={() => {
+                    if (demo) {
+                      showToast(`${picker.title} · ${m.displayName}`);
+                      close();
+                      return;
+                    }
+                    const newRole = picker.kind === "promote" ? "JUDGE" : "SPECTATOR";
+                    api.updateMemberRole(guildId, m.id, newRole)
+                      .then(() => {
+                        showToast(`${picker.title} · ${m.displayName}`);
+                        close();
+                      })
+                      .catch((err: any) => {
+                        showToast(err instanceof Error ? err.message : String(err), true);
+                      });
+                  }}
+                >
+                  {m.avatar ? (
+                    <img src={m.avatar} alt={m.displayName} style={{ width: 24, height: 24, borderRadius: "50%" }} />
+                  ) : (
+                    <div style={{ width: 24, height: 24, borderRadius: "50%", backgroundColor: "var(--bg-modifier-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>
+                      {m.displayName.charAt(0)}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{m.displayName}</span>
+                    <span style={{ fontSize: 10, color: "var(--text-muted)" }}>@{m.name}</span>
+                  </div>
+                  <span style={{ marginLeft: "auto", color: "var(--text-muted)" }}>→</span>
+                </button>
+              ))
+            )}
           </div>
         </div>
       )}

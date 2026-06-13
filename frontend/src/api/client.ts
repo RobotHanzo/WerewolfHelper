@@ -53,10 +53,12 @@ export const api = {
   roles: () => request<RoleInfo[]>("/roles"),
 
   // members
-  members: (guildId: string, query = "") =>
+  members: (guildId: string, query = "", type = "") =>
     request<{ id: string; name: string; displayName: string; avatar: string | null }[]>(
-      `/sessions/${guildId}/members?query=${encodeURIComponent(query)}`,
+      `/sessions/${guildId}/members?query=${encodeURIComponent(query)}&type=${encodeURIComponent(type)}`,
     ),
+  updateMemberRole: (g: string, userId: string, role: "JUDGE" | "SPECTATOR" | "BLOCKED") =>
+    post(`/sessions/${g}/members/role`, { userId, role }),
 
   // game actions (each mutates then the server broadcasts a fresh snapshot)
   assign: (g: string) => post(`/sessions/${g}/assign`),

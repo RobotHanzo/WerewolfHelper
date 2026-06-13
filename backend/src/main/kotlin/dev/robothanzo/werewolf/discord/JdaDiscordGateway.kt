@@ -346,6 +346,13 @@ class JdaDiscordGateway(
         if (g.selfMember.canInteract(role)) g.addRoleToMember(m, role).queue()
     }
 
+    override fun revokeJudgeRole(guildId: Long, memberId: Long) {
+        val g = guild(guildId) ?: return
+        val role = session(guildId)?.discordIds?.judgeRoleId?.let { g.getRoleById(it) } ?: return
+        val m = member(guildId, memberId) ?: return
+        if (g.selfMember.canInteract(role)) g.removeRoleFromMember(m, role).queue()
+    }
+
     override fun resetMember(guildId: Long, memberId: Long) {
         val m = member(guildId, memberId) ?: return
         if (!m.isOwner) m.modifyNickname(null).queue()

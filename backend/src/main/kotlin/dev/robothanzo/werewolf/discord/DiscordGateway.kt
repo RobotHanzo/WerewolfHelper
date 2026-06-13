@@ -70,6 +70,9 @@ interface DiscordGateway {
     /** Grant a member the provisioned judge role (re-granted to the owner on join, §3). */
     fun grantJudgeRole(guildId: Long, memberId: Long)
 
+    /** Revoke a member's provisioned judge role. */
+    fun revokeJudgeRole(guildId: Long, memberId: Long)
+
     /**
      * Post a single-select night-action prompt in [seatNumber]'s private channel. [customId] carries
      * the ability; [options] are the targetable seats; [extraValues] are non-seat choices (e.g. the

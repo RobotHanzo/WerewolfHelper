@@ -51,7 +51,7 @@ class DiscordConfig(private val properties: DiscordProperties) {
             return NoOpDiscordGateway(ws, msg)
         }
         return try {
-            JdaDiscordGateway(properties, nicknameService, sessions, roles, engine, ws)
+            JdaDiscordGateway(properties, sessions, roles, engine, ws)
         } catch (e: Exception) {
             log.error("Failed to start JDA ({}); falling back to the no-op gateway.", e.message)
             NoOpDiscordGateway(ws, msg)
