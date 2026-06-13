@@ -14,6 +14,7 @@ import dev.robothanzo.werewolf.domain.Seat
 import dev.robothanzo.werewolf.domain.repo.GameSessionRepository
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.roles.RoleTag
+import dev.robothanzo.werewolf.i18n.Msg
 import dev.robothanzo.werewolf.ops.BulkItem
 import dev.robothanzo.werewolf.ops.BulkOperationEngine
 import dev.robothanzo.werewolf.ops.BulkPhase
@@ -69,6 +70,7 @@ class JdaDiscordGateway(
     private val roles: RoleRegistry,
     private val engine: BulkOperationEngine,
     private val ws: GameWebSocketHandler,
+    private val msg: Msg,
 ) : DiscordGateway {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -235,10 +237,10 @@ class JdaDiscordGateway(
 
         val deleteItems = excessSeats.flatMap { seat ->
             listOf(
-                BulkItem("玩家${seat.paddedNumber} 刪除角色") {
+                BulkItem(msg.msg("bulk.item.delete_role", seat.paddedNumber)) {
                     guild.getRoleById(seat.roleId)?.delete()?.complete()
                 },
-                BulkItem("玩家${seat.paddedNumber} 刪除頻道") {
+                BulkItem(msg.msg("bulk.item.delete_channel", seat.paddedNumber)) {
                     guild.getTextChannelById(seat.channelId)?.delete()?.complete()
                 }
             )
@@ -248,10 +250,10 @@ class JdaDiscordGateway(
         // Roles must be created before channels (the channel's permission override references the seat
         // role), so they're two separate phases — which also reports them as distinct progress steps.
         val createRoleItems = seatsToAdd.map { seat ->
-            BulkItem("玩家${seat.paddedNumber} 建立角色") { provisionSeatRole(guild, seat) }
+            BulkItem(msg.msg("bulk.item.create_role", seat.paddedNumber)) { provisionSeatRole(guild, seat) }
         }
         val createChannelItems = seatsToAdd.map { seat ->
-            BulkItem("玩家${seat.paddedNumber} 建立頻道") { provisionSeatChannel(guild, session, seat) }
+            BulkItem(msg.msg("bulk.item.create_channel", seat.paddedNumber)) { provisionSeatChannel(guild, session, seat) }
         }
 
         // Split 0..100 evenly across the active phases (delete / create-roles / create-channels).

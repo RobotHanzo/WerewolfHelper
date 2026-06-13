@@ -60,15 +60,15 @@ class DiscordOpsService(
                 session.seats.filter { it.assigned }.flatMap { seat ->
                     val memberId = seat.memberId!!
                     listOf(
-                        BulkItem("玩家${seat.paddedNumber} 角色") { gateway.grantSeatRole(guildId, memberId, seat.number, await = true) },
-                        BulkItem("玩家${seat.paddedNumber} 暱稱") { gateway.setNickname(guildId, memberId, nicknames.nicknameFor(seat), await = true) },
+                        BulkItem(msg.msg("bulk.item.assign_role", seat.paddedNumber)) { gateway.grantSeatRole(guildId, memberId, seat.number, await = true) },
+                        BulkItem(msg.msg("bulk.item.assign_nickname", seat.paddedNumber)) { gateway.setNickname(guildId, memberId, nicknames.nicknameFor(seat), await = true) },
                     )
                 },
             )
             val notify = BulkPhase(
                 "notify", 90, 100,
                 session.seats.filter { it.assigned }.map { seat ->
-                    BulkItem("玩家${seat.paddedNumber} 身分通知") {
+                    BulkItem(msg.msg("bulk.item.assign_notify", seat.paddedNumber)) {
                         val ids = seat.cards.joinToString("、") { roles.localizedName(it.roleId) }
                         gateway.sendSeatEmbed(
                             guildId, seat.number,
@@ -106,8 +106,8 @@ class DiscordOpsService(
                 "reset", 0, 100,
                 seated.flatMap { (paddedNumber, memberId) ->
                     listOf(
-                        BulkItem("玩家$paddedNumber 移除角色") { gateway.removeSeatRoles(guildId, memberId) },
-                        BulkItem("玩家$paddedNumber 重置暱稱") { gateway.clearNickname(guildId, memberId) },
+                        BulkItem(msg.msg("bulk.item.reset_role", paddedNumber)) { gateway.removeSeatRoles(guildId, memberId) },
+                        BulkItem(msg.msg("bulk.item.reset_nickname", paddedNumber)) { gateway.clearNickname(guildId, memberId) },
                     )
                 },
             )
