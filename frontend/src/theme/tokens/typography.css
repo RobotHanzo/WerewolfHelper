@@ -3,7 +3,7 @@
 
 :root {
   --font-ui: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
-  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, var(--font-ui), monospace;
 
   /* Type scale */
   --text-xs: 12px;   /* timestamps, captions */
