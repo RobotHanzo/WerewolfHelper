@@ -39,7 +39,20 @@ class AssignmentService(private val roles: RoleRegistry) {
         val members = eligibleMembers.shuffled(random)
         val deck = buildDeck(session).toMutableList().apply { shuffle(random) }
 
-        val seats = (1..session.playerCount).map { Seat(number = it) }
+        // Reuse the already-provisioned seats so their Discord ids (roleId/channelId) survive the
+        // re-deal; recreating Seat objects here would reset those to 0 and break role grants and
+        // seat-channel notifications. Only the per-game fields are cleared.
+        val seats = (1..session.playerCount).map { n ->
+            session.seat(n)?.copy(
+                memberId = null,
+                cards = mutableListOf(),
+                police = false,
+                goldenBaby = false,
+                clone = false,
+                idiot = false,
+                orderLocked = false,
+            ) ?: Seat(number = n)
+        }
 
         if (session.settings.doubleIdentity) {
             dealDouble(seats, members, deck, random)
