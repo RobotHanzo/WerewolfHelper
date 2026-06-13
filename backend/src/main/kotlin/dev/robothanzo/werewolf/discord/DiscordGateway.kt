@@ -39,11 +39,11 @@ interface DiscordGateway {
     suspend fun resizeGuild(session: GameSession, newCount: Int)
     suspend fun deleteGuild(guildId: Long)
 
-    // --- per-member mutations (each isolated for the bulk engine) ---
-    suspend fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int)
-    suspend fun setNickname(guildId: Long, memberId: Long, nickname: String)
-    suspend fun grantSpectatorRole(guildId: Long, memberId: Long)
-    suspend fun resetMember(guildId: Long, memberId: Long)
+    // --- per-member mutations (non-blocking via the library's queue; isolated for the bulk engine) ---
+    fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int)
+    fun setNickname(guildId: Long, memberId: Long, nickname: String)
+    fun grantSpectatorRole(guildId: Long, memberId: Long)
+    fun resetMember(guildId: Long, memberId: Long)
 
     // --- messaging ---
     fun sendChannelMessage(guildId: Long, channel: ChannelKind, text: String)

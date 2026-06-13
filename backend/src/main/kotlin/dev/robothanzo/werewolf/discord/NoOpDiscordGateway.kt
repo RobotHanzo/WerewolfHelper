@@ -23,19 +23,19 @@ class NoOpDiscordGateway : DiscordGateway {
         log.info("[noop] resizeGuild {} -> {}", session.guildId, newCount)
     override suspend fun deleteGuild(guildId: Long) = log.info("[noop] deleteGuild {}", guildId)
 
-    override suspend fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int) {
+    override fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int) {
         log.debug("[noop] grantSeatRole {} seat {}", memberId, seatNumber)
     }
 
-    override suspend fun setNickname(guildId: Long, memberId: Long, nickname: String) {
+    override fun setNickname(guildId: Long, memberId: Long, nickname: String) {
         log.debug("[noop] setNickname {} -> {}", memberId, nickname)
     }
 
-    override suspend fun grantSpectatorRole(guildId: Long, memberId: Long) {
+    override fun grantSpectatorRole(guildId: Long, memberId: Long) {
         log.debug("[noop] grantSpectatorRole {}", memberId)
     }
 
-    override suspend fun resetMember(guildId: Long, memberId: Long) {
+    override fun resetMember(guildId: Long, memberId: Long) {
         log.debug("[noop] resetMember {}", memberId)
     }
 

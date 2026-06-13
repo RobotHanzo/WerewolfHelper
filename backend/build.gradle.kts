@@ -25,8 +25,9 @@ dependencies {
     implementation("org.mongodb:mongodb-spring-session:4.0.0-rc1")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-scalar:2.8.15")
 
-    // Kotlin
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    // Kotlin — Spring Boot 4 uses Jackson 3 (tools.jackson); register its Kotlin module so
+    // request bodies and DTOs (data classes with defaults) (de)serialize correctly.
+    implementation("tools.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
 
@@ -49,6 +50,8 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    // Embedded MongoDB so the Spring context can be verified end-to-end without a running server.
+    testImplementation("de.flapdoodle.embed:de.flapdoodle.embed.mongo.spring4x:4.33.0")
 }
 
 configurations.all {

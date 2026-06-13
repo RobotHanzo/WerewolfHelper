@@ -68,11 +68,11 @@ class JdaDiscordGateway(
         guild(guildId)?.leave()?.queue()
     }
 
-    override suspend fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int) {
+    override fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int) {
         log.warn("grantSeatRole needs the provisioned seat roles for guild {} (not yet wired).", guildId)
     }
 
-    override suspend fun setNickname(guildId: Long, memberId: Long, nickname: String) {
+    override fun setNickname(guildId: Long, memberId: Long, nickname: String) {
         val g = guild(guildId) ?: error("guild $guildId not found")
         val m = member(guildId, memberId) ?: error("member $memberId not found")
         if (m.isOwner) return // bots can never rename the owner
@@ -81,11 +81,11 @@ class JdaDiscordGateway(
         m.modifyNickname(nickname).queue()
     }
 
-    override suspend fun grantSpectatorRole(guildId: Long, memberId: Long) {
+    override fun grantSpectatorRole(guildId: Long, memberId: Long) {
         log.warn("grantSpectatorRole needs the provisioned spectator role for guild {} (not yet wired).", guildId)
     }
 
-    override suspend fun resetMember(guildId: Long, memberId: Long) {
+    override fun resetMember(guildId: Long, memberId: Long) {
         val m = member(guildId, memberId) ?: return
         if (!m.isOwner) m.modifyNickname(null).queue()
     }
