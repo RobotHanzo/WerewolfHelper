@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGameStore } from "@/stores/gameStore";
@@ -237,7 +238,7 @@ function Toast() {
           animate={{ opacity: 1, y: 0, x: "-50%" }}
           exit={{ opacity: 0, y: 16, x: "-50%" }}
         >
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: toast.isError ? "var(--danger-500)" : "var(--moon-400)" }} />
+          {toast.isError ? <X size={14} strokeWidth={2.5} style={{ color: "var(--danger-500)", flexShrink: 0 }} /> : <Check size={14} strokeWidth={2.5} style={{ color: "var(--success-500)", flexShrink: 0 }} />}
           {toast.text}
         </motion.div>
       )}

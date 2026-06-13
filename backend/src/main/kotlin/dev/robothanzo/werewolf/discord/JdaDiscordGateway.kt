@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.discord
 
+import club.minnced.discord.jdave.interop.JDaveSessionFactory
 import club.minnced.discord.webhook.WebhookClient
 import club.minnced.discord.webhook.send.WebhookMessageBuilder
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler
@@ -40,6 +41,7 @@ import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.components.selections.StringSelectMenu
+import net.dv8tion.jda.api.audio.AudioModuleConfig
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.ChunkingFilter
 import net.dv8tion.jda.api.utils.MemberCachePolicy
@@ -82,6 +84,7 @@ class JdaDiscordGateway(
         .setChunkingFilter(ChunkingFilter.ALL)
         .enableCache(CacheFlag.VOICE_STATE)
         .disableCache(CacheFlag.ACTIVITY, CacheFlag.EMOJI, CacheFlag.STICKER, CacheFlag.SCHEDULED_EVENTS)
+        .setAudioModuleConfig(AudioModuleConfig().withDaveSessionFactory(JDaveSessionFactory()))
         .build()
 
     private val playerManager = DefaultAudioPlayerManager().also { AudioSourceManagers.registerLocalSource(it) }

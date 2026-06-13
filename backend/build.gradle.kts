@@ -39,10 +39,10 @@ dependencies {
 
     // JDA Audio supplements
     implementation("dev.arbjerg:lavaplayer:2.2.6")
-    implementation("club.minnced:jdave-api:0.1.5")
-    implementation("club.minnced:jdave-native-linux-x86-64:0.1.5")
-    implementation("club.minnced:jdave-native-linux-aarch64:0.1.5")
-    implementation("club.minnced:jdave-native-win-x86-64:0.1.5")
+    implementation("club.minnced:jdave-api:0.1.8")
+    implementation("club.minnced:jdave-native-linux-x86-64:0.1.8")
+    implementation("club.minnced:jdave-native-linux-aarch64:0.1.8")
+    implementation("club.minnced:jdave-native-win-x86-64:0.1.8")
 
     // Spring Context Indexer for faster startup
     annotationProcessor("org.springframework:spring-context-indexer")
