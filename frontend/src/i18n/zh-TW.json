@@ -27,7 +27,10 @@
   "login": {
     "withDiscord": "使用 Discord 登入",
     "reloginWithDiscord": "使用 Discord 重新登入",
-    "note": "本控制台僅供法官與旁觀者使用。在場玩家無法進入。"
+    "note": "本控制台僅供法官與旁觀者使用。在場玩家無法進入。",
+    "loggedInAs": "已登入為 {{name}}",
+    "selectServer": "選擇遊戲伺服器",
+    "notYou": "不是你？切換帳號"
   },
   "servers": {
     "title": "選擇遊戲伺服器",

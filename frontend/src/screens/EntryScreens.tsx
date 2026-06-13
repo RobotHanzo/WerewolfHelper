@@ -1,6 +1,11 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import type { SessionSummary } from "@/types/snapshot";
+import { api } from "@/api/client";
+import { useAuthStore } from "@/stores/authStore";
+import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
+import type { SessionSummary } from "@/types/snapshot";
 
 const centered: React.CSSProperties = {
   minHeight: "100vh",
@@ -34,20 +39,141 @@ const DiscordMark = () => (
 
 export function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const { t } = useTranslation();
+  const auth = useAuthStore((s) => s.auth);
+  const navigate = useNavigate();
+  const [loggingOut, setLoggingOut] = useState(false);
+
   return (
     <div style={{ ...centered, background: "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(84,210,228,0.07), transparent)" }}>
       <div style={{ ...card, width: 380 }}>
         <img src="/logo.svg" alt="" width={72} height={72} />
         <h1 style={{ margin: "8px 0 0", fontSize: 26, fontWeight: 900, letterSpacing: "0.04em" }}>{t("app.name")}</h1>
         <span className="mono" style={{ fontSize: 11, color: "var(--moon-400)", letterSpacing: "0.24em" }}>{t("app.wordmark")}</span>
-        <button
-          type="button"
-          onClick={onLogin}
-          style={{ marginTop: 28, width: "100%", height: 48, border: "none", borderRadius: "var(--r-md)", background: "#5865F2", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
-        >
-          <DiscordMark />
-          {t("login.withDiscord")}
-        </button>
+        
+        {auth ? (
+          <>
+            <div style={{
+              marginTop: 24,
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 16,
+              padding: "20px 16px",
+              borderRadius: "var(--r-lg)",
+              background: "linear-gradient(135deg, rgba(84,210,228,0.06), rgba(84,210,228,0.01))",
+              border: "1px solid rgba(84,210,228,0.15)",
+              boxShadow: "inset 0 0 12px rgba(84,210,228,0.05)",
+              position: "relative",
+              overflow: "hidden",
+              boxSizing: "border-box"
+            }}>
+              {/* Subtle glow effect in the card */}
+              <div style={{
+                position: "absolute",
+                top: -20,
+                left: -20,
+                width: 80,
+                height: 80,
+                background: "rgba(84,210,228,0.15)",
+                filter: "blur(20px)",
+                borderRadius: "50%",
+                pointerEvents: "none"
+              }} />
+
+              {/* Avatar with circular container and glowing effect */}
+              <div style={{
+                position: "relative",
+                display: "inline-flex",
+                padding: 4,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, var(--moon-400), rgba(84,210,228,0.3))",
+                boxShadow: "0 0 16px rgba(84,210,228,0.2)"
+              }}>
+                <Avatar name={auth.username} avatar={auth.avatar} size="lg" />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: "var(--text-body)" }}>
+                  {auth.username}
+                </span>
+                <span style={{ fontSize: 12, color: "var(--text-muted)", letterSpacing: "0.05em" }}>
+                  {t("login.loggedInAs", { name: auth.username })}
+                </span>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <button
+              type="button"
+              onClick={() => navigate("/servers")}
+              className="wh-btn wh-btn--lg wh-btn--primary"
+              style={{
+                marginTop: 20,
+                width: "100%",
+                height: 48,
+                border: "none",
+                borderRadius: "var(--r-md)",
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}
+            >
+              {t("login.selectServer")}
+            </button>
+
+            <button
+              type="button"
+              disabled={loggingOut}
+              onClick={async () => {
+                setLoggingOut(true);
+                try {
+                  if (!useAuthStore.getState().demo) {
+                    await api.logout();
+                  }
+                } catch (err) {
+                  console.error("Logout failed:", err);
+                } finally {
+                  useAuthStore.setState({ auth: null, demo: false });
+                  setLoggingOut(false);
+                }
+              }}
+              className="wh-btn wh-btn--ghost"
+              style={{
+                marginTop: 8,
+                width: "100%",
+                height: 36,
+                fontSize: 13,
+                color: "var(--text-muted)",
+                fontWeight: 500,
+                cursor: "pointer",
+                background: "transparent",
+                border: "none",
+                borderRadius: "var(--r-md)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6
+              }}
+            >
+              {t("login.notYou")}
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={onLogin}
+            style={{ marginTop: 28, width: "100%", height: 48, border: "none", borderRadius: "var(--r-md)", background: "#5865F2", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
+          >
+            <DiscordMark />
+            {t("login.withDiscord")}
+          </button>
+        )}
         <p style={{ margin: "18px 0 0", fontSize: 12, color: "var(--text-muted)", lineHeight: 1.7 }}>{t("login.note")}</p>
       </div>
     </div>
