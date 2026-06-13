@@ -52,13 +52,15 @@ class DiscordOpsService(
         }
         scope.launch {
             val guildId = session.guildId
+            // One player at a time: each item blocks (await = true) until Discord confirms, so the role
+            // grant finishes before the nickname, and a player fully completes before the next starts.
             val critical = BulkPhase(
                 "critical", 0, 90,
                 session.seats.filter { it.assigned }.flatMap { seat ->
                     val memberId = seat.memberId!!
                     listOf(
-                        BulkItem("玩家${seat.paddedNumber} 角色") { gateway.grantSeatRole(guildId, memberId, seat.number) },
-                        BulkItem("玩家${seat.paddedNumber} 暱稱") { gateway.setNickname(guildId, memberId, nicknames.nicknameFor(seat)) },
+                        BulkItem("玩家${seat.paddedNumber} 角色") { gateway.grantSeatRole(guildId, memberId, seat.number, await = true) },
+                        BulkItem("玩家${seat.paddedNumber} 暱稱") { gateway.setNickname(guildId, memberId, nicknames.nicknameFor(seat), await = true) },
                     )
                 },
             )

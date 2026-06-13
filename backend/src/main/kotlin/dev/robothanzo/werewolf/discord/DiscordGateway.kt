@@ -42,9 +42,12 @@ interface DiscordGateway {
     suspend fun resizeGuild(session: GameSession, newCount: Int)
     suspend fun deleteGuild(guildId: Long)
 
-    // --- per-member mutations (non-blocking via the library's queue; isolated for the bulk engine) ---
-    fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int)
-    fun setNickname(guildId: Long, memberId: Long, nickname: String)
+    // --- per-member mutations (isolated for the bulk engine) ---
+    // `await = true` blocks until Discord confirms, so the assignment bulk phase can apply role then
+    // nickname strictly one player at a time (FEATURES §10.2); the default fire-and-forget `queue()`
+    // keeps the live single-seat nickname syncs off the request thread.
+    fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int, await: Boolean = false)
+    fun setNickname(guildId: Long, memberId: Long, nickname: String, await: Boolean = false)
     fun grantSpectatorRole(guildId: Long, memberId: Long)
     fun resetMember(guildId: Long, memberId: Long)
 

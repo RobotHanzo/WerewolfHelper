@@ -69,11 +69,11 @@ class NoOpDiscordGateway(
 
     override suspend fun deleteGuild(guildId: Long) = log.info("[noop] deleteGuild {}", guildId)
 
-    override fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int) {
+    override fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int, await: Boolean) {
         log.debug("[noop] grantSeatRole {} seat {}", memberId, seatNumber)
     }
 
-    override fun setNickname(guildId: Long, memberId: Long, nickname: String) {
+    override fun setNickname(guildId: Long, memberId: Long, nickname: String, await: Boolean) {
         log.debug("[noop] setNickname {} -> {}", memberId, nickname)
     }
 

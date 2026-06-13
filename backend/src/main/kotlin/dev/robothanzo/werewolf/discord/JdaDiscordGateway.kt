@@ -47,6 +47,7 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import net.dv8tion.jda.api.requests.GatewayIntent
+import net.dv8tion.jda.api.requests.RestAction
 import net.dv8tion.jda.api.utils.ChunkingFilter
 import net.dv8tion.jda.api.utils.MemberCachePolicy
 import net.dv8tion.jda.api.utils.cache.CacheFlag
@@ -318,21 +319,25 @@ class JdaDiscordGateway(
     private fun randomColor(): Color = Color(Color.HSBtoRGB(Math.random().toFloat(), 0.6f, 0.85f))
 
     // ---- per-member mutations ----
-    override fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int) {
+    /** `await = true` blocks on the calling (IO) thread until Discord confirms, so the assignment
+     *  bulk phase applies role then nickname strictly one player at a time; otherwise fire-and-forget. */
+    private fun RestAction<*>.dispatch(await: Boolean) = if (await) complete() else queue()
+
+    override fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int, await: Boolean) {
         val g = guild(guildId) ?: return
         val seat = session(guildId)?.seat(seatNumber) ?: return
         val role = g.getRoleById(seat.roleId) ?: return
         val m = member(guildId, memberId) ?: return
-        if (g.selfMember.canInteract(role)) g.addRoleToMember(m, role).queue()
+        if (g.selfMember.canInteract(role)) g.addRoleToMember(m, role).dispatch(await)
     }
 
-    override fun setNickname(guildId: Long, memberId: Long, nickname: String) {
+    override fun setNickname(guildId: Long, memberId: Long, nickname: String, await: Boolean) {
         val g = guild(guildId) ?: error("guild $guildId not found")
         val m = member(guildId, memberId) ?: error("member $memberId not found")
         if (m.isOwner) return // bots can never rename the owner
         if (!g.selfMember.canInteract(m)) error("權限不足")
         if (m.nickname == nickname) return // skip no-op updates
-        m.modifyNickname(nickname).queue()
+        m.modifyNickname(nickname).dispatch(await)
     }
 
     override fun grantSpectatorRole(guildId: Long, memberId: Long) {
