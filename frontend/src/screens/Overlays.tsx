@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGameStore } from "@/stores/gameStore";
@@ -159,6 +159,13 @@ function ProgressOverlay() {
   const { t } = useTranslation();
   const progress = useGameStore((s) => s.progress);
   const close = useGameStore((s) => s.closeProgress);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [progress?.lines.length]);
 
   return (
     <AnimatePresence>
@@ -170,7 +177,7 @@ function ProgressOverlay() {
               <span className="mono" style={{ marginLeft: "auto", fontWeight: 700, color: "var(--moon-300)" }}>{progress.percent}%</span>
             </header>
             <ProgressBar percent={progress.percent} state={progress.state} />
-            <div className="mono" style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 220, overflowY: "auto", padding: 12, borderRadius: "var(--r-md)", background: "var(--surface-app)", border: "1px solid var(--border-1)", fontSize: 12, lineHeight: 1.8 }}>
+            <div ref={scrollRef} className="mono" style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 220, overflowY: "auto", padding: 12, borderRadius: "var(--r-md)", background: "var(--surface-app)", border: "1px solid var(--border-1)", fontSize: 12, lineHeight: 1.8 }}>
               {progress.lines.map((l, i) => (
                 <span key={i} style={{ color: l.severity === "alert" ? "var(--danger-500)" : "var(--text-secondary)" }}>{l.line}</span>
               ))}
