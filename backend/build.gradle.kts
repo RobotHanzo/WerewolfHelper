@@ -65,6 +65,38 @@ kotlin {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Frontend bundling: build the React app and pack its dist/ into the bootJar so
+// production runs a single self-contained jar (Spring serves it from classpath:/static).
+// Only the bootJar triggers this — `test` / `compileKotlin` stay node-free.
+// Skip with `-PskipFrontend` (e.g. backend-only CI).
+// ---------------------------------------------------------------------------
+val frontendDir = layout.projectDirectory.dir("../frontend")
+val frontendDist = frontendDir.dir("dist")
+val skipFrontend = providers.gradleProperty("skipFrontend").isPresent
+val onWindows = System.getProperty("os.name").lowercase().contains("win")
+fun yarn(vararg args: String): List<String> =
+    if (onWindows) listOf("cmd", "/c", "yarn", *args) else listOf("yarn", *args)
+
+val yarnInstall = tasks.register<Exec>("yarnInstall") {
+    workingDir = frontendDir.asFile
+    commandLine(yarn("install", "--frozen-lockfile"))
+    inputs.file(frontendDir.file("package.json"))
+    inputs.file(frontendDir.file("yarn.lock"))
+    outputs.dir(frontendDir.dir("node_modules"))
+}
+
+val yarnBuild = tasks.register<Exec>("yarnBuild") {
+    dependsOn(yarnInstall)
+    workingDir = frontendDir.asFile
+    commandLine(yarn("build"))
+    inputs.dir(frontendDir.dir("src"))
+    inputs.file(frontendDir.file("package.json"))
+    inputs.file(frontendDir.file("vite.config.ts"))
+    inputs.file(frontendDir.file("index.html"))
+    outputs.dir(frontendDist)
+}
+
 tasks {
     test {
         useJUnitPlatform()
@@ -72,6 +104,11 @@ tasks {
 
     bootJar {
         mainClass.set("dev.robothanzo.werewolf.WerewolfApplicationKt")
+        if (!skipFrontend) {
+            dependsOn(yarnBuild)
+            // place the built SPA on the classpath so Spring serves it from classpath:/static
+            from(frontendDist) { into("BOOT-INF/classes/static") }
+        }
     }
 
     named<BootRun>("bootRun") {
