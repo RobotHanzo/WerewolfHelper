@@ -362,8 +362,15 @@ class JdaDiscordGateway(
     }
 
     override fun resetMember(guildId: Long, memberId: Long) {
+        val g = guild(guildId) ?: return
         val m = member(guildId, memberId) ?: return
         if (!m.isOwner) m.modifyNickname(null).queue()
+        // Strip any seat roles the member still holds (seat.roleId survives reset; only the
+        // seat→member binding is cleared), so a reset player walks away with no game role.
+        val seatRoleIds = session(guildId)?.seats?.mapNotNull { it.roleId.takeIf { id -> id != 0L } }?.toSet().orEmpty()
+        m.roles
+            .filter { it.idLong in seatRoleIds && g.selfMember.canInteract(it) }
+            .forEach { g.removeRoleFromMember(m, it).queue() }
     }
 
     // ---- messaging ----
