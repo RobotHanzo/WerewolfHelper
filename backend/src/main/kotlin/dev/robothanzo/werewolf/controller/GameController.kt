@@ -120,6 +120,7 @@ class GameController(
     @CanManageGuild
     fun start(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
         val entered = sessionService.mutate(guildId.toLong()) { s ->
+            require(s.assigned) { "error.not_assigned" }
             val t = flow.start(); s.phase = t.phase; s.day = t.day; t.phase
         }
         if (entered == Phase.NIGHT) night.startNight(guildId.toLong())

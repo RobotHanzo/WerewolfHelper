@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { FactionMeter as FactionMeterData } from "@/types/snapshot";
+import { RoleIcon } from "@/components/ui/Badge";
 
 const COLOR: Record<string, string> = {
   WOLF: "var(--wolf-500)",
@@ -7,7 +8,7 @@ const COLOR: Record<string, string> = {
   VILLAGER: "var(--vill-500)",
   GBABY: "var(--gbaby-amber)",
 };
-const GLYPH: Record<string, string> = { WOLF: "狼", GOD: "神", VILLAGER: "民", GBABY: "寶" };
+
 const LABEL_KEY: Record<string, string> = {
   WOLF: "faction.wolfFull",
   GOD: "faction.godFull",
@@ -22,7 +23,7 @@ export function FactionMeter({ meter }: { meter: FactionMeterData }) {
   return (
     <div className="wh-meter">
       <div className="wh-meter__head">
-        <span style={{ color, fontWeight: 900 }}>{GLYPH[meter.faction]}</span>
+        <span style={{ color, display: "inline-flex", alignItems: "center" }}><RoleIcon roleId={meter.faction} size={14} /></span>
         <span style={{ fontWeight: 700 }}>{t(LABEL_KEY[meter.faction])}</span>
         <span className="wh-meter__count" style={{ color }}>
           {meter.alive} / {meter.total}

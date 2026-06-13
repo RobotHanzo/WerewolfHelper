@@ -31,6 +31,7 @@ data class GameSnapshot(
     val poll: PollDto?,
     val night: NightDto?,
     val log: List<LogDto>,
+    val pool: Map<String, Int>,
 )
 
 @Schema(description = "A seat and its identities")

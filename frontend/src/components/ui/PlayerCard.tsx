@@ -58,7 +58,7 @@ export function PlayerCard({ seat, changed, readOnly, onKill, onRevive, onEdit, 
             style={{ cursor: !readOnly && idn.dead ? "pointer" : "default" }}
             title={!readOnly && idn.dead ? t("dashboard.seatAction.revive") : undefined}
           >
-            <FactionBadge faction={idn.faction} name={idn.name} dead={idn.dead} size="sm" />
+            <FactionBadge faction={idn.faction} roleId={idn.roleId} name={idn.name} dead={idn.dead} size="sm" />
           </span>
         ))}
       </div>

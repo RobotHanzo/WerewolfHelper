@@ -131,6 +131,7 @@ export interface GameSnapshot {
   poll: Poll | null;
   night: Night | null;
   log: LogEntry[];
+  pool: Record<string, number>;
 }
 
 export type DashboardRole = "JUDGE" | "SPECTATOR" | "PENDING" | "BLOCKED";

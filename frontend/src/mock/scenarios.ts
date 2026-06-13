@@ -136,6 +136,15 @@ export function buildScenario(scenario: ScenarioId): GameSnapshot {
     poll: null,
     night: null,
     log: LOG,
+    pool: {
+      villager: 4,
+      seer: 1,
+      witch: 1,
+      hunter: 1,
+      guard: 1,
+      wolf: 3,
+      wolf_king: 1,
+    },
   };
 
   switch (scenario) {

@@ -119,6 +119,9 @@
       "demote": "撤銷法官",
       "forcePolice": "指派警長"
     },
+    "error": {
+      "not_assigned": "身分尚未分配，請先進行身分分配"
+    },
     "seatAction": { "kill": "擊殺", "revive": "復活", "edit": "編輯" }
   },
   "expel": {

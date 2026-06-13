@@ -2,6 +2,8 @@ package dev.robothanzo.werewolf.discord
 
 import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.domain.Seat
+import dev.robothanzo.werewolf.i18n.Msg
+import dev.robothanzo.werewolf.websocket.GameWebSocketHandler
 import org.slf4j.LoggerFactory
 
 /**
@@ -9,7 +11,10 @@ import org.slf4j.LoggerFactory
  * so the engine, REST API, and WebSocket hub run fully against seeded/Mongo state for local
  * development and tests without a live bot.
  */
-class NoOpDiscordGateway : DiscordGateway {
+class NoOpDiscordGateway(
+    private val ws: GameWebSocketHandler? = null,
+    private val msg: Msg? = null,
+) : DiscordGateway {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -39,7 +44,13 @@ class NoOpDiscordGateway : DiscordGateway {
         }
         session.seats.sortBy { it.number }
         session.settings.playerCount = newCount
+
+        ws?.let { socket ->
+            val text = msg?.msg("bulk.finished") ?: "[完成] 所有操作已結束"
+            socket.broadcastProgress(session.guildId, 100, text, "info")
+        }
     }
+
 
     override suspend fun deleteGuild(guildId: Long) = log.info("[noop] deleteGuild {}", guildId)
 

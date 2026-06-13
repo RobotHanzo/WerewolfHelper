@@ -89,5 +89,33 @@ class BulkOperationEngineTest {
         assertTrue(result.timedOut)
         assertFalse(result.allSucceeded)
         assertTrue(sink.lines.last().text.contains("逾時"))
+     }
+
+    @Test
+    fun `empty phases emit a completion event at the end`() = runBlocking {
+        val sink = RecordingSink()
+        val phase = BulkPhase("empty", 0, 100, emptyList())
+        val result = engine.execute(listOf(phase), sink)
+
+        assertEquals(0, result.results.size)
+        assertEquals(1, sink.lines.size)
+        assertEquals(100, sink.lines.last().percent)
+        assertTrue(sink.lines.last().text.contains("結束") || sink.lines.last().text.contains("完成"))
+    }
+
+    @Test
+    fun `when final phase is empty it still advances progress to target end percentage`() = runBlocking {
+        val sink = RecordingSink()
+        val phases = listOf(
+            BulkPhase("roles", 0, 50, listOf(BulkItem("角色") {})),
+            BulkPhase("empty_final", 50, 100, emptyList())
+        )
+        engine.execute(phases, sink)
+
+        assertEquals(2, sink.lines.size)
+        assertEquals(50, sink.lines[0].percent)
+        assertEquals(100, sink.lines[1].percent)
+        assertTrue(sink.lines[1].text.contains("結束") || sink.lines[1].text.contains("完成"))
     }
 }
+

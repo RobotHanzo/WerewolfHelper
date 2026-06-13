@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.discord
 
 import dev.robothanzo.werewolf.domain.repo.GameSessionRepository
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
+import dev.robothanzo.werewolf.i18n.Msg
 import dev.robothanzo.werewolf.ops.BulkOperationEngine
 import dev.robothanzo.werewolf.websocket.GameWebSocketHandler
 import org.slf4j.LoggerFactory
@@ -43,16 +44,18 @@ class DiscordConfig(private val properties: DiscordProperties) {
         roles: RoleRegistry,
         engine: BulkOperationEngine,
         ws: GameWebSocketHandler,
+        msg: Msg,
     ): DiscordGateway {
         if (!properties.hasToken) {
             log.warn("No Discord token configured — running with the no-op gateway (REST/WS still serve).")
-            return NoOpDiscordGateway()
+            return NoOpDiscordGateway(ws, msg)
         }
         return try {
             JdaDiscordGateway(properties, nicknameService, sessions, roles, engine, ws)
         } catch (e: Exception) {
             log.error("Failed to start JDA ({}); falling back to the no-op gateway.", e.message)
-            NoOpDiscordGateway()
+            NoOpDiscordGateway(ws, msg)
         }
     }
 }
+

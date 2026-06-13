@@ -30,6 +30,11 @@ class BulkOperationEngine(private val msg: Msg) {
         phaseTimeoutMillis: Long = defaultPhaseTimeoutMillis,
     ): BulkResult {
         val results = mutableListOf<BulkItemResult>()
+        var lastEmittedPercent = 0
+        val wrappedSink = ProgressSink { percent, line, severity ->
+            lastEmittedPercent = percent
+            sink.emit(percent, line, severity)
+        }
         for (phase in phases) {
             val total = phase.items.size
             if (total == 0) continue
@@ -40,9 +45,9 @@ class BulkOperationEngine(private val msg: Msg) {
                         results += result
                         val percent = mapPercent(phase, i + 1, total)
                         if (result.success) {
-                            sink.emit(percent, msg.msg("bulk.item.done", item.description), LogSeverity.INFO)
+                            wrappedSink.emit(percent, msg.msg("bulk.item.done", item.description), LogSeverity.INFO)
                         } else {
-                            sink.emit(
+                            wrappedSink.emit(
                                 percent,
                                 msg.msg("bulk.item.failed", item.description, result.reason ?: ""),
                                 LogSeverity.ALERT,
@@ -51,12 +56,17 @@ class BulkOperationEngine(private val msg: Msg) {
                     }
                 }
             } catch (_: TimeoutCancellationException) {
-                sink.emit(phase.percentEnd, msg.msg("bulk.timeout"), LogSeverity.ALERT)
+                wrappedSink.emit(phase.percentEnd, msg.msg("bulk.timeout"), LogSeverity.ALERT)
                 return BulkResult(results, timedOut = true)
             }
         }
+        val targetEndPercent = phases.lastOrNull()?.percentEnd ?: 100
+        if (lastEmittedPercent < targetEndPercent) {
+            wrappedSink.emit(targetEndPercent, msg.msg("bulk.finished"), LogSeverity.INFO)
+        }
         return BulkResult(results)
     }
+
 
     private suspend fun runItem(item: BulkItem): BulkItemResult =
         try {

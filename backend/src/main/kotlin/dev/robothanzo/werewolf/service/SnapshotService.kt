@@ -96,6 +96,7 @@ class SnapshotService(
             log = logs.map {
                 LogDto(it.id, it.timestamp.toEpochMilli(), it.severity.name.lowercase(), it.rendered)
             },
+            pool = session.pool,
         )
     }
 

@@ -71,7 +71,13 @@ export function Dashboard() {
         )}
         {snapshot.timerEndsAt && <Countdown endsAt={snapshot.timerEndsAt} size="sm" />}
         <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          {!readOnly && isLobby && <Button variant="primary" onClick={actions.startGame}>{t("dashboard.startGame")}</Button>}
+          {!readOnly && isLobby && (
+            snapshot.assigned ? (
+              <Button variant="primary" onClick={actions.startGame}>{t("dashboard.startGame")}</Button>
+            ) : (
+              <Button variant="primary" onClick={actions.assign}>{t("dashboard.cmd.assign")}</Button>
+            )
+          )}
           {!readOnly && !isLobby && snapshot.phase !== "OVER" && (
             <Button variant="secondary" size="sm" onClick={actions.pause}>
               {snapshot.paused ? t("dashboard.resume") : t("dashboard.pause")}

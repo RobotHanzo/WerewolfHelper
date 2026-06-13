@@ -44,7 +44,12 @@ class DiscordOpsService(
 
     /** Apply the assignment's Discord side-effects: critical role/nickname batch, then notifications. */
     fun applyAssignment(session: GameSession) {
-        if (!gateway.available) return
+        if (!gateway.available) {
+            scope.launch {
+                ws.broadcastProgress(session.guildId, 100, msg.msg("bulk.finished"), "info")
+            }
+            return
+        }
         scope.launch {
             val guildId = session.guildId
             val critical = BulkPhase(
@@ -74,7 +79,12 @@ class DiscordOpsService(
     /** Reset the Discord side: clear each member's nickname/roles. Member ids are captured eagerly
      *  because the caller clears the bindings synchronously right after. */
     fun applyReset(session: GameSession) {
-        if (!gateway.available) return
+        if (!gateway.available) {
+            scope.launch {
+                ws.broadcastProgress(session.guildId, 100, msg.msg("bulk.finished"), "info")
+            }
+            return
+        }
         val guildId = session.guildId
         val memberIds = session.seats.mapNotNull { it.memberId }
         scope.launch {
@@ -85,6 +95,7 @@ class DiscordOpsService(
             engine.execute(listOf(phase), sink(guildId))
         }
     }
+
 
     @PreDestroy
     fun shutdown() = scope.cancel()

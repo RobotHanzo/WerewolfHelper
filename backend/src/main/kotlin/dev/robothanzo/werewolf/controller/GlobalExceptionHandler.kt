@@ -32,6 +32,13 @@ class GlobalExceptionHandler(private val msg: Msg) {
         ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(msg.msg("error.not_authorized")))
 
     @ExceptionHandler(IllegalArgumentException::class, IllegalStateException::class)
-    fun handleBadRequest(e: RuntimeException): ResponseEntity<ApiResponse> =
-        ResponseEntity.badRequest().body(ApiResponse.error(e.message ?: "錯誤"))
+    fun handleBadRequest(e: RuntimeException): ResponseEntity<ApiResponse> {
+        val rawMessage = e.message ?: "錯誤"
+        val resolved = try {
+            msg.msg(rawMessage)
+        } catch (ex: org.springframework.context.NoSuchMessageException) {
+            rawMessage
+        }
+        return ResponseEntity.badRequest().body(ApiResponse.error(resolved))
+    }
 }

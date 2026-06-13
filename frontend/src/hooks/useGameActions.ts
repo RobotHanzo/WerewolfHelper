@@ -74,15 +74,89 @@ export function useGameActions(guildId: string, demo: boolean) {
         } else void api.revive(guildId, seat, identityIndex);
       },
       pause: () => (demo ? patch((s) => ({ ...s, paused: !s.paused })) : void api.pause(guildId)),
-      startGame: () => (demo ? patch((s) => ({ ...s, phase: "NIGHT", started: true, day: 1 })) : void api.startGame(guildId)),
+      startGame: () => {
+        if (demo) {
+          patch((s) => {
+            if (!s.assigned) {
+              useUiStore.getState().showToast(t("dashboard.error.not_assigned"), true);
+              return s;
+            }
+            return { ...s, phase: "NIGHT", started: true, day: 1 };
+          });
+        } else {
+          void api.startGame(guildId);
+        }
+      },
       assign: () => {
-        if (!demo) {
+        if (demo) {
+          patch((snap) => {
+            const sampleRoles = [
+              { roleId: "villager", name: "平民", faction: "VILLAGER" },
+              { roleId: "villager", name: "平民", faction: "VILLAGER" },
+              { roleId: "seer", name: "預言家", faction: "GOD" },
+              { roleId: "witch", name: "女巫", faction: "GOD" },
+              { roleId: "hunter", name: "獵人", faction: "GOD" },
+              { roleId: "guard", name: "守衛", faction: "GOD" },
+              { roleId: "wolf", name: "狼人", faction: "WOLF" },
+              { roleId: "wolf", name: "狼人", faction: "WOLF" },
+              { roleId: "wolf_king", name: "狼王", faction: "WOLF" },
+              { roleId: "idiot", name: "白癡", faction: "GOD" },
+              { roleId: "villager", name: "平民", faction: "VILLAGER" },
+              { roleId: "villager", name: "平民", faction: "VILLAGER" },
+            ] as const;
+
+            const seats = snap.seats.map((seat, i) => {
+              const r = sampleRoles[i % sampleRoles.length];
+              return {
+                ...seat,
+                unassigned: false,
+                alive: true,
+                identities: [
+                  {
+                    roleId: r.roleId,
+                    name: r.name,
+                    faction: r.faction as any,
+                    dead: false,
+                  },
+                ],
+              };
+            });
+            return {
+              ...snap,
+              seats,
+              assigned: true,
+              aliveCount: seats.length,
+            };
+          });
+        } else {
           openProgress(t("longOp.title.assign"));
           api.assign(guildId).catch(handleApiError);
         }
       },
       reset: () => {
-        if (!demo) {
+        if (demo) {
+          patch((s) => ({
+            ...s,
+            phase: "LOBBY",
+            day: 0,
+            started: false,
+            assigned: false,
+            paused: false,
+            winner: null,
+            timerEndsAt: null,
+            speech: null,
+            poll: null,
+            night: null,
+            seats: s.seats.map((seat) => ({
+              ...seat,
+              unassigned: true,
+              alive: false,
+              identities: [],
+              police: false,
+              goldenBaby: false,
+            })),
+          }));
+        } else {
           openProgress(t("longOp.title.reset"));
           api.reset(guildId).catch(handleApiError);
         }
@@ -92,6 +166,8 @@ export function useGameActions(guildId: string, demo: boolean) {
          demo ? patch((s) => ({ ...s, doubleIdentity: value })) : void api.setDoubleIdentity(guildId, value),
       setMuteAfterSpeech: (value: boolean) =>
          demo ? patch((s) => ({ ...s, muteAfterSpeech: value })) : void api.setMuteAfterSpeech(guildId, value),
+      setPool: (pool: Record<string, number>) =>
+         demo ? patch((s) => ({ ...s, pool })) : void api.setPool(guildId, pool),
       setPlayerCount: (count: number) => {
         if (!demo) {
           openProgress(t("longOp.title.resize"));
