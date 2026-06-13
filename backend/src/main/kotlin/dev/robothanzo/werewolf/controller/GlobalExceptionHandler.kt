@@ -3,6 +3,7 @@ package dev.robothanzo.werewolf.controller
 import dev.robothanzo.werewolf.controller.dto.ApiResponse
 import dev.robothanzo.werewolf.game.assign.AssignmentException
 import dev.robothanzo.werewolf.i18n.Msg
+import dev.robothanzo.werewolf.security.ActivePlayerLockoutException
 import dev.robothanzo.werewolf.service.SessionNotFoundException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -21,6 +22,10 @@ class GlobalExceptionHandler(private val msg: Msg) {
     @ExceptionHandler(AssignmentException::class)
     fun handleAssignment(e: AssignmentException): ResponseEntity<ApiResponse> =
         ResponseEntity.badRequest().body(ApiResponse.error(msg.msg(e.messageKey, *e.args.toTypedArray())))
+
+    @ExceptionHandler(ActivePlayerLockoutException::class)
+    fun handleLockout(e: ActivePlayerLockoutException): ResponseEntity<ApiResponse> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(msg.msg("error.player_locked_out")))
 
     @ExceptionHandler(AccessDeniedException::class)
     fun handleDenied(e: AccessDeniedException): ResponseEntity<ApiResponse> =

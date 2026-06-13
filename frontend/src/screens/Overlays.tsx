@@ -56,9 +56,9 @@ function PickerModal({ guildId, demo }: { guildId: string; demo: boolean }) {
   const picker = useUiStore((s) => s.picker);
   const close = useUiStore((s) => s.closePicker);
   const showToast = useUiStore((s) => s.showToast);
-  const seats = useGameStore((s) => s.snapshot?.seats ?? []);
+  const seats = useGameStore((s) => s.snapshot?.seats);
   const [query, setQuery] = useState("");
-  const rows = seats
+  const rows = (seats ?? [])
     .filter((s) => !s.unassigned && (query === "" || s.displayName?.includes(query) || s.label.includes(query)))
     .slice(0, 25);
 

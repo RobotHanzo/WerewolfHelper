@@ -82,7 +82,11 @@ export class GameSocket {
       this.scheduleReconnect();
     };
 
-    ws.onerror = () => ws.close();
+    ws.onerror = () => {
+      // Browser will automatically trigger onclose when the connection fails.
+      // Do NOT call ws.close() here, as doing so during the connection/handshake
+      // phase triggers "WebSocket is closed before the connection is established" in the console.
+    };
   }
 
   close(): void {

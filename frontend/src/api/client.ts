@@ -41,7 +41,7 @@ const post = <T = void>(path: string, body?: unknown) =>
 /** Typed API surface, mirroring the backend controllers. */
 export const api = {
   // auth
-  me: () => request<AuthInfo>("/auth/me"),
+  me: (guildId?: string) => request<AuthInfo>(`/auth/me${guildId ? `?guildId=${guildId}` : ""}`),
   logout: () => post("/auth/logout"),
   loginUrl: () => "/api/auth/login",
 

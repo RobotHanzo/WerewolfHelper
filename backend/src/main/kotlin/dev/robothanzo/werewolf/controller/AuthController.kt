@@ -6,6 +6,7 @@ import dev.robothanzo.werewolf.controller.dto.AuthInfo
 import dev.robothanzo.werewolf.controller.dto.AuthResponse
 import dev.robothanzo.werewolf.discord.DiscordProperties
 import dev.robothanzo.werewolf.security.CurrentUser
+import dev.robothanzo.werewolf.security.DashboardRoleService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.slf4j.LoggerFactory
@@ -37,6 +38,7 @@ class AuthController(
     private val properties: DiscordProperties,
     private val currentUser: CurrentUser,
     private val mapper: ObjectMapper,
+    private val roleService: DashboardRoleService,
     @Value("\${werewolf.dashboard.base-url}") private val dashboardBaseUrl: String,
 ) {
 
@@ -68,15 +70,18 @@ class AuthController(
 
     @Operation(summary = "Current identity", description = "The logged-in user, or 401 if no session.")
     @GetMapping("/me")
-    fun me(): ResponseEntity<*> {
+    fun me(@RequestParam(required = false) guildId: String?): ResponseEntity<*> {
         val userId = currentUser.userId()
             ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("未登入"))
+        val resolvedRole = guildId?.toLongOrNull()?.let { gId ->
+            roleService.roleFor(gId, userId).name
+        } ?: "PENDING"
         val info = AuthInfo(
             userId = userId.toString(),
             username = currentUser.username() ?: "",
             avatar = currentUser.avatar(),
-            role = "PENDING",
-            guildId = null,
+            role = resolvedRole,
+            guildId = guildId,
         )
         return ResponseEntity.ok(AuthResponse(info))
     }

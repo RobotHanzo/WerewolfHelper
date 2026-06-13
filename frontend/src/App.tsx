@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { OctagonX, Eye } from "lucide-react";
-import { api } from "@/api/client";
+import { api, ApiError } from "@/api/client";
 import { GameSocket } from "@/api/ws";
 import { useAuthStore } from "@/stores/authStore";
 import { useGameStore } from "@/stores/gameStore";
@@ -69,6 +69,45 @@ export function App() {
 function ServerSurface() {
   const { guildId } = useParams();
   const demo = useAuthStore((s) => s.demo);
+  const navigate = useNavigate();
+  const snapshot = useGameStore((s) => s.snapshot);
+  const userId = useAuthStore((s) => s.auth?.userId);
+
+  useEffect(() => {
+    if (demo || !guildId) return;
+
+    // Set role to PENDING for this guild while we fetch to avoid flash of previous server's role/screens
+    useAuthStore.setState((s) => {
+      if (s.auth && (s.auth.guildId !== guildId || s.auth.role !== "PENDING")) {
+        return {
+          auth: {
+            ...s.auth,
+            role: "PENDING",
+            guildId,
+          }
+        };
+      }
+      return {};
+    });
+
+    api.me(guildId)
+      .then((me) => {
+        useAuthStore.getState().setAuth(me);
+        if (me.role === "BLOCKED") {
+          navigate("/blocked", { replace: true });
+        }
+      })
+      .catch(() => {
+        // If query fails, we keep the current state or handle it appropriately.
+      });
+  }, [guildId, demo, navigate]);
+
+  useEffect(() => {
+    if (demo || !snapshot || !userId) return;
+    if (snapshot.assigned && snapshot.seats.some((seat) => seat.memberId === userId)) {
+      navigate("/lockout", { replace: true });
+    }
+  }, [snapshot, userId, demo, navigate]);
 
   useEffect(() => {
     if (!guildId) return;
@@ -77,7 +116,17 @@ function ServerSurface() {
       useGameStore.getState().setConnected(true);
       return;
     }
-    api.state(guildId).then(useGameStore.getState().applySnapshot).catch(() => {});
+    api.state(guildId)
+      .then(useGameStore.getState().applySnapshot)
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 403) {
+          if (err.message === "入座玩家無法進入主控台") {
+            navigate("/lockout", { replace: true });
+          } else {
+            navigate("/blocked", { replace: true });
+          }
+        }
+      });
     const socket = new GameSocket(guildId, {
       onSnapshot: useGameStore.getState().applySnapshot,
       onProgress: useGameStore.getState().pushProgress,
@@ -86,7 +135,7 @@ function ServerSurface() {
     });
     socket.connect();
     return () => socket.close();
-  }, [guildId, demo]);
+  }, [guildId, demo, navigate]);
 
   return <AppShell />;
 }
@@ -94,7 +143,11 @@ function ServerSurface() {
 /** Redirect spectators away from judge-only screens to the God's view. */
 function JudgeRoute({ children }: { children: React.ReactNode }) {
   const { guildId } = useParams();
-  const isJudge = useAuthStore((s) => (s.auth?.role ?? "JUDGE") === "JUDGE");
+  const role = useAuthStore((s) => s.auth?.role);
+  if (!role || role === "PENDING") {
+    return <LoadingScreen />;
+  }
+  const isJudge = role === "JUDGE";
   if (!isJudge) return <Navigate to={`/server/${guildId}/spectator`} replace />;
   return <>{children}</>;
 }
