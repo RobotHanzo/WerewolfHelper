@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(yarn lint)",
+      "PowerShell(yarn lint)"
+    ]
+  }
+}

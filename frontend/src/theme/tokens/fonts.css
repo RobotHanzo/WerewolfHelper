@@ -1,0 +1,5 @@
+/* WerewolfHelper — webfonts.
+   No brand font binaries exist; these are Google-Fonts substitutes (flagged in readme.md):
+   - Noto Sans TC  — Traditional-Chinese UI text (the entire UI is zh-TW)
+   - JetBrains Mono — timers, seat numbers, vote counts, log timestamps */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap");

@@ -1,0 +1,31 @@
+/* WerewolfHelper — spacing, radii, borders, elevation. 4px grid. */
+
+:root {
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  --r-sm: 6px;   /* badges, tags, inputs */
+  --r-md: 10px;  /* buttons, small cards */
+  --r-lg: 14px;  /* cards, panels */
+  --r-xl: 20px;  /* modals, page sections */
+  --r-full: 999px;
+
+  /* Elevation — dark surfaces rely on borders + soft black shadows, not lightness */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-3: 0 12px 40px rgba(0, 0, 0, 0.55);
+  /* Moonlight glow — primary actions, the live speaker, the connection dot */
+  --shadow-glow: 0 0 0 1px rgba(84, 210, 228, 0.35), 0 0 24px rgba(84, 210, 228, 0.18);
+  --shadow-glow-urgent: 0 0 0 1px rgba(255, 92, 110, 0.45), 0 0 24px rgba(255, 92, 110, 0.22);
+
+  /* Hit targets (judges act mid-conversation; spectators on phones) */
+  --hit-min: 44px;
+}

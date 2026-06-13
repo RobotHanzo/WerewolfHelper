@@ -1,0 +1,30 @@
+/* WerewolfHelper — typography. zh-TW UI text in Noto Sans TC; all numerals,
+   timers, seat numbers and counts in JetBrains Mono. */
+
+:root {
+  --font-ui: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+
+  /* Type scale */
+  --text-xs: 12px;   /* timestamps, captions */
+  --text-sm: 13px;   /* secondary labels */
+  --text-md: 15px;   /* body */
+  --text-lg: 18px;   /* card titles */
+  --text-xl: 22px;   /* section headers */
+  --text-2xl: 28px;  /* page titles */
+  --text-timer: 40px;   /* inline countdowns */
+  --text-stage: 88px;   /* speech-stage countdown (projector-readable) */
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+  --weight-black: 900;
+
+  /* CJK-friendly line heights */
+  --leading-tight: 1.3;
+  --leading-body: 1.7;
+
+  --tracking-wide: 0.08em; /* small-caps-like labels, e.g. 階段 labels */
+  /* Tabular figures are mandatory on anything that ticks */
+  --numeric-timer: tabular-nums; /* @kind other */
+}

@@ -1,0 +1,102 @@
+/* WerewolfHelper — color system. Dark ("night") is the primary theme. */
+
+:root {
+  /* ---- Night surfaces (base) ---- */
+  --night-950: #070A11;
+  --night-900: #0B0E16; /* app background */
+  --night-850: #10141F;
+  --night-800: #151A28; /* card */
+  --night-750: #1A2031;
+  --night-700: #212840; /* raised / hover */
+  --night-600: #2B3450;
+
+  /* ---- Moonlight (brand accent) ---- */
+  --moon-200: #C8F4FA;
+  --moon-300: #93E6F2;
+  --moon-400: #54D2E4;
+  --moon-500: #29B8CD; /* primary accent */
+  --moon-600: #1B93A6;
+  --moon-glow: rgba(84, 210, 228, 0.35);
+
+  /* ---- Ink (text on night) ---- */
+  --ink-100: #EDF1FA; /* primary text */
+  --ink-300: #ADB6CC; /* secondary text */
+  --ink-500: #6B7590; /* muted / placeholder */
+  --ink-700: #3D4660; /* disabled */
+
+  /* ---- Faction colors (game semantics ONLY — never decorative) ---- */
+  --wolf-400: #FF6B7D;
+  --wolf-500: #F04A5E; /* 狼 */
+  --wolf-dim: rgba(240, 74, 94, 0.16);
+  --god-400: #A89BFF;
+  --god-500: #8B7BF4; /* 神 */
+  --god-dim: rgba(139, 123, 244, 0.16);
+  --vill-400: #5CE39A;
+  --vill-500: #36C97D; /* 民 */
+  --vill-dim: rgba(54, 201, 125, 0.16);
+
+  /* ---- Badge gold — reserved exclusively for 警長 ---- */
+  --badge-gold: #F2C94C;
+  --badge-gold-dim: rgba(242, 201, 76, 0.16);
+  /* 金寶寶 amber — warmer, distinct from badge gold */
+  --gbaby-amber: #FF9F45;
+  --gbaby-amber-dim: rgba(255, 159, 69, 0.16);
+
+  /* ---- Semantic status ---- */
+  --info-500: #5FA8FF;
+  --info-dim: rgba(95, 168, 255, 0.14);
+  --success-500: #3EDC97;
+  --success-dim: rgba(62, 220, 151, 0.14);
+  --warning-500: #FFB454;
+  --warning-dim: rgba(255, 180, 84, 0.14);
+  --danger-500: #FF5C6E;
+  --danger-dim: rgba(255, 92, 110, 0.14);
+
+  /* ---- Live-connection ---- */
+  --live-500: var(--success-500);
+  --offline-500: var(--danger-500);
+
+  /* ---- Semantic aliases ---- */
+  --surface-app: var(--night-900);
+  --surface-card: var(--night-800);
+  --surface-raised: var(--night-700);
+  --surface-overlay: rgba(7, 10, 17, 0.78);
+  --text-body: var(--ink-100);
+  --text-secondary: var(--ink-300);
+  --text-muted: var(--ink-500);
+  --text-disabled: var(--ink-700);
+  --text-on-accent: #06222A;
+  --accent: var(--moon-500);
+  --accent-strong: var(--moon-400);
+  --accent-soft: rgba(41, 184, 205, 0.14);
+  --border-1: rgba(141, 156, 196, 0.14); /* hairline */
+  --border-2: rgba(141, 156, 196, 0.26); /* interactive */
+  --focus-ring: 0 0 0 2px var(--surface-app), 0 0 0 4px var(--moon-400);
+  --urgent: var(--danger-500);
+  --urgent-dim: var(--danger-dim);
+}
+
+/* ---- Light theme (secondary; night is primary) ---- */
+[data-theme="light"] {
+  --surface-app: #F2F4FA;
+  --surface-card: #FFFFFF;
+  --surface-raised: #E8ECF5;
+  --surface-overlay: rgba(20, 26, 40, 0.45);
+  --text-body: #171C2B;
+  --text-secondary: #4A5470;
+  --text-muted: #7C86A0;
+  --text-disabled: #B6BDD0;
+  --text-on-accent: #052228;
+  --accent: #1497AB;
+  --accent-strong: #0E7E90;
+  --accent-soft: rgba(20, 151, 171, 0.12);
+  --border-1: rgba(36, 48, 80, 0.12);
+  --border-2: rgba(36, 48, 80, 0.24);
+  --focus-ring: 0 0 0 2px var(--surface-app), 0 0 0 4px #1497AB;
+  --wolf-500: #D93A4E;
+  --god-500: #6C5BD9;
+  --vill-500: #1FA866;
+  --badge-gold: #C99A18;
+  --gbaby-amber: #E07F1F;
+  --moon-glow: rgba(20, 151, 171, 0.25);
+}

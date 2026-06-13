@@ -1,0 +1,9 @@
+# Normalise text line endings; keep shell scripts and binaries correct.
+* text=auto eol=lf
+*.bat text eol=crlf
+gradlew text eol=lf
+
+*.png binary
+*.mp3 binary
+*.jar binary
+*.svg binary

@@ -1,0 +1,256 @@
+{
+  "app": {
+    "name": "狼人殺助手",
+    "wordmark": "WEREWOLFHELPER"
+  },
+  "common": {
+    "cancel": "取消",
+    "confirm": "確認",
+    "done": "完成",
+    "retry": "重試",
+    "back": "返回",
+    "signOut": "登出",
+    "refresh": "重新整理",
+    "loading": "載入中…",
+    "ack": "我知道了",
+    "close": "關閉",
+    "apply": "套用",
+    "search": "搜尋…"
+  },
+  "connection": {
+    "connecting": "正在建立連線…",
+    "live": "即時連線",
+    "offline": "連線中斷",
+    "disconnectedBanner": "即時連線中斷 — 以下資料可能不是最新狀態",
+    "reconnect": "重新連線"
+  },
+  "login": {
+    "withDiscord": "使用 Discord 登入",
+    "reloginWithDiscord": "使用 Discord 重新登入",
+    "note": "本控制台僅供法官與旁觀者使用。在場玩家無法進入。"
+  },
+  "servers": {
+    "title": "選擇遊戲伺服器",
+    "players": "{{count}} 位玩家",
+    "loadingList": "載入伺服器清單…",
+    "errorTitle": "無法載入伺服器清單",
+    "errorHint": "請檢查網路連線後重試",
+    "emptyTitle": "沒有可用的遊戲伺服器",
+    "emptyHint": "請伺服器建立者先邀請狼人殺助手機器人，並完成初始設定後再回來。",
+    "backToLogin": "← 返回登入"
+  },
+  "lockout": {
+    "title": "你目前是入座玩家",
+    "body": "主控台會公開所有玩家的身分。為了遊戲公平，入座中的玩家無法進入。",
+    "hint": "想觀戰？請法官在 Discord 將你設為旁觀者，再重新整理本頁。"
+  },
+  "blocked": {
+    "title": "存取遭拒",
+    "body": "你的帳號已被此伺服器封鎖，無法使用主控台。如有疑問，請聯絡伺服器管理員。"
+  },
+  "sessionExpired": {
+    "title": "登入逾期",
+    "body": "你的登入已過期，畫面已停止更新。請重新登入以繼續操作。"
+  },
+  "nav": {
+    "dashboard": "主控台",
+    "speech": "發言管理",
+    "spectator": "上帝視角",
+    "settings": "遊戲設定",
+    "previewOn": "結束旁觀者預覽",
+    "previewOff": "旁觀者預覽",
+    "switchServer": "伺服器",
+    "themeDark": "深色",
+    "themeLight": "淺色"
+  },
+  "role": {
+    "judge": "法官",
+    "spectator": "旁觀者",
+    "judgePreviewing": "法官（旁觀者預覽）"
+  },
+  "phase": {
+    "lobby": "遊戲大廳",
+    "assignment": "身分分配",
+    "night": "夜晚",
+    "day": "白天",
+    "dawn": "天亮",
+    "over": "遊戲結束",
+    "dayCounter": "第 {{day}} 天",
+    "nightCounter": "第 {{day}} 夜"
+  },
+  "faction": {
+    "wolf": "狼",
+    "god": "神",
+    "vill": "民",
+    "wolfFull": "狼人陣營",
+    "godFull": "神職",
+    "villFull": "平民",
+    "gbaby": "金寶寶"
+  },
+  "dashboard": {
+    "noSpeaker": "目前無人發言",
+    "speakerSpeaking": "玩家{{seat}} 發言中",
+    "goSpeech": "查看發言管理 →",
+    "startGame": "開始遊戲",
+    "nextPhase": "進入下一階段",
+    "pause": "暫停",
+    "resume": "繼續",
+    "gameOver": "遊戲結束 — {{winner}} 勝利",
+    "gameOverSub": "可重置後開始新的一局。",
+    "backToLobby": "回到大廳",
+    "rosterTitle": "玩家名單",
+    "aliveCount": "存活 {{alive}}/{{total}}",
+    "density": { "comfort": "舒適", "compact": "緊湊", "list": "列表" },
+    "lobbyChecklist": "開局檢查",
+    "logTitle": "遊戲紀錄",
+    "commands": "法官指令",
+    "group": { "flow": "遊戲流程", "voice": "語音與計時", "admin": "管理" },
+    "cmd": {
+      "assign": "隨機分配身分",
+      "reset": "強制重置",
+      "resetArmed": "再次點擊以確認",
+      "timer": "計時器",
+      "muteAll": "全體靜音",
+      "unmuteAll": "解除靜音",
+      "promote": "任命法官",
+      "demote": "撤銷法官",
+      "forcePolice": "指派警長"
+    },
+    "seatAction": { "kill": "擊殺", "revive": "復活", "edit": "編輯" }
+  },
+  "expel": {
+    "running": "放逐投票進行中",
+    "turnout": "已投 {{cast}} / {{eligible}} · 尚有 {{remaining}} 人未投",
+    "goSpeech": "前往發言管理 →",
+    "title": "放逐投票",
+    "deadline": "投票截止",
+    "progress": "投票進度",
+    "turnoutShort": "已投 {{cast}} / {{eligible}} · 未投 {{remaining}} 人"
+  },
+  "night": {
+    "title": "夜晚行動 · 第 {{day}} 夜",
+    "subtitle": "所有角色同時行動",
+    "simultaneous": "同時進行",
+    "submitted": "已提交行動",
+    "remaining": "夜晚剩餘",
+    "wolfConsensus": "刀口共識",
+    "wolfVote": "狼人投票",
+    "voted": "{{voted}} / {{total}} 已投",
+    "deliberating": "商議中…",
+    "noKill": "本夜不刀",
+    "waiting": "等待中…",
+    "noTarget": "無目標",
+    "skip": "跳過",
+    "skipAction": "跳過此行動",
+    "actors": "{{names}}",
+    "resolved": "夜晚行動已結算",
+    "peaceful": "平安夜",
+    "deaths": "{{names}} 死亡"
+  },
+  "speech": {
+    "title": "發言管理",
+    "idle": "目前沒有進行中的流程",
+    "idleHintJudge": "開始自動發言流程或警長競選。",
+    "idleHintSpectator": "等待法官開始流程。",
+    "startSpeech": "開始自動發言流程",
+    "startElection": "開始警長競選",
+    "startExpel": "開始放逐投票",
+    "waitingDirection": "等待選擇方向",
+    "directionPrompt": "由 玩家{{seat}} 開始，選擇發言方向",
+    "directionHint": "發言將依座位順序輪流進行",
+    "dirUp": "↑ 往上",
+    "dirDown": "↓ 往下",
+    "speaking": "發言中",
+    "speakingDir": "發言中 · {{direction}}",
+    "directionUp": "往上",
+    "directionDown": "往下",
+    "skip": "跳過發言",
+    "terminate": "終止流程",
+    "upcoming": "接下來發言",
+    "queueEmpty": "沒有後續發言者"
+  },
+  "election": {
+    "title": "警長競選",
+    "stageHint": "階段截止",
+    "stage": {
+      "enroll": "報名參選",
+      "resolution": "結算",
+      "campaign": "競選發言",
+      "withdraw": "退選",
+      "voting": "投票"
+    },
+    "withdrawn": "已退選",
+    "noVotes": "尚無票",
+    "voteProgress": "投票進度"
+  },
+  "spectator": {
+    "title": "上帝視角",
+    "subtitle": "唯讀 · 所有身分公開 · {{mode}}",
+    "modeSingle": "單身分",
+    "modeDouble": "雙身分",
+    "winSingle": "狼人需殺光所有神職或所有平民其一即可獲勝；好人需票出所有狼人。",
+    "winDouble": "狼人需殺光所有金寶寶或所有神職牌即可獲勝；好人需讓所有狼人牌出局。",
+    "phoneView": "旁觀者手機檢視（唯讀）"
+  },
+  "settings": {
+    "title": "遊戲設定",
+    "options": "遊戲選項",
+    "doubleIdentity": "雙身分模式",
+    "doubleIdentityDesc": "每位玩家獲得兩張身分",
+    "muteAfterSpeech": "發言後靜音",
+    "muteAfterSpeechDesc": "發言結束後自動伺服器靜音",
+    "playerCount": "玩家數量",
+    "applyCount": "套用人數變更",
+    "pool": "身分板子",
+    "poolTotal": "{{total}} / {{need}}",
+    "poolMismatch": "板子數量與玩家數不符，無法分配身分",
+    "addIdentity": "新增身分…",
+    "saving": "儲存中…",
+    "saved": "已儲存"
+  },
+  "kill": {
+    "title": "擊殺 玩家{{seat}}？",
+    "body": "將標記「{{identity}}」死亡，並檢查勝利條件。此操作會即時同步至 Discord。",
+    "allowLastWords": "允許遺言",
+    "confirm": "確認擊殺"
+  },
+  "edit": {
+    "title": "編輯 玩家{{seat}}",
+    "identitiesInOrder": "身分（依順序）",
+    "lockOrder": "鎖定身分順序",
+    "swapOrder": "調換順序",
+    "transferBadge": "移交警徽給"
+  },
+  "timer": {
+    "title": "開始計時",
+    "minutes": "分",
+    "seconds": "秒",
+    "start": "開始計時",
+    "ended": "計時結束"
+  },
+  "picker": {
+    "promote": "任命法官",
+    "demote": "撤銷法官",
+    "forcePolice": "指派警長",
+    "empty": "找不到符合的成員"
+  },
+  "longOp": {
+    "running": "操作進行中 — 請勿關閉視窗，其他操作已暫時鎖定。",
+    "error": "部分步驟失敗 — 請檢查上方紀錄並修正權限後重試。",
+    "success": "全部完成",
+    "title": {
+      "assign": "正在分配身分",
+      "reset": "正在重置遊戲",
+      "resize": "正在調整玩家數量"
+    }
+  },
+  "badge": {
+    "police": "警長",
+    "gbaby": "金寶寶",
+    "clone": "複製人",
+    "idiot": "白癡",
+    "locked": "已鎖定",
+    "unlocked": "可調換",
+    "dead": "死亡"
+  }
+}

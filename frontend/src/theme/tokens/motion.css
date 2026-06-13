@@ -1,0 +1,38 @@
+/* WerewolfHelper — motion. Two jobs only:
+   1. "this just changed" (remote updates from Discord)  →  wh-changed
+   2. "time is running out" (shared urgency convention)  →  wh-urgent
+   Everything else: fast fades/translates, no bounces. */
+
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1); /* @kind other */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1); /* @kind other */
+  --dur-fast: 120ms; /* @kind other */ /* hover, press */
+  --dur-base: 200ms; /* @kind other */ /* fades, slides */
+  --dur-slow: 320ms; /* @kind other */ /* panel/modal entrances */
+}
+
+/* Remote-change cue: moonlight flash that decays. Re-apply the class to re-trigger. */
+@keyframes wh-changed {
+  0%   { box-shadow: 0 0 0 1px rgba(84, 210, 228, 0.9), 0 0 20px rgba(84, 210, 228, 0.45); }
+  100% { box-shadow: 0 0 0 1px rgba(84, 210, 228, 0), 0 0 20px rgba(84, 210, 228, 0); }
+}
+.wh-changed { animation: wh-changed 1.4s var(--ease-out) 1; }
+
+/* Shared urgency convention: final-seconds pulse. Pair with red color + the ⚠ glyph
+   or mono digits so urgency never relies on color alone. */
+@keyframes wh-urgent {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+.wh-urgent { color: var(--urgent); animation: wh-urgent 1s var(--ease-in-out) infinite; }
+
+/* Live dot breathing (connection indicator, speaking mic) */
+@keyframes wh-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 var(--moon-glow); }
+  50%      { box-shadow: 0 0 0 6px rgba(84, 210, 228, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wh-changed { animation: none; box-shadow: 0 0 0 1px rgba(84, 210, 228, 0.6); }
+  .wh-urgent { animation: none; }
+}
