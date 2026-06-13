@@ -174,6 +174,127 @@ export function useGameActions(guildId: string, demo: boolean) {
           api.setPlayerCount(guildId, count).catch(handleApiError);
         }
       },
+      startSpeech: () => {
+        if (demo) {
+          patch((s) => {
+            const aliveSeats = s.seats.filter((seat) => seat.alive).map((seat) => seat.seat).sort((a, b) => a - b);
+            if (aliveSeats.length === 0) return s;
+            const fromSeat = s.policeSeat && aliveSeats.includes(s.policeSeat) ? s.policeSeat : aliveSeats[0];
+            const startIdx = aliveSeats.indexOf(fromSeat);
+            const order = [...aliveSeats.slice(startIdx), ...aliveSeats.slice(0, startIdx)];
+            return {
+              ...s,
+              phase: "SPEECHES",
+              speech: {
+                active: true,
+                waiting: false,
+                direction: "DOWN",
+                fromSeat,
+                speakerSeat: fromSeat,
+                endsAt: Date.now() + 60000,
+                order,
+                upcoming: order.slice(1),
+              },
+              poll: null,
+            };
+          });
+        } else {
+          void api.nextPhase(guildId);
+        }
+      },
+      startElection: () => {
+        if (demo) {
+          patch((s) => {
+            const aliveSeats = s.seats.filter((seat) => seat.alive).map((seat) => seat.seat).sort((a, b) => a - b);
+            return {
+              ...s,
+              phase: "POLICE_ELECTION",
+              speech: null,
+              poll: {
+                kind: "POLICE",
+                stage: "VOTING",
+                endsAt: Date.now() + 30000,
+                eligibleVoters: aliveSeats.length,
+                votesCast: 0,
+                candidates: aliveSeats.slice(0, 3).map((seat) => ({
+                  seat,
+                  withdrawn: false,
+                  weight: 0.0,
+                  voters: [],
+                })),
+              },
+            };
+          });
+        } else {
+          void api.nextPhase(guildId);
+        }
+      },
+      startExpel: () => {
+        if (demo) {
+          patch((s) => {
+            const aliveSeats = s.seats.filter((seat) => seat.alive).map((seat) => seat.seat).sort((a, b) => a - b);
+            return {
+              ...s,
+              phase: "EXPEL_VOTE",
+              speech: null,
+              poll: {
+                kind: "EXPEL",
+                stage: "VOTING",
+                endsAt: Date.now() + 30000,
+                eligibleVoters: aliveSeats.length,
+                votesCast: 0,
+                candidates: aliveSeats.slice(0, 3).map((seat) => ({
+                  seat,
+                  withdrawn: false,
+                  weight: 0.0,
+                  voters: [],
+                })),
+              },
+            };
+          });
+        } else {
+          void api.nextPhase(guildId);
+        }
+      },
+      skipSpeech: () => {
+        if (demo) {
+          patch((s) => {
+            if (!s.speech || !s.speech.active) return s;
+            if (s.speech.upcoming.length > 0) {
+              const nextSpeaker = s.speech.upcoming[0];
+              const upcoming = s.speech.upcoming.slice(1);
+              return {
+                ...s,
+                speech: {
+                  ...s.speech,
+                  speakerSeat: nextSpeaker,
+                  endsAt: Date.now() + 60000,
+                  upcoming,
+                },
+              };
+            } else {
+              return {
+                ...s,
+                phase: "EXPEL_VOTE",
+                speech: null,
+              };
+            }
+          });
+        } else {
+          void api.nextPhase(guildId);
+        }
+      },
+      terminateSpeech: () => {
+        if (demo) {
+          patch((s) => ({
+            ...s,
+            phase: "EXPEL_VOTE",
+            speech: null,
+          }));
+        } else {
+          void api.nextPhase(guildId);
+        }
+      },
     };
   }, [guildId, demo, patch, openProgress, t]);
 }

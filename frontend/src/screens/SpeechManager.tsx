@@ -2,13 +2,15 @@ import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGameStore } from "@/stores/gameStore";
 import { useGuild } from "@/hooks/useGuild";
+import { useGameActions } from "@/hooks/useGameActions";
 import { Avatar } from "@/components/ui/Avatar";
 import { Countdown } from "@/components/ui/Countdown";
 import { Button } from "@/components/ui/Button";
 
 export function SpeechManager() {
   const { t } = useTranslation();
-  const { readOnly } = useGuild();
+  const { guildId, demo, readOnly } = useGuild();
+  const actions = useGameActions(guildId, demo);
   const snapshot = useGameStore((s) => s.snapshot);
   if (!snapshot) return null;
 
@@ -27,9 +29,9 @@ export function SpeechManager() {
           <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{readOnly ? t("speech.idleHintSpectator") : t("speech.idleHintJudge")}</span>
           {!readOnly && (
             <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-              <Button variant="primary">{t("speech.startSpeech")}</Button>
-              <Button variant="secondary">{t("speech.startElection")}</Button>
-              <Button variant="secondary">{t("speech.startExpel")}</Button>
+              <Button variant="primary" onClick={actions.startSpeech}>{t("speech.startSpeech")}</Button>
+              <Button variant="secondary" onClick={actions.startElection}>{t("speech.startElection")}</Button>
+              <Button variant="secondary" onClick={actions.startExpel}>{t("speech.startExpel")}</Button>
             </div>
           )}
         </section>
@@ -57,8 +59,8 @@ export function SpeechManager() {
             {speech.endsAt && <Countdown endsAt={speech.endsAt} size="stage" />}
             {!readOnly && (
               <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
-                <Button variant="secondary">{t("speech.skip")}</Button>
-                <Button variant="danger">{t("speech.terminate")}</Button>
+                <Button variant="secondary" onClick={actions.skipSpeech}>{t("speech.skip")}</Button>
+                <Button variant="danger" onClick={actions.terminateSpeech}>{t("speech.terminate")}</Button>
               </div>
             )}
           </motion.section>
