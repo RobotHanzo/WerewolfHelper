@@ -44,6 +44,11 @@ import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.ChunkingFilter
 import net.dv8tion.jda.api.utils.MemberCachePolicy
 import net.dv8tion.jda.api.utils.cache.CacheFlag
+import dev.robothanzo.werewolf.ops.BulkItem
+import dev.robothanzo.werewolf.ops.BulkOperationEngine
+import dev.robothanzo.werewolf.ops.BulkPhase
+import dev.robothanzo.werewolf.ops.ProgressSink
+import dev.robothanzo.werewolf.websocket.GameWebSocketHandler
 import org.slf4j.LoggerFactory
 import java.awt.Color
 import java.io.File
@@ -60,6 +65,8 @@ class JdaDiscordGateway(
     private val nicknames: NicknameService,
     private val sessions: GameSessionRepository,
     private val roles: RoleRegistry,
+    private val engine: BulkOperationEngine,
+    private val ws: GameWebSocketHandler,
 ) : DiscordGateway {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -182,22 +189,49 @@ class JdaDiscordGateway(
         log.info("Provisioning complete for guild {}", session.guildId)
     }
 
+    private fun sink(guildId: Long): ProgressSink =
+        ProgressSink { percent, line, severity -> ws.broadcastProgress(guildId, percent, line, severity.name.lowercase()) }
+
     override suspend fun resizeGuild(session: GameSession, newCount: Int) = withContext(Dispatchers.IO) {
         val guild = guild(session.guildId) ?: error("guild ${session.guildId} not found")
-        // Remove excess seats (highest numbers first).
-        session.seats.filter { it.number > newCount }.sortedByDescending { it.number }.forEach { seat ->
-            runCatching { guild.getRoleById(seat.roleId)?.delete()?.complete() }
-            runCatching { guild.getTextChannelById(seat.channelId)?.delete()?.complete() }
+        val excessSeats = session.seats.filter { it.number > newCount }.sortedByDescending { it.number }
+        val missingSeatNumbers = (1..newCount).filter { n -> session.seats.none { it.number == n } }
+
+        val deleteItems = excessSeats.flatMap { seat ->
+            listOf(
+                BulkItem("玩家${seat.paddedNumber} 刪除角色") {
+                    guild.getRoleById(seat.roleId)?.delete()?.complete()
+                },
+                BulkItem("玩家${seat.paddedNumber} 刪除頻道") {
+                    guild.getTextChannelById(seat.channelId)?.delete()?.complete()
+                }
+            )
         }
-        session.seats.removeAll { it.number > newCount }
-        // Add missing seats.
-        (1..newCount).forEach { n ->
-            if (session.seats.none { it.number == n }) {
-                val seat = Seat(number = n)
+
+        val seatsToAdd = missingSeatNumbers.map { n -> Seat(number = n) }
+        val createItems = seatsToAdd.map { seat ->
+            BulkItem("玩家${seat.paddedNumber} 配置") {
                 provisionSeat(guild, seat)
-                session.seats.add(seat)
             }
         }
+
+        val phases = mutableListOf<BulkPhase>()
+        if (deleteItems.isNotEmpty() && createItems.isNotEmpty()) {
+            phases.add(BulkPhase("delete_seats", 0, 50, deleteItems))
+            phases.add(BulkPhase("create_seats", 50, 100, createItems))
+        } else if (deleteItems.isNotEmpty()) {
+            phases.add(BulkPhase("delete_seats", 0, 100, deleteItems))
+        } else if (createItems.isNotEmpty()) {
+            phases.add(BulkPhase("create_seats", 0, 100, createItems))
+        }
+
+        if (phases.isNotEmpty()) {
+            engine.execute(phases, sink(session.guildId))
+        }
+
+        // Apply changes in memory
+        session.seats.removeAll { it.number > newCount }
+        session.seats.addAll(seatsToAdd)
         session.seats.sortBy { it.number }
         session.settings.playerCount = newCount
     }

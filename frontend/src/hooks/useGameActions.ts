@@ -1,6 +1,8 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "@/api/client";
 import { useGameStore } from "@/stores/gameStore";
+import { useUiStore } from "@/stores/uiStore";
 import type { GameSnapshot, Seat } from "@/types/snapshot";
 
 /**
@@ -10,6 +12,8 @@ import type { GameSnapshot, Seat } from "@/types/snapshot";
  */
 export function useGameActions(guildId: string, demo: boolean) {
   const patch = useGameStore((s) => s.patch);
+  const openProgress = useGameStore((s) => s.openProgress);
+  const { t } = useTranslation();
 
   return useMemo(() => {
     const mapSeat = (snapshot: GameSnapshot, seat: number, fn: (s: Seat) => Seat): GameSnapshot => ({
@@ -21,6 +25,21 @@ export function useGameActions(guildId: string, demo: boolean) {
       ...snapshot,
       aliveCount: snapshot.seats.filter((s) => s.alive && !s.unassigned).length,
     });
+
+    const handleApiError = (err: any) => {
+      const errMsg = err.message || String(err);
+      useUiStore.getState().showToast(errMsg, true);
+      useGameStore.setState((s) => {
+        if (!s.progress) return s;
+        return {
+          progress: {
+            ...s.progress,
+            state: "error",
+            lines: [...s.progress.lines, { percent: 0, line: errMsg, severity: "alert" }]
+          }
+        };
+      });
+    };
 
     return {
       kill: (seat: number, identityIndex: number) => {
@@ -56,14 +75,29 @@ export function useGameActions(guildId: string, demo: boolean) {
       },
       pause: () => (demo ? patch((s) => ({ ...s, paused: !s.paused })) : void api.pause(guildId)),
       startGame: () => (demo ? patch((s) => ({ ...s, phase: "NIGHT", started: true, day: 1 })) : void api.startGame(guildId)),
-      assign: () => void (demo || api.assign(guildId)),
-      reset: () => void (demo || api.reset(guildId)),
+      assign: () => {
+        if (!demo) {
+          openProgress(t("longOp.title.assign"));
+          api.assign(guildId).catch(handleApiError);
+        }
+      },
+      reset: () => {
+        if (!demo) {
+          openProgress(t("longOp.title.reset"));
+          api.reset(guildId).catch(handleApiError);
+        }
+      },
       forcePolice: (seat: number) => void (demo || api.forcePolice(guildId, seat)),
       setDoubleIdentity: (value: boolean) =>
-        demo ? patch((s) => ({ ...s, doubleIdentity: value })) : void api.setDoubleIdentity(guildId, value),
+         demo ? patch((s) => ({ ...s, doubleIdentity: value })) : void api.setDoubleIdentity(guildId, value),
       setMuteAfterSpeech: (value: boolean) =>
-        demo ? patch((s) => ({ ...s, muteAfterSpeech: value })) : void api.setMuteAfterSpeech(guildId, value),
-      setPlayerCount: (count: number) => void (demo || api.setPlayerCount(guildId, count)),
+         demo ? patch((s) => ({ ...s, muteAfterSpeech: value })) : void api.setMuteAfterSpeech(guildId, value),
+      setPlayerCount: (count: number) => {
+        if (!demo) {
+          openProgress(t("longOp.title.resize"));
+          api.setPlayerCount(guildId, count).catch(handleApiError);
+        }
+      },
     };
-  }, [guildId, demo, patch]);
+  }, [guildId, demo, patch, openProgress, t]);
 }

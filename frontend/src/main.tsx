@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import "./i18n";
 import "./theme/global.css";
+import "./components/ui/ui.css";
 import { App } from "./App";
 
 createRoot(document.getElementById("root")!).render(

@@ -4,12 +4,14 @@ import dev.robothanzo.werewolf.controller.dto.ApiResponse
 import dev.robothanzo.werewolf.controller.dto.PlayerCountRequest
 import dev.robothanzo.werewolf.controller.dto.PoolRequest
 import dev.robothanzo.werewolf.controller.dto.ToggleRequest
+import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.domain.Seat
 import dev.robothanzo.werewolf.security.annotations.CanManageGuild
 import dev.robothanzo.werewolf.service.GameSessionService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import kotlinx.coroutines.runBlocking
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -21,17 +23,20 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 @RestController
 @RequestMapping("/api/sessions/{guildId}/settings")
 @Tag(name = "Settings", description = "Pre-game configuration (auto-saving)")
-class SettingsController(private val sessionService: GameSessionService) {
+class SettingsController(
+    private val sessionService: GameSessionService,
+    private val gateway: DiscordGateway,
+) {
 
-    @Operation(summary = "Set player count", description = "Resize the seat list (the resize Discord op runs separately).")
+    @Operation(summary = "Set player count", description = "Resize the seat list and provision/recycle Discord channels and roles.")
     @ApiResponses(value = [SwaggerApiResponse(responseCode = "200", description = "Updated")])
     @PostMapping("/player-count")
     @CanManageGuild
     fun playerCount(@PathVariable guildId: String, @RequestBody body: PlayerCountRequest): ResponseEntity<ApiResponse> {
         sessionService.mutate(guildId.toLong()) { s ->
-            s.settings.playerCount = body.count
-            while (s.seats.size < body.count) s.seats.add(Seat(number = s.seats.size + 1))
-            while (s.seats.size > body.count) s.seats.removeAt(s.seats.size - 1)
+            runBlocking {
+                gateway.resizeGuild(s, body.count)
+            }
         }
         return ResponseEntity.ok(ApiResponse.ok())
     }

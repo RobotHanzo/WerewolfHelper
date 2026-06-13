@@ -39,7 +39,10 @@ export function App() {
         useAuthStore.getState().setAuth(me);
         if (me.role === "BLOCKED") return navigate("/blocked", { replace: true });
         if (location.pathname === "/") navigate("/servers", { replace: true });
-      } catch {
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          return navigate("/login", { replace: true });
+        }
         enterDemo();
         if (!location.pathname.startsWith("/server/")) navigate("/server/demo/dashboard", { replace: true });
       }
@@ -158,7 +161,18 @@ function ServersRoute() {
   const [state, setState] = useState<"loading" | "error" | "ok">("loading");
   const load = () => {
     setState("loading");
-    api.listSessions().then((l) => { setServers(l); setState("ok"); }).catch(() => setState("error"));
+    api.listSessions()
+      .then((l) => {
+        setServers(l);
+        setState("ok");
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) {
+          navigate("/login", { replace: true });
+        } else {
+          setState("error");
+        }
+      });
   };
   useEffect(load, []);
   return (

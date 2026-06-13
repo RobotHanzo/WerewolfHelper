@@ -182,7 +182,12 @@ function ProgressOverlay() {
                 <Button variant="secondary" size="sm" style={{ marginLeft: "auto" }} onClick={close}>{t("common.ack")}</Button>
               </div>
             )}
-            {progress.state === "success" && <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--success-500)" }}>✓ {t("longOp.success")}</span>}
+            {progress.state === "success" && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--success-500)" }}>✓ {t("longOp.success")}</span>
+                <Button variant="secondary" size="sm" style={{ marginLeft: "auto" }} onClick={close}>{t("common.ack")}</Button>
+              </div>
+            )}
           </motion.div>
         </motion.div>
       )}
@@ -216,9 +221,15 @@ function Toast() {
   return (
     <AnimatePresence>
       {toast && (
-        <motion.div className="wh-toast" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--moon-400)" }} />
-          {toast}
+        <motion.div
+          className="wh-toast"
+          style={{ x: "-50%" }}
+          initial={{ opacity: 0, y: 16, x: "-50%" }}
+          animate={{ opacity: 1, y: 0, x: "-50%" }}
+          exit={{ opacity: 0, y: 16, x: "-50%" }}
+        >
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: toast.isError ? "var(--danger-500)" : "var(--moon-400)" }} />
+          {toast.text}
         </motion.div>
       )}
     </AnimatePresence>

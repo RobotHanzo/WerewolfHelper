@@ -17,7 +17,7 @@ interface UiState {
   editSeat: number | null;
   timerOpen: boolean;
   picker: { kind: "promote" | "demote" | "force-police"; title: string } | null;
-  toast: string | null;
+  toast: { text: string; isError?: boolean } | null;
 
   setDensity: (density: Density) => void;
   toggleSpectatorPreview: () => void;
@@ -28,7 +28,7 @@ interface UiState {
   setTimerOpen: (open: boolean) => void;
   openPicker: (kind: "promote" | "demote" | "force-police", title: string) => void;
   closePicker: () => void;
-  showToast: (text: string) => void;
+  showToast: (text: string, isError?: boolean) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -49,8 +49,9 @@ export const useUiStore = create<UiState>((set) => ({
   setTimerOpen: (timerOpen) => set({ timerOpen }),
   openPicker: (kind, title) => set({ picker: { kind, title } }),
   closePicker: () => set({ picker: null }),
-  showToast: (toast) => {
-    set({ toast });
-    setTimeout(() => set((s) => (s.toast === toast ? { toast: null } : s)), 2600);
+  showToast: (text, isError) => {
+    const toastObj = { text, isError };
+    set({ toast: toastObj });
+    setTimeout(() => set((s) => (s.toast === toastObj ? { toast: null } : s)), 2600);
   },
 }));

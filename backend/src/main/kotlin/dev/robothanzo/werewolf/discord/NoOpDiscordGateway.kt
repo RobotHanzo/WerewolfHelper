@@ -1,6 +1,7 @@
 package dev.robothanzo.werewolf.discord
 
 import dev.robothanzo.werewolf.domain.GameSession
+import dev.robothanzo.werewolf.domain.Seat
 import org.slf4j.LoggerFactory
 
 /**
@@ -18,9 +19,28 @@ class NoOpDiscordGateway : DiscordGateway {
     override fun isOwner(guildId: Long, memberId: Long): Boolean = false
     override fun canInteract(guildId: Long, memberId: Long): Boolean = true
 
-    override suspend fun provisionGuild(session: GameSession) = log.info("[noop] provisionGuild {}", session.guildId)
-    override suspend fun resizeGuild(session: GameSession, newCount: Int) =
+    override suspend fun provisionGuild(session: GameSession) {
+        log.info("[noop] provisionGuild {}", session.guildId)
+        (1..session.playerCount).forEach { n ->
+            if (session.seats.none { it.number == n }) {
+                session.seats.add(Seat(number = n))
+            }
+        }
+        session.seats.sortBy { it.number }
+    }
+
+    override suspend fun resizeGuild(session: GameSession, newCount: Int) {
         log.info("[noop] resizeGuild {} -> {}", session.guildId, newCount)
+        session.seats.removeAll { it.number > newCount }
+        (1..newCount).forEach { n ->
+            if (session.seats.none { it.number == n }) {
+                session.seats.add(Seat(number = n))
+            }
+        }
+        session.seats.sortBy { it.number }
+        session.settings.playerCount = newCount
+    }
+
     override suspend fun deleteGuild(guildId: Long) = log.info("[noop] deleteGuild {}", guildId)
 
     override fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int) {
