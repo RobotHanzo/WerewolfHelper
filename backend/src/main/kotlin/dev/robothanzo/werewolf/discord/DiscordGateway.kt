@@ -16,6 +16,9 @@ data class GuildMember(
 /** Which shared channel a message targets. */
 enum class ChannelKind { COURT, JUDGE, SPECTATOR }
 
+/** A minimal rich-embed spec (keeps JDA out of the seam). [color] is packed RGB, null → default. */
+data class EmbedSpec(val title: String, val description: String, val color: Int? = null)
+
 /**
  * Every Discord/JDA interaction goes through this seam so the rest of the app is testable and so the
  * bot layer **degrades gracefully** when no token is configured (the [NoOpDiscordGateway] is used and
@@ -49,11 +52,14 @@ interface DiscordGateway {
     fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int, await: Boolean = false)
     fun setNickname(guildId: Long, memberId: Long, nickname: String, await: Boolean = false)
     fun grantSpectatorRole(guildId: Long, memberId: Long)
-    fun resetMember(guildId: Long, memberId: Long)
+    /** Reset side-effects, split so the bulk engine reports them as distinct progress steps. */
+    fun removeSeatRoles(guildId: Long, memberId: Long)
+    fun clearNickname(guildId: Long, memberId: Long)
 
     // --- messaging ---
     fun sendChannelMessage(guildId: Long, channel: ChannelKind, text: String)
     fun sendSeatMessage(guildId: Long, seatNumber: Int, text: String)
+    fun sendSeatEmbed(guildId: Long, seatNumber: Int, embed: EmbedSpec)
 
     /**
      * Post an interactive prompt with [buttons] into the COURT channel. Covers every day-side flow

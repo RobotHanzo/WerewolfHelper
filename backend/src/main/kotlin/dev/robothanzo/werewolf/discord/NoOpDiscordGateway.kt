@@ -81,8 +81,12 @@ class NoOpDiscordGateway(
         log.debug("[noop] grantSpectatorRole {}", memberId)
     }
 
-    override fun resetMember(guildId: Long, memberId: Long) {
-        log.debug("[noop] resetMember {}", memberId)
+    override fun removeSeatRoles(guildId: Long, memberId: Long) {
+        log.debug("[noop] removeSeatRoles {}", memberId)
+    }
+
+    override fun clearNickname(guildId: Long, memberId: Long) {
+        log.debug("[noop] clearNickname {}", memberId)
     }
 
     override fun sendChannelMessage(guildId: Long, channel: ChannelKind, text: String) {
@@ -91,6 +95,10 @@ class NoOpDiscordGateway(
 
     override fun sendSeatMessage(guildId: Long, seatNumber: Int, text: String) {
         log.debug("[noop] seat {} <- {}", seatNumber, text)
+    }
+
+    override fun sendSeatEmbed(guildId: Long, seatNumber: Int, embed: EmbedSpec) {
+        log.debug("[noop] seat {} embed <- {}: {}", seatNumber, embed.title, embed.description)
     }
 
     override fun sendCourtButtons(guildId: Long, text: String, buttons: List<CourtButton>) {

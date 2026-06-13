@@ -21,6 +21,7 @@ import dev.robothanzo.werewolf.ops.ProgressSink
 import dev.robothanzo.werewolf.websocket.GameWebSocketHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.Permission
@@ -380,16 +381,21 @@ class JdaDiscordGateway(
         if (g.selfMember.canInteract(role)) g.removeRoleFromMember(m, role).queue()
     }
 
-    override fun resetMember(guildId: Long, memberId: Long) {
+    override fun clearNickname(guildId: Long, memberId: Long) {
+        val m = member(guildId, memberId) ?: return
+        if (!m.isOwner) m.modifyNickname(null).complete()
+    }
+
+    override fun removeSeatRoles(guildId: Long, memberId: Long) {
         val g = guild(guildId) ?: return
         val m = member(guildId, memberId) ?: return
-        if (!m.isOwner) m.modifyNickname(null).queue()
         // Strip any seat roles the member still holds (seat.roleId survives reset; only the
-        // seat→member binding is cleared), so a reset player walks away with no game role.
+        // seat→member binding is cleared), so a reset player walks away with no game role. Each
+        // removal blocks (complete) so it's done one at a time, matching the assignment flow.
         val seatRoleIds = session(guildId)?.seats?.mapNotNull { it.roleId.takeIf { id -> id != 0L } }?.toSet().orEmpty()
         m.roles
             .filter { it.idLong in seatRoleIds && g.selfMember.canInteract(it) }
-            .forEach { g.removeRoleFromMember(m, it).queue() }
+            .forEach { g.removeRoleFromMember(m, it).complete() }
     }
 
     // ---- messaging ----
@@ -406,6 +412,16 @@ class JdaDiscordGateway(
     override fun sendSeatMessage(guildId: Long, seatNumber: Int, text: String) {
         val seat = session(guildId)?.seat(seatNumber) ?: return
         guild(guildId)?.getTextChannelById(seat.channelId)?.sendMessage(text)?.queue()
+    }
+
+    override fun sendSeatEmbed(guildId: Long, seatNumber: Int, embed: EmbedSpec) {
+        val seat = session(guildId)?.seat(seatNumber) ?: return
+        val built = EmbedBuilder()
+            .setTitle(embed.title)
+            .setDescription(embed.description)
+            .apply { embed.color?.let { setColor(it) } }
+            .build()
+        guild(guildId)?.getTextChannelById(seat.channelId)?.sendMessageEmbeds(built)?.queue()
     }
 
     override fun sendCourtButtons(guildId: Long, text: String, buttons: List<CourtButton>) {

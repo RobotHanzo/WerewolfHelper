@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.discord.ChannelKind
 import dev.robothanzo.werewolf.discord.DiscordGateway
+import dev.robothanzo.werewolf.discord.EmbedSpec
 import dev.robothanzo.werewolf.discord.NicknameService
 import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
@@ -69,7 +70,10 @@ class DiscordOpsService(
                 session.seats.filter { it.assigned }.map { seat ->
                     BulkItem("玩家${seat.paddedNumber} 身分通知") {
                         val ids = seat.cards.joinToString("、") { roles.localizedName(it.roleId) }
-                        gateway.sendSeatMessage(guildId, seat.number, "${msg.msg("assign.dm.title")}：$ids")
+                        gateway.sendSeatEmbed(
+                            guildId, seat.number,
+                            EmbedSpec(title = msg.msg("assign.dm.title"), description = ids, color = 0xE8B923),
+                        )
                     }
                 },
             )
@@ -88,11 +92,17 @@ class DiscordOpsService(
             return
         }
         val guildId = session.guildId
-        val memberIds = session.seats.mapNotNull { it.memberId }
+        val seated = session.seats.filter { it.memberId != null }.map { it.paddedNumber to it.memberId!! }
         scope.launch {
+            // Role removal then nickname reset, as two separate progress steps per player (one by one).
             val phase = BulkPhase(
                 "reset", 0, 100,
-                memberIds.map { memberId -> BulkItem("成員 $memberId 重置") { gateway.resetMember(guildId, memberId) } },
+                seated.flatMap { (paddedNumber, memberId) ->
+                    listOf(
+                        BulkItem("玩家$paddedNumber 移除角色") { gateway.removeSeatRoles(guildId, memberId) },
+                        BulkItem("玩家$paddedNumber 重置暱稱") { gateway.clearNickname(guildId, memberId) },
+                    )
+                },
             )
             engine.execute(listOf(phase), sink(guildId))
         }
