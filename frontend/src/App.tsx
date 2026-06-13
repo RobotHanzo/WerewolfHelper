@@ -104,14 +104,14 @@ function ServerSurface() {
       .catch(() => {
         // If query fails, we keep the current state or handle it appropriately.
       });
-  }, [guildId, demo, navigate]);
+  }, [guildId, demo]);
 
   useEffect(() => {
     if (demo || !snapshot || !userId) return;
     if (snapshot.assigned && snapshot.seats.some((seat) => seat.memberId === userId)) {
       navigate("/lockout", { replace: true });
     }
-  }, [snapshot, userId, demo, navigate]);
+  }, [snapshot, userId, demo]);
 
   useEffect(() => {
     if (!guildId) return;
@@ -138,8 +138,10 @@ function ServerSurface() {
       onExpired: () => useGameStore.getState().setExpired(true),
     });
     socket.connect();
-    return () => socket.close();
-  }, [guildId, demo, navigate]);
+    return () => {
+      socket.close();
+    };
+  }, [guildId, demo]);
 
   return <AppShell />;
 }

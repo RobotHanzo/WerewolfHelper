@@ -50,13 +50,7 @@ export function Dashboard() {
   const cols: Record<Density, number> = { comfort: 3, compact: 4, list: 1 };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.22, ease: "easeOut" }}
-      style={{ maxWidth: 1180, margin: "0 auto" }}
-    >
+    <div style={{ maxWidth: 1180, margin: "0 auto" }}>
       {/* status header */}
       <div className="wh-card" style={{ display: "flex", alignItems: "center", gap: 20, padding: "14px 18px", marginBottom: 16 }}>
         <span style={{ display: "flex", flexDirection: "column" }}>
@@ -174,7 +168,7 @@ export function Dashboard() {
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }
 

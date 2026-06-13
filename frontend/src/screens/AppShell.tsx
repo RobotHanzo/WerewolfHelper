@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Moon, Sun, LayoutDashboard, Mic, Eye, Settings as SettingsIcon, Server, LogOut, WifiOff } from "lucide-react";
 import { motion } from "framer-motion";
 import { api } from "@/api/client";
@@ -15,6 +15,7 @@ import { Overlays } from "./Overlays";
 export function AppShell() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { guildId, demo, isJudge } = useGuild();
   const auth = useAuthStore((s) => s.auth);
   const connected = useGameStore((s) => s.connected);
@@ -129,7 +130,15 @@ export function AppShell() {
             <span style={{ fontSize: 13, fontWeight: 700, color: "var(--danger-500)" }}>{t("connection.disconnectedBanner")}</span>
           </div>
         )}
-        <Outlet />
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+          style={{ width: "100%" }}
+        >
+          <Outlet />
+        </motion.div>
       </motion.main>
 
       <Overlays guildId={guildId} demo={demo} />
