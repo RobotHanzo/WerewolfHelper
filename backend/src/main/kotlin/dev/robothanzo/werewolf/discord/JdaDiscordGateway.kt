@@ -25,8 +25,13 @@ import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.buttons.Button
+import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.ChunkingFilter
 import net.dv8tion.jda.api.utils.MemberCachePolicy
@@ -68,9 +73,13 @@ class JdaDiscordGateway(
     private val webhookCache = ConcurrentHashMap<Long, WebhookClient>()
     private val soundFiles = ConcurrentHashMap<SoundCue, File>()
 
+    @Volatile
+    private var interactionHandler: DiscordInteractionHandler? = null
+
     init {
         jda.addEventListener(RelayListener())
         jda.addEventListener(LifecycleListener())
+        jda.addEventListener(ComponentListener())
     }
 
     override val available: Boolean = true
@@ -349,6 +358,44 @@ class JdaDiscordGateway(
         }
     }
 
+    // ---- night interactions ----
+    override fun setInteractionHandler(handler: DiscordInteractionHandler) {
+        interactionHandler = handler
+    }
+
+    override fun promptNightAction(
+        guildId: Long,
+        seatNumber: Int,
+        customId: String,
+        prompt: String,
+        options: List<SeatOption>,
+        extraValues: List<Pair<String, String>>,
+        allowSkip: Boolean,
+        maxValues: Int,
+    ) {
+        val seat = session(guildId)?.seat(seatNumber) ?: return
+        val channel = guild(guildId)?.getTextChannelById(seat.channelId) ?: return
+        val menu = StringSelectMenu.create(customId).apply {
+            extraValues.forEach { (value, label) -> addOption(label, value) }
+            options.take(23).forEach { addOption(it.label, it.seat.toString()) }
+            if (allowSkip) addOption("不行動", InteractionIds.SKIP)
+            setRequiredRange(1, maxValues.coerceAtLeast(1))
+        }.build()
+        channel.sendMessage(prompt).addComponents(ActionRow.of(menu)).queue()
+    }
+
+    override fun promptWolfVote(guildId: Long, voterSeats: List<Int>, options: List<SeatOption>) {
+        val g = guild(guildId) ?: return
+        val session = session(guildId) ?: return
+        val buttons = options.map { Button.danger("${InteractionIds.WOLF_VOTE}:${it.seat}", it.label) } +
+            Button.secondary("${InteractionIds.WOLF_VOTE}:${InteractionIds.SKIP}", "本夜不刀")
+        val rows = buttons.chunked(5).map { ActionRow.of(it) }
+        voterSeats.forEach { seatNumber ->
+            val seat = session.seat(seatNumber) ?: return@forEach
+            g.getTextChannelById(seat.channelId)?.sendMessage("狼人請投票決定今晚刀口：")?.addComponents(rows)?.queue()
+        }
+    }
+
     /** Membership rules (FEATURES §3): latecomers become spectators once identities are assigned;
      *  the session is deleted if the bot is removed from the guild. */
     private inner class LifecycleListener : ListenerAdapter() {
@@ -361,6 +408,21 @@ class JdaDiscordGateway(
         override fun onGuildLeave(event: GuildLeaveEvent) {
             runCatching { sessions.deleteById(event.guild.idLong) }
             webhookCache.clear()
+        }
+    }
+
+    /** Routes night-action select menus and wolf-kill vote buttons into the engine handler. */
+    private inner class ComponentListener : ListenerAdapter() {
+        override fun onButtonInteraction(event: ButtonInteractionEvent) {
+            if (!event.componentId.startsWith(InteractionIds.PREFIX) || !event.isFromGuild) return
+            val reply = interactionHandler?.handle(event.guild!!.idLong, event.user.idLong, event.componentId, emptyList())
+            event.reply(reply?.ack ?: "已收到").setEphemeral(true).queue()
+        }
+
+        override fun onStringSelectInteraction(event: StringSelectInteractionEvent) {
+            if (!event.componentId.startsWith(InteractionIds.PREFIX) || !event.isFromGuild) return
+            val reply = interactionHandler?.handle(event.guild!!.idLong, event.user.idLong, event.componentId, event.values)
+            event.reply(reply?.ack ?: "已收到").setEphemeral(true).queue()
         }
     }
 }

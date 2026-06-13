@@ -7,9 +7,11 @@ import dev.robothanzo.werewolf.controller.dto.KillRequest
 import dev.robothanzo.werewolf.controller.dto.PoliceTransferRequest
 import dev.robothanzo.werewolf.controller.dto.ReviveRequest
 import dev.robothanzo.werewolf.game.flow.GameFlowService
+import dev.robothanzo.werewolf.domain.Phase
 import dev.robothanzo.werewolf.security.annotations.CanManageGuild
 import dev.robothanzo.werewolf.service.GameActionService
 import dev.robothanzo.werewolf.service.GameSessionService
+import dev.robothanzo.werewolf.service.NightOrchestrator
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -28,6 +30,7 @@ class GameController(
     private val actions: GameActionService,
     private val sessionService: GameSessionService,
     private val flow: GameFlowService,
+    private val night: NightOrchestrator,
 ) {
 
     @Operation(summary = "Assign identities", description = "Deal the identity pool to the eligible members.")
@@ -116,9 +119,10 @@ class GameController(
     @PostMapping("/state/start")
     @CanManageGuild
     fun start(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
-        sessionService.mutate(guildId.toLong()) { s ->
-            val t = flow.start(); s.phase = t.phase; s.day = t.day
+        val entered = sessionService.mutate(guildId.toLong()) { s ->
+            val t = flow.start(); s.phase = t.phase; s.day = t.day; t.phase
         }
+        if (entered == Phase.NIGHT) night.startNight(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok())
     }
 
@@ -127,9 +131,10 @@ class GameController(
     @PostMapping("/state/next")
     @CanManageGuild
     fun next(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
-        sessionService.mutate(guildId.toLong()) { s ->
-            val t = flow.next(s.phase, s.day); s.phase = t.phase; s.day = t.day
+        val entered = sessionService.mutate(guildId.toLong()) { s ->
+            val t = flow.next(s.phase, s.day); s.phase = t.phase; s.day = t.day; t.phase
         }
+        if (entered == Phase.NIGHT) night.startNight(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok())
     }
 

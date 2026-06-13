@@ -42,6 +42,9 @@ data class GameSession(
 
     /** Discord role/channel ids created at provisioning. */
     var discordIds: DiscordIds = DiscordIds(),
+
+    /** Current night round (active during the NIGHT phase). */
+    var nightState: NightState = NightState(),
 ) {
     val playerCount: Int get() = settings.playerCount
 

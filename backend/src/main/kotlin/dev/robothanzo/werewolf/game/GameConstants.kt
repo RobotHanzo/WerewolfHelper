@@ -19,6 +19,9 @@ object GameConstants {
     /** Default speech time per speaker. */
     const val SPEECH_SECONDS = 120
 
+    /** Default night-action window. */
+    const val NIGHT_SECONDS = 60
+
     /** Police vote weight in polls, and the parity win-check bonus. */
     const val POLICE_VOTE_WEIGHT = 1.5
     const val POLICE_PARITY_BONUS = 0.5

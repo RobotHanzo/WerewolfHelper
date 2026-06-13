@@ -64,4 +64,25 @@ class NoOpDiscordGateway : DiscordGateway {
     ) {
         log.debug("[noop] relayWolfChat seat {} : {}", fromSeat, content)
     }
+
+    override fun setInteractionHandler(handler: DiscordInteractionHandler) {
+        log.debug("[noop] setInteractionHandler")
+    }
+
+    override fun promptNightAction(
+        guildId: Long,
+        seatNumber: Int,
+        customId: String,
+        prompt: String,
+        options: List<SeatOption>,
+        extraValues: List<Pair<String, String>>,
+        allowSkip: Boolean,
+        maxValues: Int,
+    ) {
+        log.debug("[noop] promptNightAction seat {} {}", seatNumber, customId)
+    }
+
+    override fun promptWolfVote(guildId: Long, voterSeats: List<Int>, options: List<SeatOption>) {
+        log.debug("[noop] promptWolfVote {}", voterSeats)
+    }
 }

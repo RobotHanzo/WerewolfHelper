@@ -57,4 +57,27 @@ interface DiscordGateway {
 
     // --- wolf-chat relay (one cached webhook per channel) ---
     fun relayWolfChat(guildId: Long, fromSeat: Int, authorName: String, authorAvatar: String?, content: String)
+
+    // --- night interactions (button / select-menu prompts) ---
+    /** Register the handler that routes component interactions into the engine. */
+    fun setInteractionHandler(handler: DiscordInteractionHandler)
+
+    /**
+     * Post a single-select night-action prompt in [seatNumber]'s private channel. [customId] carries
+     * the ability; [options] are the targetable seats; [extraValues] are non-seat choices (e.g. the
+     * witch's "save"); a Skip choice is added when [allowSkip].
+     */
+    fun promptNightAction(
+        guildId: Long,
+        seatNumber: Int,
+        customId: String,
+        prompt: String,
+        options: List<SeatOption>,
+        extraValues: List<Pair<String, String>> = emptyList(),
+        allowSkip: Boolean = true,
+        maxValues: Int = 1,
+    )
+
+    /** Post wolf-kill vote buttons (one per option, plus skip) into each wolf participant's channel. */
+    fun promptWolfVote(guildId: Long, voterSeats: List<Int>, options: List<SeatOption>)
 }
