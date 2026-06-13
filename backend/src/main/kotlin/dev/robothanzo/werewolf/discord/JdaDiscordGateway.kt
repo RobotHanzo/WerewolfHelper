@@ -244,20 +244,28 @@ class JdaDiscordGateway(
         }
 
         val seatsToAdd = missingSeatNumbers.map { n -> Seat(number = n) }
-        val createItems = seatsToAdd.map { seat ->
-            BulkItem("玩家${seat.paddedNumber} 配置") {
-                provisionSeat(guild, session, seat)
-            }
+        // Roles must be created before channels (the channel's permission override references the seat
+        // role), so they're two separate phases — which also reports them as distinct progress steps.
+        val createRoleItems = seatsToAdd.map { seat ->
+            BulkItem("玩家${seat.paddedNumber} 建立角色") { provisionSeatRole(guild, seat) }
+        }
+        val createChannelItems = seatsToAdd.map { seat ->
+            BulkItem("玩家${seat.paddedNumber} 建立頻道") { provisionSeatChannel(guild, session, seat) }
         }
 
+        // Split 0..100 evenly across the active phases (delete / create-roles / create-channels).
         val phases = mutableListOf<BulkPhase>()
-        if (deleteItems.isNotEmpty() && createItems.isNotEmpty()) {
-            phases.add(BulkPhase("delete_seats", 0, 50, deleteItems))
-            phases.add(BulkPhase("create_seats", 50, 100, createItems))
-        } else if (deleteItems.isNotEmpty()) {
-            phases.add(BulkPhase("delete_seats", 0, 100, deleteItems))
-        } else if (createItems.isNotEmpty()) {
-            phases.add(BulkPhase("create_seats", 0, 100, createItems))
+        val active = buildList {
+            if (deleteItems.isNotEmpty()) add("delete_seats" to deleteItems)
+            if (createRoleItems.isNotEmpty()) {
+                add("create_roles" to createRoleItems)
+                add("create_channels" to createChannelItems)
+            }
+        }
+        active.forEachIndexed { i, (name, items) ->
+            val start = 100 * i / active.size
+            val end = 100 * (i + 1) / active.size
+            phases.add(BulkPhase(name, start, end, items))
         }
 
         if (phases.isNotEmpty()) {
@@ -282,10 +290,21 @@ class JdaDiscordGateway(
         session.seats.sortBy { it.number }
     }
 
+    /** Full seat provision = role then channel. Split helpers let the bulk engine report the two as
+     *  distinct progress phases (channel creation reads back the role via `seat.roleId`). */
     private fun provisionSeat(guild: Guild, session: GameSession, seat: Seat) {
-        val name = "玩家${seat.paddedNumber}"
-        val role = guild.createRole().setName(name).setColor(randomColor()).setHoisted(true).complete()
+        provisionSeatRole(guild, seat)
+        provisionSeatChannel(guild, session, seat)
+    }
+
+    private fun provisionSeatRole(guild: Guild, seat: Seat) {
+        val role = guild.createRole().setName("玩家${seat.paddedNumber}").setColor(randomColor()).setHoisted(true).complete()
         seat.roleId = role.idLong
+    }
+
+    private fun provisionSeatChannel(guild: Guild, session: GameSession, seat: Seat) {
+        val name = "玩家${seat.paddedNumber}"
+        val role = guild.getRoleById(seat.roleId) ?: error("seat ${seat.number} role not provisioned")
         val channel = guild.createTextChannel(name)
             .addPermissionOverride(
                 role,
