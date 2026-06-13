@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { Moon, Sun, LayoutDashboard, Mic, Eye, Settings as SettingsIcon, Server, LogOut, WifiOff } from "lucide-react";
+import { motion } from "framer-motion";
 import { api } from "@/api/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useGameStore } from "@/stores/gameStore";
@@ -43,8 +44,20 @@ export function AppShell() {
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--surface-app)" }}>
-      <aside style={{ width: 224, flex: "none", display: "flex", flexDirection: "column", gap: 8, padding: 16, borderRight: "1px solid var(--border-1)", background: "var(--surface-card)", position: "sticky", top: 0, height: "100vh", boxSizing: "border-box" }}>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      style={{ display: "flex", minHeight: "100vh", background: "var(--surface-app)" }}
+    >
+      <motion.aside
+        initial={{ x: -16, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: -16, opacity: 0 }}
+        transition={{ duration: 0.22, ease: "easeOut" }}
+        style={{ width: 224, flex: "none", display: "flex", flexDirection: "column", gap: 8, padding: 16, borderRight: "1px solid var(--border-1)", background: "var(--surface-card)", position: "sticky", top: 0, height: "100vh", boxSizing: "border-box" }}
+      >
         <div style={{ padding: "4px 4px 16px", display: "flex", alignItems: "center", gap: 10 }}>
           <img src="/logo.svg" alt="" width={34} height={34} />
           <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
@@ -101,9 +114,15 @@ export function AppShell() {
             <LogOut size={13} /> {t("common.signOut")}
           </button>
         </div>
-      </aside>
+      </motion.aside>
 
-      <main style={{ flex: 1, minWidth: 0, padding: "20px 24px 80px", boxSizing: "border-box" }}>
+      <motion.main
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 8 }}
+        transition={{ duration: 0.22, ease: "easeOut" }}
+        style={{ flex: 1, minWidth: 0, padding: "20px 24px 80px", boxSizing: "border-box" }}
+      >
         {!connected && (
           <div className="wh-urgent" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", margin: "0 auto 14px", maxWidth: 1180, borderRadius: "var(--r-md)", background: "var(--danger-dim)", border: "1px solid rgba(255,92,110,0.4)" }}>
             <WifiOff size={16} />
@@ -111,10 +130,10 @@ export function AppShell() {
           </div>
         )}
         <Outlet />
-      </main>
+      </motion.main>
 
       <Overlays guildId={guildId} demo={demo} />
-    </div>
+    </motion.div>
   );
 }
 

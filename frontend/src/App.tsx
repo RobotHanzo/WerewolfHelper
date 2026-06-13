@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { OctagonX, Eye } from "lucide-react";
+
 import { api, ApiError } from "@/api/client";
 import { GameSocket } from "@/api/ws";
 import { useAuthStore } from "@/stores/authStore";

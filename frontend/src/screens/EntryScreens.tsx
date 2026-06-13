@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { AnimatePresence, motion } from "framer-motion";
 import { api } from "@/api/client";
 import { useAuthStore } from "@/stores/authStore";
 import { Avatar } from "@/components/ui/Avatar";
@@ -44,139 +45,171 @@ export function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [loggingOut, setLoggingOut] = useState(false);
 
   return (
-    <div style={{ ...centered, background: "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(84,210,228,0.07), transparent)" }}>
-      <div style={{ ...card, width: 380 }}>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      style={{ ...centered, background: "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(84,210,228,0.07), transparent)" }}
+    >
+      <motion.div
+        initial={{ scale: 0.98, opacity: 0, y: 8 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.98, opacity: 0, y: -8 }}
+        transition={{ duration: 0.22, ease: "easeOut" }}
+        style={{ ...card, width: 380 }}
+      >
         <img src="/logo.svg" alt="" width={72} height={72} />
         <h1 style={{ margin: "8px 0 0", fontSize: 26, fontWeight: 900, letterSpacing: "0.04em" }}>{t("app.name")}</h1>
         <span className="mono" style={{ fontSize: 11, color: "var(--moon-400)", letterSpacing: "0.24em" }}>{t("app.wordmark")}</span>
         
-        {auth ? (
-          <>
-            <div style={{
-              marginTop: 24,
-              width: "100%",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 16,
-              padding: "20px 16px",
-              borderRadius: "var(--r-lg)",
-              background: "linear-gradient(135deg, rgba(84,210,228,0.06), rgba(84,210,228,0.01))",
-              border: "1px solid rgba(84,210,228,0.15)",
-              boxShadow: "inset 0 0 12px rgba(84,210,228,0.05)",
-              position: "relative",
-              overflow: "hidden",
-              boxSizing: "border-box"
-            }}>
-              {/* Subtle glow effect in the card */}
-              <div style={{
-                position: "absolute",
-                top: -20,
-                left: -20,
-                width: 80,
-                height: 80,
-                background: "rgba(84,210,228,0.15)",
-                filter: "blur(20px)",
-                borderRadius: "50%",
-                pointerEvents: "none"
-              }} />
+        <div style={{ width: "100%", display: "flex", flexDirection: "column", position: "relative" }}>
+          <AnimatePresence mode="wait">
+            {auth ? (
+              <motion.div
+                key="profile-card"
+                initial={{ opacity: 0, y: 6, scale: 0.99 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.99 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}
+              >
+                <div style={{
+                  marginTop: 24,
+                  width: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 16,
+                  padding: "20px 16px",
+                  borderRadius: "var(--r-lg)",
+                  background: "linear-gradient(135deg, rgba(84,210,228,0.06), rgba(84,210,228,0.01))",
+                  border: "1px solid rgba(84,210,228,0.15)",
+                  boxShadow: "inset 0 0 12px rgba(84,210,228,0.05)",
+                  position: "relative",
+                  overflow: "hidden",
+                  boxSizing: "border-box"
+                }}>
+                  {/* Subtle glow effect in the card */}
+                  <div style={{
+                    position: "absolute",
+                    top: -20,
+                    left: -20,
+                    width: 80,
+                    height: 80,
+                    background: "rgba(84,210,228,0.15)",
+                    filter: "blur(20px)",
+                    borderRadius: "50%",
+                    pointerEvents: "none"
+                  }} />
 
-              {/* Avatar with circular container and glowing effect */}
-              <div style={{
-                position: "relative",
-                display: "inline-flex",
-                padding: 4,
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, var(--moon-400), rgba(84,210,228,0.3))",
-                boxShadow: "0 0 16px rgba(84,210,228,0.2)"
-              }}>
-                <Avatar name={auth.username} avatar={auth.avatar} size="lg" />
-              </div>
+                  {/* Avatar with circular container and glowing effect */}
+                  <div style={{
+                    position: "relative",
+                    display: "inline-flex",
+                    padding: 4,
+                    borderRadius: "50%",
+                    background: "linear-gradient(135deg, var(--moon-400), rgba(84,210,228,0.3))",
+                    boxShadow: "0 0 16px rgba(84,210,228,0.2)"
+                  }}>
+                    <Avatar name={auth.username} avatar={auth.avatar} size="lg" />
+                  </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <span style={{ fontSize: 18, fontWeight: 800, color: "var(--text-body)" }}>
-                  {auth.username}
-                </span>
-                <span style={{ fontSize: 12, color: "var(--text-muted)", letterSpacing: "0.05em" }}>
-                  {t("login.loggedInAs", { name: auth.username })}
-                </span>
-              </div>
-            </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: "var(--text-body)" }}>
+                      {auth.username}
+                    </span>
+                    <span style={{ fontSize: 12, color: "var(--text-muted)", letterSpacing: "0.05em" }}>
+                      {t("login.loggedInAs", { name: auth.username })}
+                    </span>
+                  </div>
+                </div>
 
-            {/* Action buttons */}
-            <button
-              type="button"
-              onClick={() => navigate("/servers")}
-              className="wh-btn wh-btn--lg wh-btn--primary"
-              style={{
-                marginTop: 20,
-                width: "100%",
-                height: 48,
-                border: "none",
-                borderRadius: "var(--r-md)",
-                fontSize: 15,
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-                transition: "transform 0.2s, box-shadow 0.2s"
-              }}
-            >
-              {t("login.selectServer")}
-            </button>
+                {/* Action buttons */}
+                <button
+                  type="button"
+                  onClick={() => navigate("/servers")}
+                  className="wh-btn wh-btn--lg wh-btn--primary"
+                  style={{
+                    marginTop: 20,
+                    width: "100%",
+                    height: 48,
+                    border: "none",
+                    borderRadius: "var(--r-md)",
+                    fontSize: 15,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    transition: "transform 0.2s, box-shadow 0.2s"
+                  }}
+                >
+                  {t("login.selectServer")}
+                </button>
 
-            <button
-              type="button"
-              disabled={loggingOut}
-              onClick={async () => {
-                setLoggingOut(true);
-                try {
-                  if (!useAuthStore.getState().demo) {
-                    await api.logout();
-                  }
-                } catch (err) {
-                  console.error("Logout failed:", err);
-                } finally {
-                  useAuthStore.setState({ auth: null, demo: false });
-                  setLoggingOut(false);
-                }
-              }}
-              className="wh-btn wh-btn--ghost"
-              style={{
-                marginTop: 8,
-                width: "100%",
-                height: 36,
-                fontSize: 13,
-                color: "var(--text-muted)",
-                fontWeight: 500,
-                cursor: "pointer",
-                background: "transparent",
-                border: "none",
-                borderRadius: "var(--r-md)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6
-              }}
-            >
-              {t("login.notYou")}
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={onLogin}
-            style={{ marginTop: 28, width: "100%", height: 48, border: "none", borderRadius: "var(--r-md)", background: "#5865F2", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
-          >
-            <DiscordMark />
-            {t("login.withDiscord")}
-          </button>
-        )}
+                <button
+                  type="button"
+                  disabled={loggingOut}
+                  onClick={async () => {
+                    setLoggingOut(true);
+                    try {
+                      if (!useAuthStore.getState().demo) {
+                        await api.logout();
+                      }
+                    } catch (err) {
+                      console.error("Logout failed:", err);
+                    } finally {
+                      useAuthStore.setState({ auth: null, demo: false });
+                      setLoggingOut(false);
+                    }
+                  }}
+                  className="wh-btn wh-btn--ghost"
+                  style={{
+                    marginTop: 8,
+                    width: "100%",
+                    height: 36,
+                    fontSize: 13,
+                    color: "var(--text-muted)",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    background: "transparent",
+                    border: "none",
+                    borderRadius: "var(--r-md)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6
+                  }}
+                >
+                  {t("login.notYou")}
+                </button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="login-form"
+                initial={{ opacity: 0, y: 6, scale: 0.99 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.99 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                style={{ width: "100%", display: "flex", flexDirection: "column" }}
+              >
+                <button
+                  type="button"
+                  onClick={onLogin}
+                  style={{ marginTop: 28, width: "100%", height: 48, border: "none", borderRadius: "var(--r-md)", background: "#5865F2", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
+                >
+                  <DiscordMark />
+                  {t("login.withDiscord")}
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
         <p style={{ margin: "18px 0 0", fontSize: 12, color: "var(--text-muted)", lineHeight: 1.7 }}>{t("login.note")}</p>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -207,32 +240,84 @@ export function ServerSelectScreen({
   onBack: () => void;
 }) {
   const { t } = useTranslation();
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.02,
+        delayChildren: 0.02
+      }
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.15, ease: "easeInOut" }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 8, opacity: 0 },
+    show: { y: 0, opacity: 1, transition: { duration: 0.18, ease: "easeOut" } }
+  };
+
   return (
-    <div style={centered}>
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      exit="exit"
+      style={centered}
+    >
       <div style={{ width: 460, display: "flex", flexDirection: "column", gap: 12 }}>
-        <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 900 }}>{t("servers.title")}</h1>
-        {loading && <span style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center" }}>{t("servers.loadingList")}</span>}
+        <motion.h1
+          variants={itemVariants}
+          style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 900 }}
+        >
+          {t("servers.title")}
+        </motion.h1>
+
+        {loading && (
+          <motion.span
+            variants={itemVariants}
+            style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center" }}
+          >
+            {t("servers.loadingList")}
+          </motion.span>
+        )}
+
         {error && (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: 28, borderRadius: "var(--r-lg)", background: "var(--danger-dim)", border: "1px solid rgba(255,92,110,0.35)" }}>
+          <motion.div
+            variants={itemVariants}
+            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: 28, borderRadius: "var(--r-lg)", background: "var(--danger-dim)", border: "1px solid rgba(255,92,110,0.35)" }}
+          >
             <span style={{ fontWeight: 700, color: "var(--danger-500)" }}>⚠ {t("servers.errorTitle")}</span>
             <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{t("servers.errorHint")}</span>
             <Button size="sm" onClick={onRetry}>{t("common.retry")}</Button>
-          </div>
+          </motion.div>
         )}
+
         {!loading && !error && servers.length === 0 && (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: 32, borderRadius: "var(--r-lg)", background: "var(--surface-card)", border: "1px dashed var(--border-2)" }}>
+          <motion.div
+            variants={itemVariants}
+            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: 32, borderRadius: "var(--r-lg)", background: "var(--surface-card)", border: "1px dashed var(--border-2)" }}
+          >
             <span style={{ fontWeight: 700 }}>{t("servers.emptyTitle")}</span>
             <span style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", lineHeight: 1.7 }}>{t("servers.emptyHint")}</span>
-          </div>
+          </motion.div>
         )}
+
         {!loading && !error &&
           servers.map((sv) => (
-            <button
+            <motion.button
+              variants={itemVariants}
               key={sv.guildId}
               type="button"
               onClick={() => onPick(sv.guildId)}
               className="wh-card"
-              style={{ display: "flex", alignItems: "center", gap: 16, width: "100%", padding: 18, cursor: "pointer", textAlign: "left", fontFamily: "var(--font-ui)" }}
+              style={{ display: "flex", alignItems: "center", gap: 16, width: "100%", padding: 18, cursor: "pointer", textAlign: "left", fontFamily: "var(--font-ui)", transition: "transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out)" }}
+              whileHover={{ scale: 1.02, boxShadow: "var(--shadow-2)", borderColor: "var(--border-2)" }}
+              whileTap={{ scale: 0.99 }}
             >
               <span style={{ width: 52, height: 52, flex: "none", borderRadius: "var(--r-full)", background: "var(--surface-raised)", border: "1px solid var(--border-2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: "var(--text-secondary)" }}>
                 {sv.guildName.trim()[0] ?? "?"}
@@ -244,13 +329,16 @@ export function ServerSelectScreen({
                 </span>
               </span>
               <span style={{ color: "var(--text-muted)", fontSize: 18 }}>→</span>
-            </button>
+            </motion.button>
           ))}
-        <Button variant="ghost" size="sm" onClick={onBack} style={{ alignSelf: "flex-start", marginTop: 6 }}>
-          {t("servers.backToLogin")}
-        </Button>
+
+        <motion.div variants={itemVariants}>
+          <Button variant="ghost" size="sm" onClick={onBack} style={{ alignSelf: "flex-start", marginTop: 6 }}>
+            {t("servers.backToLogin")}
+          </Button>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
