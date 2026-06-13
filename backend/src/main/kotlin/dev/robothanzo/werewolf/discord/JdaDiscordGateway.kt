@@ -23,12 +23,20 @@ import net.dv8tion.jda.api.entities.Icon
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.events.guild.GuildJoinEvent
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent
+import net.dv8tion.jda.api.events.guild.GuildReadyEvent
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
+import net.dv8tion.jda.api.events.session.ReadyEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
+import net.dv8tion.jda.api.interactions.commands.OptionType
+import net.dv8tion.jda.api.interactions.commands.build.Commands
+import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.components.selections.StringSelectMenu
@@ -76,10 +84,14 @@ class JdaDiscordGateway(
     @Volatile
     private var interactionHandler: DiscordInteractionHandler? = null
 
+    @Volatile
+    private var commandHandler: DiscordCommandHandler? = null
+
     init {
         jda.addEventListener(RelayListener())
         jda.addEventListener(LifecycleListener())
         jda.addEventListener(ComponentListener())
+        jda.addEventListener(CommandListener())
     }
 
     override val available: Boolean = true
@@ -239,6 +251,13 @@ class JdaDiscordGateway(
         if (g.selfMember.canInteract(role)) g.addRoleToMember(m, role).queue()
     }
 
+    override fun grantJudgeRole(guildId: Long, memberId: Long) {
+        val g = guild(guildId) ?: return
+        val role = session(guildId)?.discordIds?.judgeRoleId?.let { g.getRoleById(it) } ?: return
+        val m = member(guildId, memberId) ?: return
+        if (g.selfMember.canInteract(role)) g.addRoleToMember(m, role).queue()
+    }
+
     override fun resetMember(guildId: Long, memberId: Long) {
         val m = member(guildId, memberId) ?: return
         if (!m.isOwner) m.modifyNickname(null).queue()
@@ -363,6 +382,10 @@ class JdaDiscordGateway(
         interactionHandler = handler
     }
 
+    override fun setCommandHandler(handler: DiscordCommandHandler) {
+        commandHandler = handler
+    }
+
     override fun promptNightAction(
         guildId: Long,
         seatNumber: Int,
@@ -392,7 +415,7 @@ class JdaDiscordGateway(
         val rows = buttons.chunked(5).map { ActionRow.of(it) }
         voterSeats.forEach { seatNumber ->
             val seat = session.seat(seatNumber) ?: return@forEach
-            g.getTextChannelById(seat.channelId)?.sendMessage("狼人請投票決定今晚刀口：")?.addComponents(rows)?.queue()
+            g.getTextChannelById(seat.channelId)?.sendMessage("🐺 狼人請投票決定今晚刀口：")?.addComponents(rows)?.queue()
         }
     }
 
@@ -401,13 +424,57 @@ class JdaDiscordGateway(
     private inner class LifecycleListener : ListenerAdapter() {
         override fun onGuildMemberJoin(event: GuildMemberJoinEvent) {
             val session = session(event.guild.idLong) ?: return
-            if (event.member.idLong == session.ownerId) return // owner re-grant handled elsewhere
+            if (event.member.idLong == session.ownerId) {
+                grantJudgeRole(event.guild.idLong, event.member.idLong) // re-grant judge to the owner (§3)
+                return
+            }
             if (session.assigned) grantSpectatorRole(event.guild.idLong, event.member.idLong)
+        }
+
+        // Provision when the bot joins a guild with a matching pending config, and on restart-readiness.
+        override fun onGuildJoin(event: GuildJoinEvent) {
+            commandHandler?.onGuildJoined(event.guild.idLong, event.guild.ownerIdLong)
+        }
+
+        override fun onGuildReady(event: GuildReadyEvent) {
+            commandHandler?.onGuildJoined(event.guild.idLong, event.guild.ownerIdLong)
         }
 
         override fun onGuildLeave(event: GuildLeaveEvent) {
             runCatching { sessions.deleteById(event.guild.idLong) }
             webhookCache.clear()
+        }
+    }
+
+    /** Registers and handles the `/server` slash command (create / delete), for server creators. */
+    private inner class CommandListener : ListenerAdapter() {
+        override fun onReady(event: ReadyEvent) {
+            jda.updateCommands().addCommands(
+                Commands.slash("server", "管理狼人殺遊戲伺服器")
+                    .addSubcommands(
+                        SubcommandData("create", "建立一個新的遊戲伺服器設定")
+                            .addOptions(
+                                OptionData(OptionType.INTEGER, "players", "玩家人數", true).setRequiredRange(4, 20),
+                                OptionData(OptionType.BOOLEAN, "double", "雙身分模式", false),
+                            ),
+                        SubcommandData("delete", "刪除目前伺服器的遊戲"),
+                    ),
+            ).queue()
+        }
+
+        override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
+            if (event.name != "server") return
+            val handler = commandHandler ?: return event.reply("尚未就緒").setEphemeral(true).queue()
+            val reply = when (event.subcommandName) {
+                "create" -> handler.onServerCreate(
+                    event.user.idLong,
+                    event.getOption("players")!!.asInt,
+                    event.getOption("double")?.asBoolean ?: false,
+                )
+                "delete" -> handler.onServerDelete(event.user.idLong, event.guild?.idLong ?: 0)
+                else -> "未知的指令"
+            }
+            event.reply(reply).setEphemeral(true).queue()
         }
     }
 

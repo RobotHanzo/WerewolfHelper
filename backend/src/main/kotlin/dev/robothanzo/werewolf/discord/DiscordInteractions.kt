@@ -15,6 +15,21 @@ fun interface DiscordInteractionHandler {
     fun handle(guildId: Long, userId: Long, customId: String, values: List<String>): InteractionReply?
 }
 
+/**
+ * Routes the `/server` slash command and bot-join events into the provisioning service. As with the
+ * interaction handler, the gateway owns the JDA wiring and this owns the meaning.
+ */
+interface DiscordCommandHandler {
+    /** `/server create` — returns the zh-TW reply (instructions + invite link, or an error). */
+    fun onServerCreate(creatorId: Long, playerCount: Int, doubleIdentity: Boolean): String
+
+    /** `/server delete` — returns the zh-TW reply. */
+    fun onServerDelete(creatorId: Long, guildId: Long): String
+
+    /** The bot joined (or became ready in) a guild — provision it if a pending config matches. */
+    fun onGuildJoined(guildId: Long, ownerId: Long)
+}
+
 /** Custom-id constants shared between the orchestrator (parsing) and the gateway (building). */
 object InteractionIds {
     const val PREFIX = "wh"

@@ -69,6 +69,14 @@ class NoOpDiscordGateway : DiscordGateway {
         log.debug("[noop] setInteractionHandler")
     }
 
+    override fun setCommandHandler(handler: DiscordCommandHandler) {
+        log.debug("[noop] setCommandHandler")
+    }
+
+    override fun grantJudgeRole(guildId: Long, memberId: Long) {
+        log.debug("[noop] grantJudgeRole {}", memberId)
+    }
+
     override fun promptNightAction(
         guildId: Long,
         seatNumber: Int,

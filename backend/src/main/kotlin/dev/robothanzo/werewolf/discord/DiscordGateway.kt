@@ -62,6 +62,12 @@ interface DiscordGateway {
     /** Register the handler that routes component interactions into the engine. */
     fun setInteractionHandler(handler: DiscordInteractionHandler)
 
+    /** Register the handler for the `/server` slash command and bot-join provisioning. */
+    fun setCommandHandler(handler: DiscordCommandHandler)
+
+    /** Grant a member the provisioned judge role (re-granted to the owner on join, §3). */
+    fun grantJudgeRole(guildId: Long, memberId: Long)
+
     /**
      * Post a single-select night-action prompt in [seatNumber]'s private channel. [customId] carries
      * the ability; [options] are the targetable seats; [extraValues] are non-seat choices (e.g. the

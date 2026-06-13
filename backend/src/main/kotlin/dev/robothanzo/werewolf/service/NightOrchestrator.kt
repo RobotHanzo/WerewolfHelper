@@ -109,7 +109,7 @@ class NightOrchestrator(
             actors.forEach { actor ->
                 gateway.promptNightAction(
                     guildId, actor.number, "${InteractionIds.NIGHT_ACTION}:${ability.id}",
-                    "$roleName：請選擇今晚的行動目標", options, extras, ability.optional, ability.targetCount,
+                    "🌙 $roleName：請選擇今晚的行動目標", options, extras, ability.optional, ability.targetCount,
                 )
             }
         }

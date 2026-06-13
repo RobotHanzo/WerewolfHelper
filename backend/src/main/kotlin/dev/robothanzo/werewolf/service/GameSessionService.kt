@@ -34,6 +34,8 @@ class GameSessionService(
 
     fun save(session: GameSession): GameSession = sessions.save(session)
 
+    fun delete(guildId: Long) = sessions.deleteById(guildId)
+
     fun recentLogs(guildId: Long): List<GameLogEntry> = logs.findByGuildIdOrderByTimestampDesc(guildId)
 
     /** Append a typed, localized log entry. */
