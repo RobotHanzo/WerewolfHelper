@@ -137,14 +137,16 @@ function TimerModal() {
         <h2 style={{ margin: 0, fontSize: 17, fontWeight: 900 }}>{t("timer.title")}</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
           {presets.map((p) => (
-            <button key={p} className="wh-btn wh-btn--secondary" style={{ height: 40 }} onClick={() => { setMin(String(Math.floor(p / 60))); setSec(String(p % 60)); }}>
+            <button key={p} className="wh-btn wh-btn--secondary wh-btn--sm" style={{ height: 40 }} onClick={() => { setMin(String(Math.floor(p / 60))); setSec(String(p % 60)); }}>
               <span className="mono">{p}s</span>
             </button>
           ))}
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input className="wh-input wh-input--mono" style={{ flex: 1 }} value={min} onChange={(e) => setMin(e.target.value)} aria-label={t("timer.minutes")} />
-          <input className="wh-input wh-input--mono" style={{ flex: 1 }} value={sec} onChange={(e) => setSec(e.target.value)} aria-label={t("timer.seconds")} />
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input className="wh-input wh-input--mono" style={{ flex: 1, minWidth: 0 }} value={min} onChange={(e) => setMin(e.target.value)} aria-label={t("timer.minutes")} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-secondary)" }}>{t("timer.minutes")}</span>
+          <input className="wh-input wh-input--mono" style={{ flex: 1, minWidth: 0 }} value={sec} onChange={(e) => setSec(e.target.value)} aria-label={t("timer.seconds")} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-secondary)" }}>{t("timer.seconds")}</span>
         </div>
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <Button variant="ghost" onClick={() => setOpen(false)}>{t("common.cancel")}</Button>
@@ -171,7 +173,7 @@ function ProgressOverlay() {
     <AnimatePresence>
       {progress && (
         <motion.div className="wh-modal-backdrop" style={{ zIndex: 60 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <motion.div className="wh-card" style={{ width: 520, padding: 28, borderRadius: "var(--r-xl)", boxShadow: "var(--shadow-3)", display: "flex", flexDirection: "column", gap: 16 }} initial={{ scale: 0.96 }} animate={{ scale: 1 }}>
+          <motion.div className="wh-card" style={{ width: 520, maxWidth: "100%", padding: 28, borderRadius: "var(--r-xl)", boxShadow: "var(--shadow-3)", display: "flex", flexDirection: "column", gap: 16 }} initial={{ scale: 0.96 }} animate={{ scale: 1 }}>
             <header style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 900 }}>{progress.title}</h2>
               <span className="mono" style={{ marginLeft: "auto", fontWeight: 700, color: "var(--moon-300)" }}>{progress.percent}%</span>
@@ -210,7 +212,7 @@ function SessionExpiredModal() {
     <AnimatePresence>
       {expired && (
         <motion.div className="wh-modal-backdrop" style={{ zIndex: 80 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <div className="wh-card" style={{ width: 360, padding: "32px 28px", borderRadius: "var(--r-xl)", boxShadow: "var(--shadow-3)", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center" }}>
+          <div className="wh-card" style={{ width: 360, maxWidth: "100%", padding: "32px 28px", borderRadius: "var(--r-xl)", boxShadow: "var(--shadow-3)", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center" }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>{t("sessionExpired.title")}</h2>
             <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.7 }}>{t("sessionExpired.body")}</p>
             <button onClick={() => (window.location.href = api.loginUrl())} style={{ marginTop: 8, width: "100%", height: 44, border: "none", borderRadius: "var(--r-md)", background: "#5865F2", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
