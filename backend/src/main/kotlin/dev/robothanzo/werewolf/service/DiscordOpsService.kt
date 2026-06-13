@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.discord.ChannelKind
 import dev.robothanzo.werewolf.discord.DiscordGateway
+import dev.robothanzo.werewolf.discord.EmbedField
 import dev.robothanzo.werewolf.discord.EmbedSpec
 import dev.robothanzo.werewolf.discord.NicknameService
 import dev.robothanzo.werewolf.domain.GameSession
@@ -78,14 +79,17 @@ class DiscordOpsService(
                 },
             )
             engine.execute(listOf(critical, notify), sink(guildId))
-            val overview = session.seats.filter { it.assigned }.joinToString("\n") { seat ->
+            val fields = session.seats.filter { it.assigned }.map { seat ->
                 val ids = seat.cards.joinToString("、") { roles.localizedName(it.roleId) }
-                "玩家${seat.paddedNumber}：$ids"
+                EmbedField(name = "玩家${seat.paddedNumber}", value = ids, inline = true)
             }
-            gateway.sendChannelEmbed(
-                guildId, ChannelKind.JUDGE,
-                EmbedSpec(title = msg.msg("assign.summary.title"), description = overview, color = 0xE8B923),
+            val summaryEmbed = EmbedSpec(
+                title = msg.msg("assign.summary.title"),
+                color = kotlin.random.Random.nextInt(0x1000000),
+                fields = fields
             )
+            gateway.sendChannelEmbed(guildId, ChannelKind.JUDGE, summaryEmbed)
+            gateway.sendChannelEmbed(guildId, ChannelKind.SPECTATOR, summaryEmbed)
         }
     }
 

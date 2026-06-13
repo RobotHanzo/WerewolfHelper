@@ -16,8 +16,19 @@ data class GuildMember(
 /** Which shared channel a message targets. */
 enum class ChannelKind { COURT, JUDGE, SPECTATOR }
 
-/** A minimal rich-embed spec (keeps JDA out of the seam). [color] is packed RGB, null → default. */
-data class EmbedSpec(val title: String, val description: String, val color: Int? = null)
+/** A single embed field: [name] is the bold heading, [value] the body, [inline] packs it side-by-side. */
+data class EmbedField(val name: String, val value: String, val inline: Boolean = false)
+
+/**
+ * A minimal rich-embed spec (keeps JDA out of the seam). [color] is packed RGB, null → default.
+ * [description] may be blank when the content is carried entirely by [fields].
+ */
+data class EmbedSpec(
+    val title: String,
+    val description: String = "",
+    val color: Int? = null,
+    val fields: List<EmbedField> = emptyList(),
+)
 
 /**
  * Every Discord/JDA interaction goes through this seam so the rest of the app is testable and so the

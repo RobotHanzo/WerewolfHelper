@@ -418,12 +418,7 @@ class JdaDiscordGateway(
             ChannelKind.JUDGE -> ids.judgeTextChannelId
             ChannelKind.SPECTATOR -> ids.spectatorTextChannelId
         }
-        val built = EmbedBuilder()
-            .setTitle(embed.title)
-            .setDescription(embed.description)
-            .apply { embed.color?.let { setColor(it) } }
-            .build()
-        guild(guildId)?.getTextChannelById(channelId)?.sendMessageEmbeds(built)?.queue()
+        guild(guildId)?.getTextChannelById(channelId)?.sendMessageEmbeds(buildEmbed(embed))?.queue()
     }
 
     override fun sendSeatMessage(guildId: Long, seatNumber: Int, text: String) {
@@ -433,13 +428,15 @@ class JdaDiscordGateway(
 
     override fun sendSeatEmbed(guildId: Long, seatNumber: Int, embed: EmbedSpec) {
         val seat = session(guildId)?.seat(seatNumber) ?: return
-        val built = EmbedBuilder()
-            .setTitle(embed.title)
-            .setDescription(embed.description)
-            .apply { embed.color?.let { setColor(it) } }
-            .build()
-        guild(guildId)?.getTextChannelById(seat.channelId)?.sendMessageEmbeds(built)?.queue()
+        guild(guildId)?.getTextChannelById(seat.channelId)?.sendMessageEmbeds(buildEmbed(embed))?.queue()
     }
+
+    private fun buildEmbed(embed: EmbedSpec) = EmbedBuilder()
+        .setTitle(embed.title)
+        .apply { if (embed.description.isNotBlank()) setDescription(embed.description) }
+        .apply { embed.color?.let { setColor(it) } }
+        .apply { embed.fields.forEach { addField(it.name, it.value, it.inline) } }
+        .build()
 
     override fun sendCourtButtons(guildId: Long, text: String, buttons: List<CourtButton>) {
         val ids = session(guildId)?.discordIds ?: return
