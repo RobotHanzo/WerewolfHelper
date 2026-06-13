@@ -85,4 +85,12 @@ export const api = {
   setPool: (g: string, pool: Record<string, number>) => post(`/sessions/${g}/settings/pool`, { pool }),
   setDoubleIdentity: (g: string, value: boolean) => post(`/sessions/${g}/settings/double-identity`, { value }),
   setMuteAfterSpeech: (g: string, value: boolean) => post(`/sessions/${g}/settings/mute-after-speech`, { value }),
+
+  // day-side flow controls (mirror the Discord court buttons)
+  skipSpeaker: (g: string) => post(`/sessions/${g}/speech/skip`),
+  stopSpeech: (g: string) => post(`/sessions/${g}/speech/stop`),
+  setSpeechDirection: (g: string, direction: "UP" | "DOWN") =>
+    post(`/sessions/${g}/speech/direction`, { direction }),
+  advancePoll: (g: string) => post(`/sessions/${g}/poll/advance`),
+  resolvePoll: (g: string) => post(`/sessions/${g}/poll/resolve`),
 };

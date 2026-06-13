@@ -14,6 +14,8 @@ import dev.robothanzo.werewolf.domain.LogSeverity
 import dev.robothanzo.werewolf.game.flow.GameScheduler
 import dev.robothanzo.werewolf.domain.Phase
 import dev.robothanzo.werewolf.security.annotations.CanManageGuild
+import dev.robothanzo.werewolf.service.CourtAnnouncer
+import dev.robothanzo.werewolf.service.DayOrchestrator
 import dev.robothanzo.werewolf.service.GameActionService
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.NightOrchestrator
@@ -36,9 +38,23 @@ class GameController(
     private val sessionService: GameSessionService,
     private val flow: GameFlowService,
     private val night: NightOrchestrator,
+    private val day: DayOrchestrator,
+    private val announcer: CourtAnnouncer,
     private val gateway: DiscordGateway,
     private val gameScheduler: GameScheduler,
 ) {
+
+    /** Run the orchestrator that owns the phase we just entered (night actions / day flow). */
+    private fun onPhaseEntered(guildId: Long, phase: Phase) {
+        when (phase) {
+            Phase.NIGHT -> night.startNight(guildId)
+            Phase.DAWN -> day.enterDawn(guildId)
+            Phase.POLICE_ELECTION -> day.startPoliceElection(guildId)
+            Phase.SPEECHES -> day.startSpeeches(guildId)
+            Phase.EXPEL_VOTE -> day.startExpelVote(guildId)
+            else -> {}
+        }
+    }
 
     @Operation(summary = "Assign identities", description = "Deal the identity pool to the eligible members.")
     @ApiResponses(value = [SwaggerApiResponse(responseCode = "200", description = "Assigned")])
@@ -130,7 +146,7 @@ class GameController(
             require(s.assigned) { "error.not_assigned" }
             val t = flow.start(); s.phase = t.phase; s.day = t.day; t.phase
         }
-        if (entered == Phase.NIGHT) night.startNight(guildId.toLong())
+        onPhaseEntered(guildId.toLong(), entered)
         return ResponseEntity.ok(ApiResponse.ok())
     }
 
@@ -142,7 +158,7 @@ class GameController(
         val entered = sessionService.mutate(guildId.toLong()) { s ->
             val t = flow.next(s.phase, s.day); s.phase = t.phase; s.day = t.day; t.phase
         }
-        if (entered == Phase.NIGHT) night.startNight(guildId.toLong())
+        onPhaseEntered(guildId.toLong(), entered)
         return ResponseEntity.ok(ApiResponse.ok())
     }
 
@@ -187,6 +203,7 @@ class GameController(
             s.timerEndsAt = timerEndsAt
             sessionService.log(guildId.toLong(), LogSeverity.ACTION, "timer.start", seconds)
         }
+        announcer.announce(guildId.toLong(), "timer.start", seconds)
 
         // Schedule final timer completion
         val delay = seconds * 1000L
@@ -196,6 +213,7 @@ class GameController(
                 sessionService.log(guildId.toLong(), LogSeverity.ALERT, "timer.ended")
             }
             gateway.playSound(guildId.toLong(), SoundCue.TIMER_ENDED)
+            announcer.announce(guildId.toLong(), "timer.ended")
         }
 
         // Schedule 30-seconds-remaining warning if timer is > 30s
@@ -218,6 +236,7 @@ class GameController(
             s.timerEndsAt = null
             sessionService.log(guildId.toLong(), LogSeverity.ACTION, "timer.stopped")
         }
+        announcer.announce(guildId.toLong(), "timer.stopped")
         gameScheduler.cancel(guildId.toLong(), GameScheduler.TIMER)
         gameScheduler.cancel(guildId.toLong(), "timer.warn")
         return ResponseEntity.ok(ApiResponse.ok())

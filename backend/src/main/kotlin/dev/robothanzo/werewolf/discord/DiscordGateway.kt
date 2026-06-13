@@ -51,6 +51,13 @@ interface DiscordGateway {
     fun sendChannelMessage(guildId: Long, channel: ChannelKind, text: String)
     fun sendSeatMessage(guildId: Long, seatNumber: Int, text: String)
 
+    /**
+     * Post an interactive prompt with [buttons] into the COURT channel. Covers every day-side flow
+     * (speech 跳過/下台, police enroll/withdraw/vote, expel vote, direction choice). Custom ids are
+     * namespaced `wh:day:...` and routed back through the interaction handler.
+     */
+    fun sendCourtButtons(guildId: Long, text: String, buttons: List<CourtButton>)
+
     // --- voice ---
     fun muteAll(guildId: Long)
     fun unmuteAll(guildId: Long)

@@ -37,6 +37,19 @@ export function SpeechManager() {
         </section>
       )}
 
+      {speech?.waiting && (
+        <section className="wh-card" style={{ padding: "40px 32px", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center", borderRadius: "var(--r-xl)" }}>
+          <span style={{ fontSize: 15, fontWeight: 800 }}>{t("speech.waitingDirection")}</span>
+          <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{t("speech.directionPrompt", { seat: speech.fromSeat ?? "" })}</span>
+          {!readOnly && (
+            <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+              <Button variant="primary" onClick={() => actions.setSpeechDirection("UP")}>{t("speech.dirUp")}</Button>
+              <Button variant="primary" onClick={() => actions.setSpeechDirection("DOWN")}>{t("speech.dirDown")}</Button>
+            </div>
+          )}
+        </section>
+      )}
+
       <AnimatePresence mode="wait">
         {speech?.active && speech.speakerSeat != null && (
           <motion.section
@@ -87,8 +100,18 @@ export function SpeechManager() {
   );
 }
 
+const POLL_STAGE_KEY: Record<string, string> = {
+  ENROLL: "enroll",
+  CAMPAIGN: "campaign",
+  WITHDRAW: "withdraw",
+  VOTING: "voting",
+  RESOLVED: "resolution",
+};
+
 function VotePanel() {
   const { t } = useTranslation();
+  const { guildId, demo, readOnly } = useGuild();
+  const actions = useGameActions(guildId, demo);
   const poll = useGameStore((s) => s.snapshot?.poll);
   if (!poll) return null;
   const notVoted = poll.eligibleVoters - poll.votesCast;
@@ -98,6 +121,9 @@ function VotePanel() {
     <section className="wh-card" style={{ padding: 28, display: "flex", flexDirection: "column", gap: 16, borderRadius: "var(--r-xl)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <span style={{ fontSize: 17, fontWeight: 900 }}>{isElection ? t("election.title") : t("expel.title")}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "var(--moon-300)", background: "var(--accent-soft)", border: "1px solid rgba(84,210,228,0.3)", borderRadius: "var(--r-full)", padding: "3px 12px" }}>
+          {t(`election.stage.${POLL_STAGE_KEY[poll.stage] ?? "voting"}`)}
+        </span>
         <span style={{ marginLeft: "auto" }} />
         {poll.endsAt && <Countdown endsAt={poll.endsAt} size="md" label={isElection ? t("election.stageHint") : t("expel.deadline")} />}
       </div>
@@ -123,6 +149,12 @@ function VotePanel() {
           );
         })}
       </div>
+      {!readOnly && (
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          {isElection && <Button variant="secondary" onClick={actions.advancePoll}>{t("election.advanceStage")}</Button>}
+          <Button variant="danger" onClick={actions.resolvePoll}>{t("election.resolveNow")}</Button>
+        </div>
+      )}
     </section>
   );
 }

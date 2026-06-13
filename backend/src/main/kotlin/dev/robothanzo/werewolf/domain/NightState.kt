@@ -11,6 +11,8 @@ data class NightState(
     var endsAt: Long = 0,
     var resolved: Boolean = false,
     var summary: String? = null,
+    /** Seat numbers that died this night (drives the dawn announcement + last-words flow). */
+    var deaths: MutableList<Int> = mutableListOf(),
     /** Ability ids grouped by wave (the simultaneous plan from the [dev.robothanzo.werewolf.game.night.NightPlanner]). */
     var waves: MutableList<MutableList<String>> = mutableListOf(),
     /** Alive seats taking part in the collective wolf kill. */

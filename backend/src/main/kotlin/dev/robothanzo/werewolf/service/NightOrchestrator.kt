@@ -5,6 +5,7 @@ import dev.robothanzo.werewolf.discord.DiscordInteractionHandler
 import dev.robothanzo.werewolf.discord.InteractionIds
 import dev.robothanzo.werewolf.discord.InteractionReply
 import dev.robothanzo.werewolf.discord.SeatOption
+import dev.robothanzo.werewolf.discord.SoundCue
 import dev.robothanzo.werewolf.domain.Faction
 import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.domain.LogSeverity
@@ -47,6 +48,8 @@ class NightOrchestrator(
     private val gateway: DiscordGateway,
     private val scheduler: GameScheduler,
     private val msg: Msg,
+    private val announcer: CourtAnnouncer,
+    private val router: InteractionRouter,
 ) : DiscordInteractionHandler {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -55,12 +58,16 @@ class NightOrchestrator(
     private val wolfKillAbility = abilities.firstOrNull { Effect.WOLF_KILL in it.writes }
 
     @PostConstruct
-    fun register() = gateway.setInteractionHandler(this)
+    fun register() = router.register(InteractionIds.NS_NIGHT, this)
 
     // ---------- starting a night ----------
     fun startNight(guildId: Long) {
         sessionService.mutate(guildId) { session -> planNight(session) }
         val session = sessionService.find(guildId) ?: return
+        // Court cue: night falls, everyone is silenced (the announcement itself was previously log-only).
+        gateway.muteAll(guildId)
+        gateway.playSound(guildId, SoundCue.NIGHT)
+        announcer.announce(guildId, "night.start", session.day)
         promptActors(session)
         val endsAt = session.nightState.endsAt
         scheduler.schedule(guildId, GameScheduler.NIGHT, endsAt - System.currentTimeMillis()) { resolveNight(guildId) }
@@ -174,11 +181,13 @@ class NightOrchestrator(
             if (!night.active || night.resolved) return@mutate
 
             val resolution = resolver.resolve(declarations.build(night), session)
+            night.deaths.clear()
             resolution.deaths.forEach { death ->
                 session.seat(death.seat)?.let { seat ->
                     val card = seat.cards.firstOrNull { !it.dead }
                     if (card != null) {
                         card.dead = true
+                        night.deaths.add(seat.number)
                         sessionService.log(guildId, LogSeverity.ALERT, "night.death", seat.paddedNumber, roles.localizedName(card.roleId))
                     }
                 }

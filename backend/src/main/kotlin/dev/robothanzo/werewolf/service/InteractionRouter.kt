@@ -1,0 +1,35 @@
+package dev.robothanzo.werewolf.service
+
+import dev.robothanzo.werewolf.discord.DiscordGateway
+import dev.robothanzo.werewolf.discord.DiscordInteractionHandler
+import dev.robothanzo.werewolf.discord.InteractionReply
+import jakarta.annotation.PostConstruct
+import org.springframework.stereotype.Component
+import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * The single [DiscordInteractionHandler] the gateway knows about. Component custom ids are namespaced
+ * `wh:<ns>:...`; this router reads the `<ns>` segment and dispatches to the orchestrator that
+ * registered it (`night` → [NightOrchestrator], `day` → [DayOrchestrator]). Orchestrators register
+ * themselves in `@PostConstruct`, avoiding a constructor cycle with the gateway.
+ */
+@Component
+class InteractionRouter(
+    private val gateway: DiscordGateway,
+) : DiscordInteractionHandler {
+
+    private val handlers = ConcurrentHashMap<String, DiscordInteractionHandler>()
+
+    @PostConstruct
+    fun register() = gateway.setInteractionHandler(this)
+
+    /** Register a sub-handler for the `wh:<namespace>:...` custom-id family. */
+    fun register(namespace: String, handler: DiscordInteractionHandler) {
+        handlers[namespace] = handler
+    }
+
+    override fun handle(guildId: Long, userId: Long, customId: String, values: List<String>): InteractionReply? {
+        val namespace = customId.split(":").getOrNull(1) ?: return null
+        return handlers[namespace]?.handle(guildId, userId, customId, values)
+    }
+}

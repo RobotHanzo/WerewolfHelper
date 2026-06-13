@@ -122,6 +122,9 @@ class GameActionService(
         session.phase = Phase.LOBBY
         session.day = 0
         session.timerEndsAt = null
+        session.stepEndsAt = null
+        session.speech = null
+        session.poll = null
         sessionService.clearLogs(guildId)
         sessionService.log(guildId, LogSeverity.ACTION, "game.reset")
         gameScheduler.cancelAll(guildId)

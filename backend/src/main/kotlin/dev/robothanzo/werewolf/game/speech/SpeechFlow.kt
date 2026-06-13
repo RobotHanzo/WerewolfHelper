@@ -18,4 +18,6 @@ data class SpeechFlow(
     val interruptVotes: MutableSet<Int> = linkedSetOf(),
     /** Single-speaker session (e.g. last words) does not advance through a queue. */
     val singleSpeaker: Boolean = false,
+    /** A last-words flow (dead players' final speech): announced differently, no interrupt vote. */
+    val lastWords: Boolean = false,
 )

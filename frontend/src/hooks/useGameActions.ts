@@ -179,9 +179,18 @@ export function useGameActions(guildId: string, demo: boolean) {
           patch((s) => {
             const aliveSeats = s.seats.filter((seat) => seat.alive).map((seat) => seat.seat).sort((a, b) => a - b);
             if (aliveSeats.length === 0) return s;
-            const fromSeat = s.policeSeat && aliveSeats.includes(s.policeSeat) ? s.policeSeat : aliveSeats[0];
-            const startIdx = aliveSeats.indexOf(fromSeat);
-            const order = [...aliveSeats.slice(startIdx), ...aliveSeats.slice(0, startIdx)];
+            const police = s.policeSeat && aliveSeats.includes(s.policeSeat) ? s.policeSeat : null;
+            if (police) {
+              // mirror the backend: park on the police's direction choice
+              return {
+                ...s,
+                phase: "SPEECHES",
+                speech: { active: true, waiting: true, direction: "DOWN", fromSeat: police, speakerSeat: null, endsAt: null, order: [], upcoming: [] },
+                poll: null,
+              };
+            }
+            const fromSeat = aliveSeats[0];
+            const order = [...aliveSeats];
             return {
               ...s,
               phase: "SPEECHES",
@@ -212,7 +221,7 @@ export function useGameActions(guildId: string, demo: boolean) {
               speech: null,
               poll: {
                 kind: "POLICE",
-                stage: "VOTING",
+                stage: "ENROLL",
                 endsAt: Date.now() + 30000,
                 eligibleVoters: aliveSeats.length,
                 votesCast: 0,
@@ -273,26 +282,66 @@ export function useGameActions(guildId: string, demo: boolean) {
                 },
               };
             } else {
-              return {
-                ...s,
-                phase: "EXPEL_VOTE",
-                speech: null,
-              };
+              // flow complete: clear it but stay in the phase (the judge advances explicitly)
+              return { ...s, speech: null };
             }
           });
         } else {
-          void api.nextPhase(guildId);
+          void api.skipSpeaker(guildId);
         }
       },
       terminateSpeech: () => {
         if (demo) {
-          patch((s) => ({
-            ...s,
-            phase: "EXPEL_VOTE",
-            speech: null,
-          }));
+          patch((s) => ({ ...s, speech: null }));
         } else {
-          void api.nextPhase(guildId);
+          void api.stopSpeech(guildId);
+        }
+      },
+      setSpeechDirection: (direction: "UP" | "DOWN") => {
+        if (demo) {
+          patch((s) => {
+            if (!s.speech?.waiting) return s;
+            const aliveSeats = s.seats.filter((seat) => seat.alive).map((seat) => seat.seat).sort((a, b) => a - b);
+            const fromSeat = s.speech.fromSeat ?? aliveSeats[0];
+            const startIdx = Math.max(0, aliveSeats.indexOf(fromSeat));
+            const ordered =
+              direction === "DOWN"
+                ? [...aliveSeats.slice(startIdx), ...aliveSeats.slice(0, startIdx)]
+                : [aliveSeats[startIdx], ...aliveSeats.slice(0, startIdx).reverse(), ...aliveSeats.slice(startIdx + 1).reverse()];
+            return {
+              ...s,
+              speech: {
+                ...s.speech,
+                waiting: false,
+                direction,
+                speakerSeat: ordered[0],
+                endsAt: Date.now() + 60000,
+                order: ordered,
+                upcoming: ordered.slice(1),
+              },
+            };
+          });
+        } else {
+          void api.setSpeechDirection(guildId, direction);
+        }
+      },
+      advancePoll: () => {
+        if (demo) {
+          patch((s) => {
+            if (!s.poll) return s;
+            const order = ["ENROLL", "CAMPAIGN", "WITHDRAW", "VOTING", "RESOLVED"] as const;
+            const next = order[Math.min(order.length - 1, order.indexOf(s.poll.stage as any) + 1)];
+            return next === "RESOLVED" ? { ...s, poll: null } : { ...s, poll: { ...s.poll, stage: next } };
+          });
+        } else {
+          void api.advancePoll(guildId);
+        }
+      },
+      resolvePoll: () => {
+        if (demo) {
+          patch((s) => ({ ...s, poll: null }));
+        } else {
+          void api.resolvePoll(guildId);
         }
       },
       muteAll: () => {

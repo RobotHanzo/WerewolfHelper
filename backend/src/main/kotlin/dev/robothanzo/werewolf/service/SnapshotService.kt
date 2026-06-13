@@ -7,7 +7,10 @@ import dev.robothanzo.werewolf.controller.dto.LogDto
 import dev.robothanzo.werewolf.controller.dto.NightActionDto
 import dev.robothanzo.werewolf.controller.dto.NightDto
 import dev.robothanzo.werewolf.controller.dto.NightWaveDto
+import dev.robothanzo.werewolf.controller.dto.PollCandidateDto
+import dev.robothanzo.werewolf.controller.dto.PollDto
 import dev.robothanzo.werewolf.controller.dto.SeatDto
+import dev.robothanzo.werewolf.controller.dto.SpeechDto
 import dev.robothanzo.werewolf.controller.dto.WinnerDto
 import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.domain.Faction
@@ -20,6 +23,7 @@ import dev.robothanzo.werewolf.game.night.Effect
 import dev.robothanzo.werewolf.game.night.NightAbility
 import dev.robothanzo.werewolf.game.night.NightDeclarationsBuilder
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
+import dev.robothanzo.werewolf.game.vote.PollEngine
 import dev.robothanzo.werewolf.game.win.WinConditionChecker
 import dev.robothanzo.werewolf.i18n.Msg
 import org.springframework.stereotype.Service
@@ -36,6 +40,7 @@ class SnapshotService(
     private val gateway: DiscordGateway,
     private val msg: Msg,
     private val declarations: NightDeclarationsBuilder,
+    private val polls: PollEngine,
     abilities: List<NightAbility>,
 ) {
     private val abilitiesById = abilities.associateBy { it.id }
@@ -90,13 +95,55 @@ class SnapshotService(
             timerEndsAt = session.timerEndsAt,
             seats = seats,
             meters = meters(session),
-            speech = null,
-            poll = null,
+            speech = buildSpeech(session),
+            poll = buildPoll(session),
             night = buildNight(session),
             log = logs.map {
                 LogDto(it.id, it.timestamp.toEpochMilli(), it.severity.name.lowercase(), it.rendered)
             },
             pool = session.pool,
+        )
+    }
+
+    /** Live day speech flow (speaking order, current speaker, the parked direction choice). */
+    private fun buildSpeech(session: GameSession): SpeechDto? {
+        val flow = session.speech ?: return null
+        val speaker = flow.order.getOrNull(flow.index)
+        return SpeechDto(
+            active = true,
+            waiting = flow.waiting,
+            direction = flow.direction.name,
+            fromSeat = flow.from,
+            speakerSeat = speaker,
+            endsAt = flow.endsAt,
+            order = flow.order,
+            upcoming = if (flow.index + 1 <= flow.order.size) flow.order.drop(flow.index + 1) else emptyList(),
+        )
+    }
+
+    /** Live poll (police election or expel vote) with weighted tallies and per-candidate voters. */
+    private fun buildPoll(session: GameSession): PollDto? {
+        val poll = session.poll ?: return null
+        val ctx = SessionPollContext(session)
+        val tally = polls.tally(poll, ctx)
+        val voters = polls.voters(poll)
+        val display = if (poll.pkRound) poll.pkCandidates.sorted() else poll.candidates.sorted()
+        val candidates = display.map { seat ->
+            PollCandidateDto(
+                seat = seat,
+                withdrawn = seat in poll.withdrawn,
+                weight = tally[seat] ?: 0.0,
+                voters = voters[seat] ?: emptyList(),
+            )
+        }
+        val eligible = session.aliveSeats().map { it.number }.count { polls.canVote(poll, ctx, it) }
+        return PollDto(
+            kind = poll.kind.name,
+            stage = poll.stage.name,
+            endsAt = poll.stageEndsAt,
+            candidates = candidates,
+            eligibleVoters = if (poll.stage.name == "VOTING") eligible else session.aliveSeats().size,
+            votesCast = poll.votes.size,
         )
     }
 

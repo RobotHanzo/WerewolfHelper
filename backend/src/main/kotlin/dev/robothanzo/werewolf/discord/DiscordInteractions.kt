@@ -6,6 +6,12 @@ data class SeatOption(val seat: Int, val label: String)
 /** The reply shown (ephemerally) to a player after they use a night button/menu. */
 data class InteractionReply(val ack: String)
 
+/** Neutral button style so the gateway interface stays free of JDA types (mapped in the JDA impl). */
+enum class ButtonStyle { PRIMARY, SECONDARY, SUCCESS, DANGER }
+
+/** One button on a court prompt (day speech controls, poll enroll/withdraw/vote, direction choice). */
+data class CourtButton(val customId: String, val label: String, val style: ButtonStyle = ButtonStyle.SECONDARY)
+
 /**
  * Receives Discord component interactions (night-action select menus, wolf-kill vote buttons) and
  * routes them into the game engine. The gateway owns the JDA wiring; this handler owns the meaning.
@@ -33,6 +39,11 @@ interface DiscordCommandHandler {
 /** Custom-id constants shared between the orchestrator (parsing) and the gateway (building). */
 object InteractionIds {
     const val PREFIX = "wh"
+
+    /** The namespace segment (`wh:<ns>:...`) used by [dev.robothanzo.werewolf.service.InteractionRouter]. */
+    const val NS_NIGHT = "night"
+    const val NS_DAY = "day"
+
     /** Night action select menu: `wh:night:act:<abilityId>` ; selected value = target seat or SKIP. */
     const val NIGHT_ACTION = "wh:night:act"
     /** Wolf-kill vote button: `wh:night:wolf:<targetSeat|SKIP>`. */
@@ -40,4 +51,20 @@ object InteractionIds {
     const val SKIP = "SKIP"
     /** Witch "save the wolves' target" option value. */
     const val WITCH_SAVE = "SAVE"
+
+    // --- day-side (court) interactions, namespace `wh:day:...` ---
+    /** Speech: the current speaker ends their own turn. */
+    const val SPEECH_SKIP = "wh:day:speech:skip"
+    /** Speech: a player votes to force the current speaker off the stage (下台). */
+    const val SPEECH_INTERRUPT = "wh:day:speech:interrupt"
+    /** Police election: toggle enrollment. */
+    const val POLICE_ENROLL = "wh:day:police:enroll"
+    /** Police election: a candidate withdraws. */
+    const val POLICE_WITHDRAW = "wh:day:police:withdraw"
+    /** Police election: the badge-holder picks the speech direction — `wh:day:police:dir:<UP|DOWN>`. */
+    const val POLICE_DIR = "wh:day:police:dir"
+    /** Police election vote button — `wh:day:police:vote:<candidateSeat>`. */
+    const val POLICE_VOTE = "wh:day:police:vote"
+    /** Expel vote button — `wh:day:expel:<targetSeat>`. */
+    const val EXPEL_VOTE = "wh:day:expel"
 }

@@ -189,7 +189,9 @@
     },
     "withdrawn": "已退選",
     "noVotes": "尚無票",
-    "voteProgress": "投票進度"
+    "voteProgress": "投票進度",
+    "advanceStage": "推進階段",
+    "resolveNow": "立即結算"
   },
   "spectator": {
     "title": "上帝視角",

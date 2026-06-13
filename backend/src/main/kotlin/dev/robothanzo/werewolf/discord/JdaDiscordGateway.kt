@@ -374,6 +374,20 @@ class JdaDiscordGateway(
         guild(guildId)?.getTextChannelById(seat.channelId)?.sendMessage(text)?.queue()
     }
 
+    override fun sendCourtButtons(guildId: Long, text: String, buttons: List<CourtButton>) {
+        val ids = session(guildId)?.discordIds ?: return
+        val channel = guild(guildId)?.getTextChannelById(ids.courtTextChannelId) ?: return
+        val rows = buttons.map { it.toJdaButton() }.chunked(5).map { ActionRow.of(it) }
+        channel.sendMessage(text).apply { if (rows.isNotEmpty()) addComponents(rows) }.queue()
+    }
+
+    private fun CourtButton.toJdaButton(): Button = when (style) {
+        ButtonStyle.PRIMARY -> Button.primary(customId, label)
+        ButtonStyle.SECONDARY -> Button.secondary(customId, label)
+        ButtonStyle.SUCCESS -> Button.success(customId, label)
+        ButtonStyle.DANGER -> Button.danger(customId, label)
+    }
+
     // ---- voice ----
     override fun muteAll(guildId: Long) = setMuteAll(guildId, true)
     override fun unmuteAll(guildId: Long) = setMuteAll(guildId, false)

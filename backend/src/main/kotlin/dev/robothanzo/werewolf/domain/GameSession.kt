@@ -1,5 +1,7 @@
 package dev.robothanzo.werewolf.domain
 
+import dev.robothanzo.werewolf.game.speech.SpeechFlow
+import dev.robothanzo.werewolf.game.vote.Poll
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
 
@@ -45,6 +47,12 @@ data class GameSession(
 
     /** Current night round (active during the NIGHT phase). */
     var nightState: NightState = NightState(),
+
+    /** Active day speech flow (SPEECHES / police campaign / last words), or null when idle. */
+    var speech: SpeechFlow? = null,
+
+    /** Active day poll (police election or expel vote), or null when idle. */
+    var poll: Poll? = null,
 ) {
     val playerCount: Int get() = settings.playerCount
 
