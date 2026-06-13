@@ -3,14 +3,16 @@ import { useTranslation } from "react-i18next";
 import { api } from "@/api/client";
 import { useGameStore } from "@/stores/gameStore";
 import { useGameActions } from "@/hooks/useGameActions";
+import { useGuild } from "@/hooks/useGuild";
 import { Switch } from "@/components/ui/Switch";
 import { Stepper } from "@/components/ui/Stepper";
 import { Button } from "@/components/ui/Button";
 import { FactionBadge } from "@/components/ui/Badge";
 import type { Faction, RoleInfo } from "@/types/snapshot";
 
-export function Settings({ guildId, demo }: { guildId: string; demo: boolean }) {
+export function Settings() {
   const { t } = useTranslation();
+  const { guildId, demo } = useGuild();
   const snapshot = useGameStore((s) => s.snapshot);
   const actions = useGameActions(guildId, demo);
   const [count, setCount] = useState(snapshot?.totalSeats ?? 12);

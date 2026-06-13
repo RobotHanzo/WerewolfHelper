@@ -1,48 +1,45 @@
 import { useTranslation } from "react-i18next";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { Moon, Sun, LayoutDashboard, Mic, Eye, Settings as SettingsIcon, Server, LogOut, WifiOff } from "lucide-react";
+import { api } from "@/api/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useGameStore } from "@/stores/gameStore";
-import { useUiStore, type Screen } from "@/stores/uiStore";
+import { useUiStore } from "@/stores/uiStore";
 import { useThemeStore } from "@/stores/themeStore";
+import { useGuild } from "@/hooks/useGuild";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 import { Avatar } from "@/components/ui/Avatar";
-import { Dashboard } from "./Dashboard";
-import { SpeechManager } from "./SpeechManager";
-import { Spectator } from "./Spectator";
-import { Settings } from "./Settings";
 import { Overlays } from "./Overlays";
 
-export function AppShell({ guildId, demo }: { guildId: string; demo: boolean }) {
+export function AppShell() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { guildId, demo, isJudge } = useGuild();
   const auth = useAuthStore((s) => s.auth);
   const connected = useGameStore((s) => s.connected);
   const unread = useGameStore((s) => s.unreadLogs);
-  const screen = useUiStore((s) => s.screen);
-  const setScreen = useUiStore((s) => s.setScreen);
-  const setLogVisible = useGameStore((s) => s.setLogPanelVisible);
   const spectatorPreview = useUiStore((s) => s.spectatorPreview);
   const togglePreview = useUiStore((s) => s.toggleSpectatorPreview);
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggle);
 
-  const isJudge = (auth?.role ?? "JUDGE") === "JUDGE";
-  const readOnly = !isJudge || spectatorPreview;
-
-  const nav: { key: Screen; label: string; icon: React.ReactNode; badge?: number }[] = isJudge
+  const base = `/server/${guildId}`;
+  const nav = isJudge
     ? [
-        { key: "dashboard", label: t("nav.dashboard"), icon: <LayoutDashboard size={16} />, badge: unread || undefined },
-        { key: "speech", label: t("nav.speech"), icon: <Mic size={16} /> },
-        { key: "spectator", label: t("nav.spectator"), icon: <Eye size={16} /> },
-        { key: "settings", label: t("nav.settings"), icon: <SettingsIcon size={16} /> },
+        { to: `${base}/dashboard`, label: t("nav.dashboard"), icon: <LayoutDashboard size={16} />, badge: unread || undefined },
+        { to: `${base}/speech`, label: t("nav.speech"), icon: <Mic size={16} /> },
+        { to: `${base}/spectator`, label: t("nav.spectator"), icon: <Eye size={16} /> },
+        { to: `${base}/settings`, label: t("nav.settings"), icon: <SettingsIcon size={16} /> },
       ]
     : [
-        { key: "spectator", label: t("nav.spectator"), icon: <Eye size={16} /> },
-        { key: "speech", label: t("nav.speech"), icon: <Mic size={16} /> },
+        { to: `${base}/spectator`, label: t("nav.spectator"), icon: <Eye size={16} /> },
+        { to: `${base}/speech`, label: t("nav.speech"), icon: <Mic size={16} /> },
       ];
 
-  const go = (key: Screen) => {
-    setScreen(key);
-    if (key === "dashboard") setLogVisible(true);
+  const signOut = () => {
+    if (!demo) void api.logout();
+    useAuthStore.setState({ auth: null, demo: false });
+    navigate("/login");
   };
 
   return (
@@ -56,22 +53,24 @@ export function AppShell({ guildId, demo }: { guildId: string; demo: boolean }) 
           </span>
         </div>
 
-        {nav.map((n) => {
-          const active = screen === n.key;
-          return (
-            <button
-              key={n.key}
-              onClick={() => go(n.key)}
-              style={{ display: "flex", alignItems: "center", gap: 10, height: 40, padding: "0 12px", borderRadius: "var(--r-md)", border: "none", cursor: "pointer", fontFamily: "var(--font-ui)", fontSize: 14, fontWeight: active ? 700 : 500, background: active ? "var(--accent-soft)" : "transparent", color: active ? "var(--moon-300)" : "var(--text-secondary)" }}
-            >
-              {n.icon}
-              <span style={{ flex: 1, textAlign: "left" }}>{n.label}</span>
-              {n.badge && (
-                <span className="mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--text-on-accent)", background: "var(--moon-500)", borderRadius: "var(--r-full)", padding: "1px 7px" }}>{n.badge}</span>
-              )}
-            </button>
-          );
-        })}
+        {nav.map((n) => (
+          <NavLink
+            key={n.to}
+            to={n.to}
+            style={({ isActive }) => ({
+              display: "flex", alignItems: "center", gap: 10, height: 40, padding: "0 12px", borderRadius: "var(--r-md)",
+              textDecoration: "none", fontSize: 14, fontWeight: isActive ? 700 : 500,
+              background: isActive ? "var(--accent-soft)" : "transparent",
+              color: isActive ? "var(--moon-300)" : "var(--text-secondary)",
+            })}
+          >
+            {n.icon}
+            <span style={{ flex: 1, textAlign: "left" }}>{n.label}</span>
+            {n.badge && (
+              <span className="mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--text-on-accent)", background: "var(--moon-500)", borderRadius: "var(--r-full)", padding: "1px 7px" }}>{n.badge}</span>
+            )}
+          </NavLink>
+        ))}
 
         <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
           <LiveIndicator connected={connected} />
@@ -94,11 +93,11 @@ export function AppShell({ guildId, demo }: { guildId: string; demo: boolean }) 
               {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
               {theme === "dark" ? t("nav.themeLight") : t("nav.themeDark")}
             </button>
-            <button onClick={() => useAuthStore.setState({ status: "servers", guildId: null })} style={iconBtn}>
+            <button onClick={() => navigate("/servers")} style={iconBtn}>
               <Server size={13} /> {t("nav.switchServer")}
             </button>
           </div>
-          <button onClick={() => useAuthStore.setState({ status: "login", auth: null })} style={{ ...iconBtn, border: "none", color: "var(--text-muted)" }}>
+          <button onClick={signOut} style={{ ...iconBtn, border: "none", color: "var(--text-muted)" }}>
             <LogOut size={13} /> {t("common.signOut")}
           </button>
         </div>
@@ -111,10 +110,7 @@ export function AppShell({ guildId, demo }: { guildId: string; demo: boolean }) 
             <span style={{ fontSize: 13, fontWeight: 700, color: "var(--danger-500)" }}>{t("connection.disconnectedBanner")}</span>
           </div>
         )}
-        {screen === "dashboard" && isJudge && <Dashboard guildId={guildId} demo={demo} readOnly={spectatorPreview} />}
-        {screen === "speech" && <SpeechManager readOnly={readOnly} />}
-        {screen === "spectator" && <Spectator />}
-        {screen === "settings" && isJudge && !spectatorPreview && <Settings guildId={guildId} demo={demo} />}
+        <Outlet />
       </main>
 
       <Overlays guildId={guildId} demo={demo} />

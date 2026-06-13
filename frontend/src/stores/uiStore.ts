@@ -1,7 +1,6 @@
 import { create } from "zustand";
 
 export type Density = "comfort" | "compact" | "list";
-export type Screen = "dashboard" | "speech" | "spectator" | "settings";
 
 interface KillTarget {
   seat: number;
@@ -10,7 +9,6 @@ interface KillTarget {
 }
 
 interface UiState {
-  screen: Screen;
   density: Density;
   spectatorPreview: boolean;
 
@@ -21,7 +19,6 @@ interface UiState {
   picker: { kind: "promote" | "demote" | "force-police"; title: string } | null;
   toast: string | null;
 
-  setScreen: (screen: Screen) => void;
   setDensity: (density: Density) => void;
   toggleSpectatorPreview: () => void;
   openKill: (target: KillTarget) => void;
@@ -35,7 +32,6 @@ interface UiState {
 }
 
 export const useUiStore = create<UiState>((set) => ({
-  screen: "dashboard",
   density: "comfort",
   spectatorPreview: false,
   killTarget: null,
@@ -44,7 +40,6 @@ export const useUiStore = create<UiState>((set) => ({
   picker: null,
   toast: null,
 
-  setScreen: (screen) => set({ screen }),
   setDensity: (density) => set({ density }),
   toggleSpectatorPreview: () => set((s) => ({ spectatorPreview: !s.spectatorPreview })),
   openKill: (killTarget) => set({ killTarget }),

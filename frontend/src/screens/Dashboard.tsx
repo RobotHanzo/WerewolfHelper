@@ -1,8 +1,11 @@
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGameStore } from "@/stores/gameStore";
 import { useUiStore, type Density } from "@/stores/uiStore";
 import { useGameActions } from "@/hooks/useGameActions";
+import { useGuild } from "@/hooks/useGuild";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { LogFeed } from "@/components/ui/LogFeed";
 import { Button } from "@/components/ui/Button";
@@ -22,8 +25,10 @@ const PHASE_KEY: Record<string, string> = {
   OVER: "phase.over",
 };
 
-export function Dashboard({ guildId, demo, readOnly }: { guildId: string; demo: boolean; readOnly: boolean }) {
+export function Dashboard() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { guildId, demo, readOnly } = useGuild();
   const snapshot = useGameStore((s) => s.snapshot);
   const changedSeats = useGameStore((s) => s.changedSeats);
   const unreadLogs = useGameStore((s) => s.unreadLogs);
@@ -31,8 +36,14 @@ export function Dashboard({ guildId, demo, readOnly }: { guildId: string; demo: 
   const setDensity = useUiStore((s) => s.setDensity);
   const openKill = useUiStore((s) => s.openKill);
   const openEdit = useUiStore((s) => s.openEdit);
-  const setScreen = useUiStore((s) => s.setScreen);
+  const setLogVisible = useGameStore((s) => s.setLogPanelVisible);
   const actions = useGameActions(guildId, demo);
+
+  // The log panel is in view on the dashboard → mark logs read while here.
+  useEffect(() => {
+    setLogVisible(true);
+    return () => setLogVisible(false);
+  }, [setLogVisible]);
 
   if (!snapshot) return null;
   const isLobby = snapshot.phase === "LOBBY";
@@ -49,7 +60,7 @@ export function Dashboard({ guildId, demo, readOnly }: { guildId: string; demo: 
           </span>
         </span>
         {snapshot.speech?.active && snapshot.speech.speakerSeat != null && (
-          <button onClick={() => setScreen("speech")} style={{ display: "flex", alignItems: "center", gap: 12, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+          <button onClick={() => navigate(`/server/${guildId}/speech`)} style={{ display: "flex", alignItems: "center", gap: 12, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
             <Avatar size="sm" speaking name={`#${snapshot.speech.speakerSeat}`} />
             <span style={{ display: "flex", flexDirection: "column", textAlign: "left" }}>
               <span style={{ fontSize: 13, fontWeight: 700 }}>{t("dashboard.speakerSpeaking", { seat: String(snapshot.speech.speakerSeat).padStart(2, "0") })}</span>

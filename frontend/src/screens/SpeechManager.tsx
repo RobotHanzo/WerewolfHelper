@@ -1,12 +1,14 @@
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGameStore } from "@/stores/gameStore";
+import { useGuild } from "@/hooks/useGuild";
 import { Avatar } from "@/components/ui/Avatar";
 import { Countdown } from "@/components/ui/Countdown";
 import { Button } from "@/components/ui/Button";
 
-export function SpeechManager({ readOnly }: { readOnly: boolean }) {
+export function SpeechManager() {
   const { t } = useTranslation();
+  const { readOnly } = useGuild();
   const snapshot = useGameStore((s) => s.snapshot);
   if (!snapshot) return null;
 
