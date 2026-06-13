@@ -238,7 +238,7 @@ function Toast() {
           animate={{ opacity: 1, y: 0, x: "-50%" }}
           exit={{ opacity: 0, y: 16, x: "-50%" }}
         >
-          {toast.isError ? <X size={14} strokeWidth={2.5} style={{ color: "var(--danger-500)", flexShrink: 0 }} /> : <Check size={14} strokeWidth={2.5} style={{ color: "var(--success-500)", flexShrink: 0 }} />}
+          {toast.isError ? <X size={18} strokeWidth={2.5} style={{ color: "var(--danger-500)", flexShrink: 0 }} /> : <Check size={18} strokeWidth={2.5} style={{ color: "var(--success-500)", flexShrink: 0 }} />}
           {toast.text}
         </motion.div>
       )}
