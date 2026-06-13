@@ -11,6 +11,9 @@ data class Seat(
     val number: Int,
     var memberId: Long? = null,
     var cards: MutableList<IdentityCard> = mutableListOf(),
+    // Discord-provisioned ids for this seat (0 until provisioned).
+    var roleId: Long = 0,
+    var channelId: Long = 0,
     // flags
     var police: Boolean = false,
     var goldenBaby: Boolean = false,

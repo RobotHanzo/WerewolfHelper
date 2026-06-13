@@ -39,6 +39,9 @@ data class GameSession(
 
     /** Owner (server-creator) member id, re-granted judge on join. */
     var ownerId: Long? = null,
+
+    /** Discord role/channel ids created at provisioning. */
+    var discordIds: DiscordIds = DiscordIds(),
 ) {
     val playerCount: Int get() = settings.playerCount
 

@@ -1,53 +1,90 @@
 package dev.robothanzo.werewolf.discord
 
+import club.minnced.discord.webhook.WebhookClient
+import club.minnced.discord.webhook.send.WebhookMessageBuilder
+import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler
+import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager
+import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers
+import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
+import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import dev.robothanzo.werewolf.domain.GameSession
+import dev.robothanzo.werewolf.domain.Seat
+import dev.robothanzo.werewolf.domain.repo.GameSessionRepository
+import dev.robothanzo.werewolf.game.roles.RoleRegistry
+import dev.robothanzo.werewolf.game.roles.RoleTag
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.JDABuilder
+import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Icon
 import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.Role
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.events.guild.GuildLeaveEvent
+import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent
+import net.dv8tion.jda.api.hooks.ListenerAdapter
 import net.dv8tion.jda.api.requests.GatewayIntent
+import net.dv8tion.jda.api.utils.ChunkingFilter
+import net.dv8tion.jda.api.utils.MemberCachePolicy
 import net.dv8tion.jda.api.utils.cache.CacheFlag
 import org.slf4j.LoggerFactory
+import java.awt.Color
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Live JDA-backed gateway. Connects with the configured token and implements the per-member
- * mutations and messaging used by the engine. The full server-provisioning sequence
- * (role/channel creation with exact permission overwrites, wolf-chat webhooks, audio playback) is
- * the remaining integration surface and is logged rather than half-applied — never silently break a
- * game with a partial provision.
- *
- * Mutating calls catch and rethrow with a readable reason so the bulk engine can isolate failures.
+ * Live JDA-backed gateway. Implements provisioning (FEATURES §3), per-member mutations, channel
+ * messaging, mass voice control, the seven audio cues (lavaplayer), and the wolf-chat webhook relay
+ * (one cached webhook per channel). Long-running provisioning runs on [Dispatchers.IO] using
+ * blocking `.complete()` calls, which lean on JDA's own rate-limit queue as the barrier.
  */
 class JdaDiscordGateway(
     properties: DiscordProperties,
     private val nicknames: NicknameService,
+    private val sessions: GameSessionRepository,
+    private val roles: RoleRegistry,
 ) : DiscordGateway {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    private val jda: JDA = JDABuilder.createLight(
+    private val jda: JDA = JDABuilder.create(
         properties.token,
         GatewayIntent.GUILD_MEMBERS,
         GatewayIntent.GUILD_MESSAGES,
         GatewayIntent.GUILD_VOICE_STATES,
         GatewayIntent.MESSAGE_CONTENT,
-    ).enableCache(CacheFlag.VOICE_STATE).build()
+    )
+        .setMemberCachePolicy(MemberCachePolicy.ALL)
+        .setChunkingFilter(ChunkingFilter.ALL)
+        .enableCache(CacheFlag.VOICE_STATE)
+        .disableCache(CacheFlag.ACTIVITY, CacheFlag.EMOJI, CacheFlag.STICKER, CacheFlag.SCHEDULED_EVENTS)
+        .build()
+
+    private val playerManager = DefaultAudioPlayerManager().also { AudioSourceManagers.registerLocalSource(it) }
+    private val webhookCache = ConcurrentHashMap<Long, WebhookClient>()
+    private val soundFiles = ConcurrentHashMap<SoundCue, File>()
+
+    init {
+        jda.addEventListener(RelayListener())
+        jda.addEventListener(LifecycleListener())
+    }
 
     override val available: Boolean = true
 
+    // ---- helpers ----
     private fun guild(guildId: Long): Guild? = jda.getGuildById(guildId)
-    private fun member(guildId: Long, memberId: Long): Member? = guild(guildId)?.getMemberById(memberId)
+    private fun session(guildId: Long): GameSession? = sessions.findById(guildId).orElse(null)
+    private fun member(guildId: Long, memberId: Long): Member? =
+        guild(guildId)?.let { g -> g.getMemberById(memberId) ?: runCatching { g.retrieveMemberById(memberId).complete() }.getOrNull() }
 
+    // ---- queries ----
     override fun listMembers(guildId: Long): List<GuildMember> =
         guild(guildId)?.members.orEmpty().map {
-            GuildMember(
-                id = it.idLong,
-                name = it.user.name,
-                displayName = it.effectiveName,
-                avatarUrl = it.user.effectiveAvatarUrl,
-                bot = it.user.isBot,
-                owner = it.isOwner,
-            )
+            GuildMember(it.idLong, it.user.name, it.effectiveName, it.user.effectiveAvatarUrl, it.user.isBot, it.isOwner)
         }
 
     override fun isOwner(guildId: Long, memberId: Long): Boolean = guild(guildId)?.ownerIdLong == memberId
@@ -58,18 +95,123 @@ class JdaDiscordGateway(
         return g.selfMember.canInteract(m)
     }
 
-    override suspend fun provisionGuild(session: GameSession) =
-        log.warn("provisionGuild for {} requires the full JDA provisioning sequence (not yet wired).", session.guildId)
+    // ---- provisioning ----
+    override suspend fun provisionGuild(session: GameSession) = withContext(Dispatchers.IO) {
+        val guild = guild(session.guildId) ?: error("guild ${session.guildId} not found")
+        log.info("Provisioning guild {}", session.guildId)
 
-    override suspend fun resizeGuild(session: GameSession, newCount: Int) =
-        log.warn("resizeGuild for {} requires the full JDA provisioning sequence (not yet wired).", session.guildId)
+        runCatching {
+            guild.manager
+                .setName("狼人殺伺服器")
+                .setDefaultNotificationLevel(Guild.NotificationLevel.MENTIONS_ONLY)
+                .complete()
+            javaClass.classLoader.getResourceAsStream("wolf.png")?.use { guild.manager.setIcon(Icon.from(it)).complete() }
+        }.onFailure { log.warn("guild rename/icon failed: {}", it.message) }
+
+        // Delete existing channels (per-item isolated).
+        guild.channels.forEach { ch -> runCatching { ch.delete().complete() }.onFailure { log.warn("delete {} failed: {}", ch.id, it.message) } }
+
+        // Judge role (yellow, admin).
+        val judgeRole = guild.createRole().setName("法官").setColor(Color.YELLOW).setHoisted(true)
+            .setPermissions(listOf(Permission.ADMINISTRATOR)).complete()
+        session.discordIds.judgeRoleId = judgeRole.idLong
+
+        // Seat roles + private channels.
+        ensureSeats(session)
+        session.seats.sortedBy { it.number }.forEach { seat -> provisionSeat(guild, seat) }
+
+        // Spectator role (brown) + per-seat-channel overrides.
+        val spectatorRole = guild.createRole().setName("旁觀者").setColor(Color(0x65, 0x43, 0x21))
+            .setPermissions(listOf(Permission.VIEW_CHANNEL)).complete()
+        session.discordIds.spectatorRoleId = spectatorRole.idLong
+        session.seats.forEach { seat ->
+            guild.getTextChannelById(seat.channelId)?.let { ch ->
+                runCatching {
+                    ch.upsertPermissionOverride(spectatorRole)
+                        .setAllowed(Permission.VIEW_CHANNEL).setDenied(Permission.MESSAGE_SEND).complete()
+                }
+            }
+        }
+
+        // Shared channels with overwrites set at creation time.
+        val pub = guild.publicRole
+        val courtText = guild.createTextChannel("法院")
+            .addPermissionOverride(pub, emptyList(), listOf(Permission.USE_APPLICATION_COMMANDS))
+            .addPermissionOverride(spectatorRole, listOf(Permission.VIEW_CHANNEL), listOf(Permission.MESSAGE_SEND))
+            .complete()
+        session.discordIds.courtTextChannelId = courtText.idLong
+
+        val courtVoice = guild.createVoiceChannel("法院")
+            .addPermissionOverride(spectatorRole, listOf(Permission.VIEW_CHANNEL), listOf(Permission.VOICE_SPEAK))
+            .complete()
+        session.discordIds.courtVoiceChannelId = courtVoice.idLong
+
+        val spectatorText = guild.createTextChannel("旁觀者")
+            .addPermissionOverride(spectatorRole, listOf(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND), emptyList())
+            .addPermissionOverride(pub, emptyList(), listOf(Permission.VIEW_CHANNEL))
+            .complete()
+        session.discordIds.spectatorTextChannelId = spectatorText.idLong
+
+        val judgeText = guild.createTextChannel("法官")
+            .addPermissionOverride(pub, emptyList(), listOf(Permission.VIEW_CHANNEL, Permission.USE_APPLICATION_COMMANDS))
+            .addPermissionOverride(judgeRole, listOf(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND), emptyList())
+            .complete()
+        session.discordIds.judgeTextChannelId = judgeText.idLong
+
+        log.info("Provisioning complete for guild {}", session.guildId)
+    }
+
+    override suspend fun resizeGuild(session: GameSession, newCount: Int) = withContext(Dispatchers.IO) {
+        val guild = guild(session.guildId) ?: error("guild ${session.guildId} not found")
+        // Remove excess seats (highest numbers first).
+        session.seats.filter { it.number > newCount }.sortedByDescending { it.number }.forEach { seat ->
+            runCatching { guild.getRoleById(seat.roleId)?.delete()?.complete() }
+            runCatching { guild.getTextChannelById(seat.channelId)?.delete()?.complete() }
+        }
+        session.seats.removeAll { it.number > newCount }
+        // Add missing seats.
+        (1..newCount).forEach { n ->
+            if (session.seats.none { it.number == n }) {
+                val seat = Seat(number = n)
+                provisionSeat(guild, seat)
+                session.seats.add(seat)
+            }
+        }
+        session.seats.sortBy { it.number }
+        session.settings.playerCount = newCount
+    }
 
     override suspend fun deleteGuild(guildId: Long) {
         guild(guildId)?.leave()?.queue()
     }
 
+    private fun ensureSeats(session: GameSession) {
+        (1..session.playerCount).forEach { n ->
+            if (session.seats.none { it.number == n }) session.seats.add(Seat(number = n))
+        }
+        session.seats.sortBy { it.number }
+    }
+
+    private fun provisionSeat(guild: Guild, seat: Seat) {
+        val name = "玩家${seat.paddedNumber}"
+        val role = guild.createRole().setName(name).setColor(randomColor()).setHoisted(true).complete()
+        seat.roleId = role.idLong
+        val channel = guild.createTextChannel(name)
+            .addPermissionOverride(role, listOf(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND, Permission.USE_APPLICATION_COMMANDS), emptyList())
+            .addPermissionOverride(guild.publicRole, emptyList(), listOf(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND))
+            .complete()
+        seat.channelId = channel.idLong
+    }
+
+    private fun randomColor(): Color = Color(Color.HSBtoRGB(Math.random().toFloat(), 0.6f, 0.85f))
+
+    // ---- per-member mutations ----
     override fun grantSeatRole(guildId: Long, memberId: Long, seatNumber: Int) {
-        log.warn("grantSeatRole needs the provisioned seat roles for guild {} (not yet wired).", guildId)
+        val g = guild(guildId) ?: return
+        val seat = session(guildId)?.seat(seatNumber) ?: return
+        val role = g.getRoleById(seat.roleId) ?: return
+        val m = member(guildId, memberId) ?: return
+        if (g.selfMember.canInteract(role)) g.addRoleToMember(m, role).queue()
     }
 
     override fun setNickname(guildId: Long, memberId: Long, nickname: String) {
@@ -82,7 +224,10 @@ class JdaDiscordGateway(
     }
 
     override fun grantSpectatorRole(guildId: Long, memberId: Long) {
-        log.warn("grantSpectatorRole needs the provisioned spectator role for guild {} (not yet wired).", guildId)
+        val g = guild(guildId) ?: return
+        val role = session(guildId)?.discordIds?.spectatorRoleId?.let { g.getRoleById(it) } ?: return
+        val m = member(guildId, memberId) ?: return
+        if (g.selfMember.canInteract(role)) g.addRoleToMember(m, role).queue()
     }
 
     override fun resetMember(guildId: Long, memberId: Long) {
@@ -90,14 +235,23 @@ class JdaDiscordGateway(
         if (!m.isOwner) m.modifyNickname(null).queue()
     }
 
+    // ---- messaging ----
     override fun sendChannelMessage(guildId: Long, channel: ChannelKind, text: String) {
-        log.debug("sendChannelMessage {} requires the provisioned {} channel (not yet wired).", guildId, channel)
+        val ids = session(guildId)?.discordIds ?: return
+        val channelId = when (channel) {
+            ChannelKind.COURT -> ids.courtTextChannelId
+            ChannelKind.JUDGE -> ids.judgeTextChannelId
+            ChannelKind.SPECTATOR -> ids.spectatorTextChannelId
+        }
+        guild(guildId)?.getTextChannelById(channelId)?.sendMessage(text)?.queue()
     }
 
     override fun sendSeatMessage(guildId: Long, seatNumber: Int, text: String) {
-        log.debug("sendSeatMessage seat {} requires the provisioned seat channel (not yet wired).", seatNumber)
+        val seat = session(guildId)?.seat(seatNumber) ?: return
+        guild(guildId)?.getTextChannelById(seat.channelId)?.sendMessage(text)?.queue()
     }
 
+    // ---- voice ----
     override fun muteAll(guildId: Long) = setMuteAll(guildId, true)
     override fun unmuteAll(guildId: Long) = setMuteAll(guildId, false)
 
@@ -110,19 +264,103 @@ class JdaDiscordGateway(
 
     override fun muteMember(guildId: Long, memberId: Long, muted: Boolean) {
         val m = member(guildId, memberId) ?: return
-        if (!m.isOwner) m.mute(muted).queue()
+        if (!m.isOwner && m.voiceState?.channel != null) m.mute(muted).queue()
     }
 
-    override fun playSound(guildId: Long, cue: SoundCue) =
-        log.debug("playSound {} for {} requires the lavaplayer voice pipeline (not yet wired).", cue, guildId)
+    override fun playSound(guildId: Long, cue: SoundCue) {
+        val g = guild(guildId) ?: return
+        val voice = session(guildId)?.discordIds?.courtVoiceChannelId?.let { g.getVoiceChannelById(it) } ?: return
+        val file = soundFiles.getOrPut(cue) { extractSound(cue) } ?: return
+        val player = playerManager.createPlayer()
+        val audioManager = g.audioManager
+        audioManager.sendingHandler = AudioPlayerSendHandler(player)
+        if (!audioManager.isConnected) runCatching { audioManager.openAudioConnection(voice) }
+        playerManager.loadItem(file.absolutePath, object : AudioLoadResultHandler {
+            override fun trackLoaded(track: AudioTrack) {
+                player.startTrack(track, false)
+            }
+            override fun playlistLoaded(playlist: AudioPlaylist) {}
+            override fun noMatches() {
+                log.warn("audio cue {} not found", cue)
+            }
+            override fun loadFailed(e: FriendlyException) {
+                log.error("audio cue {} failed: {}", cue, e.message)
+            }
+        })
+    }
 
-    override fun relayWolfChat(
-        guildId: Long,
-        fromSeat: Int,
-        authorName: String,
-        authorAvatar: String?,
-        content: String,
-    ) {
-        log.debug("relayWolfChat for {} requires one cached webhook per channel (not yet wired).", guildId)
+    /** Extract a bundled mp3 to a temp file so lavaplayer's local source can load it by path. */
+    private fun extractSound(cue: SoundCue): File? = runCatching {
+        val tmp = File.createTempFile("wh-", ".mp3").apply { deleteOnExit() }
+        javaClass.classLoader.getResourceAsStream(cue.resource)!!.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+        tmp
+    }.getOrNull()
+
+    // ---- wolf-chat relay (one cached webhook per channel) ----
+    override fun relayWolfChat(guildId: Long, fromSeat: Int, authorName: String, authorAvatar: String?, content: String) {
+        val g = guild(guildId) ?: return
+        val session = session(guildId) ?: return
+        val sender = session.seat(fromSeat) ?: return
+        val message = WebhookMessageBuilder().setContent(content).setUsername(authorName).setAvatarUrl(authorAvatar).build()
+
+        // Mirror to the other members of whichever relay group the sender belongs to.
+        val wolfGroup = isWolfChat(sender)
+        val gbabyGroup = sender.goldenBaby
+        session.seats.forEach { target ->
+            if (target.number == fromSeat || target.channelId == 0L) return@forEach
+            val sameGroup = (wolfGroup && isWolfChat(target)) || (gbabyGroup && target.goldenBaby)
+            if (sameGroup) g.getTextChannelById(target.channelId)?.let { webhookFor(it).send(message) }
+        }
+        // Wolves are also mirrored into the judge channel.
+        if (wolfGroup) g.getTextChannelById(session.discordIds.judgeTextChannelId)?.let { webhookFor(it).send(message) }
+    }
+
+    /** A seat participates in wolf chat if any living card has the WOLF_CHAT tag (wolves, 夢魘, …). */
+    private fun isWolfChat(seat: Seat): Boolean =
+        seat.livingCards().ifEmpty { seat.cards }.any { roles.byId(it.roleId)?.hasTag(RoleTag.WOLF_CHAT) == true }
+
+    private fun webhookFor(channel: TextChannel): WebhookClient =
+        webhookCache.getOrPut(channel.idLong) {
+            val hook = channel.retrieveWebhooks().complete().firstOrNull { it.token != null }
+                ?: channel.createWebhook("Werewolf Relay").complete()
+            WebhookClient.withUrl(hook.url)
+        }
+
+    /** Listens for messages in seat channels and mirrors wolf-team chatter. */
+    private inner class RelayListener : ListenerAdapter() {
+        override fun onMessageReceived(event: MessageReceivedEvent) {
+            if (event.author.isBot || !event.isFromGuild) return
+            val session = session(event.guild.idLong) ?: return
+            val author = event.member?.effectiveName ?: event.author.name
+            val avatar = event.author.effectiveAvatarUrl
+            val content = event.message.contentRaw
+
+            // From a seat channel → relay within the sender's group.
+            session.seats.firstOrNull { it.channelId == event.channel.idLong }?.let { sender ->
+                relayWolfChat(event.guild.idLong, sender.number, "$author（${sender.paddedNumber}）", avatar, content)
+                return
+            }
+            // From the judge channel → mirror to every wolf-team channel.
+            if (event.channel.idLong == session.discordIds.judgeTextChannelId) {
+                val message = WebhookMessageBuilder().setContent(content).setUsername("法官頻道（$author）").setAvatarUrl(avatar).build()
+                session.seats.filter { isWolfChat(it) && it.channelId != 0L }
+                    .forEach { event.guild.getTextChannelById(it.channelId)?.let { ch -> webhookFor(ch).send(message) } }
+            }
+        }
+    }
+
+    /** Membership rules (FEATURES §3): latecomers become spectators once identities are assigned;
+     *  the session is deleted if the bot is removed from the guild. */
+    private inner class LifecycleListener : ListenerAdapter() {
+        override fun onGuildMemberJoin(event: GuildMemberJoinEvent) {
+            val session = session(event.guild.idLong) ?: return
+            if (event.member.idLong == session.ownerId) return // owner re-grant handled elsewhere
+            if (session.assigned) grantSpectatorRole(event.guild.idLong, event.member.idLong)
+        }
+
+        override fun onGuildLeave(event: GuildLeaveEvent) {
+            runCatching { sessions.deleteById(event.guild.idLong) }
+            webhookCache.clear()
+        }
     }
 }

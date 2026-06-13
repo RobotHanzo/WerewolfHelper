@@ -1,5 +1,7 @@
 package dev.robothanzo.werewolf.discord
 
+import dev.robothanzo.werewolf.domain.repo.GameSessionRepository
+import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -33,13 +35,17 @@ class DiscordConfig(private val properties: DiscordProperties) {
      * dashboard must still come up.
      */
     @Bean
-    fun discordGateway(nicknameService: NicknameService): DiscordGateway {
+    fun discordGateway(
+        nicknameService: NicknameService,
+        sessions: GameSessionRepository,
+        roles: RoleRegistry,
+    ): DiscordGateway {
         if (!properties.hasToken) {
             log.warn("No Discord token configured — running with the no-op gateway (REST/WS still serve).")
             return NoOpDiscordGateway()
         }
         return try {
-            JdaDiscordGateway(properties, nicknameService)
+            JdaDiscordGateway(properties, nicknameService, sessions, roles)
         } catch (e: Exception) {
             log.error("Failed to start JDA ({}); falling back to the no-op gateway.", e.message)
             NoOpDiscordGateway()

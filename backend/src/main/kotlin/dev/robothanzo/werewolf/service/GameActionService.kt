@@ -25,6 +25,7 @@ class GameActionService(
     private val win: WinConditionChecker,
     private val nicknames: NicknameService,
     private val gateway: DiscordGateway,
+    private val discordOps: DiscordOpsService,
 ) {
 
     /** Deal identities to the eligible (non-bot, non-owner, non-spectator) members. */
@@ -35,11 +36,12 @@ class GameActionService(
             .ifEmpty { session.seats.mapNotNull { it.memberId } } // dev fallback to existing bindings
         assignment.assign(session, eligible, Random.Default)
         session.assigned = true
-        session.seats.forEach { syncNickname(session, it) }
         sessionService.log(
             guildId, LogSeverity.ACTION, "assign.completed",
             session.playerCount, session.pool.values.sum(),
         )
+        // Critical role/nickname batch then notifications, streamed over WS (FEATURES §10.2).
+        discordOps.applyAssignment(session)
     }
 
     /** Mark one identity of a seat dead (soft death), then re-check win conditions. */
@@ -103,8 +105,8 @@ class GameActionService(
 
     /** Return the server to the pre-assignment state. */
     fun reset(guildId: Long) = sessionService.mutate(guildId) { session ->
+        discordOps.applyReset(session) // captures member ids before we clear the bindings below
         session.seats.forEach { seat ->
-            seat.memberId?.let { gateway.resetMember(guildId, it) }
             seat.memberId = null
             seat.cards.clear()
             seat.police = false
