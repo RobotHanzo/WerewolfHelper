@@ -4,5 +4,8 @@
       "Bash(yarn lint)",
       "PowerShell(yarn lint)"
     ]
+  },
+  "enabledPlugins": {
+    "feature-dev@claude-plugins-official": true
   }
 }
