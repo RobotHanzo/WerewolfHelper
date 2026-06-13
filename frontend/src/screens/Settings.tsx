@@ -115,7 +115,7 @@ export function Settings() {
             <Switch checked={snapshot.doubleIdentity} onChange={actions.setDoubleIdentity} label={t("settings.doubleIdentity")} description={t("settings.doubleIdentityDesc")} />
             <Switch checked={snapshot.muteAfterSpeech} onChange={actions.setMuteAfterSpeech} label={t("settings.muteAfterSpeech")} description={t("settings.muteAfterSpeechDesc")} />
             <div style={{ borderTop: "1px solid var(--border-1)", paddingTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-              <Stepper label={t("settings.playerCount")} value={count} min={4} max={20} onChange={setCount} dirty={dirty} />
+              <Stepper label={t("settings.playerCount")} value={count} onChange={setCount} dirty={dirty} />
               {dirty && (
                 <Button variant="primary" size="sm" style={{ alignSelf: "flex-start" }} onClick={() => actions.setPlayerCount(count)}>
                   {t("settings.applyCount")}
