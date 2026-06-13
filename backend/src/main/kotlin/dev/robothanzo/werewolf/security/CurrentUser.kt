@@ -15,7 +15,7 @@ class CurrentUser {
     private fun request(): HttpServletRequest? =
         (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)?.request
 
-    fun userId(): Long? = request()?.getSession(false)?.getAttribute(ATTR_USER_ID) as? Long
+    fun userId(): Long? = (request()?.getSession(false)?.getAttribute(ATTR_USER_ID) as? String)?.toLongOrNull()
 
     fun username(): String? = request()?.getSession(false)?.getAttribute(ATTR_USERNAME) as? String
 
@@ -23,7 +23,9 @@ class CurrentUser {
 
     fun login(userId: Long, username: String, avatar: String?) {
         val session = request()?.getSession(true) ?: return
-        session.setAttribute(ATTR_USER_ID, userId)
+        // Stored as String, not Long: the Mongo session converter's security ObjectMapper whitelists
+        // String but rejects java.lang.Long for polymorphic deserialization (InvalidTypeIdException).
+        session.setAttribute(ATTR_USER_ID, userId.toString())
         session.setAttribute(ATTR_USERNAME, username)
         session.setAttribute(ATTR_AVATAR, avatar)
     }

@@ -5,7 +5,6 @@ import dev.robothanzo.werewolf.controller.dto.PlayerCountRequest
 import dev.robothanzo.werewolf.controller.dto.PoolRequest
 import dev.robothanzo.werewolf.controller.dto.ToggleRequest
 import dev.robothanzo.werewolf.discord.DiscordGateway
-import dev.robothanzo.werewolf.domain.Seat
 import dev.robothanzo.werewolf.security.annotations.CanManageGuild
 import dev.robothanzo.werewolf.service.GameSessionService
 import io.swagger.v3.oas.annotations.Operation

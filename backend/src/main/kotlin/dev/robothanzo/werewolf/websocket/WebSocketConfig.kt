@@ -49,7 +49,8 @@ class AuthHandshakeInterceptor(private val roleService: DashboardRoleService) : 
             ?.toLongOrNull()
             ?: return false
 
-        val userId = servletRequest.getSession(false)?.getAttribute("wh.userId") as? Long ?: return false
+        val userId = (servletRequest.getSession(false)?.getAttribute("wh.userId") as? String)?.toLongOrNull()
+            ?: return false
         if (!roleService.canView(guildId, userId)) return false
 
         attributes[GameWebSocketHandler.ATTR_GUILD_ID] = guildId
