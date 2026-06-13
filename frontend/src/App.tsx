@@ -18,7 +18,7 @@ import { Settings } from "@/screens/Settings";
 import { Button } from "@/components/ui/Button";
 
 /** Seed demo data and mark demo mode (no live backend reachable). */
-function enterDemo() {
+export function enterDemo() {
   useGameStore.getState().applySnapshot(buildScenario("night"));
   useGameStore.getState().setConnected(true);
   useAuthStore.getState().setAuth({ userId: "0", username: "示範法官", avatar: null, role: "JUDGE", guildId: "demo" });
@@ -53,7 +53,18 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<LoadingScreen />} />
-      <Route path="/login" element={<LoginScreen onLogin={() => (window.location.href = api.loginUrl())} />} />
+      <Route
+        path="/login"
+        element={
+          <LoginScreen
+            onLogin={() => (window.location.href = api.loginUrl())}
+            onViewDemo={() => {
+              enterDemo();
+              navigate("/server/demo/dashboard", { replace: true });
+            }}
+          />
+        }
+      />
       <Route path="/servers" element={<ServersRoute />} />
       <Route path="/lockout" element={<LockoutRoute />} />
       <Route path="/blocked" element={<BlockedRoute />} />

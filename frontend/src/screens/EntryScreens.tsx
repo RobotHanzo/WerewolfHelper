@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
+import { Eye } from "lucide-react";
 import { api } from "@/api/client";
 import { useAuthStore } from "@/stores/authStore";
 import { Avatar } from "@/components/ui/Avatar";
@@ -38,7 +39,7 @@ const DiscordMark = () => (
   </svg>
 );
 
-export function LoginScreen({ onLogin }: { onLogin: () => void }) {
+export function LoginScreen({ onLogin, onViewDemo }: { onLogin: () => void; onViewDemo?: () => void }) {
   const { t } = useTranslation();
   const auth = useAuthStore((s) => s.auth);
   const navigate = useNavigate();
@@ -203,6 +204,32 @@ export function LoginScreen({ onLogin }: { onLogin: () => void }) {
                   <DiscordMark />
                   {t("login.withDiscord")}
                 </button>
+                {onViewDemo && (
+                  <button
+                    type="button"
+                    onClick={onViewDemo}
+                    className="wh-btn wh-btn--ghost"
+                    style={{
+                      marginTop: 10,
+                      width: "100%",
+                      height: 40,
+                      fontSize: 13,
+                      color: "var(--text-muted)",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      background: "transparent",
+                      border: "1px solid var(--border-2)",
+                      borderRadius: "var(--r-md)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <Eye size={15} />
+                    {t("login.viewDemo")}
+                  </button>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

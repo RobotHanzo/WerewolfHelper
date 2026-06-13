@@ -30,7 +30,8 @@
     "note": "本控制台僅供法官與旁觀者使用。在場玩家無法進入。",
     "loggedInAs": "已登入為 {{name}}",
     "selectServer": "選擇遊戲伺服器",
-    "notYou": "不是你？切換帳號"
+    "notYou": "不是你？切換帳號",
+    "viewDemo": "查看示範"
   },
   "servers": {
     "title": "選擇遊戲伺服器",
