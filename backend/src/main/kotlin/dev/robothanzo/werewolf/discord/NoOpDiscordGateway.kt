@@ -93,6 +93,10 @@ class NoOpDiscordGateway(
         log.debug("[noop] {} <- {}", channel, text)
     }
 
+    override fun sendChannelEmbed(guildId: Long, channel: ChannelKind, embed: EmbedSpec) {
+        log.debug("[noop] {} embed <- {}: {}", channel, embed.title, embed.description)
+    }
+
     override fun sendSeatMessage(guildId: Long, seatNumber: Int, text: String) {
         log.debug("[noop] seat {} <- {}", seatNumber, text)
     }

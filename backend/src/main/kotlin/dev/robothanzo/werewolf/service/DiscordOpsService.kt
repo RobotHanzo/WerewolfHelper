@@ -78,7 +78,14 @@ class DiscordOpsService(
                 },
             )
             engine.execute(listOf(critical, notify), sink(guildId))
-            gateway.sendChannelMessage(guildId, ChannelKind.JUDGE, msg.msg("assign.summary.title"))
+            val overview = session.seats.filter { it.assigned }.joinToString("\n") { seat ->
+                val ids = seat.cards.joinToString("、") { roles.localizedName(it.roleId) }
+                "玩家${seat.paddedNumber}：$ids"
+            }
+            gateway.sendChannelEmbed(
+                guildId, ChannelKind.JUDGE,
+                EmbedSpec(title = msg.msg("assign.summary.title"), description = overview, color = 0xE8B923),
+            )
         }
     }
 

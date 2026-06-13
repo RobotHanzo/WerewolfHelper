@@ -58,6 +58,7 @@ interface DiscordGateway {
 
     // --- messaging ---
     fun sendChannelMessage(guildId: Long, channel: ChannelKind, text: String)
+    fun sendChannelEmbed(guildId: Long, channel: ChannelKind, embed: EmbedSpec)
     fun sendSeatMessage(guildId: Long, seatNumber: Int, text: String)
     fun sendSeatEmbed(guildId: Long, seatNumber: Int, embed: EmbedSpec)
 

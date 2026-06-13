@@ -409,6 +409,21 @@ class JdaDiscordGateway(
         guild(guildId)?.getTextChannelById(channelId)?.sendMessage(text)?.queue()
     }
 
+    override fun sendChannelEmbed(guildId: Long, channel: ChannelKind, embed: EmbedSpec) {
+        val ids = session(guildId)?.discordIds ?: return
+        val channelId = when (channel) {
+            ChannelKind.COURT -> ids.courtTextChannelId
+            ChannelKind.JUDGE -> ids.judgeTextChannelId
+            ChannelKind.SPECTATOR -> ids.spectatorTextChannelId
+        }
+        val built = EmbedBuilder()
+            .setTitle(embed.title)
+            .setDescription(embed.description)
+            .apply { embed.color?.let { setColor(it) } }
+            .build()
+        guild(guildId)?.getTextChannelById(channelId)?.sendMessageEmbeds(built)?.queue()
+    }
+
     override fun sendSeatMessage(guildId: Long, seatNumber: Int, text: String) {
         val seat = session(guildId)?.seat(seatNumber) ?: return
         guild(guildId)?.getTextChannelById(seat.channelId)?.sendMessage(text)?.queue()
