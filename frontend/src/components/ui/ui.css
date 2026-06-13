@@ -1,0 +1,398 @@
+/* ============================================================
+   月光主控台 — component styles over the design tokens.
+   ============================================================ */
+
+/* ---- Button ---- */
+.wh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+.wh-btn:active {
+  transform: scale(0.98);
+}
+.wh-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.wh-btn--sm {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+.wh-btn--md {
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
+}
+.wh-btn--lg {
+  height: 48px;
+  padding: 0 24px;
+  font-size: 15px;
+}
+.wh-btn--primary {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  box-shadow: var(--shadow-glow);
+}
+.wh-btn--primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+.wh-btn--secondary {
+  background: var(--surface-raised);
+  color: var(--text-body);
+  border-color: var(--border-2);
+}
+.wh-btn--secondary:hover:not(:disabled) {
+  background: var(--night-600);
+}
+.wh-btn--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+.wh-btn--ghost:hover:not(:disabled) {
+  background: var(--surface-raised);
+}
+.wh-btn--danger {
+  background: transparent;
+  color: var(--danger-500);
+  border-color: rgba(255, 92, 110, 0.4);
+}
+.wh-btn--danger:hover:not(:disabled) {
+  background: var(--danger-dim);
+}
+.wh-btn--armed {
+  background: var(--danger-500);
+  color: #fff;
+  border-color: var(--danger-500);
+  box-shadow: var(--shadow-glow-urgent);
+}
+
+/* ---- Badge ---- */
+.wh-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 2px 8px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.wh-badge--sm {
+  font-size: 11px;
+  padding: 1px 6px;
+}
+.wh-badge__glyph {
+  font-weight: 900;
+  opacity: 0.85;
+}
+.wh-badge--wolf {
+  background: var(--wolf-dim);
+  color: var(--wolf-400);
+  border-color: rgba(240, 74, 94, 0.3);
+}
+.wh-badge--god {
+  background: var(--god-dim);
+  color: var(--god-400);
+  border-color: rgba(139, 123, 244, 0.3);
+}
+.wh-badge--vill {
+  background: var(--vill-dim);
+  color: var(--vill-400);
+  border-color: rgba(54, 201, 125, 0.3);
+}
+.wh-badge--dead {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+.wh-badge--police {
+  background: var(--badge-gold-dim);
+  color: var(--badge-gold);
+  border-color: rgba(242, 201, 76, 0.35);
+}
+.wh-badge--gbaby {
+  background: var(--gbaby-amber-dim);
+  color: var(--gbaby-amber);
+  border-color: rgba(255, 159, 69, 0.35);
+}
+.wh-badge--lock {
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  border-color: var(--border-2);
+}
+
+/* ---- Avatar ---- */
+.wh-avatar {
+  position: relative;
+  flex: none;
+  border-radius: var(--r-full);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-weight: 700;
+  overflow: hidden;
+}
+.wh-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.wh-avatar--dead {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+.wh-avatar--speaking {
+  border-color: var(--moon-400);
+  box-shadow: var(--shadow-glow);
+  animation: wh-breathe 2s var(--ease-in-out) infinite;
+}
+
+/* ---- Countdown ---- */
+.wh-countdown {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--text-body);
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.wh-countdown__label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-muted);
+}
+.wh-countdown--sm {
+  font-size: 16px;
+}
+.wh-countdown--md {
+  font-size: var(--text-timer);
+}
+.wh-countdown--stage {
+  font-size: var(--text-stage);
+  line-height: 1;
+}
+
+/* ---- LiveIndicator ---- */
+.wh-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.wh-live__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-full);
+  flex: none;
+}
+.wh-live--on .wh-live__dot {
+  background: var(--live-500);
+  animation: wh-breathe 2.4s var(--ease-in-out) infinite;
+}
+.wh-live--on {
+  color: var(--live-500);
+}
+.wh-live--off .wh-live__dot {
+  background: var(--offline-500);
+}
+.wh-live--off {
+  color: var(--offline-500);
+}
+
+/* ---- ProgressBar ---- */
+.wh-progress {
+  height: 10px;
+  border-radius: var(--r-full);
+  background: var(--surface-app);
+  overflow: hidden;
+}
+.wh-progress__fill {
+  height: 100%;
+  border-radius: var(--r-full);
+  background: var(--accent);
+  transition: width var(--dur-base) var(--ease-out);
+}
+.wh-progress--error .wh-progress__fill {
+  background: var(--danger-500);
+}
+.wh-progress--success .wh-progress__fill {
+  background: var(--success-500);
+}
+
+/* ---- FactionMeter ---- */
+.wh-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--r-lg);
+  background: var(--surface-card);
+  border: 1px solid var(--border-1);
+}
+.wh-meter__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wh-meter__count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ---- Switch ---- */
+.wh-switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wh-switch__track {
+  width: 42px;
+  height: 24px;
+  border-radius: var(--r-full);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-2);
+  position: relative;
+  cursor: pointer;
+  flex: none;
+  transition: background var(--dur-base) var(--ease-out);
+}
+.wh-switch__track--on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.wh-switch__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-full);
+  background: #fff;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.wh-switch__track--on .wh-switch__knob {
+  transform: translateX(18px);
+}
+
+/* ---- Input ---- */
+.wh-input {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-md);
+  background: var(--surface-app);
+  color: var(--text-body);
+  font-size: 13px;
+  font-family: var(--font-ui);
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.wh-input:focus {
+  border-color: var(--accent);
+}
+.wh-input--mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Modal ---- */
+.wh-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--surface-overlay);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 16px;
+}
+
+/* ---- Toast ---- */
+.wh-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--r-full);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-2);
+  box-shadow: var(--shadow-2);
+  font-size: 13px;
+}
+
+/* ---- LogFeed ---- */
+.wh-log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+}
+.wh-log__row {
+  display: flex;
+  gap: 10px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  border-left: 2px solid transparent;
+}
+.wh-log__time {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  flex: none;
+}
+.wh-log__row--info {
+  border-left-color: var(--info-500);
+}
+.wh-log__row--action {
+  border-left-color: var(--moon-500);
+  background: var(--accent-soft);
+}
+.wh-log__row--alert {
+  border-left-color: var(--danger-500);
+  background: var(--danger-dim);
+}
+
+/* ---- common card ---- */
+.wh-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+}
+
+.wh-section-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: var(--tracking-wide);
+}

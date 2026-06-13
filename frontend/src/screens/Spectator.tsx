@@ -1,0 +1,41 @@
+import { useTranslation } from "react-i18next";
+import { useGameStore } from "@/stores/gameStore";
+import { FactionMeter } from "@/components/ui/FactionMeter";
+import { PlayerCard } from "@/components/ui/PlayerCard";
+
+/** Read-only God's view: faction proportions, a win-condition reminder, and the full roster. */
+export function Spectator() {
+  const { t } = useTranslation();
+  const snapshot = useGameStore((s) => s.snapshot);
+  const changedSeats = useGameStore((s) => s.changedSeats);
+  if (!snapshot) return null;
+
+  return (
+    <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
+      <header style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900 }}>{t("spectator.title")}</h1>
+        <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
+          {t("spectator.subtitle", { mode: snapshot.doubleIdentity ? t("spectator.modeDouble") : t("spectator.modeSingle") })}
+        </span>
+      </header>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+        {snapshot.meters.map((m) => (
+          <FactionMeter key={m.faction} meter={m} />
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", borderRadius: "var(--r-md)", background: "var(--accent-soft)", border: "1px solid rgba(84,210,228,0.25)" }}>
+        <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.7 }}>
+          {snapshot.doubleIdentity ? t("spectator.winDouble") : t("spectator.winSingle")}
+        </p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+        {snapshot.seats.map((seat) => (
+          <PlayerCard key={seat.seat} seat={seat} readOnly changed={changedSeats.has(seat.seat)} />
+        ))}
+      </div>
+    </div>
+  );
+}
