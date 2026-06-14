@@ -6,6 +6,7 @@ import dev.robothanzo.werewolf.controller.dto.IdentityDto
 import dev.robothanzo.werewolf.controller.dto.LogDto
 import dev.robothanzo.werewolf.controller.dto.NightActionDto
 import dev.robothanzo.werewolf.controller.dto.NightDto
+import dev.robothanzo.werewolf.controller.dto.NightVoteDto
 import dev.robothanzo.werewolf.controller.dto.NightWaveDto
 import dev.robothanzo.werewolf.controller.dto.PollCandidateDto
 import dev.robothanzo.werewolf.controller.dto.PollDto
@@ -189,6 +190,10 @@ class SnapshotService(
     private fun actionDto(session: GameSession, night: NightState, abilityId: String): NightActionDto {
         if (abilityId == wolfKillAbilityId) {
             val voted = night.wolfParticipants.all { night.wolfVotes.containsKey(it) }
+            val votes = night.wolfParticipants.sorted().map { voter ->
+                val choice = night.wolfVotes[voter]
+                NightVoteDto(voter = voter, target = choice?.takeIf { it >= 0 }, skip = choice == -1)
+            }
             return NightActionDto(
                 abilityId = abilityId,
                 roleId = "wolf",
@@ -197,6 +202,7 @@ class SnapshotService(
                 actorSeats = night.wolfParticipants.sorted(),
                 targetSeat = declarations.wolfConsensus(night.wolfVotes),
                 status = if (voted) "submitted" else "acting",
+                votes = votes,
             )
         }
         val roleId = abilitiesById[abilityId]?.roleId ?: abilityId

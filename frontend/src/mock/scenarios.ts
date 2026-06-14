@@ -168,11 +168,11 @@ export function buildScenario(scenario: ScenarioId): GameSnapshot {
           resolved: false,
           summary: null,
           waves: [
-            { index: 0, actions: [{ abilityId: "magician.swap", roleId: "magician", roleName: "魔術師", faction: "GOD", actorSeats: [], targetSeat: null, status: "skipped" }] },
+            { index: 0, actions: [{ abilityId: "magician.swap", roleId: "magician", roleName: "魔術師", faction: "GOD", actorSeats: [4], targetSeat: 9, status: "submitted" }] },
             {
               index: 2,
               actions: [
-                { abilityId: "wolf.kill", roleId: "wolf", roleName: "狼人", faction: "WOLF", actorSeats: [1, 3, 8, 12], targetSeat: 9, status: "acting" },
+                { abilityId: "wolf.kill", roleId: "wolf", roleName: "狼人", faction: "WOLF", actorSeats: [1, 3, 8, 12], targetSeat: 9, status: "acting", votes: [{ voter: 1, target: 9, skip: false }, { voter: 3, target: 9, skip: false }, { voter: 8, target: null, skip: true }, { voter: 12, target: null, skip: false }] },
                 { abilityId: "guard.protect", roleId: "guard", roleName: "守衛", faction: "GOD", actorSeats: [7], targetSeat: 2, status: "submitted" },
                 { abilityId: "seer.investigate", roleId: "seer", roleName: "預言家", faction: "GOD", actorSeats: [2], targetSeat: 12, status: "submitted" },
               ],

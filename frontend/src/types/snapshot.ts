@@ -85,6 +85,14 @@ export interface Poll {
   votesCast: number;
 }
 
+export interface NightVote {
+  voter: number;
+  /** Target seat; null when not yet voted or when voting to skip (see `skip`). */
+  target: number | null;
+  /** True when this wolf voted not to kill tonight. */
+  skip: boolean;
+}
+
 export interface NightAction {
   abilityId: string;
   roleId: string;
@@ -93,6 +101,8 @@ export interface NightAction {
   actorSeats: number[];
   targetSeat: number | null;
   status: "acting" | "submitted" | "skipped";
+  /** Per-wolf vote breakdown for the collective knife; null for single-actor abilities. */
+  votes?: NightVote[] | null;
 }
 
 export interface NightWave {

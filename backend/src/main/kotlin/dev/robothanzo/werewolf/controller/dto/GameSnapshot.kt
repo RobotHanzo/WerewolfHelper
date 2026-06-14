@@ -138,6 +138,17 @@ data class NightActionDto(
     val actorSeats: List<Int>,
     val targetSeat: Int?,
     val status: String,
+    @get:Schema(description = "Per-wolf vote breakdown for the collective knife (null for single-actor abilities)")
+    val votes: List<NightVoteDto>? = null,
+)
+
+@Schema(description = "One wolf's knife vote within the collective kill")
+data class NightVoteDto(
+    val voter: Int,
+    @get:Schema(description = "Target seat; null when not yet voted or when voting to skip")
+    val target: Int?,
+    @get:Schema(description = "True when this wolf voted not to kill tonight")
+    val skip: Boolean,
 )
 
 @Schema(description = "A game log entry")

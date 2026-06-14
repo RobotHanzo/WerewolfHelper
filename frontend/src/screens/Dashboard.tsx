@@ -114,7 +114,7 @@ export function Dashboard() {
       )}
 
       {/* night board */}
-      <AnimatePresence>{snapshot.night?.active && <NightBoard night={snapshot.night} />}</AnimatePresence>
+      <AnimatePresence>{snapshot.night && (snapshot.night.active || snapshot.night.resolved) && <NightBoard night={snapshot.night} />}</AnimatePresence>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16, alignItems: "start" }}>
         {/* roster */}
