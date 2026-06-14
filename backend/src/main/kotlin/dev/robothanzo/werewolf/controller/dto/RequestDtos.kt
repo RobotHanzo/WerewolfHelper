@@ -10,6 +10,12 @@ data class KillRequest(
     val allowLastWords: Boolean = false,
 )
 
+@Schema(description = "Pick a target seat (revenge shot, knight duel)")
+data class TargetRequest(
+    @Schema(description = "The seat being targeted")
+    val target: Int,
+)
+
 @Schema(description = "Revive a seat or a single identity")
 data class ReviveRequest(
     @Schema(description = "Index of the identity to revive; null revives the whole seat")

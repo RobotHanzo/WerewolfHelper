@@ -73,6 +73,49 @@ export function useGameActions(guildId: string, demo: boolean) {
           );
         } else void api.revive(guildId, seat, identityIndex);
       },
+      revenge: (seat: number, target: number) => {
+        if (demo) {
+          patch((snap) =>
+            recompute(
+              mapSeat(
+                mapSeat(snap, seat, (s) => ({ ...s, revengePending: false })),
+                target,
+                (s) => {
+                  const identities = s.identities.map((i, idx) => (idx === 0 ? { ...i, dead: true } : i));
+                  return { ...s, identities, alive: identities.some((i) => !i.dead) };
+                },
+              ),
+            ),
+          );
+        } else void api.revenge(guildId, seat, target);
+      },
+      duel: (seat: number, target: number) => {
+        if (demo) {
+          patch((snap) => {
+            const targetSeat = snap.seats.find((s) => s.seat === target);
+            const targetIsWolf = targetSeat?.identities.some((i) => i.faction === "WOLF") ?? false;
+            const dead = targetIsWolf ? target : seat;
+            return recompute(
+              mapSeat({ ...snap, phase: targetIsWolf ? "NIGHT" : snap.phase }, dead, (s) => {
+                const identities = s.identities.map((i, idx) => (idx === 0 ? { ...i, dead: true } : i));
+                return { ...s, identities, alive: identities.some((i) => !i.dead) };
+              }),
+            );
+          });
+        } else void api.duel(guildId, seat, target);
+      },
+      selfDestruct: (seat: number) => {
+        if (demo) {
+          patch((snap) =>
+            recompute(
+              mapSeat({ ...snap, phase: "NIGHT" }, seat, (s) => {
+                const identities = s.identities.map((i, idx) => (idx === 0 ? { ...i, dead: true } : i));
+                return { ...s, identities, alive: identities.some((i) => !i.dead) };
+              }),
+            ),
+          );
+        } else void api.selfDestruct(guildId, seat);
+      },
       pause: () => (demo ? patch((s) => ({ ...s, paused: !s.paused })) : void api.pause(guildId)),
       startGame: () => {
         if (demo) {
@@ -166,6 +209,10 @@ export function useGameActions(guildId: string, demo: boolean) {
          demo ? patch((s) => ({ ...s, doubleIdentity: value })) : void api.setDoubleIdentity(guildId, value),
       setMuteAfterSpeech: (value: boolean) =>
          demo ? patch((s) => ({ ...s, muteAfterSpeech: value })) : void api.setMuteAfterSpeech(guildId, value),
+      setWitchSelfSave: (value: boolean) =>
+         demo ? patch((s) => ({ ...s, witchSelfSave: value })) : void api.setWitchSelfSave(guildId, value),
+      setHiddenWolfKnife: (value: boolean) =>
+         demo ? patch((s) => ({ ...s, hiddenWolfInheritsKnife: value })) : void api.setHiddenWolfKnife(guildId, value),
       setPool: (pool: Record<string, number>) =>
          demo ? patch((s) => ({ ...s, pool })) : void api.setPool(guildId, pool),
       setPlayerCount: (count: number) => {
@@ -179,9 +226,18 @@ export function useGameActions(guildId: string, demo: boolean) {
           patch((s) => {
             const aliveSeats = s.seats.filter((seat) => seat.alive).map((seat) => seat.seat).sort((a, b) => a - b);
             if (aliveSeats.length === 0) return s;
-            const fromSeat = s.policeSeat && aliveSeats.includes(s.policeSeat) ? s.policeSeat : aliveSeats[0];
-            const startIdx = aliveSeats.indexOf(fromSeat);
-            const order = [...aliveSeats.slice(startIdx), ...aliveSeats.slice(0, startIdx)];
+            const police = s.policeSeat && aliveSeats.includes(s.policeSeat) ? s.policeSeat : null;
+            if (police) {
+              // mirror the backend: park on the police's direction choice
+              return {
+                ...s,
+                phase: "SPEECHES",
+                speech: { active: true, waiting: true, direction: "DOWN", fromSeat: police, speakerSeat: null, endsAt: null, order: [], upcoming: [] },
+                poll: null,
+              };
+            }
+            const fromSeat = aliveSeats[0];
+            const order = [...aliveSeats];
             return {
               ...s,
               phase: "SPEECHES",
@@ -212,7 +268,7 @@ export function useGameActions(guildId: string, demo: boolean) {
               speech: null,
               poll: {
                 kind: "POLICE",
-                stage: "VOTING",
+                stage: "ENROLL",
                 endsAt: Date.now() + 30000,
                 eligibleVoters: aliveSeats.length,
                 votesCast: 0,
@@ -273,26 +329,66 @@ export function useGameActions(guildId: string, demo: boolean) {
                 },
               };
             } else {
-              return {
-                ...s,
-                phase: "EXPEL_VOTE",
-                speech: null,
-              };
+              // flow complete: clear it but stay in the phase (the judge advances explicitly)
+              return { ...s, speech: null };
             }
           });
         } else {
-          void api.nextPhase(guildId);
+          void api.skipSpeaker(guildId);
         }
       },
       terminateSpeech: () => {
         if (demo) {
-          patch((s) => ({
-            ...s,
-            phase: "EXPEL_VOTE",
-            speech: null,
-          }));
+          patch((s) => ({ ...s, speech: null }));
         } else {
-          void api.nextPhase(guildId);
+          void api.stopSpeech(guildId);
+        }
+      },
+      setSpeechDirection: (direction: "UP" | "DOWN") => {
+        if (demo) {
+          patch((s) => {
+            if (!s.speech?.waiting) return s;
+            const aliveSeats = s.seats.filter((seat) => seat.alive).map((seat) => seat.seat).sort((a, b) => a - b);
+            const fromSeat = s.speech.fromSeat ?? aliveSeats[0];
+            const startIdx = Math.max(0, aliveSeats.indexOf(fromSeat));
+            const ordered =
+              direction === "DOWN"
+                ? [...aliveSeats.slice(startIdx), ...aliveSeats.slice(0, startIdx)]
+                : [aliveSeats[startIdx], ...aliveSeats.slice(0, startIdx).reverse(), ...aliveSeats.slice(startIdx + 1).reverse()];
+            return {
+              ...s,
+              speech: {
+                ...s.speech,
+                waiting: false,
+                direction,
+                speakerSeat: ordered[0],
+                endsAt: Date.now() + 60000,
+                order: ordered,
+                upcoming: ordered.slice(1),
+              },
+            };
+          });
+        } else {
+          void api.setSpeechDirection(guildId, direction);
+        }
+      },
+      advancePoll: () => {
+        if (demo) {
+          patch((s) => {
+            if (!s.poll) return s;
+            const order = ["ENROLL", "CAMPAIGN", "WITHDRAW", "VOTING", "RESOLVED"] as const;
+            const next = order[Math.min(order.length - 1, order.indexOf(s.poll.stage as any) + 1)];
+            return next === "RESOLVED" ? { ...s, poll: null } : { ...s, poll: { ...s.poll, stage: next } };
+          });
+        } else {
+          void api.advancePoll(guildId);
+        }
+      },
+      resolvePoll: () => {
+        if (demo) {
+          patch((s) => ({ ...s, poll: null }));
+        } else {
+          void api.resolvePoll(guildId);
         }
       },
       muteAll: () => {

@@ -90,6 +90,13 @@ class BlackMerchantTrade : SimpleNightAbility(
     "black_merchant.trade", RoleIds.BLACK_MERCHANT, reads = setOf(SWAP, FEAR), writes = setOf(TRADE),
 )
 
+/** 機械狼 — one-shot learn: copies the chosen seat's identity into the actor's learnedRoleId, after
+ *  which it acts as the learned role on later nights (ROLES.md 機械狼 主動技). */
+@Component
+class MechanicWolfLearn : SimpleNightAbility(
+    "mechanic_wolf.learn", RoleIds.MECHANIC_WOLF, reads = setOf(SWAP, FEAR), writes = setOf(Effect.LEARN),
+)
+
 /** 獵魔人 hunts a seat; resolves to a death immediately (good → self-death, wolf → target death).
  *  Cannot be used on the first night. */
 @Component

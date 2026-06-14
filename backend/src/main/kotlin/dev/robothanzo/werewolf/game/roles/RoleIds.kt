@@ -32,4 +32,5 @@ object RoleIds {
     const val PSYCHIC = "psychic"
     const val MECHANIC_WOLF = "mechanic_wolf"
     const val DEMON_HUNTER = "demon_hunter"
+    const val HIDDEN_WOLF = "hidden_wolf"
 }

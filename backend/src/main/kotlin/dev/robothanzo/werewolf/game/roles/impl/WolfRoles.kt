@@ -33,7 +33,7 @@ class WolfBeautyRole : BaseRole(
 @Component
 class WhiteWolfKingRole : BaseRole(
     RoleIds.WHITE_WOLF_KING, "role.white_wolf_king", Faction.WOLF,
-    setOf(RoleTag.WOLF_CHAT, RoleTag.DEATH_REVENGE),
+    setOf(RoleTag.WOLF_CHAT, RoleTag.DEATH_REVENGE, RoleTag.REVENGE_ON_SELF_DESTRUCT_ONLY),
 )
 
 @Component
@@ -48,10 +48,18 @@ class WolfYoungerRole : BaseRole(
     setOf(RoleTag.WOLF_CHAT),
 )
 
+/** 機械狼 — 互不相認 (no wolf chat); learns a role, and inherits the knife once the wolves are gone. */
 @Component
 class MechanicWolfRole : BaseRole(
     RoleIds.MECHANIC_WOLF, "role.mechanic_wolf", Faction.WOLF,
-    setOf(RoleTag.WOLF_CHAT),
+    setOf(RoleTag.INHERITS_KILL),
+)
+
+/** 隱狼 — 狼人陣營的平民: no wolf chat, reads as 好人, inherits the knife / dies with the team. */
+@Component
+class HiddenWolfRole : BaseRole(
+    RoleIds.HIDDEN_WOLF, "role.hidden_wolf", Faction.WOLF,
+    setOf(RoleTag.INVESTIGATED_AS_GOOD, RoleTag.INHERITS_KILL),
 )
 
 /** 夢魘 — nightmare. On the wolf chat team and acts at night, but per FEATURES §2's name rule
@@ -62,10 +70,11 @@ class NightmareRole : BaseRole(
     setOf(RoleTag.WOLF_CHAT),
 )
 
-/** 石像鬼 — gargoyle. Wolf faction by exception, but does not share wolf chat or the kill. */
+/** 石像鬼 — gargoyle. Wolf faction by exception, no wolf chat; inherits the knife once wolves are gone. */
 @Component
 class GargoyleRole : BaseRole(
     RoleIds.GARGOYLE, "role.gargoyle", Faction.WOLF,
+    setOf(RoleTag.INHERITS_KILL),
 )
 
 @Component

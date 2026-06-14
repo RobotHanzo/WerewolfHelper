@@ -53,10 +53,12 @@ export const api = {
   roles: () => request<RoleInfo[]>("/roles"),
 
   // members
-  members: (guildId: string, query = "") =>
+  members: (guildId: string, query = "", type = "") =>
     request<{ id: string; name: string; displayName: string; avatar: string | null }[]>(
-      `/sessions/${guildId}/members?query=${encodeURIComponent(query)}`,
+      `/sessions/${guildId}/members?query=${encodeURIComponent(query)}&type=${encodeURIComponent(type)}`,
     ),
+  updateMemberRole: (g: string, userId: string, role: "JUDGE" | "SPECTATOR" | "BLOCKED") =>
+    post(`/sessions/${g}/members/role`, { userId, role }),
 
   // game actions (each mutates then the server broadcasts a fresh snapshot)
   assign: (g: string) => post(`/sessions/${g}/assign`),
@@ -66,6 +68,11 @@ export const api = {
   pause: (g: string) => post(`/sessions/${g}/state/pause`),
   kill: (g: string, seat: number, identityIndex: number | null, allowLastWords: boolean) =>
     post(`/sessions/${g}/seats/${seat}/kill`, { identityIndex, allowLastWords }),
+  revenge: (g: string, seat: number, target: number) =>
+    post(`/sessions/${g}/seats/${seat}/revenge`, { target }),
+  duel: (g: string, seat: number, target: number) =>
+    post(`/sessions/${g}/seats/${seat}/duel`, { target }),
+  selfDestruct: (g: string, seat: number) => post(`/sessions/${g}/seats/${seat}/self-destruct`),
   revive: (g: string, seat: number, identityIndex: number | null) =>
     post(`/sessions/${g}/seats/${seat}/revive`, { identityIndex }),
   edit: (g: string, seat: number, roleIds: string[], orderLocked: boolean | null) =>
@@ -83,4 +90,14 @@ export const api = {
   setPool: (g: string, pool: Record<string, number>) => post(`/sessions/${g}/settings/pool`, { pool }),
   setDoubleIdentity: (g: string, value: boolean) => post(`/sessions/${g}/settings/double-identity`, { value }),
   setMuteAfterSpeech: (g: string, value: boolean) => post(`/sessions/${g}/settings/mute-after-speech`, { value }),
+  setWitchSelfSave: (g: string, value: boolean) => post(`/sessions/${g}/settings/witch-self-save`, { value }),
+  setHiddenWolfKnife: (g: string, value: boolean) => post(`/sessions/${g}/settings/hidden-wolf-knife`, { value }),
+
+  // day-side flow controls (mirror the Discord court buttons)
+  skipSpeaker: (g: string) => post(`/sessions/${g}/speech/skip`),
+  stopSpeech: (g: string) => post(`/sessions/${g}/speech/stop`),
+  setSpeechDirection: (g: string, direction: "UP" | "DOWN") =>
+    post(`/sessions/${g}/speech/direction`, { direction }),
+  advancePoll: (g: string) => post(`/sessions/${g}/poll/advance`),
+  resolvePoll: (g: string) => post(`/sessions/${g}/poll/resolve`),
 };

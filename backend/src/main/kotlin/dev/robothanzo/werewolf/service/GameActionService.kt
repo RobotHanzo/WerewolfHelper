@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.discord.NicknameService
+import dev.robothanzo.werewolf.domain.DashboardRole
 import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.domain.LogSeverity
 import dev.robothanzo.werewolf.domain.Phase
@@ -10,6 +11,7 @@ import dev.robothanzo.werewolf.game.assign.AssignmentService
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.win.WinConditionChecker
 import dev.robothanzo.werewolf.game.flow.GameScheduler
+import dev.robothanzo.werewolf.security.DashboardRoleService
 import org.springframework.stereotype.Service
 import kotlin.random.Random
 
@@ -28,12 +30,14 @@ class GameActionService(
     private val gateway: DiscordGateway,
     private val discordOps: DiscordOpsService,
     private val gameScheduler: GameScheduler,
+    private val roleService: DashboardRoleService,
+    private val deaths: DeathService,
 ) {
 
     /** Deal identities to the eligible (non-bot, non-owner, non-spectator) members. */
     fun assign(guildId: Long) = sessionService.mutate(guildId) { session ->
         val eligible = gateway.listMembers(guildId)
-            .filter { !it.bot && !it.owner }
+            .filter { !it.bot && !it.owner && roleService.roleFor(guildId, it.id) != DashboardRole.JUDGE }
             .map { it.id }
             .ifEmpty { session.seats.mapNotNull { it.memberId } } // dev fallback to existing bindings
         assignment.assign(session, eligible, Random.Default)
@@ -46,19 +50,37 @@ class GameActionService(
         discordOps.applyAssignment(session)
     }
 
-    /** Mark one identity of a seat dead (soft death), then re-check win conditions. */
+    /** Mark one identity of a seat dead (soft death) through the shared [DeathService] — which arms
+     *  any 獵人 / 狼王 revenge and cascades 殉情 — then re-check win conditions. */
     fun kill(guildId: Long, seatNumber: Int, identityIndex: Int?, @Suppress("UNUSED_PARAMETER") lastWords: Boolean) =
         sessionService.mutate(guildId) { session ->
             val seat = session.seat(seatNumber) ?: error("seat $seatNumber not found")
             val idx = identityIndex ?: seat.cards.indexOfFirst { !it.dead }
             require(idx in seat.cards.indices) { "no living identity to kill" }
-            val card = seat.cards[idx]
-            card.dead = true
-            val roleName = roles.localizedName(card.roleId)
-            sessionService.log(guildId, LogSeverity.ALERT, "death.announce", seat.paddedNumber, roleName)
-            syncNickname(session, seat)
+            val produced = deaths.applyDeath(session, seatNumber, seat.cards[idx], DeathCause.JUDGE)
+            logDeaths(guildId, session, produced)
             checkWin(session)
         }
+
+    /** Fire an armed 獵人 / 狼王 / 白狼王 revenge shot at [targetSeat] (FEATURES §5, ROLES.md). */
+    fun revenge(guildId: Long, seatNumber: Int, targetSeat: Int) = sessionService.mutate(guildId) { session ->
+        val seat = session.seat(seatNumber) ?: error("seat $seatNumber not found")
+        require(seat.revengePending) { "seat $seatNumber has no pending revenge" }
+        seat.revengePending = false
+        // The shot itself is a normal death (so a 狼王 can chain its own 殉情); the target keeps its abilities.
+        val produced = deaths.killSeat(session, targetSeat, DeathCause.JUDGE)
+        sessionService.log(guildId, LogSeverity.ACTION, "day.revenge", seat.paddedNumber, String.format("%02d", targetSeat))
+        logDeaths(guildId, session, produced)
+        checkWin(session)
+    }
+
+    /** Announce every death the shared applier produced (the primary death plus any 殉情 cascade). */
+    private fun logDeaths(guildId: Long, session: GameSession, produced: List<DeathInfo>) {
+        produced.forEach { d ->
+            val paddedNumber = session.seat(d.seat)?.paddedNumber ?: String.format("%02d", d.seat)
+            sessionService.log(guildId, LogSeverity.ALERT, "death.announce", paddedNumber, roles.localizedName(d.roleId))
+        }
+    }
 
     /** Revive the whole seat or a single named identity. */
     fun revive(guildId: Long, seatNumber: Int, identityIndex: Int?) = sessionService.mutate(guildId) { session ->
@@ -122,6 +144,9 @@ class GameActionService(
         session.phase = Phase.LOBBY
         session.day = 0
         session.timerEndsAt = null
+        session.stepEndsAt = null
+        session.speech = null
+        session.poll = null
         sessionService.clearLogs(guildId)
         sessionService.log(guildId, LogSeverity.ACTION, "game.reset")
         gameScheduler.cancelAll(guildId)

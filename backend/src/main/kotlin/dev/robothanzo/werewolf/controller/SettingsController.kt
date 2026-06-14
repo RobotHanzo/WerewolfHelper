@@ -66,4 +66,22 @@ class SettingsController(
         sessionService.mutate(guildId.toLong()) { s -> s.settings.muteAfterSpeech = body.value }
         return ResponseEntity.ok(ApiResponse.ok())
     }
+
+    @Operation(summary = "Toggle witch self-save", description = "Enable/disable 女巫自救 (ROLES.md 女巫 房規).")
+    @ApiResponses(value = [SwaggerApiResponse(responseCode = "200", description = "Updated")])
+    @PostMapping("/witch-self-save")
+    @CanManageGuild
+    fun witchSelfSave(@PathVariable guildId: String, @RequestBody body: ToggleRequest): ResponseEntity<ApiResponse> {
+        sessionService.mutate(guildId.toLong()) { s -> s.settings.witchSelfSave = body.value }
+        return ResponseEntity.ok(ApiResponse.ok())
+    }
+
+    @Operation(summary = "Toggle hidden-wolf knife", description = "Enable/disable 隱狼繼承狼刀 (ROLES.md 隱狼 房規).")
+    @ApiResponses(value = [SwaggerApiResponse(responseCode = "200", description = "Updated")])
+    @PostMapping("/hidden-wolf-knife")
+    @CanManageGuild
+    fun hiddenWolfKnife(@PathVariable guildId: String, @RequestBody body: ToggleRequest): ResponseEntity<ApiResponse> {
+        sessionService.mutate(guildId.toLong()) { s -> s.settings.hiddenWolfInheritsKnife = body.value }
+        return ResponseEntity.ok(ApiResponse.ok())
+    }
 }

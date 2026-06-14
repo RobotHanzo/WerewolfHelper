@@ -1,7 +1,9 @@
 package dev.robothanzo.werewolf.game.night
 
+import dev.robothanzo.werewolf.game.roles.RoleIds.DEMON_HUNTER
 import dev.robothanzo.werewolf.game.roles.RoleIds.SEER
 import dev.robothanzo.werewolf.game.roles.RoleIds.VILLAGER
+import dev.robothanzo.werewolf.game.roles.RoleIds.WITCH
 import dev.robothanzo.werewolf.game.roles.RoleIds.WOLF
 import dev.robothanzo.werewolf.support.TestFixtures.registry
 import dev.robothanzo.werewolf.support.TestFixtures.seat
@@ -164,6 +166,44 @@ class NightResolverTest {
         )
         // save voided → 9 dies; poison voided → 6 lives
         assertEquals(setOf(9), r.deadSeats)
+    }
+
+    @Test
+    fun `女巫自救被禁止時仍死亡`() {
+        // wolves knife the witch (seat 5); she saves herself → blocked by default 房規, so she dies.
+        val s = session(
+            playerCount = 12,
+            seats = (1..12).map { if (it == 5) seat(it, WITCH to false) else seat(it, VILLAGER to false) },
+        )
+        val r = resolver.resolve(
+            NightDeclarations(wolfKill = NightAction(setOf(1), 5), witchActor = 5, witchSave = 5),
+            s,
+        )
+        assertEquals(setOf(5), r.deadSeats)
+    }
+
+    @Test
+    fun `女巫自救開啟時可自救`() {
+        val s = session(
+            playerCount = 12,
+            seats = (1..12).map { if (it == 5) seat(it, WITCH to false) else seat(it, VILLAGER to false) },
+        ) { settings.witchSelfSave = true }
+        val r = resolver.resolve(
+            NightDeclarations(wolfKill = NightAction(setOf(1), 5), witchActor = 5, witchSave = 5),
+            s,
+        )
+        assertTrue(r.deadSeats.isEmpty())
+    }
+
+    @Test
+    fun `獵魔人免疫女巫毒`() {
+        // seat 7 is a 獵魔人; the witch poisons it → immune (ROLES.md 獵魔人 被動), so it lives.
+        val s = session(
+            playerCount = 12,
+            seats = (1..12).map { if (it == 7) seat(it, DEMON_HUNTER to false) else seat(it, VILLAGER to false) },
+        )
+        val r = resolver.resolve(NightDeclarations(witchActor = 5, witchPoison = 7), s)
+        assertTrue(r.deadSeats.isEmpty())
     }
 
     @Test

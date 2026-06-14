@@ -5,12 +5,14 @@ import dev.robothanzo.werewolf.discord.DiscordInteractionHandler
 import dev.robothanzo.werewolf.discord.InteractionIds
 import dev.robothanzo.werewolf.discord.InteractionReply
 import dev.robothanzo.werewolf.discord.SeatOption
+import dev.robothanzo.werewolf.discord.SoundCue
 import dev.robothanzo.werewolf.domain.Faction
 import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.domain.LogSeverity
 import dev.robothanzo.werewolf.domain.NightIntentData
 import dev.robothanzo.werewolf.domain.NightState
 import dev.robothanzo.werewolf.domain.Phase
+import dev.robothanzo.werewolf.domain.Seat
 import dev.robothanzo.werewolf.game.GameConstants
 import dev.robothanzo.werewolf.game.flow.GameScheduler
 import dev.robothanzo.werewolf.game.night.NightAbility
@@ -20,6 +22,7 @@ import dev.robothanzo.werewolf.game.night.NightResolver
 import dev.robothanzo.werewolf.game.night.Effect
 import dev.robothanzo.werewolf.game.roles.RoleIds
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
+import dev.robothanzo.werewolf.game.roles.RoleTag
 import dev.robothanzo.werewolf.game.win.WinConditionChecker
 import dev.robothanzo.werewolf.i18n.Msg
 import jakarta.annotation.PostConstruct
@@ -47,6 +50,9 @@ class NightOrchestrator(
     private val gateway: DiscordGateway,
     private val scheduler: GameScheduler,
     private val msg: Msg,
+    private val announcer: CourtAnnouncer,
+    private val router: InteractionRouter,
+    private val deaths: DeathService,
 ) : DiscordInteractionHandler {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -54,13 +60,21 @@ class NightOrchestrator(
     private val abilitiesByRole = abilities.groupBy { it.roleId }
     private val wolfKillAbility = abilities.firstOrNull { Effect.WOLF_KILL in it.writes }
 
+    private companion object {
+        const val MECHANIC_LEARN_ID = "mechanic_wolf.learn"
+    }
+
     @PostConstruct
-    fun register() = gateway.setInteractionHandler(this)
+    fun register() = router.register(InteractionIds.NS_NIGHT, this)
 
     // ---------- starting a night ----------
     fun startNight(guildId: Long) {
         sessionService.mutate(guildId) { session -> planNight(session) }
         val session = sessionService.find(guildId) ?: return
+        // Court cue: night falls, everyone is silenced (the announcement itself was previously log-only).
+        gateway.muteAll(guildId)
+        gateway.playSound(guildId, SoundCue.NIGHT)
+        announcer.announce(guildId, "night.start", session.day)
         promptActors(session)
         val endsAt = session.nightState.endsAt
         scheduler.schedule(guildId, GameScheduler.NIGHT, endsAt - System.currentTimeMillis()) { resolveNight(guildId) }
@@ -69,15 +83,26 @@ class NightOrchestrator(
     private fun planNight(session: GameSession) {
         val alive = session.aliveSeats()
         val present = alive.flatMap { it.livingCards() }.map { it.roleId }.toSet()
-        val wolfParticipants = alive.filter { seat ->
-            seat.livingCards().any { roles.factionOf(it.roleId) == Faction.WOLF && it.roleId != RoleIds.GARGOYLE }
-        }.map { it.number }.toSet()
+        // 機械狼 acts as its learned identity once it has learned (ROLES.md 機械狼 主動技).
+        val learned = alive.mapNotNull { it.learnedRoleId }.toSet()
+        val mechanicMayLearn = alive.any { s ->
+            s.livingCards().any { it.roleId == RoleIds.MECHANIC_WOLF } && s.learnedRoleId == null
+        }
+
+        // 血月使徒 自爆 seals this one night: all 神職 abilities void + the wolves cannot knife.
+        val sealed = session.bloodMoonSeal
+        session.bloodMoonSeal = false
+
+        val wolfParticipants = if (sealed) emptySet() else wolfKillParticipants(session, alive)
 
         val active = abilitiesByRole.values.flatten()
             .filter { it.id != wolfKillAbility?.id }
-            .filter { it.roleId in present }
+            .filter { it.roleId in present || it.roleId in learned }
+            .filterNot { it.id == MECHANIC_LEARN_ID && !mechanicMayLearn } // one-shot learn
             .filterNot { it.firstNightOnly && session.day != 1 }
             .filterNot { it.id == "demon_hunter.hunt" && session.day <= 1 }
+            .filterNot { sealed && roles.factionOf(it.roleId) == Faction.GOD } // 封印神職技能
+            .distinctBy { it.id }
             .toMutableList()
         if (wolfParticipants.isNotEmpty()) wolfKillAbility?.let { active.add(it) }
 
@@ -94,6 +119,29 @@ class NightOrchestrator(
         sessionService.log(session.guildId, LogSeverity.ACTION, "night.start", session.day)
     }
 
+    /**
+     * Who opens their eyes for the wolf knife. Normally the chat wolves (wolf-faction roles that
+     * aren't a 互不相認 大哥). Once no chat wolf is left alive, an `INHERITS_KILL` seat (石像鬼 / 隱狼 /
+     * 機械狼) inherits the knife and is armed — 隱狼 only if 隱狼繼承狼刀 is enabled (ROLES.md).
+     */
+    private fun wolfKillParticipants(session: GameSession, alive: List<Seat>): Set<Int> {
+        fun inheritor(roleId: String) = roles.byId(roleId)?.hasTag(RoleTag.INHERITS_KILL) == true
+        val chatWolves = alive.filter { seat ->
+            seat.livingCards().any { roles.factionOf(it.roleId) == Faction.WOLF && !inheritor(it.roleId) }
+        }
+        if (chatWolves.isNotEmpty()) return chatWolves.map { it.number }.toSet()
+
+        // No chat wolf left — the 大哥 inherits the knife.
+        val inheritors = alive.filter { seat ->
+            seat.livingCards().any { card ->
+                inheritor(card.roleId) &&
+                    (card.roleId != RoleIds.HIDDEN_WOLF || session.settings.hiddenWolfInheritsKnife)
+            }
+        }
+        inheritors.forEach { it.knifeArmed = true }
+        return inheritors.map { it.number }.toSet()
+    }
+
     private fun promptActors(session: GameSession) {
         val guildId = session.guildId
         val options = session.aliveSeats().map { SeatOption(it.number, "玩家${it.paddedNumber}") }
@@ -103,7 +151,11 @@ class NightOrchestrator(
                 return@forEach
             }
             val ability = abilitiesById[abilityId] ?: return@forEach
-            val actors = session.aliveSeats().filter { seat -> seat.livingCards().any { it.roleId == ability.roleId } }
+            // A 機械狼 that has learned a role also acts as that role (besides the real card-holders).
+            val actors = session.aliveSeats().filter { seat ->
+                seat.livingCards().any { it.roleId == ability.roleId } ||
+                    (ability.id != MECHANIC_LEARN_ID && seat.learnedRoleId == ability.roleId)
+            }
             val roleName = roles.localizedName(ability.roleId)
             val extras = if (ability.roleId == RoleIds.WITCH) listOf(InteractionIds.WITCH_SAVE to "解救今晚刀口") else emptyList()
             actors.forEach { actor ->
@@ -174,16 +226,25 @@ class NightOrchestrator(
             if (!night.active || night.resolved) return@mutate
 
             val resolution = resolver.resolve(declarations.build(night), session)
+            // Persist 狼美人 charm / 邱比特 lover bonds first so a same-night death can cascade 殉情.
+            persistBonds(session)
+            night.deaths.clear()
+            // Each death flows through the shared applier (arms 獵人/狼王 revenge, cascades 殉情,
+            // 隱狼 auto-death). The resolver's suppressRevenge flags are carried through.
             resolution.deaths.forEach { death ->
-                session.seat(death.seat)?.let { seat ->
-                    val card = seat.cards.firstOrNull { !it.dead }
-                    if (card != null) {
-                        card.dead = true
-                        sessionService.log(guildId, LogSeverity.ALERT, "night.death", seat.paddedNumber, roles.localizedName(card.roleId))
+                val seat = session.seat(death.seat) ?: return@forEach
+                val card = seat.cards.firstOrNull { !it.dead } ?: return@forEach
+                deaths.applyDeath(session, death.seat, card, DeathCause.NIGHT, death.suppressRevenge).forEach { info ->
+                    if (info.seat !in night.deaths) {
+                        night.deaths.add(info.seat)
+                        val padded = session.seat(info.seat)?.paddedNumber ?: ""
+                        sessionService.log(guildId, LogSeverity.ALERT, "night.death", padded, roles.localizedName(info.roleId))
                     }
                 }
             }
+            applyLearns(session)
             announceInvestigations(session)
+            deliverGravekeeper(session)
 
             val summary = if (resolution.deaths.isEmpty()) msg.msg("night.peaceful")
             else resolution.deaths.joinToString("、") { msg.msg("seat.name", session.seat(it.seat)?.paddedNumber ?: "") }
@@ -203,7 +264,56 @@ class NightOrchestrator(
         }
     }
 
-    /** DM each investigator the faction of the seat they checked. */
+    /** 守墓人 — from the second night on, DM the faction (好人/狼人) of the last expelled seat
+     *  (ROLES.md 守墓人: 第一晚無技能, 第二晚起). */
+    private fun deliverGravekeeper(session: GameSession) {
+        if (session.day < 2) return
+        val expelled = session.lastExpelledSeat?.let { session.seat(it) } ?: return
+        val keeper = session.aliveSeats().firstOrNull { s ->
+            s.livingCards().any { it.roleId == RoleIds.GRAVEKEEPER }
+        } ?: return
+        val card = expelled.cards.lastOrNull { it.dead } ?: expelled.cards.firstOrNull() ?: return
+        val faction = if (expelled.clone) Faction.GOD else roles.factionOf(card.roleId)
+        val verdict = if (faction == Faction.WOLF) "狼人" else "好人"
+        gateway.sendSeatMessage(session.guildId, keeper.number, msg.msg("gravekeeper.report", expelled.paddedNumber, verdict))
+    }
+
+    /** Persist 狼美人 charm + 邱比特 lover bonds onto the seats so a daytime death can cascade 殉情
+     *  (the in-resolver night 殉情 is unchanged; this only feeds the day-phase logic). */
+    private fun persistBonds(session: GameSession) {
+        session.nightState.intents.filter { !it.skipped }.forEach { intent ->
+            when (intent.abilityId) {
+                "wolf_beauty.charm" -> {
+                    val beauty = intent.actorSeats.firstOrNull() ?: return@forEach
+                    val victim = intent.targets.firstOrNull() ?: return@forEach
+                    session.seat(beauty)?.charmedSeat = victim
+                }
+                "cupid.bond" -> {
+                    if (intent.targets.size < 2) return@forEach
+                    val (a, b) = intent.targets[0] to intent.targets[1]
+                    session.seat(a)?.loverSeat = b
+                    session.seat(b)?.loverSeat = a
+                }
+            }
+        }
+    }
+
+    /** 機械狼 learn — copy the chosen seat's identity into the actor's learnedRoleId (one-shot). */
+    private fun applyLearns(session: GameSession) {
+        session.nightState.intents
+            .filter { it.abilityId == MECHANIC_LEARN_ID && !it.skipped && it.targets.isNotEmpty() }
+            .forEach { intent ->
+                val mechanic = intent.actorSeats.firstOrNull()?.let { session.seat(it) } ?: return@forEach
+                if (mechanic.learnedRoleId != null) return@forEach
+                val target = session.seat(intent.targets.first()) ?: return@forEach
+                val card = target.livingCards().firstOrNull() ?: target.cards.firstOrNull() ?: return@forEach
+                // Kept off the public log — the learned identity is secret, surfaced only on the dashboard.
+                mechanic.learnedRoleId = card.roleId
+            }
+    }
+
+    /** DM each investigator their result: 預言家 reports faction (隱狼 reads 好人); 通靈師/石像鬼 report
+     *  the exact identity (a 機械狼 reads as its learned identity). */
     private fun announceInvestigations(session: GameSession) {
         session.nightState.intents
             .filter { it.abilityId.endsWith("investigate") && !it.skipped && it.targets.isNotEmpty() }
@@ -211,8 +321,14 @@ class NightOrchestrator(
                 val actor = intent.actorSeats.firstOrNull() ?: return@forEach
                 val target = session.seat(intent.targets.first()) ?: return@forEach
                 val card = target.livingCards().firstOrNull() ?: target.cards.firstOrNull() ?: return@forEach
-                val faction = if (target.clone) Faction.GOD else roles.factionOf(card.roleId)
-                val verdict = if (faction == Faction.WOLF) "狼人" else "好人"
+                val verdict = if (intent.roleId == RoleIds.SEER) {
+                    val readsGood = roles.byId(card.roleId)?.hasTag(RoleTag.INVESTIGATED_AS_GOOD) == true
+                    val faction = if (target.clone) Faction.GOD else roles.factionOf(card.roleId)
+                    if (faction == Faction.WOLF && !readsGood) "狼人" else "好人"
+                } else {
+                    // 通靈師 / 石像鬼 — exact identity, following a 機械狼's learned id.
+                    roles.localizedName(target.learnedRoleId ?: card.roleId)
+                }
                 gateway.sendSeatMessage(session.guildId, actor, "查驗 玩家${target.paddedNumber} → $verdict")
             }
     }

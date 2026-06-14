@@ -39,6 +39,9 @@ enum class Effect {
     /** 黑市商人 trade. */
     TRADE,
 
+    /** 機械狼 learns a player's identity (copied into the actor's learnedRoleId). */
+    LEARN,
+
     /** Terminal channel: a death has been declared (resolution output). */
     DEATH,
 }

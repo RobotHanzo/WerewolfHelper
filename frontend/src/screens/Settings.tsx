@@ -114,6 +114,8 @@ export function Settings() {
             <h2 className="wh-section-title">{t("settings.options")}</h2>
             <Switch checked={snapshot.doubleIdentity} onChange={actions.setDoubleIdentity} label={t("settings.doubleIdentity")} description={t("settings.doubleIdentityDesc")} />
             <Switch checked={snapshot.muteAfterSpeech} onChange={actions.setMuteAfterSpeech} label={t("settings.muteAfterSpeech")} description={t("settings.muteAfterSpeechDesc")} />
+            <Switch checked={snapshot.witchSelfSave} onChange={actions.setWitchSelfSave} label={t("settings.witchSelfSave")} description={t("settings.witchSelfSaveDesc")} />
+            <Switch checked={snapshot.hiddenWolfInheritsKnife} onChange={actions.setHiddenWolfKnife} label={t("settings.hiddenWolfKnife")} description={t("settings.hiddenWolfKnifeDesc")} />
             <div style={{ borderTop: "1px solid var(--border-1)", paddingTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
               <Stepper label={t("settings.playerCount")} value={count} min={4} max={20} onChange={setCount} dirty={dirty} />
               {dirty && (

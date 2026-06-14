@@ -21,6 +21,23 @@ data class Seat(
     var idiot: Boolean = false,
     /** Whether the identity-order swap is locked (120 s after assignment). */
     var orderLocked: Boolean = false,
+    // --- ROLES.md behavioural state (default-safe, Mongo-additive) ---
+    /** 邱比特 lover bond (bidirectional); the two lovers 殉情 together. */
+    var loverSeat: Int? = null,
+    /** 狼美人 current charm victim — persisted so daytime 殉情 can cascade. */
+    var charmedSeat: Int? = null,
+    /** An armed but unfired DEATH_REVENGE shot (獵人 / 狼王 / 白狼王). */
+    var revengePending: Boolean = false,
+    /** 白癡 has flipped its card on expel: stays alive but loses its vote. */
+    var idiotRevealed: Boolean = false,
+    /** 機械狼 learned identity (its abilities/reads follow this id). */
+    var learnedRoleId: String? = null,
+    /** 石像鬼 / 隱狼 has inherited the wolf knife (the chat wolves are gone). */
+    var knifeArmed: Boolean = false,
+    /** 騎士 has spent its one-shot day duel. */
+    var duelUsed: Boolean = false,
+    /** 血月使徒 has used its one-shot 最後一狼 survival on expel. */
+    var bloodMoonRevived: Boolean = false,
 ) {
     /** Zero-padded seat name, e.g. seat 3 → "03" (used as 玩家03). */
     val paddedNumber: String get() = number.toString().padStart(2, '0')
