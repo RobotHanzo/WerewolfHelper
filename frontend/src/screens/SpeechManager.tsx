@@ -72,9 +72,16 @@ export function SpeechManager() {
               <span className="mono" style={{ fontSize: 30, fontWeight: 900 }}>玩家{String(speech.speakerSeat).padStart(2, "0")}</span>
             </div>
             {speech.endsAt && <Countdown endsAt={speech.endsAt} size="stage" />}
+            {!speech.lastWords && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", background: "var(--surface-app)", border: "1px solid var(--border-1)", borderRadius: "var(--r-full)", padding: "4px 12px" }} className="mono">
+                {t("speech.stepDownVotes", { count: speech.interruptVoters.length, threshold: speech.interruptThreshold })}
+              </span>
+            )}
             {!readOnly && (
               <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 10, marginTop: 6 }}>
                 <Button variant="secondary" onClick={actions.skipSpeech}>{t("speech.skip")}</Button>
+                {/* 下台: judge override that forces the current speaker off — backend-identical to skip (advance). */}
+                {!speech.lastWords && <Button variant="danger" onClick={actions.skipSpeech}>{t("speech.stepDown")}</Button>}
                 <Button variant="danger" onClick={actions.terminateSpeech}>{t("speech.terminate")}</Button>
               </div>
             )}

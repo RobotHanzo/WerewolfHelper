@@ -16,6 +16,8 @@ data class GameSnapshot(
     val phase: String,
     val day: Int,
     val paused: Boolean,
+    @get:Schema(description = "Epoch-millis the game was paused at (countdowns freeze here); null while running")
+    val pausedAt: Long?,
     val started: Boolean,
     val doubleIdentity: Boolean,
     val muteAfterSpeech: Boolean,
@@ -93,6 +95,12 @@ data class SpeechDto(
     val endsAt: Long?,
     val order: List<Int>,
     val upcoming: List<Int>,
+    @get:Schema(description = "Seats that have cast a 下台 (step-down) vote against the current speaker")
+    val interruptVoters: List<Int>,
+    @get:Schema(description = "Number of 下台 votes needed to force the current speaker off (alive majority)")
+    val interruptThreshold: Int,
+    @get:Schema(description = "Whether this is a last-words flow (no 下台 vote applies)")
+    val lastWords: Boolean,
 )
 
 @Schema(description = "Live poll state (police election or expel vote)")

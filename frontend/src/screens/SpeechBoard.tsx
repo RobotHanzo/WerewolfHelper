@@ -3,7 +3,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Megaphone, Vote, ArrowUp, ArrowDown } from "lucide-react";
 import type { Seat, Speech } from "@/types/snapshot";
 import { useGameStore } from "@/stores/gameStore";
+import { useGuild } from "@/hooks/useGuild";
+import { useGameActions } from "@/hooks/useGameActions";
 import { Avatar } from "@/components/ui/Avatar";
+import { Button } from "@/components/ui/Button";
 import { Countdown } from "@/components/ui/Countdown";
 import { PollResults } from "./SpeechManager";
 
@@ -52,6 +55,8 @@ function SpeakingRow({ speech, seat }: { speech: Speech; seat?: Seat }) {
  */
 export function SpeechBoard() {
   const { t } = useTranslation();
+  const { guildId, demo, readOnly } = useGuild();
+  const actions = useGameActions(guildId, demo);
   const snapshot = useGameStore((s) => s.snapshot);
   const speech = snapshot?.speech;
   const poll = snapshot?.poll;
@@ -95,6 +100,21 @@ export function SpeechBoard() {
 
       <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 16 }}>
         {speech?.active && speech.speakerSeat != null && <SpeakingRow speech={speech} seat={seatBySeat(speech.speakerSeat)} />}
+
+        {speech?.active && !speech.lastWords && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", background: "var(--surface-card)", border: "1px solid var(--border-1)", borderRadius: "var(--r-full)", padding: "4px 12px" }} className="mono">
+              {t("speech.stepDownVotes", { count: speech.interruptVoters.length, threshold: speech.interruptThreshold })}
+            </span>
+            {!readOnly && (
+              <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+                <Button variant="secondary" size="sm" onClick={actions.skipSpeech}>{t("speech.skip")}</Button>
+                {/* 下台: judge override that forces the speaker off — backend-identical to skip (advance). */}
+                <Button variant="danger" size="sm" onClick={actions.skipSpeech}>{t("speech.stepDown")}</Button>
+              </span>
+            )}
+          </div>
+        )}
 
         {speech?.waiting && (
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>

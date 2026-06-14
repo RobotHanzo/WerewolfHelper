@@ -190,6 +190,8 @@
     "directionDown": "往下",
     "skip": "跳過發言",
     "terminate": "終止流程",
+    "stepDown": "下台",
+    "stepDownVotes": "下台票 {{count}}/{{threshold}}",
     "upcoming": "接下來發言",
     "queueEmpty": "沒有後續發言者"
   },

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useGameStore } from "@/stores/gameStore";
 
 type Size = "sm" | "md" | "stage";
 
@@ -19,15 +20,19 @@ export function formatClock(totalSeconds: number): string {
 export const URGENT_THRESHOLD = 10;
 
 export function Countdown({ endsAt, size = "sm", label }: { endsAt: number | null; size?: Size; label?: string }) {
+  // When the game is paused the backend leaves `endsAt` untouched, so we freeze the displayed time at
+  // the pause instant (any live countdown would otherwise keep draining to 00:00 while halted). On
+  // resume the backend shifts `endsAt` forward by the paused duration and the tick continues seamlessly.
+  const pausedAt = useGameStore((s) => (s.snapshot?.paused ? s.snapshot.pausedAt : null));
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (endsAt == null) return;
+    if (endsAt == null || pausedAt != null) return;
     const id = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
-  }, [endsAt]);
+  }, [endsAt, pausedAt]);
 
   if (endsAt == null) return null;
-  const remaining = secondsUntil(endsAt, now);
+  const remaining = secondsUntil(endsAt, pausedAt ?? now);
   const urgent = remaining <= URGENT_THRESHOLD;
 
   return (

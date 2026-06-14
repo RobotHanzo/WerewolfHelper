@@ -1,7 +1,9 @@
 package dev.robothanzo.werewolf.service
 
+import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.domain.Phase
 import dev.robothanzo.werewolf.game.flow.GameFlowService
+import dev.robothanzo.werewolf.game.flow.GameScheduler
 import jakarta.annotation.PostConstruct
 import org.springframework.stereotype.Service
 
@@ -27,6 +29,8 @@ class GameFlowCoordinator(
     private val flow: GameFlowService,
     private val night: NightOrchestrator,
     private val day: DayOrchestrator,
+    private val scheduler: GameScheduler,
+    private val timer: TimerService,
 ) {
 
     @PostConstruct
@@ -51,6 +55,53 @@ class GameFlowCoordinator(
             val t = flow.next(s.phase, s.day); s.phase = t.phase; s.day = t.day; t.phase
         }
         entered?.let { enterPhase(guildId, it) }
+    }
+
+    /**
+     * Pause ⇄ resume every running countdown (speech turn, poll stage, night phase, public timer).
+     *
+     * Pausing cancels all in-memory scheduler jobs and stamps [GameSession.pausedAt]; the persisted
+     * `endsAt` deadlines are intentionally left as-is, so the dashboard freezes its countdowns at that
+     * instant. Resuming shifts every active deadline forward by the elapsed paused duration and re-arms
+     * the jobs (via each owner's `resume*`), so the countdowns continue exactly where they stopped.
+     */
+    fun togglePause(guildId: Long) {
+        val session = sessionService.find(guildId) ?: return
+        if (session.paused) resume(guildId) else pause(guildId)
+    }
+
+    private fun pause(guildId: Long) {
+        sessionService.mutate(guildId) { s ->
+            if (s.paused) return@mutate
+            s.paused = true
+            s.pausedAt = System.currentTimeMillis()
+        }
+        // Freeze the wall clock: stop every running countdown; resume re-arms them from the shifted deadlines.
+        scheduler.cancelAll(guildId)
+    }
+
+    private fun resume(guildId: Long) {
+        sessionService.mutate(guildId) { s ->
+            if (!s.paused) return@mutate
+            val elapsed = System.currentTimeMillis() - (s.pausedAt ?: System.currentTimeMillis())
+            shiftDeadlines(s, elapsed)
+            s.paused = false
+            s.pausedAt = null
+        }
+        // Re-arm the in-memory jobs from the freshly-shifted deadlines (each owner reschedules its own).
+        night.resumeNight(guildId)
+        day.resumeDay(guildId)
+        timer.resume(guildId)
+    }
+
+    /** Push every active `endsAt` deadline forward by the paused duration so nothing fires early. */
+    private fun shiftDeadlines(s: GameSession, elapsedMs: Long) {
+        if (elapsedMs <= 0) return
+        s.stepEndsAt = s.stepEndsAt?.plus(elapsedMs)
+        s.timerEndsAt = s.timerEndsAt?.plus(elapsedMs)
+        s.speech?.let { it.endsAt = it.endsAt?.plus(elapsedMs) }
+        s.poll?.let { it.stageEndsAt = it.stageEndsAt?.plus(elapsedMs) }
+        s.nightState.let { if (it.active && it.endsAt > 0) it.endsAt += elapsedMs }
     }
 
     /** Run the orchestrator that owns [phase] (night actions / day flow). */

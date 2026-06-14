@@ -24,6 +24,8 @@ class GameFlowCoordinatorTest {
     private lateinit var sessionService: GameSessionService
     private val night: NightOrchestrator = mock()
     private val day: DayOrchestrator = mock()
+    private val scheduler: dev.robothanzo.werewolf.game.flow.GameScheduler = mock()
+    private val timer: TimerService = mock()
     private lateinit var coordinator: GameFlowCoordinator
 
     @BeforeEach
@@ -34,7 +36,7 @@ class GameFlowCoordinatorTest {
         whenever(sessionService.mutate(any(), any<(GameSession) -> Any?>())).thenAnswer { inv ->
             inv.getArgument<(GameSession) -> Any?>(1).invoke(session)
         }
-        coordinator = GameFlowCoordinator(sessionService, GameFlowService(), night, day)
+        coordinator = GameFlowCoordinator(sessionService, GameFlowService(), night, day, scheduler, timer)
     }
 
     @Test
@@ -84,6 +86,34 @@ class GameFlowCoordinatorTest {
         coordinator.advance(1L)
         assertEquals(Phase.SPEECHES, session.phase)
         verify(day).startSpeeches(1L)
+    }
+
+    @Test
+    fun `pause stamps the freeze instant and stops every running countdown`() {
+        session.paused = false
+        coordinator.togglePause(1L)
+        assertEquals(true, session.paused)
+        org.junit.jupiter.api.Assertions.assertNotNull(session.pausedAt)
+        verify(scheduler).cancelAll(1L)
+    }
+
+    @Test
+    fun `resume clears the freeze, shifts deadlines forward, and re-arms the jobs`() {
+        val frozenFor = 5_000L
+        session.paused = true
+        session.pausedAt = System.currentTimeMillis() - frozenFor
+        val stepBefore = System.currentTimeMillis() + 10_000L
+        session.stepEndsAt = stepBefore
+
+        coordinator.togglePause(1L)
+
+        assertEquals(false, session.paused)
+        org.junit.jupiter.api.Assertions.assertNull(session.pausedAt)
+        // The deadline was pushed forward by roughly the paused duration.
+        org.junit.jupiter.api.Assertions.assertTrue((session.stepEndsAt ?: 0) >= stepBefore + frozenFor - 500)
+        verify(night).resumeNight(1L)
+        verify(day).resumeDay(1L)
+        verify(timer).resume(1L)
     }
 
     @Test

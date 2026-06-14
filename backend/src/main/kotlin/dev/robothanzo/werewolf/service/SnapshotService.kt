@@ -25,6 +25,7 @@ import dev.robothanzo.werewolf.game.night.Effect
 import dev.robothanzo.werewolf.game.night.NightAbility
 import dev.robothanzo.werewolf.game.night.NightDeclarationsBuilder
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
+import dev.robothanzo.werewolf.game.speech.SpeechService
 import dev.robothanzo.werewolf.game.vote.PollEngine
 import dev.robothanzo.werewolf.game.win.WinConditionChecker
 import dev.robothanzo.werewolf.i18n.Msg
@@ -43,6 +44,7 @@ class SnapshotService(
     private val msg: Msg,
     private val declarations: NightDeclarationsBuilder,
     private val polls: PollEngine,
+    private val speeches: SpeechService,
     abilities: List<NightAbility>,
 ) {
     private val abilitiesById = abilities.associateBy { it.id }
@@ -90,6 +92,7 @@ class SnapshotService(
             phase = session.phase.name,
             day = session.day,
             paused = session.paused,
+            pausedAt = session.pausedAt,
             started = session.phase != Phase.LOBBY,
             doubleIdentity = session.settings.doubleIdentity,
             muteAfterSpeech = session.settings.muteAfterSpeech,
@@ -129,6 +132,9 @@ class SnapshotService(
             endsAt = flow.endsAt,
             order = flow.order,
             upcoming = if (flow.index + 1 <= flow.order.size) flow.order.drop(flow.index + 1) else emptyList(),
+            interruptVoters = flow.interruptVotes.toList(),
+            interruptThreshold = speeches.majorityThreshold(session.aliveSeats().size),
+            lastWords = flow.lastWords,
         )
     }
 

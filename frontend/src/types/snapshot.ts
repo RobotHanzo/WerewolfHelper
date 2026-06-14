@@ -67,6 +67,12 @@ export interface Speech {
   endsAt: number | null;
   order: number[];
   upcoming: number[];
+  /** Seats that have cast a 下台 (step-down) vote against the current speaker. */
+  interruptVoters: number[];
+  /** 下台 votes needed to force the current speaker off (alive majority). */
+  interruptThreshold: number;
+  /** Last-words flow: no 下台 vote applies. */
+  lastWords: boolean;
 }
 
 export interface PollCandidate {
@@ -145,6 +151,8 @@ export interface GameSnapshot {
   phase: Phase;
   day: number;
   paused: boolean;
+  /** Epoch-ms the game was paused at — every countdown freezes here; null while running. */
+  pausedAt: number | null;
   started: boolean;
   doubleIdentity: boolean;
   muteAfterSpeech: boolean;

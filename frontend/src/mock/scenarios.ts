@@ -127,6 +127,7 @@ export function buildScenario(scenario: ScenarioId): GameSnapshot {
     phase: "NIGHT",
     day: 3,
     paused: false,
+    pausedAt: null,
     started: true,
     doubleIdentity: true,
     muteAfterSpeech: true,
@@ -193,7 +194,7 @@ export function buildScenario(scenario: ScenarioId): GameSnapshot {
       return {
         ...base,
         phase: "SPEECHES",
-        speech: { active: true, waiting: false, direction: "DOWN", fromSeat: 7, speakerSeat: 7, endsAt: now + 88_000, order: [7, 8, 9, 11, 12, 1, 2, 4, 5], upcoming: [8, 9, 11, 12] },
+        speech: { active: true, waiting: false, direction: "DOWN", fromSeat: 7, speakerSeat: 7, endsAt: now + 88_000, order: [7, 8, 9, 11, 12, 1, 2, 4, 5], upcoming: [8, 9, 11, 12], interruptVoters: [9, 11], interruptThreshold: 5, lastWords: false },
       };
     case "election":
       return {

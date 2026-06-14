@@ -284,6 +284,18 @@ class NightOrchestrator(
         }
     }
 
+    /**
+     * Re-arm the current night phase's deadline + reminders after a pause resume. The deadline on
+     * [NightState.endsAt] has already been shifted forward by the paused duration, so [schedulePhase]
+     * picks up exactly the time that was left when the game was paused.
+     */
+    fun resumeNight(guildId: Long) {
+        val night = sessionService.find(guildId)?.nightState ?: return
+        if (night.active && !night.resolved && night.currentPhase < night.waves.size) {
+            schedulePhase(guildId, night)
+        }
+    }
+
     private fun cancelPhaseTimers(guildId: Long) {
         scheduler.cancel(guildId, GameScheduler.NIGHT)
         GameConstants.NIGHT_REMINDER_AT_SECONDS.forEach { scheduler.cancel(guildId, "${GameScheduler.NIGHT_REMINDER}.$it") }

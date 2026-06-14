@@ -485,14 +485,52 @@ class DayOrchestrator(
         val endsAt = System.currentTimeMillis() + seconds * 1000L
         poll.stageEndsAt = endsAt
         session.stepEndsAt = endsAt
+        armStageTimers(session, warnCue)
+    }
+
+    /**
+     * Arm the poll-stage resolution + the "10 s left" warning from the **persisted** [Poll.stageEndsAt]
+     * deadline (so it works both when the stage opens and when re-armed after a pause resume — the
+     * deadline having been shifted forward by the paused duration).
+     */
+    private fun armStageTimers(session: GameSession, warnCue: SoundCue?) {
+        val poll = session.poll ?: return
+        val endsAt = poll.stageEndsAt ?: return
         val guildId = session.guildId
-        scheduler.schedule(guildId, GameScheduler.POLL_STAGE, seconds * 1000L) { resolvePollStage(guildId) }
-        val warnAt = seconds - GameConstants.TEN_SECONDS_WARNING_AT
-        if (warnCue != null && warnAt > 0) {
-            scheduler.schedule(guildId, GameScheduler.TEN_SECOND_WARNING, warnAt * 1000L) {
+        val remainMs = (endsAt - System.currentTimeMillis()).coerceAtLeast(0)
+        scheduler.schedule(guildId, GameScheduler.POLL_STAGE, remainMs) { resolvePollStage(guildId) }
+        val warnMs = remainMs - GameConstants.TEN_SECONDS_WARNING_AT * 1000L
+        if (warnCue != null && warnMs > 0) {
+            scheduler.schedule(guildId, GameScheduler.TEN_SECOND_WARNING, warnMs) {
                 gateway.playSound(guildId, warnCue)
             }
         }
+    }
+
+    /**
+     * Re-arm whichever day countdown is live after a pause resume. Exactly one is active at a time:
+     * a speaking turn ([SpeechFlow.endsAt]) or a timed poll stage ([Poll.stageEndsAt]); both deadlines
+     * have already been shifted forward by the paused duration, so the jobs pick up the time that was
+     * left. A parked direction choice / CAMPAIGN (speech-driven) has no timer of its own.
+     */
+    fun resumeDay(guildId: Long) {
+        val session = sessionService.find(guildId) ?: return
+        val flow = session.speech
+        if (flow != null && !flow.waiting && flow.endsAt != null) {
+            val remainMs = (flow.endsAt!! - System.currentTimeMillis()).coerceAtLeast(0)
+            scheduler.schedule(guildId, GameScheduler.SPEECH, remainMs) { advanceSpeaker(guildId) }
+        }
+        val poll = session.poll
+        if (poll != null && poll.stage in TIMED_POLL_STAGES && poll.stageEndsAt != null) {
+            armStageTimers(session, stageWarnCue(poll))
+        }
+    }
+
+    /** The "10 s left" cue for a timed poll stage (enrol/vote get one; withdraw is silent). */
+    private fun stageWarnCue(poll: Poll): SoundCue? = when (poll.stage) {
+        PollStage.ENROLL -> SoundCue.ENROLL_TEN_SECONDS
+        PollStage.VOTING -> SoundCue.POLL_TEN_SECONDS
+        else -> null
     }
 
     // ======================= interactions =======================
@@ -628,5 +666,8 @@ class DayOrchestrator(
     private companion object {
         /** Day phases whose work, once their poll+speech are idle, auto-advances to the next phase. */
         val ADVANCEABLE_DAY_PHASES = setOf(Phase.DAWN, Phase.POLICE_ELECTION, Phase.SPEECHES, Phase.EXPEL_VOTE)
+
+        /** Poll stages that run their own scheduled deadline (CAMPAIGN is driven by the speech flow). */
+        val TIMED_POLL_STAGES = setOf(PollStage.ENROLL, PollStage.WITHDRAW, PollStage.VOTING)
     }
 }

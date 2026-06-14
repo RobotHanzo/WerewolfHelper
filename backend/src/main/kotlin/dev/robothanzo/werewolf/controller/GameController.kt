@@ -9,16 +9,12 @@ import dev.robothanzo.werewolf.controller.dto.ReviveRequest
 import dev.robothanzo.werewolf.controller.dto.TargetRequest
 import dev.robothanzo.werewolf.controller.dto.TimerRequest
 import dev.robothanzo.werewolf.discord.DiscordGateway
-import dev.robothanzo.werewolf.discord.SoundCue
-import dev.robothanzo.werewolf.domain.LogSeverity
-import dev.robothanzo.werewolf.game.flow.GameScheduler
 import dev.robothanzo.werewolf.domain.Phase
 import dev.robothanzo.werewolf.security.annotations.CanManageGuild
-import dev.robothanzo.werewolf.service.CourtAnnouncer
 import dev.robothanzo.werewolf.service.DayOrchestrator
 import dev.robothanzo.werewolf.service.GameActionService
 import dev.robothanzo.werewolf.service.GameFlowCoordinator
-import dev.robothanzo.werewolf.service.GameSessionService
+import dev.robothanzo.werewolf.service.TimerService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -35,12 +31,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 @Tag(name = "Game", description = "Judge actions on the running game (all mutate then broadcast a snapshot)")
 class GameController(
     private val actions: GameActionService,
-    private val sessionService: GameSessionService,
     private val coordinator: GameFlowCoordinator,
     private val day: DayOrchestrator,
-    private val announcer: CourtAnnouncer,
     private val gateway: DiscordGateway,
-    private val gameScheduler: GameScheduler,
+    private val timer: TimerService,
 ) {
 
     @Operation(summary = "Assign identities", description = "Deal the identity pool to the eligible members.")
@@ -180,12 +174,12 @@ class GameController(
         return ResponseEntity.ok(ApiResponse.ok())
     }
 
-    @Operation(summary = "Pause / resume", description = "Toggle the paused flag.")
+    @Operation(summary = "Pause / resume", description = "Freeze (or un-freeze) every running countdown.")
     @ApiResponses(value = [SwaggerApiResponse(responseCode = "200", description = "Toggled")])
     @PostMapping("/state/pause")
     @CanManageGuild
     fun pause(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
-        sessionService.mutate(guildId.toLong()) { s -> s.paused = !s.paused }
+        coordinator.togglePause(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok())
     }
 
@@ -215,33 +209,7 @@ class GameController(
         @PathVariable guildId: String,
         @RequestBody body: TimerRequest,
     ): ResponseEntity<ApiResponse> {
-        val seconds = body.seconds
-        val timerEndsAt = System.currentTimeMillis() + seconds * 1000L
-        sessionService.mutate(guildId.toLong()) { s ->
-            s.timerEndsAt = timerEndsAt
-            sessionService.log(guildId.toLong(), LogSeverity.ACTION, "timer.start", seconds)
-        }
-        announcer.announce(guildId.toLong(), "timer.start", seconds)
-
-        // Schedule final timer completion
-        val delay = seconds * 1000L
-        gameScheduler.schedule(guildId.toLong(), GameScheduler.TIMER, delay) {
-            sessionService.mutate(guildId.toLong()) { s ->
-                s.timerEndsAt = null
-                sessionService.log(guildId.toLong(), LogSeverity.ALERT, "timer.ended")
-            }
-            gateway.playSound(guildId.toLong(), SoundCue.TIMER_ENDED)
-            announcer.announce(guildId.toLong(), "timer.ended")
-        }
-
-        // Schedule 30-seconds-remaining warning if timer is > 30s
-        if (seconds > 30) {
-            val warnDelay = (seconds - 30) * 1000L
-            gameScheduler.schedule(guildId.toLong(), "timer.warn", warnDelay) {
-                gateway.playSound(guildId.toLong(), SoundCue.TIMER_THIRTY_SECONDS)
-            }
-        }
-
+        timer.start(guildId.toLong(), body.seconds)
         return ResponseEntity.ok(ApiResponse.ok())
     }
 
@@ -250,13 +218,7 @@ class GameController(
     @PostMapping("/timer/stop")
     @CanManageGuild
     fun stopTimer(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
-        sessionService.mutate(guildId.toLong()) { s ->
-            s.timerEndsAt = null
-            sessionService.log(guildId.toLong(), LogSeverity.ACTION, "timer.stopped")
-        }
-        announcer.announce(guildId.toLong(), "timer.stopped")
-        gameScheduler.cancel(guildId.toLong(), GameScheduler.TIMER)
-        gameScheduler.cancel(guildId.toLong(), "timer.warn")
+        timer.stop(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok())
     }
 }

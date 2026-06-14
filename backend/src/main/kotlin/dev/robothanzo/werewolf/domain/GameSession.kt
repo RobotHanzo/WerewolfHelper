@@ -29,6 +29,13 @@ data class GameSession(
     var stepId: String? = null,
     var day: Int = 0,
     var paused: Boolean = false,
+    /**
+     * Wall-clock (epoch millis) at which the game was paused, or null while running. Every active
+     * countdown is frozen here: the scheduler jobs are cancelled and the persisted `endsAt` deadlines
+     * are left untouched, so the dashboard counts down to this instant (a standstill); on resume the
+     * deadlines are shifted forward by the paused duration and the jobs are re-armed.
+     */
+    var pausedAt: Long? = null,
 
     var assigned: Boolean = false,
 

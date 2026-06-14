@@ -116,7 +116,24 @@ export function useGameActions(guildId: string, demo: boolean) {
           );
         } else void api.selfDestruct(guildId, seat);
       },
-      pause: () => (demo ? patch((s) => ({ ...s, paused: !s.paused })) : void api.pause(guildId)),
+      pause: () =>
+        demo
+          ? patch((s) => {
+              if (!s.paused) return { ...s, paused: true, pausedAt: Date.now() };
+              // Resume: shift every frozen deadline forward by the paused duration (mirrors the backend).
+              const elapsed = Date.now() - (s.pausedAt ?? Date.now());
+              const shift = (v: number | null | undefined) => (v == null ? v : v + elapsed);
+              return {
+                ...s,
+                paused: false,
+                pausedAt: null,
+                timerEndsAt: shift(s.timerEndsAt) ?? null,
+                speech: s.speech ? { ...s.speech, endsAt: shift(s.speech.endsAt) ?? null } : s.speech,
+                poll: s.poll ? { ...s.poll, endsAt: shift(s.poll.endsAt) ?? null } : s.poll,
+                night: s.night ? { ...s.night, endsAt: shift(s.night.endsAt) ?? null } : s.night,
+              };
+            })
+          : void api.pause(guildId),
       skipPhase: () => {
         if (demo) {
           patch((s) => {
@@ -210,6 +227,7 @@ export function useGameActions(guildId: string, demo: boolean) {
             started: false,
             assigned: false,
             paused: false,
+            pausedAt: null,
             winner: null,
             timerEndsAt: null,
             speech: null,
@@ -259,7 +277,7 @@ export function useGameActions(guildId: string, demo: boolean) {
               return {
                 ...s,
                 phase: "SPEECHES",
-                speech: { active: true, waiting: true, direction: "DOWN", fromSeat: police, speakerSeat: null, endsAt: null, order: [], upcoming: [] },
+                speech: { active: true, waiting: true, direction: "DOWN", fromSeat: police, speakerSeat: null, endsAt: null, order: [], upcoming: [], interruptVoters: [], interruptThreshold: Math.floor(aliveSeats.length / 2) + 1, lastWords: false },
                 poll: null,
               };
             }
@@ -277,6 +295,9 @@ export function useGameActions(guildId: string, demo: boolean) {
                 endsAt: Date.now() + 60000,
                 order,
                 upcoming: order.slice(1),
+                interruptVoters: [],
+                interruptThreshold: Math.floor(aliveSeats.length / 2) + 1,
+                lastWords: false,
               },
               poll: null,
             };
@@ -353,6 +374,7 @@ export function useGameActions(guildId: string, demo: boolean) {
                   speakerSeat: nextSpeaker,
                   endsAt: Date.now() + 60000,
                   upcoming,
+                  interruptVoters: [],
                 },
               };
             } else {
@@ -392,6 +414,7 @@ export function useGameActions(guildId: string, demo: boolean) {
                 endsAt: Date.now() + 60000,
                 order: ordered,
                 upcoming: ordered.slice(1),
+                interruptThreshold: Math.floor(aliveSeats.length / 2) + 1,
               },
             };
           });
