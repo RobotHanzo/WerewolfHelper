@@ -634,6 +634,17 @@ class JdaDiscordGateway(
         }
     }
 
+    override fun promptWitchChoice(guildId: Long, seatNumber: Int, prompt: String) {
+        val seat = session(guildId)?.seat(seatNumber) ?: return
+        val channel = guild(guildId)?.getTextChannelById(seat.channelId) ?: return
+        val buttons = listOf(
+            Button.success(InteractionIds.WITCH_USE_CURE, "使用解藥"),
+            Button.danger(InteractionIds.WITCH_USE_POISON, "使用毒藥"),
+            Button.secondary(InteractionIds.WITCH_SKIP, "不使用藥水"),
+        )
+        channel.sendMessage(prompt).addComponents(ActionRow.of(buttons)).queue()
+    }
+
     /** Membership rules (FEATURES §3): latecomers become spectators once identities are assigned;
      *  the session is deleted if the bot is removed from the guild. */
     private inner class LifecycleListener : ListenerAdapter() {

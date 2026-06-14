@@ -164,4 +164,8 @@ class NoOpDiscordGateway(
     override fun promptWolfVote(guildId: Long, voterSeats: List<Int>, options: List<SeatOption>) {
         log.debug("[noop] promptWolfVote {}", voterSeats)
     }
+
+    override fun promptWitchChoice(guildId: Long, seatNumber: Int, prompt: String) {
+        log.debug("[noop] promptWitchChoice seat {}", seatNumber)
+    }
 }

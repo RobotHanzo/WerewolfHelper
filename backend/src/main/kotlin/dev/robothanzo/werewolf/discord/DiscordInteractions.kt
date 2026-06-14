@@ -63,8 +63,19 @@ object InteractionIds {
     /** Wolf-kill vote button: `wh:night:wolf:<targetSeat|SKIP>`. */
     const val WOLF_VOTE = "wh:night:wolf"
     const val SKIP = "SKIP"
-    /** Witch "save the wolves' target" option value. */
-    const val WITCH_SAVE = "SAVE"
+
+    /**
+     * Witch potion interactions (namespace `night`). The choice is split into two steps so it stays
+     * editable until a target is committed: the two buttons [WITCH_USE_CURE]/[WITCH_USE_POISON] (plus
+     * [WITCH_SKIP]) open the matching target select menu ([WITCH_CURE_TARGET]/[WITCH_POISON_TARGET]);
+     * only selecting a target (or skipping) records the night intent. [WITCH] is the shared prefix.
+     */
+    const val WITCH = "wh:night:witch"
+    const val WITCH_USE_CURE = "wh:night:witch:cure"
+    const val WITCH_USE_POISON = "wh:night:witch:poison"
+    const val WITCH_SKIP = "wh:night:witch:skip"
+    const val WITCH_CURE_TARGET = "wh:night:witch:cure-target"
+    const val WITCH_POISON_TARGET = "wh:night:witch:poison-target"
 
     // --- day-side (court) interactions, namespace `wh:day:...` ---
     /** Speech: the current speaker ends their own turn. */

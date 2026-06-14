@@ -126,4 +126,12 @@ interface DiscordGateway {
 
     /** Post wolf-kill vote buttons (one per option, plus skip) into each wolf participant's channel. */
     fun promptWolfVote(guildId: Long, voterSeats: List<Int>, options: List<SeatOption>)
+
+    /**
+     * Post the witch's potion choice into [seatNumber]'s channel: a 解藥 button, a 毒藥 button, and a
+     * skip. Each button opens its own target select menu (via [promptNightAction]); the choice stays
+     * editable until a target is committed. The two-step split is what lets the witch flip between
+     * potions before locking in a target.
+     */
+    fun promptWitchChoice(guildId: Long, seatNumber: Int, prompt: String)
 }

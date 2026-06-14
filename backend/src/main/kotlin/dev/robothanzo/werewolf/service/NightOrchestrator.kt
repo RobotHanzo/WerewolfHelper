@@ -63,6 +63,7 @@ class NightOrchestrator(
     private val abilitiesById = abilities.associateBy { it.id }
     private val abilitiesByRole = abilities.groupBy { it.roleId }
     private val wolfKillAbility = abilities.firstOrNull { Effect.WOLF_KILL in it.writes }
+    private val witchAbilityId = abilities.firstOrNull { it.roleId == RoleIds.WITCH }?.id
 
     private companion object {
         const val MECHANIC_LEARN_ID = "mechanic_wolf.learn"
@@ -188,12 +189,21 @@ class NightOrchestrator(
                 return@forEach
             }
             val ability = abilitiesById[abilityId] ?: return@forEach
+            // 女巫 uses a two-step prompt: a 解藥/毒藥 choice, then a target menu (see [handleWitch]).
+            if (ability.roleId == RoleIds.WITCH) {
+                actorSeatsFor(session, ability).forEach { actor ->
+                    gateway.promptWitchChoice(
+                        guildId, actor,
+                        "🌙 女巫：請先選擇要使用解藥還是毒藥，再選擇對象。在選定對象前，可隨時改用另一瓶藥或取消。",
+                    )
+                }
+                return@forEach
+            }
             val roleName = roles.localizedName(ability.roleId)
-            val extras = if (ability.roleId == RoleIds.WITCH) listOf(InteractionIds.WITCH_SAVE to "解救今晚刀口") else emptyList()
             actorSeatsFor(session, ability).forEach { actor ->
                 gateway.promptNightAction(
                     guildId, actor, "${InteractionIds.NIGHT_ACTION}:${ability.id}",
-                    "🌙 $roleName：請選擇今晚的行動目標", options, extras, ability.optional, ability.targetCount,
+                    "🌙 $roleName：請選擇今晚的行動目標", options, emptyList(), ability.optional, ability.targetCount,
                 )
             }
         }
@@ -205,6 +215,41 @@ class NightOrchestrator(
             seat.livingCards().any { it.roleId == ability.roleId } ||
                 (ability.id != MECHANIC_LEARN_ID && seat.learnedRoleId == ability.roleId)
         }.map { it.number }
+
+    /**
+     * Open the witch's target select menu for the pressed potion button. No intent is recorded here,
+     * so the witch stays "pending" and can still flip to the other potion (or skip) until she commits
+     * a target. Cure lists only the seats slain tonight she may revive; poison lists every living seat.
+     */
+    private fun openWitchTargetMenu(session: GameSession, witchSeat: Int, customId: String): InteractionReply {
+        if (customId == InteractionIds.WITCH_USE_CURE) {
+            val eligible = eligibleSaveTargets(session, witchSeat)
+            if (eligible.isEmpty()) return InteractionReply("今晚沒有可以解救的對象")
+            val options = eligible.map { SeatOption(it, "玩家${session.seat(it)?.paddedNumber}") }
+            gateway.promptNightAction(
+                session.guildId, witchSeat, InteractionIds.WITCH_CURE_TARGET,
+                "💊 解藥：請選擇要解救的對象（選定對象前仍可改用毒藥）", options,
+            )
+            return InteractionReply("請從選單選擇要解救的對象")
+        }
+        val options = session.aliveSeats().map { SeatOption(it.number, "玩家${it.paddedNumber}") }
+        gateway.promptNightAction(
+            session.guildId, witchSeat, InteractionIds.WITCH_POISON_TARGET,
+            "☠️ 毒藥：請選擇要毒殺的對象（選定對象前仍可改用解藥）", options,
+        )
+        return InteractionReply("請從選單選擇要毒殺的對象")
+    }
+
+    /**
+     * Seats the witch may revive tonight: the wolves' knife victim (she only ever learns the wolf
+     * kill), dropped when it is her own seat and 自救 is disabled (ROLES.md 女巫不可自救 房規). Usually a
+     * single seat — the lone knife target.
+     */
+    private fun eligibleSaveTargets(session: GameSession, witchSeat: Int): List<Int> {
+        val knife = declarations.wolfConsensus(session.nightState.wolfVotes) ?: return emptyList()
+        if (knife == witchSeat && !session.settings.witchSelfSave) return emptyList()
+        return listOf(knife)
+    }
 
     // ---------- sequential phase machine ----------
 
@@ -362,6 +407,7 @@ class NightOrchestrator(
         // wave has closed (the seat forfeited it on timeout); a later one hasn't opened yet.
         val actingAbilityId = when {
             customId.startsWith(InteractionIds.WOLF_VOTE) -> wolfKillAbility?.id
+            customId.startsWith(InteractionIds.WITCH) -> witchAbilityId
             customId.startsWith(InteractionIds.NIGHT_ACTION) -> customId.removePrefix("${InteractionIds.NIGHT_ACTION}:")
             else -> null
         }
@@ -370,6 +416,12 @@ class NightOrchestrator(
             if (phase != night0.currentPhase) {
                 return InteractionReply(if (phase in 0 until night0.currentPhase) "此階段已結束，行動已失效" else "尚未輪到這個身分行動")
             }
+        }
+
+        // 女巫: a 解藥/毒藥 button only opens the matching target menu — no intent yet, so the phase
+        // stays open and the choice is editable until a target is committed (handled below).
+        if (customId == InteractionIds.WITCH_USE_CURE || customId == InteractionIds.WITCH_USE_POISON) {
+            return openWitchTargetMenu(session, seatNumber, customId)
         }
 
         var reply = "已收到"
@@ -386,6 +438,26 @@ class NightOrchestrator(
                     reply = if (raw == InteractionIds.SKIP) "已投票：本夜不刀" else "已投票：玩家${raw.padStart(2, '0')}"
                 }
 
+                customId.startsWith(InteractionIds.WITCH) -> {
+                    val abilityId = witchAbilityId ?: return@mutate
+                    val ability = abilitiesById[abilityId] ?: return@mutate
+                    val intent = NightIntentData(abilityId, ability.roleId, mutableListOf(seatNumber))
+                    val value = values.firstOrNull()
+                    when {
+                        customId == InteractionIds.WITCH_SKIP || value == null || value == InteractionIds.SKIP -> intent.skipped = true
+                        customId.startsWith(InteractionIds.WITCH_CURE_TARGET) -> intent.meta["save"] = 1
+                        customId.startsWith(InteractionIds.WITCH_POISON_TARGET) -> intent.meta["poison"] = value.toInt()
+                        else -> intent.skipped = true
+                    }
+                    night.intents.removeAll { it.abilityId == abilityId }
+                    night.intents.add(intent)
+                    reply = when {
+                        intent.skipped -> "已選擇不使用藥水"
+                        intent.meta.containsKey("save") -> "已使用解藥"
+                        else -> "已使用毒藥"
+                    }
+                }
+
                 customId.startsWith(InteractionIds.NIGHT_ACTION) -> {
                     val abilityId = customId.removePrefix("${InteractionIds.NIGHT_ACTION}:")
                     val ability = abilitiesById[abilityId] ?: return@mutate
@@ -393,8 +465,6 @@ class NightOrchestrator(
                     val first = values.firstOrNull()
                     when {
                         first == null || first == InteractionIds.SKIP -> intent.skipped = true
-                        ability.roleId == RoleIds.WITCH && first == InteractionIds.WITCH_SAVE -> intent.meta["save"] = 1
-                        ability.roleId == RoleIds.WITCH -> intent.meta["poison"] = first.toInt()
                         else -> intent.targets = values.filter { it != InteractionIds.SKIP }.map { it.toInt() }.toMutableList()
                     }
                     night.intents.removeAll { it.abilityId == abilityId }
