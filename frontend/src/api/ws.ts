@@ -25,6 +25,9 @@ export interface GameSocketHandlers {
   onProgress?: (event: ProgressEvent) => void;
   onConnected: (connected: boolean) => void;
   onPong?: () => void;
+  /** The server's authorization for this guild changed (role promote/demote, or assignment lockout):
+   *  re-fetch `/me` and re-route. Carries no payload — each client resolves its own role. */
+  onAuthRefresh?: () => void;
   /** Session expired / rejected — pop the re-login modal instead of reconnect-looping. */
   onExpired: () => void;
 }
@@ -71,6 +74,8 @@ export class GameSocket {
         this.handlers.onProgress?.({ percent: msg.percent, line: msg.line, severity: msg.severity ?? "info" });
       } else if (msg.type === "pong") {
         this.handlers.onPong?.();
+      } else if (msg.type === "authRefresh") {
+        this.handlers.onAuthRefresh?.();
       }
     };
 

@@ -257,6 +257,21 @@ export function useGameActions(guildId: string, demo: boolean) {
           api.reset(guildId).catch(handleApiError);
         }
       },
+      edit: (seat: number, roleIds: string[], orderLocked: boolean | null) => {
+        if (demo) {
+          patch((snap) =>
+            mapSeat(snap, seat, (s) => {
+              const identities = roleIds.map((rid, i) => {
+                const existing = s.identities.find((idn) => idn.roleId === rid) ?? s.identities[i];
+                return existing ? { ...existing, roleId: rid } : s.identities[i];
+              });
+              return { ...s, identities, orderLocked: orderLocked ?? s.orderLocked };
+            }),
+          );
+        } else {
+          api.edit(guildId, seat, roleIds, orderLocked).catch(handleApiError);
+        }
+      },
       forcePolice: (seat: number) => void (demo || api.forcePolice(guildId, seat)),
       setDoubleIdentity: (value: boolean) =>
          demo ? patch((s) => ({ ...s, doubleIdentity: value })) : void api.setDoubleIdentity(guildId, value),

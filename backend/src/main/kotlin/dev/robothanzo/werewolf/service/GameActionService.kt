@@ -50,6 +50,10 @@ class GameActionService(
         )
         // Critical role/nickname batch then notifications, streamed over WS (FEATURES §10.2).
         discordOps.applyAssignment(session)
+    }.also {
+        // Seated players who were watching as spectators are now active players: nudge every client
+        // to re-resolve its role so they flip to LOCKED_OUT and get kicked off the God's view at once.
+        sessionService.broadcastAuthRefresh(guildId)
     }
 
     /** Mark one identity of a seat dead (soft death) through the shared [DeathService] — which arms
@@ -148,6 +152,7 @@ class GameActionService(
         session.day = 0
         session.timerEndsAt = null
         session.stepEndsAt = null
+        session.orderLockEndsAt = null
         session.speech = null
         session.poll = null
         session.wolfChat.clear()

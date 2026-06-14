@@ -31,6 +31,8 @@ data class GameSnapshot(
     @get:Schema(description = "Whether the judge has revealed the result to the court (confirmed the win banner)")
     val winRevealed: Boolean,
     val timerEndsAt: Long?,
+    @get:Schema(description = "Epoch-millis the double-identity order swap locks; null when not in the swap window")
+    val orderLockEndsAt: Long?,
     val seats: List<SeatDto>,
     val meters: List<FactionMeterDto>,
     val speech: SpeechDto?,

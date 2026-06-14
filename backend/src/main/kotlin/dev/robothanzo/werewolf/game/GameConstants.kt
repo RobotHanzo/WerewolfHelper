@@ -16,6 +16,9 @@ object GameConstants {
     /** Identity-order swap locks this long after assignment. */
     const val ORDER_LOCK_SECONDS = 120
 
+    /** Seconds-remaining marks at which players are reminded their identity order is about to lock. */
+    val ORDER_LOCK_REMINDER_AT_SECONDS = listOf(30, 10)
+
     /** Default speech time per speaker. */
     const val SPEECH_SECONDS = 120
 

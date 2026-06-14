@@ -39,6 +39,7 @@ export function App() {
         const me = await api.me();
         useAuthStore.getState().setAuth(me);
         if (me.role === "BLOCKED") return navigate("/blocked", { replace: true });
+        if (me.role === "LOCKED_OUT") return navigate("/lockout", { replace: true });
         if (location.pathname === "/") navigate("/servers", { replace: true });
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
@@ -88,6 +89,14 @@ function ServerSurface() {
   const snapshot = useGameStore((s) => s.snapshot);
   const userId = useAuthStore((s) => s.auth?.userId);
 
+  // Apply a freshly-resolved `/me` to the store and route on access-revoking roles. Shared by the
+  // initial fetch and the live `authRefresh` nudge (role promote/demote, or assignment lockout).
+  const applyMe = (me: Awaited<ReturnType<typeof api.me>>) => {
+    useAuthStore.getState().setAuth(me);
+    if (me.role === "LOCKED_OUT") navigate("/lockout", { replace: true });
+    else if (me.role === "BLOCKED") navigate("/blocked", { replace: true });
+  };
+
   useEffect(() => {
     if (demo || !guildId) return;
 
@@ -106,20 +115,18 @@ function ServerSurface() {
     });
 
     api.me(guildId)
-      .then((me) => {
-        useAuthStore.getState().setAuth(me);
-        if (me.role === "BLOCKED") {
-          navigate("/blocked", { replace: true });
-        }
-      })
+      .then(applyMe)
       .catch(() => {
         // If query fails, we keep the current state or handle it appropriately.
       });
   }, [guildId, demo]);
 
+  // Immediate client-side lockout: the assignment snapshot seats this user, so flip their role and
+  // bounce them off the God's view at once (the server's authRefresh + /me re-fetch confirm it).
   useEffect(() => {
     if (demo || !snapshot || !userId) return;
     if (snapshot.assigned && snapshot.seats.some((seat) => seat.memberId === userId)) {
+      useAuthStore.setState((s) => (s.auth ? { auth: { ...s.auth, role: "LOCKED_OUT" } } : {}));
       navigate("/lockout", { replace: true });
     }
   }, [snapshot, userId, demo]);
@@ -147,6 +154,7 @@ function ServerSurface() {
       onProgress: useGameStore.getState().pushProgress,
       onConnected: useGameStore.getState().setConnected,
       onPong: useGameStore.getState().incrementPongCount,
+      onAuthRefresh: () => api.me(guildId).then(applyMe).catch(() => {}),
       onExpired: () => useGameStore.getState().setExpired(true),
     });
     socket.connect();
@@ -154,6 +162,12 @@ function ServerSurface() {
       socket.close();
     };
   }, [guildId, demo]);
+
+  // Never paint the God's view for a player the snapshot now seats — hold a loading screen until the
+  // lockout redirect above completes, so identities can't flash before navigation.
+  if (!demo && userId && snapshot?.assigned && snapshot.seats.some((seat) => seat.memberId === userId)) {
+    return <LoadingScreen />;
+  }
 
   return <AppShell />;
 }

@@ -1,9 +1,12 @@
 package dev.robothanzo.werewolf.service
 
+import dev.robothanzo.werewolf.discord.ButtonStyle
 import dev.robothanzo.werewolf.discord.ChannelKind
+import dev.robothanzo.werewolf.discord.CourtButton
 import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.discord.EmbedField
 import dev.robothanzo.werewolf.discord.EmbedSpec
+import dev.robothanzo.werewolf.discord.InteractionIds
 import dev.robothanzo.werewolf.discord.NicknameService
 import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
@@ -37,6 +40,7 @@ class DiscordOpsService(
     private val roles: RoleRegistry,
     private val ws: GameWebSocketHandler,
     private val msg: Msg,
+    private val orderService: IdentityOrderService,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -66,6 +70,11 @@ class DiscordOpsService(
                     )
                 },
             )
+            // Double identity: each announcement carries a 調換順序 button so the player can swap their
+            // two cards' order before the lock countdown (FEATURES §5.3).
+            val swapButtons = if (session.settings.doubleIdentity)
+                listOf(CourtButton(InteractionIds.SWAP_ORDER, msg.msg("assign.order.swap_button"), ButtonStyle.SECONDARY))
+            else emptyList()
             val notify = BulkPhase(
                 "notify", 90, 100,
                 session.seats.filter { it.assigned }.map { seat ->
@@ -74,11 +83,14 @@ class DiscordOpsService(
                         gateway.sendSeatEmbed(
                             guildId, seat.number,
                             EmbedSpec(title = msg.msg("assign.dm.title"), description = ids, color = 0xE8B923),
+                            if (seat.cards.size > 1) swapButtons else emptyList(),
                         )
                     }
                 },
             )
             engine.execute(listOf(critical, notify), sink(guildId))
+            // Now that announcements are out, start the swap window's lock countdown (double identity only).
+            orderService.startOrderLock(guildId)
             val fields = session.seats.filter { it.assigned }.map { seat ->
                 val ids = seat.cards.joinToString("、") { roles.localizedName(it.roleId) }
                 EmbedField(name = "玩家${seat.paddedNumber}", value = ids, inline = true)

@@ -74,7 +74,10 @@ class AuthController(
         val userId = currentUser.userId()
             ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("未登入"))
         val resolvedRole = guildId?.toLongOrNull()?.let { gId ->
-            roleService.roleFor(gId, userId).name
+            // An active player (holds a seat in the running game) is locked out before any role check,
+            // so a fresh load / re-fetch reflects the lockout immediately (mirrors IdentityUtils).
+            if (roleService.isActivePlayer(gId, userId)) "LOCKED_OUT"
+            else roleService.roleFor(gId, userId).name
         } ?: "PENDING"
         val info = AuthInfo(
             userId = userId.toString(),

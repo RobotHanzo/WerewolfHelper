@@ -59,6 +59,9 @@ class GameSessionService(
         ws.broadcastSnapshot(session.guildId, snapshots.build(session, recentLogs(session.guildId)))
     }
 
+    /** Nudge the guild's clients to re-fetch their dashboard authorization (role change / lockout). */
+    fun broadcastAuthRefresh(guildId: Long) = ws.broadcastAuthRefresh(guildId)
+
     /**
      * Load the session, run [block], persist, and broadcast a fresh snapshot — the standard
      * mutate-then-sync path every controller action funnels through.

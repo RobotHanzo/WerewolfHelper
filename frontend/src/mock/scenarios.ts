@@ -140,6 +140,7 @@ export function buildScenario(scenario: ScenarioId): GameSnapshot {
     winner: null,
     winRevealed: false,
     timerEndsAt: null,
+    orderLockEndsAt: null,
     seats,
     meters: meters(seats, true),
     speech: null,

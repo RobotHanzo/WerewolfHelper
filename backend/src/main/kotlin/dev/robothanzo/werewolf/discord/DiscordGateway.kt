@@ -74,7 +74,9 @@ interface DiscordGateway {
     fun sendChannelMessage(guildId: Long, channel: ChannelKind, text: String)
     fun sendChannelEmbed(guildId: Long, channel: ChannelKind, embed: EmbedSpec)
     fun sendSeatMessage(guildId: Long, seatNumber: Int, text: String)
-    fun sendSeatEmbed(guildId: Long, seatNumber: Int, embed: EmbedSpec)
+    /** Post an embed into a seat's private channel, optionally with interactive [buttons] (e.g. the
+     *  double-identity 調換順序 button on the assignment announcement). */
+    fun sendSeatEmbed(guildId: Long, seatNumber: Int, embed: EmbedSpec, buttons: List<CourtButton> = emptyList())
 
     /**
      * Post an interactive prompt with [buttons] into the COURT channel. Covers every day-side flow

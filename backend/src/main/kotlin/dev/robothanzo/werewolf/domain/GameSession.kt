@@ -45,6 +45,12 @@ data class GameSession(
     // --- scheduled deadlines (epoch millis, null when inactive) ---
     var timerEndsAt: Long? = null,
     var stepEndsAt: Long? = null,
+    /**
+     * When the double-identity order swap locks (epoch millis), or null when not running. Set when
+     * assignment completes; the dashboard counts down to it and seats are reminded at the
+     * [dev.robothanzo.werewolf.game.GameConstants.ORDER_LOCK_REMINDER_AT_SECONDS] marks. Cleared on lock/reset.
+     */
+    var orderLockEndsAt: Long? = null,
 
     /** Owner (server-creator) member id, re-granted judge on join. */
     var ownerId: Long? = null,

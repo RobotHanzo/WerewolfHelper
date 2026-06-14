@@ -102,7 +102,7 @@ class NoOpDiscordGateway(
         log.debug("[noop] seat {} <- {}", seatNumber, text)
     }
 
-    override fun sendSeatEmbed(guildId: Long, seatNumber: Int, embed: EmbedSpec) {
+    override fun sendSeatEmbed(guildId: Long, seatNumber: Int, embed: EmbedSpec, buttons: List<CourtButton>) {
         log.debug("[noop] seat {} embed <- {}: {}", seatNumber, embed.title, embed.description)
     }
 

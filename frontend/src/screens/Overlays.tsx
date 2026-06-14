@@ -9,12 +9,13 @@ import { api } from "@/api/client";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import type { RoleInfo } from "@/types/snapshot";
 
 export function Overlays({ guildId, demo }: { guildId: string; demo: boolean }) {
   return (
     <>
       <KillModal guildId={guildId} demo={demo} />
-      <EditModal />
+      <EditModal guildId={guildId} demo={demo} />
       <PickerModal guildId={guildId} demo={demo} />
       <TimerModal guildId={guildId} demo={demo} />
       <ProgressOverlay />
@@ -24,11 +25,49 @@ export function Overlays({ guildId, demo }: { guildId: string; demo: boolean }) 
   );
 }
 
-function EditModal() {
+function EditModal({ guildId, demo }: { guildId: string; demo: boolean }) {
   const { t } = useTranslation();
   const editSeat = useUiStore((s) => s.editSeat);
   const close = useUiStore((s) => s.closeEdit);
   const seat = useGameStore((s) => s.snapshot?.seats.find((x) => x.seat === editSeat) ?? null);
+  const seatsForRoles = useGameStore((s) => s.snapshot?.seats);
+  const actions = useGameActions(guildId, demo);
+
+  // Editable working copy, seeded each time a seat opens; the live snapshot wins after save.
+  const [roleIds, setRoleIds] = useState<string[]>([]);
+  const [locked, setLocked] = useState(false);
+  const [allRoles, setAllRoles] = useState<RoleInfo[]>([]);
+
+  useEffect(() => {
+    if (!seat) return;
+    setRoleIds(seat.identities.map((i) => i.roleId));
+    setLocked(seat.orderLocked);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editSeat]);
+
+  // Role catalogue for the per-card pickers. Falls back to roles already on the board in demo mode.
+  useEffect(() => {
+    if (editSeat == null) return;
+    let active = true;
+    api.roles()
+      .then((r) => active && setAllRoles(r))
+      .catch(() => {
+        if (!active) return;
+        const seen = new Map<string, RoleInfo>();
+        (seatsForRoles ?? []).forEach((s) => s.identities.forEach((i) => seen.set(i.roleId, { id: i.roleId, name: i.name, faction: i.faction })));
+        setAllRoles([...seen.values()]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [editSeat, seatsForRoles]);
+
+  const nameFor = (rid: string) => allRoles.find((r) => r.id === rid)?.name ?? seat?.identities.find((i) => i.roleId === rid)?.name ?? rid;
+
+  const save = () => {
+    actions.edit(seat!.seat, roleIds, locked);
+    close();
+  };
 
   return (
     <Modal open={editSeat != null} onClose={close} width={420}>
@@ -36,15 +75,35 @@ function EditModal() {
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 900 }}>{t("edit.title", { seat: seat.label })}</h2>
           <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em" }}>{t("edit.identitiesInOrder")}</span>
-          {seat.identities.map((idn, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: "var(--r-md)", background: "var(--surface-app)", border: "1px solid var(--border-1)" }}>
+          {roleIds.map((rid, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span className="mono" style={{ fontSize: 11, color: "var(--text-muted)" }}>{i + 1}</span>
-              <span style={{ fontSize: 13, fontWeight: 700 }}>{idn.name}</span>
-              {idn.dead && <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--danger-500)" }}>{t("badge.dead")}</span>}
+              <select
+                className="wh-input"
+                style={{ flex: 1, minWidth: 0 }}
+                value={rid}
+                onChange={(e) => setRoleIds((prev) => prev.map((v, idx) => (idx === i ? e.target.value : v)))}
+              >
+                {allRoles.length === 0 && <option value={rid}>{nameFor(rid)}</option>}
+                {allRoles.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+              {seat.identities[i]?.dead && <span style={{ fontSize: 11, color: "var(--danger-500)" }}>{t("badge.dead")}</span>}
             </div>
           ))}
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <Button variant="primary" onClick={close}>{t("common.done")}</Button>
+          {roleIds.length > 1 && (
+            <Button variant="secondary" size="sm" onClick={() => setRoleIds((prev) => [...prev].reverse())}>
+              {t("edit.swapOrder")}
+            </Button>
+          )}
+          <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, cursor: "pointer" }}>
+            <input type="checkbox" checked={locked} onChange={(e) => setLocked(e.target.checked)} style={{ accentColor: "var(--moon-500)", width: 16, height: 16 }} />
+            {t("edit.lockOrder")}
+          </label>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <Button variant="ghost" onClick={close}>{t("common.cancel")}</Button>
+            <Button variant="primary" onClick={save}>{t("edit.save")}</Button>
           </div>
         </div>
       )}

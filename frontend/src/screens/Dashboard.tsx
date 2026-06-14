@@ -98,6 +98,9 @@ export function Dashboard() {
             )}
           </span>
         )}
+        {snapshot.orderLockEndsAt && (
+          <Countdown endsAt={snapshot.orderLockEndsAt} size="sm" label={t("dashboard.orderLock")} />
+        )}
         <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           {!readOnly && isLobby && (
             snapshot.assigned ? (

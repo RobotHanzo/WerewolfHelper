@@ -129,6 +129,10 @@ class MembersController(
             sessionService.log(gId, LogSeverity.ACTION, "judge.demoted", targetName)
         }
 
+        // Tell every connected client to re-resolve its role so the dashboard + permissions update in
+        // real time (the demoted judge loses judge screens, the promoted spectator gains them).
+        sessionService.broadcastAuthRefresh(gId)
+
         return ResponseEntity.ok(ApiResponse.ok())
     }
 }

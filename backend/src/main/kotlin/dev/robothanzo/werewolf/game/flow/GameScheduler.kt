@@ -61,6 +61,8 @@ class GameScheduler {
         /** Per-phase "still pending" reminders DM'd to the seat channels (one key per mark). */
         const val NIGHT_REMINDER = "night.remind"
         const val ORDER_LOCK = "order.lock"
+        /** Per-mark "order locks soon" reminders DM'd to the seat channels (one key per mark). */
+        const val ORDER_LOCK_REMINDER = "order.lock.remind"
         const val TEN_SECOND_WARNING = "warn.10s"
     }
 }

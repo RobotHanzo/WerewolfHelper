@@ -65,6 +65,16 @@ class GameWebSocketHandler(private val mapper: ObjectMapper) : TextWebSocketHand
         send(guildId, mapOf("type" to "progress", "percent" to percent, "line" to line, "severity" to severity))
     }
 
+    /**
+     * Nudge the guild's clients to re-fetch their own dashboard authorization (`/api/auth/me`). Used
+     * when a judge promotes/demotes a member or assignment locks out seated players, so the dashboard
+     * role + permissions update in real time without a manual reload. This carries **no** per-user
+     * state (each client resolves its own role) — it is a signal, not a snapshot patch.
+     */
+    fun broadcastAuthRefresh(guildId: Long) {
+        send(guildId, mapOf("type" to "authRefresh"))
+    }
+
     private fun send(guildId: Long, payload: Any) {
         val clients = registry[guildId] ?: return
         val json = mapper.writeValueAsString(payload)

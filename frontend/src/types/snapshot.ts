@@ -166,6 +166,8 @@ export interface GameSnapshot {
   /** Whether the judge has revealed the result to the court (confirmed the win banner). */
   winRevealed: boolean;
   timerEndsAt: number | null;
+  /** Epoch-ms the double-identity order swap locks; null when not in the swap window. */
+  orderLockEndsAt: number | null;
   seats: Seat[];
   meters: FactionMeter[];
   speech: Speech | null;
@@ -177,7 +179,7 @@ export interface GameSnapshot {
   pool: Record<string, number>;
 }
 
-export type DashboardRole = "JUDGE" | "SPECTATOR" | "PENDING" | "BLOCKED";
+export type DashboardRole = "JUDGE" | "SPECTATOR" | "PENDING" | "BLOCKED" | "LOCKED_OUT";
 
 export interface AuthInfo {
   userId: string;

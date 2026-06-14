@@ -438,9 +438,12 @@ class JdaDiscordGateway(
         guild(guildId)?.getTextChannelById(seat.channelId)?.sendMessage(text)?.queue()
     }
 
-    override fun sendSeatEmbed(guildId: Long, seatNumber: Int, embed: EmbedSpec) {
+    override fun sendSeatEmbed(guildId: Long, seatNumber: Int, embed: EmbedSpec, buttons: List<CourtButton>) {
         val seat = session(guildId)?.seat(seatNumber) ?: return
-        guild(guildId)?.getTextChannelById(seat.channelId)?.sendMessageEmbeds(buildEmbed(embed))?.queue()
+        val channel = guild(guildId)?.getTextChannelById(seat.channelId) ?: return
+        val message = channel.sendMessageEmbeds(buildEmbed(embed))
+        if (buttons.isNotEmpty()) message.addComponents(ActionRow.of(buttons.map { it.toJdaButton() }))
+        message.queue()
     }
 
     private fun buildEmbed(embed: EmbedSpec) = EmbedBuilder()

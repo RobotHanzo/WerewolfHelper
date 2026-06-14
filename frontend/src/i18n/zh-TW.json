@@ -96,6 +96,7 @@
   },
   "dashboard": {
     "noSpeaker": "目前無人發言",
+    "orderLock": "身分鎖定",
     "speakerSpeaking": "玩家{{seat}} 發言中",
     "goSpeech": "查看發言管理 →",
     "startGame": "開始遊戲",
@@ -259,6 +260,7 @@
     "identitiesInOrder": "身分（依順序）",
     "lockOrder": "鎖定身分順序",
     "swapOrder": "調換順序",
+    "save": "儲存",
     "transferBadge": "移交警徽給"
   },
   "timer": {

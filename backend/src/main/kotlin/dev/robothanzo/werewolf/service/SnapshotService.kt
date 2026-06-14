@@ -107,6 +107,7 @@ class SnapshotService(
             },
             winRevealed = session.winRevealed,
             timerEndsAt = session.timerEndsAt,
+            orderLockEndsAt = session.orderLockEndsAt,
             seats = seats,
             meters = meters(session),
             speech = buildSpeech(session),

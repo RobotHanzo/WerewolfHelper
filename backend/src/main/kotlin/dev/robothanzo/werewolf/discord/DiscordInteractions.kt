@@ -57,6 +57,10 @@ object InteractionIds {
     /** The namespace segment (`wh:<ns>:...`) used by [dev.robothanzo.werewolf.service.InteractionRouter]. */
     const val NS_NIGHT = "night"
     const val NS_DAY = "day"
+    const val NS_ASSIGN = "assign"
+
+    /** Double-identity: swap the two identity cards before the order locks — `wh:assign:swap`. */
+    const val SWAP_ORDER = "wh:assign:swap"
 
     /** Night action select menu: `wh:night:act:<abilityId>` ; selected value = target seat or SKIP. */
     const val NIGHT_ACTION = "wh:night:act"
