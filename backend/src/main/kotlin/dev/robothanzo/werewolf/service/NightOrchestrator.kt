@@ -56,6 +56,9 @@ class NightOrchestrator(
     private val deaths: DeathService,
 ) : DiscordInteractionHandler {
 
+    /** Set by [GameFlowCoordinator] in its `@PostConstruct` (back-reference, breaks the bean cycle). */
+    var coordinator: GameFlowCoordinator? = null
+
     private val log = LoggerFactory.getLogger(javaClass)
     private val abilitiesById = abilities.associateBy { it.id }
     private val abilitiesByRole = abilities.groupBy { it.roleId }
@@ -64,7 +67,7 @@ class NightOrchestrator(
     private companion object {
         const val MECHANIC_LEARN_ID = "mechanic_wolf.learn"
 
-        /** Cap on retained wolf-chat lines per night, so a long night can't grow the document unbounded. */
+        /** Cap on retained wolf-chat lines, so a long game can't grow the document unbounded. */
         const val MAX_WOLF_CHAT = 100
     }
 
@@ -75,16 +78,15 @@ class NightOrchestrator(
     }
 
     /**
-     * Record a relayed wolf-chat line onto the live night (the gateway has already gated on
-     * night-active + wolf-chat membership). Mutating through [GameSessionService.mutate] persists and
-     * broadcasts the fresh snapshot, so the judge board updates live. Oldest lines are trimmed once
-     * the per-night cap is exceeded.
+     * Record a relayed wolf-chat line onto the session (the gateway has already gated on wolf-chat
+     * membership). Kept at the session level — not the night — so it syncs across **every** phase, not
+     * just the night. Mutating through [GameSessionService.mutate] persists and broadcasts the fresh
+     * snapshot, so the judge panel updates live. Oldest lines are trimmed once the cap is exceeded.
      */
-    fun onWolfChat(guildId: Long, seat: Int, author: String, content: String) {
+    fun onWolfChat(guildId: Long, seat: Int, author: String, avatar: String?, content: String) {
         sessionService.mutate(guildId) { session ->
-            if (!session.nightState.active) return@mutate
-            val chat = session.nightState.wolfChat
-            chat.add(WolfChatData(seat, author, content, System.currentTimeMillis()))
+            val chat = session.wolfChat
+            chat.add(WolfChatData(seat, author, avatar, content, System.currentTimeMillis()))
             if (chat.size > MAX_WOLF_CHAT) chat.subList(0, chat.size - MAX_WOLF_CHAT).clear()
         }
     }
@@ -97,9 +99,14 @@ class NightOrchestrator(
         gateway.muteAll(guildId)
         gateway.playSound(guildId, SoundCue.NIGHT)
         announcer.announce(guildId, "night.start", session.day)
-        promptActors(session)
-        val endsAt = session.nightState.endsAt
-        scheduler.schedule(guildId, GameScheduler.NIGHT, endsAt - System.currentTimeMillis()) { resolveNight(guildId) }
+        val night = session.nightState
+        // No actor has anything to do tonight — resolve immediately rather than hang on an empty phase.
+        if (night.currentPhase >= night.waves.size) {
+            resolveNight(guildId)
+            return
+        }
+        promptPhase(session, night.currentPhase)
+        schedulePhase(guildId, night)
     }
 
     private fun planNight(session: GameSession) {
@@ -129,15 +136,21 @@ class NightOrchestrator(
         if (wolfParticipants.isNotEmpty()) wolfKillAbility?.let { active.add(it) }
 
         val plan = planner.plan(active)
-        val endsAt = System.currentTimeMillis() + GameConstants.NIGHT_SECONDS * 1000L
-        session.nightState = NightState(
+        val night = NightState(
             active = true,
             day = session.day,
-            endsAt = endsAt,
             waves = plan.waves.map { wave -> wave.abilities.map { it.id }.toMutableList() }.toMutableList(),
             wolfParticipants = wolfParticipants.toMutableSet(),
         )
-        session.stepEndsAt = endsAt
+        session.nightState = night
+        // Phases run sequentially in wave order; open the first one that actually has an actor.
+        val first = firstActivePhase(session, night, 0)
+        night.currentPhase = first
+        if (first < night.waves.size) {
+            val endsAt = System.currentTimeMillis() + phaseDuration(night, first) * 1000L
+            night.endsAt = endsAt
+            session.stepEndsAt = endsAt
+        }
         sessionService.log(session.guildId, LogSeverity.ACTION, "night.start", session.day)
     }
 
@@ -164,29 +177,157 @@ class NightOrchestrator(
         return inheritors.map { it.number }.toSet()
     }
 
-    private fun promptActors(session: GameSession) {
+    /** Prompt only the actors of [phaseIndex] (sequential phases — earlier/later waves aren't open yet). */
+    private fun promptPhase(session: GameSession, phaseIndex: Int) {
         val guildId = session.guildId
         val options = session.aliveSeats().map { SeatOption(it.number, "玩家${it.paddedNumber}") }
-        session.nightState.waves.flatten().forEach { abilityId ->
+        val ids = session.nightState.waves.getOrNull(phaseIndex) ?: return
+        ids.forEach { abilityId ->
             if (abilityId == wolfKillAbility?.id) {
                 gateway.promptWolfVote(guildId, session.nightState.wolfParticipants.toList(), options)
                 return@forEach
             }
             val ability = abilitiesById[abilityId] ?: return@forEach
-            // A 機械狼 that has learned a role also acts as that role (besides the real card-holders).
-            val actors = session.aliveSeats().filter { seat ->
-                seat.livingCards().any { it.roleId == ability.roleId } ||
-                    (ability.id != MECHANIC_LEARN_ID && seat.learnedRoleId == ability.roleId)
-            }
             val roleName = roles.localizedName(ability.roleId)
             val extras = if (ability.roleId == RoleIds.WITCH) listOf(InteractionIds.WITCH_SAVE to "解救今晚刀口") else emptyList()
-            actors.forEach { actor ->
+            actorSeatsFor(session, ability).forEach { actor ->
                 gateway.promptNightAction(
-                    guildId, actor.number, "${InteractionIds.NIGHT_ACTION}:${ability.id}",
+                    guildId, actor, "${InteractionIds.NIGHT_ACTION}:${ability.id}",
                     "🌙 $roleName：請選擇今晚的行動目標", options, extras, ability.optional, ability.targetCount,
                 )
             }
         }
+    }
+
+    /** Seats that act for [ability]: real card-holders plus a 機械狼 acting as its learned identity. */
+    private fun actorSeatsFor(session: GameSession, ability: NightAbility): List<Int> =
+        session.aliveSeats().filter { seat ->
+            seat.livingCards().any { it.roleId == ability.roleId } ||
+                (ability.id != MECHANIC_LEARN_ID && seat.learnedRoleId == ability.roleId)
+        }.map { it.number }
+
+    // ---------- sequential phase machine ----------
+
+    /** The wolf phase (the wave carrying the collective knife) gets the longer discuss/vote window. */
+    private fun phaseDuration(night: NightState, phaseIndex: Int): Int {
+        val ids = night.waves.getOrNull(phaseIndex) ?: return GameConstants.NIGHT_PHASE_SECONDS
+        return if (wolfKillAbility?.id in ids) GameConstants.NIGHT_WOLF_PHASE_SECONDS
+        else GameConstants.NIGHT_PHASE_SECONDS
+    }
+
+    private fun phaseHasActors(session: GameSession, night: NightState, phaseIndex: Int): Boolean {
+        val ids = night.waves.getOrNull(phaseIndex) ?: return false
+        return ids.any { abilityId ->
+            if (abilityId == wolfKillAbility?.id) night.wolfParticipants.isNotEmpty()
+            else abilitiesById[abilityId]?.let { actorSeatsFor(session, it).isNotEmpty() } == true
+        }
+    }
+
+    /** The next wave (from [from] onward) that actually has someone to prompt; [waves].size when none. */
+    private fun firstActivePhase(session: GameSession, night: NightState, from: Int): Int {
+        for (i in from until night.waves.size) if (phaseHasActors(session, night, i)) return i
+        return night.waves.size
+    }
+
+    /** Seats in [phaseIndex] that still owe an action (wolves who haven't voted; actors with no intent). */
+    private fun pendingActors(session: GameSession, night: NightState, phaseIndex: Int): Set<Int> {
+        val ids = night.waves.getOrNull(phaseIndex) ?: return emptySet()
+        val pending = mutableSetOf<Int>()
+        ids.forEach { abilityId ->
+            if (abilityId == wolfKillAbility?.id) {
+                night.wolfParticipants.filterNot { night.wolfVotes.containsKey(it) }.forEach { pending.add(it) }
+            } else if (night.intents.none { it.abilityId == abilityId }) {
+                abilitiesById[abilityId]?.let { pending.addAll(actorSeatsFor(session, it)) }
+            }
+        }
+        return pending
+    }
+
+    private fun isPhaseComplete(session: GameSession, night: NightState, phaseIndex: Int): Boolean =
+        pendingActors(session, night, phaseIndex).isEmpty()
+
+    /** Wave index an ability belongs to (-1 if it isn't part of tonight's plan). */
+    private fun phaseOf(night: NightState, abilityId: String): Int =
+        night.waves.indexOfFirst { abilityId in it }
+
+    /**
+     * Close [phaseIndex] by forfeiting everyone who never acted: a single-actor ability gets a
+     * recorded skip (so the board reads 跳過 and the resolver treats it as no-action); a wolf who
+     * never voted is logged as a not-kill ballot. A no-op when the phase already completed.
+     */
+    private fun forfeitPhase(session: GameSession, night: NightState, phaseIndex: Int) {
+        val ids = night.waves.getOrNull(phaseIndex) ?: return
+        ids.forEach { abilityId ->
+            if (abilityId == wolfKillAbility?.id) {
+                night.wolfParticipants.forEach { voter -> night.wolfVotes.putIfAbsent(voter, -1) }
+            } else if (night.intents.none { it.abilityId == abilityId }) {
+                val ability = abilitiesById[abilityId] ?: return@forEach
+                val actors = actorSeatsFor(session, ability)
+                if (actors.isNotEmpty()) {
+                    night.intents.add(NightIntentData(abilityId, ability.roleId, actors.toMutableList(), skipped = true))
+                }
+            }
+        }
+    }
+
+    /** Arm the current phase's deadline plus its still-pending reminders. */
+    private fun schedulePhase(guildId: Long, night: NightState) {
+        val remainMs = night.endsAt - System.currentTimeMillis()
+        scheduler.schedule(guildId, GameScheduler.NIGHT, remainMs) { advancePhase(guildId) }
+        GameConstants.NIGHT_REMINDER_AT_SECONDS.forEach { mark ->
+            val delay = remainMs - mark * 1000L
+            if (delay > 0) {
+                scheduler.schedule(guildId, "${GameScheduler.NIGHT_REMINDER}.$mark", delay) {
+                    remindPendingActors(guildId, mark)
+                }
+            }
+        }
+    }
+
+    private fun cancelPhaseTimers(guildId: Long) {
+        scheduler.cancel(guildId, GameScheduler.NIGHT)
+        GameConstants.NIGHT_REMINDER_AT_SECONDS.forEach { scheduler.cancel(guildId, "${GameScheduler.NIGHT_REMINDER}.$it") }
+    }
+
+    /** DM every seat still pending in the current phase that there are [secondsLeft] seconds left. */
+    private fun remindPendingActors(guildId: Long, secondsLeft: Int) {
+        val session = sessionService.find(guildId) ?: return
+        val night = session.nightState
+        if (!night.active || night.resolved) return
+        pendingActors(session, night, night.currentPhase).forEach { seat ->
+            gateway.sendSeatMessage(guildId, seat, msg.msg("night.reminder", secondsLeft))
+        }
+    }
+
+    /**
+     * Close the current phase (deadline hit or everyone acted) and open the next one with actors; once
+     * none remain, resolve the night. Safe to call from the scheduler or from a completing interaction.
+     */
+    fun advancePhase(guildId: Long) {
+        cancelPhaseTimers(guildId)
+        var resolve = false
+        sessionService.mutate(guildId) { session ->
+            val night = session.nightState
+            if (!night.active || night.resolved) return@mutate
+            // Anyone who never acted in the closing phase forfeits their action.
+            forfeitPhase(session, night, night.currentPhase)
+            val next = firstActivePhase(session, night, night.currentPhase + 1)
+            night.currentPhase = next
+            if (next >= night.waves.size) {
+                resolve = true
+            } else {
+                val endsAt = System.currentTimeMillis() + phaseDuration(night, next) * 1000L
+                night.endsAt = endsAt
+                session.stepEndsAt = endsAt
+            }
+        }
+        if (resolve) {
+            resolveNight(guildId)
+            return
+        }
+        val session = sessionService.find(guildId) ?: return
+        promptPhase(session, session.nightState.currentPhase)
+        schedulePhase(guildId, session.nightState)
     }
 
     // ---------- handling interactions ----------
@@ -202,7 +343,22 @@ class NightOrchestrator(
             ownSeat != null -> ownSeat
             else -> return InteractionReply("你不是這場遊戲的玩家")
         }
-        if (!session.nightState.active || session.nightState.resolved) return InteractionReply("夜晚行動已結束")
+        val night0 = session.nightState
+        if (!night0.active || night0.resolved) return InteractionReply("夜晚行動已結束")
+
+        // Phases run sequentially: only the ability whose wave is currently open may act. An earlier
+        // wave has closed (the seat forfeited it on timeout); a later one hasn't opened yet.
+        val actingAbilityId = when {
+            customId.startsWith(InteractionIds.WOLF_VOTE) -> wolfKillAbility?.id
+            customId.startsWith(InteractionIds.NIGHT_ACTION) -> customId.removePrefix("${InteractionIds.NIGHT_ACTION}:")
+            else -> null
+        }
+        if (actingAbilityId != null) {
+            val phase = phaseOf(night0, actingAbilityId)
+            if (phase != night0.currentPhase) {
+                return InteractionReply(if (phase in 0 until night0.currentPhase) "此階段已結束，行動已失效" else "尚未輪到這個身分行動")
+            }
+        }
 
         var reply = "已收到"
         sessionService.mutate(guildId) { s ->
@@ -235,22 +391,18 @@ class NightOrchestrator(
                 }
             }
         }
-        if (isComplete(guildId)) resolveNight(guildId)
-        return InteractionReply(reply)
-    }
-
-    private fun isComplete(guildId: Long): Boolean {
-        val night = sessionService.find(guildId)?.nightState ?: return false
-        if (!night.active) return false
-        return night.waves.flatten().all { abilityId ->
-            if (abilityId == wolfKillAbility?.id) night.wolfParticipants.all { night.wolfVotes.containsKey(it) }
-            else night.intents.any { it.abilityId == abilityId }
+        // Only the current phase is open, so a completing submission advances (or resolves) the night.
+        val after = sessionService.find(guildId)
+        if (after != null && after.nightState.active && !after.nightState.resolved &&
+            isPhaseComplete(after, after.nightState, after.nightState.currentPhase)) {
+            advancePhase(guildId)
         }
+        return InteractionReply(reply)
     }
 
     // ---------- resolution ----------
     fun resolveNight(guildId: Long) {
-        scheduler.cancel(guildId, GameScheduler.NIGHT)
+        cancelPhaseTimers(guildId)
         sessionService.mutate(guildId) { session ->
             val night = session.nightState
             if (!night.active || night.resolved) return@mutate
@@ -292,6 +444,9 @@ class NightOrchestrator(
                 session.phase = Phase.DAWN
             }
         }
+        // Hand off to the day side: run 天亮 (death announce + last words), which then auto-advances
+        // the rest of the day. (Without this the night left the phase on DAWN but never ran dawn.)
+        if (sessionService.find(guildId)?.phase == Phase.DAWN) coordinator?.enterPhase(guildId, Phase.DAWN)
     }
 
     /** 守墓人 — from the second night on, DM the faction (好人/狼人) of the last expelled seat

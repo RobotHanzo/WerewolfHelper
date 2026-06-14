@@ -73,6 +73,7 @@ describe("Navigation and WebSocket Lifecycle", () => {
       seats: [],
       stage: "NIGHT",
       log: [],
+      wolfChat: [],
     } as any);
 
     const container = document.createElement("div");

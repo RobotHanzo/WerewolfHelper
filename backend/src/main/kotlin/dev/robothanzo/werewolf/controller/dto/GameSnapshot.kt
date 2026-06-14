@@ -32,6 +32,8 @@ data class GameSnapshot(
     val speech: SpeechDto?,
     val poll: PollDto?,
     val night: NightDto?,
+    @get:Schema(description = "Wolf-team chatter relayed from the seat channels, in send order — synced across every phase")
+    val wolfChat: List<WolfChatDto>,
     val log: List<LogDto>,
     val pool: Map<String, Int>,
 )
@@ -115,20 +117,22 @@ data class PollCandidateDto(
 data class NightDto(
     val active: Boolean,
     val day: Int,
+    @get:Schema(description = "Deadline (epoch-millis) of the currently-active phase")
     val endsAt: Long?,
+    @get:Schema(description = "Wave index of the phase currently being prompted (phases run sequentially)")
+    val currentPhase: Int,
     val submittedCount: Int,
     val totalCount: Int,
     val resolved: Boolean,
     val summary: String?,
     val waves: List<NightWaveDto>,
-    @get:Schema(description = "Wolf-team chatter relayed from the seat channels this night, in send order")
-    val wolfChat: List<WolfChatDto> = emptyList(),
 )
 
-@Schema(description = "One relayed wolf-chat line shown on the judge night board")
+@Schema(description = "One relayed wolf-chat line shown on the judge wolf-chat panel")
 data class WolfChatDto(
     val seat: Int,
     val author: String,
+    val avatar: String?,
     val content: String,
     val at: Long,
 )

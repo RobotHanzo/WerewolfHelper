@@ -9,6 +9,16 @@ and the WebSocket. This is where side effects live; keep new rules in `game/` an
   **saves, then broadcasts a full snapshot** (snapshot-as-truth). Almost every state change goes
   through it. Also owns `log(...)` (typed, localized log entries: key + params + rendered text) and
   `broadcast`. Don't persist/broadcast by hand — call `mutate`.
+- `GameFlowCoordinator` owns the **coarse phase walk** (the side of the pure `game/flow/GameFlowService`):
+  `start`/`advance` run the phase machine then `enterPhase` dispatches to the orchestrator that owns
+  the phase (`night.startNight` / `day.enterDawn|startPoliceElection|startSpeeches|startExpelVote`).
+  Crucially it drives **automatic stage progression**: when a day stage finishes its interactive work
+  (`poll == null && speech == null` in a day phase) the orchestrators call `coordinator.advance`, so
+  the loop walks itself `NIGHT → DAWN → [POLICE_ELECTION] → SPEECHES → EXPEL_VOTE → NIGHT(+1)` with no
+  judge click; `/state/next` stays an explicit override. To avoid a bean cycle the coordinator depends
+  on the orchestrators and registers itself onto them in `@PostConstruct` (`night.coordinator = this`),
+  the same self-registration idiom used with the gateway. `NightOrchestrator.resolveNight` hands off to
+  `enterPhase(DAWN)` once the night resolves (this is what actually runs 天亮).
 - `SnapshotService` builds the wire `GameSnapshot` (`controller/dto`) consumed by the frontend store.
 - `GameActionService` — the judge's per-seat mutations (assign / kill / revenge / revive / edit /
   force + transfer police / reset). Each mutates in place inside `mutate`; nicknames are synced

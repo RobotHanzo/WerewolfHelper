@@ -110,10 +110,11 @@ export interface NightWave {
   actions: NightAction[];
 }
 
-/** One relayed wolf-team chat line, shown on the judge night board. */
+/** One relayed wolf-team chat line, shown on the judge wolf-chat panel. */
 export interface WolfChatMessage {
   seat: number;
   author: string;
+  avatar: string | null;
   content: string;
   at: number;
 }
@@ -121,14 +122,15 @@ export interface WolfChatMessage {
 export interface Night {
   active: boolean;
   day: number;
+  /** Deadline (epoch ms) of the currently-active phase. */
   endsAt: number | null;
+  /** Wave index of the phase currently being prompted (phases run sequentially). */
+  currentPhase: number;
   submittedCount: number;
   totalCount: number;
   resolved: boolean;
   summary: string | null;
   waves: NightWave[];
-  /** Wolf-team chatter relayed from the seat channels this night, in send order. */
-  wolfChat: WolfChatMessage[];
 }
 
 export interface LogEntry {
@@ -159,6 +161,8 @@ export interface GameSnapshot {
   speech: Speech | null;
   poll: Poll | null;
   night: Night | null;
+  /** Wolf-team chatter relayed from the seat channels, in send order — synced across every phase. */
+  wolfChat: WolfChatMessage[];
   log: LogEntry[];
   pool: Record<string, number>;
 }

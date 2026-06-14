@@ -48,6 +48,13 @@ data class GameSession(
     /** Current night round (active during the NIGHT phase). */
     var nightState: NightState = NightState(),
 
+    /**
+     * Wolf-team chatter relayed from the seat channels, surfaced on the judge dashboard. Lives at the
+     * session level (not on [nightState]) so it keeps syncing across every phase, not just the night,
+     * and survives the per-night [NightState] reset. Trimmed to a rolling cap; cleared on game reset.
+     */
+    var wolfChat: MutableList<WolfChatData> = mutableListOf(),
+
     /** Active day speech flow (SPEECHES / police campaign / last words), or null when idle. */
     var speech: SpeechFlow? = null,
 

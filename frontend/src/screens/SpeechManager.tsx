@@ -108,13 +108,46 @@ const POLL_STAGE_KEY: Record<string, string> = {
   RESOLVED: "resolution",
 };
 
-function VotePanel() {
+/** The turnout bar + per-candidate weight bars — the poll body, reused bare inside the dashboard
+ *  `SpeechBoard` (which supplies its own header) and wrapped in a card by `VotePanel` below. */
+export function PollResults() {
+  const { t } = useTranslation();
+  const poll = useGameStore((s) => s.snapshot?.poll);
+  if (!poll) return null;
+  const notVoted = poll.eligibleVoters - poll.votesCast;
+  const maxWeight = Math.max(1, ...poll.candidates.map((x) => x.weight));
+
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, color: "var(--text-muted)" }} className="mono">
+        <span>{t("expel.progress")}</span>
+        <span style={{ flex: 1, height: 6, borderRadius: "var(--r-full)", background: "var(--surface-app)", overflow: "hidden" }}>
+          <span style={{ display: "block", height: "100%", width: `${(poll.votesCast / Math.max(1, poll.eligibleVoters)) * 100}%`, background: "var(--moon-500)" }} />
+        </span>
+        <span>{t("expel.turnoutShort", { cast: poll.votesCast, eligible: poll.eligibleVoters, remaining: notVoted })}</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {poll.candidates.map((c) => (
+          <motion.div layout key={c.seat} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", borderRadius: "var(--r-md)", background: "var(--surface-app)", border: "1px solid var(--border-1)", opacity: c.withdrawn ? 0.5 : 1 }}>
+            <Avatar size="sm" name={`#${c.seat}`} />
+            <span className="mono" style={{ fontSize: 13, fontWeight: 700, width: 64, textDecoration: c.withdrawn ? "line-through" : "none" }}>玩家{String(c.seat).padStart(2, "0")}</span>
+            <span style={{ flex: 1, height: 8, borderRadius: "var(--r-full)", background: "var(--surface-card)", overflow: "hidden" }}>
+              <motion.span layout style={{ display: "block", height: "100%", width: `${(c.weight / maxWeight) * 100}%`, background: "var(--moon-500)" }} />
+            </span>
+            <span className="mono" style={{ fontSize: 16, fontWeight: 700, color: "var(--moon-300)", width: 44, textAlign: "right" }}>{c.weight % 1 ? c.weight.toFixed(1) : c.weight}</span>
+          </motion.div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+export function VotePanel({ controls = true }: { controls?: boolean } = {}) {
   const { t } = useTranslation();
   const { guildId, demo, readOnly } = useGuild();
   const actions = useGameActions(guildId, demo);
   const poll = useGameStore((s) => s.snapshot?.poll);
   if (!poll) return null;
-  const notVoted = poll.eligibleVoters - poll.votesCast;
   const isElection = poll.kind === "POLICE";
 
   return (
@@ -127,29 +160,8 @@ function VotePanel() {
         <span style={{ marginLeft: "auto" }} />
         {poll.endsAt && <Countdown endsAt={poll.endsAt} size="md" label={isElection ? t("election.stageHint") : t("expel.deadline")} />}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, color: "var(--text-muted)" }} className="mono">
-        <span>{t("expel.progress")}</span>
-        <span style={{ flex: 1, height: 6, borderRadius: "var(--r-full)", background: "var(--surface-app)", overflow: "hidden" }}>
-          <span style={{ display: "block", height: "100%", width: `${(poll.votesCast / Math.max(1, poll.eligibleVoters)) * 100}%`, background: "var(--moon-500)" }} />
-        </span>
-        <span>{t("expel.turnoutShort", { cast: poll.votesCast, eligible: poll.eligibleVoters, remaining: notVoted })}</span>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {poll.candidates.map((c) => {
-          const maxWeight = Math.max(1, ...poll.candidates.map((x) => x.weight));
-          return (
-            <motion.div layout key={c.seat} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", borderRadius: "var(--r-md)", background: "var(--surface-app)", border: "1px solid var(--border-1)", opacity: c.withdrawn ? 0.5 : 1 }}>
-              <Avatar size="sm" name={`#${c.seat}`} />
-              <span className="mono" style={{ fontSize: 13, fontWeight: 700, width: 64, textDecoration: c.withdrawn ? "line-through" : "none" }}>玩家{String(c.seat).padStart(2, "0")}</span>
-              <span style={{ flex: 1, height: 8, borderRadius: "var(--r-full)", background: "var(--surface-card)", overflow: "hidden" }}>
-                <motion.span layout style={{ display: "block", height: "100%", width: `${(c.weight / maxWeight) * 100}%`, background: "var(--moon-500)" }} />
-              </span>
-              <span className="mono" style={{ fontSize: 16, fontWeight: 700, color: "var(--moon-300)", width: 44, textAlign: "right" }}>{c.weight % 1 ? c.weight.toFixed(1) : c.weight}</span>
-            </motion.div>
-          );
-        })}
-      </div>
-      {!readOnly && (
+      <PollResults />
+      {controls && !readOnly && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end" }}>
           {isElection && <Button variant="secondary" onClick={actions.advancePoll}>{t("election.advanceStage")}</Button>}
           <Button variant="danger" onClick={actions.resolvePoll}>{t("election.resolveNow")}</Button>

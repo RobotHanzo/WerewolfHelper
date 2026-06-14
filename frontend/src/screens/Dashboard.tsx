@@ -12,7 +12,8 @@ import { LogFeed } from "@/components/ui/LogFeed";
 import { Button } from "@/components/ui/Button";
 import { Countdown } from "@/components/ui/Countdown";
 import { Avatar } from "@/components/ui/Avatar";
-import { NightBoard } from "./NightBoard";
+import { NightBoard, WolfChatPanel } from "./NightBoard";
+import { SpeechBoard } from "./SpeechBoard";
 
 const PHASE_KEY: Record<string, string> = {
   LOBBY: "phase.lobby",
@@ -127,8 +128,18 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* night board */}
-      <AnimatePresence>{snapshot.night && (snapshot.night.active || snapshot.night.resolved) && <NightBoard night={snapshot.night} />}</AnimatePresence>
+      {/* night board (carries the wolf-chat panel beside the phases during the night) */}
+      <AnimatePresence>{snapshot.night && (snapshot.night.active || snapshot.night.resolved) && <NightBoard night={snapshot.night} wolfChat={snapshot.wolfChat} />}</AnimatePresence>
+
+      {/* speech-manager stages (發言 / 警長競選 / 放逐投票) surface here the same way the night does */}
+      <AnimatePresence>{(snapshot.speech?.active || snapshot.speech?.waiting || snapshot.poll) && <SpeechBoard />}</AnimatePresence>
+
+      {/* wolf chat keeps syncing across every phase — show it on its own when the night board is down */}
+      {!(snapshot.night && (snapshot.night.active || snapshot.night.resolved)) && snapshot.wolfChat.length > 0 && (
+        <div className="wh-card wh-wolfchat-standalone" style={{ marginBottom: 16, overflow: "hidden", border: "1px solid var(--wolf-700)" }}>
+          <WolfChatPanel messages={snapshot.wolfChat} />
+        </div>
+      )}
 
       <div className="wh-dash-grid">
         {/* roster */}

@@ -108,6 +108,7 @@ class SnapshotService(
             speech = buildSpeech(session),
             poll = buildPoll(session),
             night = buildNight(session),
+            wolfChat = session.wolfChat.map { WolfChatDto(it.seat, it.author, it.avatar, it.content, it.at) },
             log = logs.map {
                 LogDto(it.id, it.timestamp.toEpochMilli(), it.severity.name.lowercase(), it.rendered)
             },
@@ -176,12 +177,12 @@ class SnapshotService(
             active = night.active,
             day = night.day,
             endsAt = night.endsAt.takeIf { night.active },
+            currentPhase = night.currentPhase,
             submittedCount = submitted,
             totalCount = allIds.size,
             resolved = night.resolved,
             summary = night.summary,
             waves = waves,
-            wolfChat = night.wolfChat.map { WolfChatDto(it.seat, it.author, it.content, it.at) },
         )
     }
 

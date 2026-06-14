@@ -542,14 +542,15 @@ class JdaDiscordGateway(
         seat.livingCards().ifEmpty { seat.cards }.any { roles.byId(it.roleId)?.hasTag(RoleTag.WOLF_CHAT) == true }
 
     /**
-     * Forward a wolf-team line to the registered handler so it surfaces on the judge night board.
-     * Gated here (night active + a wolf-chat seat) where the session and role registry are already in
-     * hand; the handler owns persistence + broadcast (avoiding a constructor cycle, as with the other
-     * inbound handlers). The non-wolf seat groups (e.g. 金寶寶) are deliberately not recorded.
+     * Forward a wolf-team line to the registered handler so it surfaces on the judge wolf-chat panel.
+     * Gated here only on a wolf-chat seat (not on night-active — the panel syncs across every phase)
+     * where the session and role registry are already in hand; the handler owns persistence + broadcast
+     * (avoiding a constructor cycle, as with the other inbound handlers). The non-wolf seat groups
+     * (e.g. 金寶寶) are deliberately not recorded.
      */
-    private fun recordWolfChat(guildId: Long, session: GameSession, sender: Seat, author: String, content: String) {
-        if (!session.nightState.active || content.isBlank() || !isWolfChat(sender)) return
-        wolfChatHandler?.onWolfChat(guildId, sender.number, "$author（${sender.paddedNumber}）", content)
+    private fun recordWolfChat(guildId: Long, session: GameSession, sender: Seat, author: String, avatar: String?, content: String) {
+        if (content.isBlank() || !isWolfChat(sender)) return
+        wolfChatHandler?.onWolfChat(guildId, sender.number, "$author（${sender.paddedNumber}）", avatar, content)
     }
 
     private fun webhookFor(channel: TextChannel): WebhookClient =
@@ -571,7 +572,7 @@ class JdaDiscordGateway(
             // From a seat channel → relay within the sender's group.
             session.seats.firstOrNull { it.channelId == event.channel.idLong }?.let { sender ->
                 relayWolfChat(event.guild.idLong, sender.number, "$author（${sender.paddedNumber}）", avatar, content)
-                recordWolfChat(event.guild.idLong, session, sender, author, content)
+                recordWolfChat(event.guild.idLong, session, sender, author, avatar, content)
                 return
             }
             // From the judge channel → mirror to every wolf-team channel.

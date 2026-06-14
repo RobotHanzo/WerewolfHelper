@@ -58,6 +58,8 @@ class GameScheduler {
         const val POLL_STAGE = "poll.stage"
         const val TIMER = "timer"
         const val NIGHT = "night"
+        /** Per-phase "still pending" reminders DM'd to the seat channels (one key per mark). */
+        const val NIGHT_REMINDER = "night.remind"
         const val ORDER_LOCK = "order.lock"
         const val TEN_SECOND_WARNING = "warn.10s"
     }

@@ -587,6 +587,14 @@
   min-height: 0;
   overflow-y: auto;
 }
+/* Standalone wolf-chat (outside the night body): drop the grid-edge border and cap the scroll, since
+   it has no phases column to bound its height. */
+.wh-wolfchat-standalone .wh-night-chat {
+  border-left: none;
+}
+.wh-wolfchat-standalone .wh-night-chat-scroll {
+  max-height: 320px;
+}
 @media (max-width: 860px) {
   .wh-night-body {
     grid-template-columns: 1fr;

@@ -7,7 +7,6 @@ import dev.robothanzo.werewolf.controller.dto.KillRequest
 import dev.robothanzo.werewolf.controller.dto.PoliceTransferRequest
 import dev.robothanzo.werewolf.controller.dto.ReviveRequest
 import dev.robothanzo.werewolf.controller.dto.TargetRequest
-import dev.robothanzo.werewolf.game.flow.GameFlowService
 import dev.robothanzo.werewolf.controller.dto.TimerRequest
 import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.discord.SoundCue
@@ -18,8 +17,8 @@ import dev.robothanzo.werewolf.security.annotations.CanManageGuild
 import dev.robothanzo.werewolf.service.CourtAnnouncer
 import dev.robothanzo.werewolf.service.DayOrchestrator
 import dev.robothanzo.werewolf.service.GameActionService
+import dev.robothanzo.werewolf.service.GameFlowCoordinator
 import dev.robothanzo.werewolf.service.GameSessionService
-import dev.robothanzo.werewolf.service.NightOrchestrator
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -37,25 +36,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 class GameController(
     private val actions: GameActionService,
     private val sessionService: GameSessionService,
-    private val flow: GameFlowService,
-    private val night: NightOrchestrator,
+    private val coordinator: GameFlowCoordinator,
     private val day: DayOrchestrator,
     private val announcer: CourtAnnouncer,
     private val gateway: DiscordGateway,
     private val gameScheduler: GameScheduler,
 ) {
-
-    /** Run the orchestrator that owns the phase we just entered (night actions / day flow). */
-    private fun onPhaseEntered(guildId: Long, phase: Phase) {
-        when (phase) {
-            Phase.NIGHT -> night.startNight(guildId)
-            Phase.DAWN -> day.enterDawn(guildId)
-            Phase.POLICE_ELECTION -> day.startPoliceElection(guildId)
-            Phase.SPEECHES -> day.startSpeeches(guildId)
-            Phase.EXPEL_VOTE -> day.startExpelVote(guildId)
-            else -> {}
-        }
-    }
 
     @Operation(summary = "Assign identities", description = "Deal the identity pool to the eligible members.")
     @ApiResponses(value = [SwaggerApiResponse(responseCode = "200", description = "Assigned")])
@@ -110,7 +96,7 @@ class GameController(
         @PathVariable seat: Int,
         @RequestBody body: TargetRequest,
     ): ResponseEntity<ApiResponse> {
-        if (day.knightDuel(guildId.toLong(), seat, body.target)) onPhaseEntered(guildId.toLong(), Phase.NIGHT)
+        if (day.knightDuel(guildId.toLong(), seat, body.target)) coordinator.enterPhase(guildId.toLong(), Phase.NIGHT)
         return ResponseEntity.ok(ApiResponse.ok())
     }
 
@@ -122,7 +108,7 @@ class GameController(
         @PathVariable guildId: String,
         @PathVariable seat: Int,
     ): ResponseEntity<ApiResponse> {
-        if (day.selfDestruct(guildId.toLong(), seat)) onPhaseEntered(guildId.toLong(), Phase.NIGHT)
+        if (day.selfDestruct(guildId.toLong(), seat)) coordinator.enterPhase(guildId.toLong(), Phase.NIGHT)
         return ResponseEntity.ok(ApiResponse.ok())
     }
 
@@ -181,11 +167,7 @@ class GameController(
     @PostMapping("/state/start")
     @CanManageGuild
     fun start(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
-        val entered = sessionService.mutate(guildId.toLong()) { s ->
-            require(s.assigned) { "error.not_assigned" }
-            val t = flow.start(); s.phase = t.phase; s.day = t.day; t.phase
-        }
-        onPhaseEntered(guildId.toLong(), entered)
+        coordinator.start(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok())
     }
 
@@ -194,10 +176,7 @@ class GameController(
     @PostMapping("/state/next")
     @CanManageGuild
     fun next(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
-        val entered = sessionService.mutate(guildId.toLong()) { s ->
-            val t = flow.next(s.phase, s.day); s.phase = t.phase; s.day = t.day; t.phase
-        }
-        onPhaseEntered(guildId.toLong(), entered)
+        coordinator.advance(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok())
     }
 

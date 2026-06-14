@@ -141,29 +141,49 @@ function WolfConsensusCard({ action }: { action: NightAction }) {
   );
 }
 
-/** One topological wave from NightPlanner, surfaced as a numbered, ordered phase. */
-function PhaseSection({ displayNumber, actions, isLast }: { displayNumber: number; actions: NightAction[]; isLast: boolean }) {
+/** Per-phase time limits (FEATURES §12): the wolf phase gets the longer discuss/vote window. */
+const WOLF_PHASE_SECONDS = 90;
+const PHASE_SECONDS = 60;
+
+type PhaseState = "done" | "active" | "upcoming";
+
+/**
+ * One topological wave from NightPlanner, surfaced as a numbered, sequential phase. Phases run one
+ * at a time: only the [state]="active" phase is open and counts down to its [endsAt]; earlier phases
+ * are done, later ones are upcoming.
+ */
+function PhaseSection({ displayNumber, actions, isLast, state, endsAt }: {
+  displayNumber: number;
+  actions: NightAction[];
+  isLast: boolean;
+  state: PhaseState;
+  endsAt: number | null;
+}) {
   const { t } = useTranslation();
   const done = actions.filter(isDone).length;
   const complete = done === actions.length;
   const wolf = actions.find(isWolfKill);
   const rest = actions.filter((a) => !isWolfKill(a));
+  const limit = wolf ? WOLF_PHASE_SECONDS : PHASE_SECONDS;
+  const finished = state === "done";
+  const active = state === "active";
+  const dim = state === "upcoming";
 
   return (
-    <div style={{ display: "flex", gap: 12 }}>
+    <div style={{ display: "flex", gap: 12, opacity: dim ? 0.55 : 1 }}>
       {/* timeline rail */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
         <span
           style={{
             width: 28, height: 28, borderRadius: "var(--r-full)", display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 12, fontWeight: 900,
-            color: complete ? "var(--text-on-accent)" : "var(--moon-300)",
-            background: complete ? "var(--success-500)" : "var(--accent-soft)",
-            border: `1px solid ${complete ? "var(--success-500)" : "var(--moon-500)"}`,
-            boxShadow: complete ? "none" : "0 0 8px var(--moon-500)",
+            color: finished ? "var(--text-on-accent)" : active ? "var(--moon-300)" : "var(--text-muted)",
+            background: finished ? "var(--success-500)" : active ? "var(--accent-soft)" : "var(--surface-raised)",
+            border: `1px solid ${finished ? "var(--success-500)" : active ? "var(--moon-500)" : "var(--border-1)"}`,
+            boxShadow: active ? "0 0 8px var(--moon-500)" : "none",
           }}
         >
-          {complete ? <Check size={15} /> : displayNumber}
+          {finished ? <Check size={15} /> : displayNumber}
         </span>
         {!isLast && <span style={{ flex: 1, width: 2, marginTop: 4, background: "var(--border-1)" }} />}
       </div>
@@ -173,8 +193,12 @@ function PhaseSection({ displayNumber, actions, isLast }: { displayNumber: numbe
         <header style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
           <span style={{ fontSize: 13, fontWeight: 800 }}>{t("night.phase", { n: displayNumber })}</span>
           <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{t("night.simultaneous")}</span>
-          <span className="mono" style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: complete ? "var(--success-500)" : "var(--text-secondary)" }}>
-            {complete ? t("night.phaseDone") : t("night.phaseProgress", { done, total: actions.length })}
+          <span className="mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", border: "1px solid var(--border-1)", borderRadius: "var(--r-full)", padding: "1px 7px" }}>
+            {t("night.phaseLimit", { s: limit })}
+          </span>
+          {active && endsAt != null && <Countdown endsAt={endsAt} size="sm" label={t("night.phaseRemaining")} />}
+          <span className="mono" style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: complete ? "var(--success-500)" : active ? "var(--text-secondary)" : "var(--text-muted)" }}>
+            {complete ? t("night.phaseDone") : dim ? t("night.phaseUpcoming") : t("night.phaseProgress", { done, total: actions.length })}
           </span>
         </header>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(232px, 1fr))", gap: 12 }}>
@@ -190,10 +214,11 @@ const chatTime = (at: number) =>
   new Date(at).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false });
 
 /**
- * The wolf team's relayed chatter for this night. Read-only mirror of what the wolves type in their
- * private Discord channels — auto-scrolls to the newest line. Wolf-tinted to match the knife panel.
+ * The wolf team's relayed chatter. Read-only mirror of what the wolves type in their private Discord
+ * channels — synced across every phase, not just the night — auto-scrolls to the newest line.
+ * Wolf-tinted to match the knife panel.
  */
-function WolfChatPanel({ messages }: { messages: WolfChatMessage[] }) {
+export function WolfChatPanel({ messages }: { messages: WolfChatMessage[] }) {
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -220,7 +245,7 @@ function WolfChatPanel({ messages }: { messages: WolfChatMessage[] }) {
         <div ref={scrollRef} className="wh-night-chat-scroll" style={{ display: "flex", flexDirection: "column", gap: 8, paddingRight: 4 }}>
           {messages.map((m, i) => (
             <div key={`${m.at}-${i}`} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-              <Avatar size="sm" name={`#${m.seat}`} />
+              <Avatar size="sm" name={m.author} avatar={m.avatar} />
               <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
                 <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "var(--wolf-400)" }}>{m.author}</span>
@@ -242,21 +267,37 @@ function WolfChatPanel({ messages }: { messages: WolfChatMessage[] }) {
  * collective wolf knife is elevated into its own consensus panel. Judge-only — no spectator surface
  * requests this, and it leaks no information the roster doesn't already show.
  */
-export function NightBoard({ night }: { night: Night }) {
+export function NightBoard({ night, wolfChat }: { night: Night; wolfChat: WolfChatMessage[] }) {
   const { t } = useTranslation();
 
   // Drop abilities with no actor in play, then drop emptied waves and renumber the survivors so the
-  // phase labels stay contiguous (NightPlanner wave indices can have gaps).
+  // phase labels stay contiguous (NightPlanner wave indices can have gaps). The original wave index is
+  // kept so it can be matched against `currentPhase` to mark the live phase.
   const phases = night.waves
-    .map((w) => w.actions.filter(isLive))
-    .filter((actions) => actions.length > 0);
+    .map((w) => ({ index: w.index, actions: w.actions.filter(isLive) }))
+    .filter((p) => p.actions.length > 0);
+
+  // Phases run sequentially: the wave at `currentPhase` is open, earlier ones are done, later pending.
+  const phaseState = (waveIndex: number): PhaseState => {
+    if (!night.active) return "done";
+    if (waveIndex < night.currentPhase) return "done";
+    if (waveIndex === night.currentPhase) return "active";
+    return "upcoming";
+  };
 
   // Wolf chat sits beside the phases on desktop (CSS grid), stacked below on mobile.
-  const showChat = night.active || night.wolfChat.length > 0;
+  const showChat = night.active || wolfChat.length > 0;
   const phasesEl = (
     <div className="wh-night-phases">
-      {phases.map((actions, i) => (
-        <PhaseSection key={i} displayNumber={i + 1} actions={actions} isLast={i === phases.length - 1} />
+      {phases.map((p, i) => (
+        <PhaseSection
+          key={p.index}
+          displayNumber={i + 1}
+          actions={p.actions}
+          isLast={i === phases.length - 1}
+          state={phaseState(p.index)}
+          endsAt={night.endsAt}
+        />
       ))}
     </div>
   );
@@ -283,14 +324,13 @@ export function NightBoard({ night }: { night: Night }) {
             </span>
             <ProgressBar percent={night.totalCount ? (night.submittedCount / night.totalCount) * 100 : 0} state={night.submittedCount >= night.totalCount ? "success" : "running"} />
           </span>
-          {night.endsAt && <Countdown endsAt={night.endsAt} size="sm" label={t("night.remaining")} />}
         </span>
       </header>
 
       {showChat ? (
         <div className="wh-night-body">
           {phasesEl}
-          <WolfChatPanel messages={night.wolfChat} />
+          <WolfChatPanel messages={wolfChat} />
         </div>
       ) : (
         phasesEl

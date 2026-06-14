@@ -8,11 +8,14 @@ package dev.robothanzo.werewolf.domain
 data class NightState(
     var active: Boolean = false,
     var day: Int = 0,
+    /** Deadline of the **currently-active phase** (the wave at [currentPhase]); the dashboard counts down to it. */
     var endsAt: Long = 0,
     var resolved: Boolean = false,
     var summary: String? = null,
     /** Seat numbers that died this night (drives the dawn announcement + last-words flow). */
     var deaths: MutableList<Int> = mutableListOf(),
+    /** Index into [waves] of the phase currently being prompted; phases run sequentially. */
+    var currentPhase: Int = 0,
     /** Ability ids grouped by wave (the simultaneous plan from the [dev.robothanzo.werewolf.game.night.NightPlanner]). */
     var waves: MutableList<MutableList<String>> = mutableListOf(),
     /** Alive seats taking part in the collective wolf kill. */
@@ -21,14 +24,13 @@ data class NightState(
     var wolfVotes: MutableMap<Int, Int> = mutableMapOf(),
     /** Submitted per-ability intents (excluding the collective wolf kill, which lives in wolfVotes). */
     var intents: MutableList<NightIntentData> = mutableListOf(),
-    /** Wolf-team chatter relayed from the seat channels this night, surfaced on the judge night board. */
-    var wolfChat: MutableList<WolfChatData> = mutableListOf(),
 )
 
-/** A single wolf-chat line captured during the night, in send order, for the dashboard board. */
+/** A single relayed wolf-chat line, in send order, for the dashboard wolf-chat panel. */
 data class WolfChatData(
     var seat: Int = 0,
     var author: String = "",
+    var avatar: String? = null,
     var content: String = "",
     var at: Long = 0,
 )

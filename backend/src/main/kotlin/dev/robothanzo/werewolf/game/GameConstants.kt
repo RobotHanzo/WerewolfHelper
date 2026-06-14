@@ -19,8 +19,14 @@ object GameConstants {
     /** Default speech time per speaker. */
     const val SPEECH_SECONDS = 120
 
-    /** Default night-action window. */
-    const val NIGHT_SECONDS = 60
+    /** Default per-phase night-action window (each topological wave runs as its own timed phase). */
+    const val NIGHT_PHASE_SECONDS = 60
+
+    /** The wolf phase (the wave that carries the collective knife) gets longer to discuss + vote. */
+    const val NIGHT_WOLF_PHASE_SECONDS = 90
+
+    /** Seconds-remaining marks at which a still-pending seat is reminded in its channel. */
+    val NIGHT_REMINDER_AT_SECONDS = listOf(30, 10)
 
     /** Police vote weight in polls, and the parity win-check bonus. */
     const val POLICE_VOTE_WEIGHT = 1.5

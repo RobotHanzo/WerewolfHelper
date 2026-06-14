@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useGameStore } from "@/stores/gameStore";
 import { FactionMeter } from "@/components/ui/FactionMeter";
 import { PlayerCard } from "@/components/ui/PlayerCard";
+import { WolfChatPanel } from "./NightBoard";
 
 /** Read-only God's view: faction proportions, a win-condition reminder, and the full roster. */
 export function Spectator() {
@@ -36,6 +37,12 @@ export function Spectator() {
           <PlayerCard key={seat.seat} seat={seat} readOnly changed={changedSeats.has(seat.seat)} />
         ))}
       </div>
+
+      {snapshot.wolfChat.length > 0 && (
+        <div className="wh-card wh-wolfchat-standalone" style={{ overflow: "hidden", border: "1px solid var(--wolf-700)" }}>
+          <WolfChatPanel messages={snapshot.wolfChat} />
+        </div>
+      )}
     </div>
   );
 }

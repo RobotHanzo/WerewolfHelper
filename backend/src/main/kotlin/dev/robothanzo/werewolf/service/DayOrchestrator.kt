@@ -61,34 +61,58 @@ class DayOrchestrator(
     private val duel: DuelResolver,
 ) : DiscordInteractionHandler {
 
+    /** Set by [GameFlowCoordinator] in its `@PostConstruct` (back-reference, breaks the bean cycle). */
+    var coordinator: GameFlowCoordinator? = null
+
     @PostConstruct
     fun register() = router.register(InteractionIds.NS_DAY, this)
 
-    // ======================= phase entry points (from GameController dispatch) =======================
+    // ======================= phase entry points (from GameFlowCoordinator dispatch) =======================
 
     /** 天亮：morning cue, unmute, announce the night's deaths (or 平安夜), then run last words. */
-    fun enterDawn(guildId: Long) = sessionService.mutate(guildId) { enterDawnInternal(it) }
+    fun enterDawn(guildId: Long) = mutateThenAdvance(guildId) { enterDawnInternal(it) }
 
     /** Start the daytime speech round; if there is a police badge the holder picks the direction. */
-    fun startSpeeches(guildId: Long) = sessionService.mutate(guildId) { startSpeechesInternal(it) }
+    fun startSpeeches(guildId: Long) = mutateThenAdvance(guildId) { startSpeechesInternal(it) }
 
     /** Start the day-1 police election at its enrollment stage. */
-    fun startPoliceElection(guildId: Long) = sessionService.mutate(guildId) { startPoliceElectionInternal(it) }
+    fun startPoliceElection(guildId: Long) = mutateThenAdvance(guildId) { startPoliceElectionInternal(it) }
 
     /** Open the expel vote over all living seats. */
-    fun startExpelVote(guildId: Long) = sessionService.mutate(guildId) { startExpelVoteInternal(it) }
+    fun startExpelVote(guildId: Long) = mutateThenAdvance(guildId) { startExpelVoteInternal(it) }
 
     // ======================= dashboard control endpoints (DayController) =======================
 
-    fun skipCurrentSpeaker(guildId: Long) = sessionService.mutate(guildId) { advanceSpeakerInternal(it) }
+    fun skipCurrentSpeaker(guildId: Long) = mutateThenAdvance(guildId) { advanceSpeakerInternal(it) }
 
-    fun stopSpeech(guildId: Long) = sessionService.mutate(guildId) { endSpeechInternal(it) }
+    fun stopSpeech(guildId: Long) = mutateThenAdvance(guildId) { endSpeechInternal(it) }
 
     fun chooseDirection(guildId: Long, direction: SpeechDirection) =
-        sessionService.mutate(guildId) { chooseDirectionInternal(it, direction) }
+        mutateThenAdvance(guildId) { chooseDirectionInternal(it, direction) }
 
     /** Force the current poll stage to resolve / advance early (same op the scheduler deadline runs). */
-    fun resolvePollStage(guildId: Long) = sessionService.mutate(guildId) { resolvePollStageInternal(it) }
+    fun resolvePollStage(guildId: Long) = mutateThenAdvance(guildId) { resolvePollStageInternal(it) }
+
+    // ======================= automatic stage progression =======================
+
+    /**
+     * Run [block] in one `mutate`, then auto-advance the phase if this stage has finished its
+     * interactive work. A day phase is "done" once both its poll and its speech flow are idle —
+     * which is exactly the settled state every completion path leaves behind (a poll resolving to
+     * 平安夜/election/expel-last-words, a speech round ending, etc.). The next phase's entry sets up
+     * fresh poll/speech, so the walk halts as soon as there is something to wait on.
+     */
+    private fun mutateThenAdvance(guildId: Long, block: (GameSession) -> Unit) {
+        sessionService.mutate(guildId) { block(it) }
+        maybeAdvance(guildId)
+    }
+
+    private fun maybeAdvance(guildId: Long) {
+        val s = sessionService.find(guildId) ?: return
+        if (s.phase in ADVANCEABLE_DAY_PHASES && s.poll == null && s.speech == null) {
+            coordinator?.advance(guildId)
+        }
+    }
 
     // ======================= day-phase role actions (ROLES.md) =======================
 
@@ -167,7 +191,7 @@ class DayOrchestrator(
 
     // ======================= scheduler callbacks =======================
 
-    private fun advanceSpeaker(guildId: Long) = sessionService.mutate(guildId) { advanceSpeakerInternal(it) }
+    private fun advanceSpeaker(guildId: Long) = mutateThenAdvance(guildId) { advanceSpeakerInternal(it) }
 
     // ======================= speech flow =======================
 
@@ -552,6 +576,9 @@ class DayOrchestrator(
                 }
             }
         }
+        // A court click can complete the stage (final vote resolves the poll; a skip ends the speech),
+        // so try to auto-advance just like the dashboard/scheduler paths do.
+        maybeAdvance(guildId)
         return InteractionReply(reply)
     }
 
@@ -597,4 +624,9 @@ class DayOrchestrator(
     /** Render a weighted tally without a trailing `.0` (3.0 → "3", 3.5 → "3.5"). */
     private fun fmtVotes(votes: Double): String =
         if (votes % 1.0 == 0.0) votes.toInt().toString() else votes.toString()
+
+    private companion object {
+        /** Day phases whose work, once their poll+speech are idle, auto-advances to the next phase. */
+        val ADVANCEABLE_DAY_PHASES = setOf(Phase.DAWN, Phase.POLICE_ELECTION, Phase.SPEECHES, Phase.EXPEL_VOTE)
+    }
 }

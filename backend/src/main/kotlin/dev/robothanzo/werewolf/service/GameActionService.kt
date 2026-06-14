@@ -147,6 +147,7 @@ class GameActionService(
         session.stepEndsAt = null
         session.speech = null
         session.poll = null
+        session.wolfChat.clear()
         sessionService.clearLogs(guildId)
         sessionService.log(guildId, LogSeverity.ACTION, "game.reset")
         gameScheduler.cancelAll(guildId)
