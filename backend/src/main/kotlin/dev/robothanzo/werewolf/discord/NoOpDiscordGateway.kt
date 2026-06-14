@@ -35,6 +35,7 @@ class NoOpDiscordGateway(
         GuildMember(1012L, "mu", "繆", null, spectator = true)
     )
     override fun isOwner(guildId: Long, memberId: Long): Boolean = false
+    override fun isJudge(guildId: Long, memberId: Long): Boolean = false
     override fun canInteract(guildId: Long, memberId: Long): Boolean = true
     override fun getGuildName(guildId: Long): String? = null
     override fun getGuildIconUrl(guildId: Long): String? = null
@@ -133,6 +134,10 @@ class NoOpDiscordGateway(
 
     override fun setCommandHandler(handler: DiscordCommandHandler) {
         log.debug("[noop] setCommandHandler")
+    }
+
+    override fun setWolfChatHandler(handler: WolfChatHandler) {
+        log.debug("[noop] setWolfChatHandler")
     }
 
     override fun grantJudgeRole(guildId: Long, memberId: Long) {

@@ -6,6 +6,7 @@ import { useGameStore } from "@/stores/gameStore";
 import { useUiStore, type Density } from "@/stores/uiStore";
 import { useGameActions } from "@/hooks/useGameActions";
 import { useGuild } from "@/hooks/useGuild";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { LogFeed } from "@/components/ui/LogFeed";
 import { Button } from "@/components/ui/Button";
@@ -38,6 +39,8 @@ export function Dashboard() {
   const openEdit = useUiStore((s) => s.openEdit);
   const setLogVisible = useGameStore((s) => s.setLogPanelVisible);
   const actions = useGameActions(guildId, demo);
+  const isPhone = useMediaQuery("(max-width: 520px)");
+  const isTablet = useMediaQuery("(max-width: 860px)");
 
   // Two-step revenge / duel: pick the actor, then click a target seat.
   const [targeting, setTargeting] = useState<{ kind: "revenge" | "duel"; seat: number } | null>(null);
@@ -55,12 +58,18 @@ export function Dashboard() {
 
   if (!snapshot) return null;
   const isLobby = snapshot.phase === "LOBBY";
-  const cols: Record<Density, number> = { comfort: 3, compact: 4, list: 1 };
+  // Roster columns track the user's density on desktop; on narrow screens
+  // we cap them so cards stay legible (phones go single/double column).
+  const cols: Record<Density, number> = isPhone
+    ? { comfort: 1, compact: 2, list: 1 }
+    : isTablet
+      ? { comfort: 2, compact: 3, list: 1 }
+      : { comfort: 3, compact: 4, list: 1 };
 
   return (
     <div style={{ maxWidth: 1180, margin: "0 auto" }}>
       {/* status header */}
-      <div className="wh-card" style={{ display: "flex", alignItems: "center", gap: 20, padding: "14px 18px", marginBottom: 16 }}>
+      <div className="wh-card" style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 16, padding: "14px 18px", marginBottom: 16 }}>
         <span style={{ display: "flex", flexDirection: "column" }}>
           <span style={{ fontSize: 16, fontWeight: 900 }}>{t(PHASE_KEY[snapshot.phase])}</span>
           <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
@@ -96,9 +105,14 @@ export function Dashboard() {
             )
           )}
           {!readOnly && !isLobby && snapshot.phase !== "OVER" && (
-            <Button variant="secondary" size="sm" onClick={actions.pause}>
-              {snapshot.paused ? t("dashboard.resume") : t("dashboard.pause")}
-            </Button>
+            <>
+              <Button variant="secondary" size="sm" onClick={actions.pause}>
+                {snapshot.paused ? t("dashboard.resume") : t("dashboard.pause")}
+              </Button>
+              <Button variant="secondary" size="sm" armed armedLabel={t("dashboard.skipArmed")} onClick={actions.skipPhase}>
+                {t("dashboard.skip")}
+              </Button>
+            </>
           )}
         </span>
       </div>
@@ -116,7 +130,7 @@ export function Dashboard() {
       {/* night board */}
       <AnimatePresence>{snapshot.night && (snapshot.night.active || snapshot.night.resolved) && <NightBoard night={snapshot.night} />}</AnimatePresence>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16, alignItems: "start" }}>
+      <div className="wh-dash-grid">
         {/* roster */}
         <section style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
           <header style={{ display: "flex", alignItems: "center", gap: 10 }}>

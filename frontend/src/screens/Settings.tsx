@@ -106,7 +106,7 @@ export function Settings() {
       `}</style>
 
       <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900 }}>{t("settings.title")}</h1>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
+      <div className="wh-form-grid">
         
         {/* left column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

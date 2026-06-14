@@ -110,6 +110,14 @@ export interface NightWave {
   actions: NightAction[];
 }
 
+/** One relayed wolf-team chat line, shown on the judge night board. */
+export interface WolfChatMessage {
+  seat: number;
+  author: string;
+  content: string;
+  at: number;
+}
+
 export interface Night {
   active: boolean;
   day: number;
@@ -119,6 +127,8 @@ export interface Night {
   resolved: boolean;
   summary: string | null;
   waves: NightWave[];
+  /** Wolf-team chatter relayed from the seat channels this night, in send order. */
+  wolfChat: WolfChatMessage[];
 }
 
 export interface LogEntry {

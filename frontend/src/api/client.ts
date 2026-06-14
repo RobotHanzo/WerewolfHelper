@@ -87,6 +87,7 @@ export const api = {
 
   // settings
   setPlayerCount: (g: string, count: number) => post(`/sessions/${g}/settings/player-count`, { count }),
+  setDay: (g: string, day: number) => post(`/sessions/${g}/settings/day`, { day }),
   setPool: (g: string, pool: Record<string, number>) => post(`/sessions/${g}/settings/pool`, { pool }),
   setDoubleIdentity: (g: string, value: boolean) => post(`/sessions/${g}/settings/double-identity`, { value }),
   setMuteAfterSpeech: (g: string, value: boolean) => post(`/sessions/${g}/settings/mute-after-speech`, { value }),

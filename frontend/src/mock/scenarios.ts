@@ -179,6 +179,12 @@ export function buildScenario(scenario: ScenarioId): GameSnapshot {
             },
             { index: 3, actions: [{ abilityId: "witch.potion", roleId: "witch", roleName: "女巫", faction: "GOD", actorSeats: [5], targetSeat: null, status: "acting" }] },
           ],
+          wolfChat: [
+            { seat: 1, author: "Alex（01）", content: "今晚刀誰？9 號一直跳預言家", at: now - 38_000 },
+            { seat: 3, author: "Mia（03）", content: "同意，9 號刀掉，他帶節奏太兇", at: now - 30_000 },
+            { seat: 8, author: "Leo（08）", content: "我覺得留 9 號，先處理真預言家 2 號", at: now - 18_000 },
+            { seat: 1, author: "Alex（01）", content: "那這夜先 9，明天再看 2 號", at: now - 6_000 },
+          ],
         },
       };
     case "day":

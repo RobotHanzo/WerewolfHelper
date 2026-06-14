@@ -13,6 +13,7 @@ import dev.robothanzo.werewolf.controller.dto.PollDto
 import dev.robothanzo.werewolf.controller.dto.SeatDto
 import dev.robothanzo.werewolf.controller.dto.SpeechDto
 import dev.robothanzo.werewolf.controller.dto.WinnerDto
+import dev.robothanzo.werewolf.controller.dto.WolfChatDto
 import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.domain.Faction
 import dev.robothanzo.werewolf.domain.GameLogEntry
@@ -180,6 +181,7 @@ class SnapshotService(
             resolved = night.resolved,
             summary = night.summary,
             waves = waves,
+            wolfChat = night.wolfChat.map { WolfChatDto(it.seat, it.author, it.content, it.at) },
         )
     }
 

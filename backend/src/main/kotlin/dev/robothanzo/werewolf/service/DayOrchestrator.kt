@@ -473,7 +473,9 @@ class DayOrchestrator(
 
     // ======================= interactions =======================
 
-    override fun handle(guildId: Long, userId: Long, customId: String, values: List<String>): InteractionReply? {
+    // Day prompts live in the shared COURT channel (not a per-seat channel), so the action is always
+    // attributed to the clicking member's own seat — [channelId] is unused here.
+    override fun handle(guildId: Long, userId: Long, channelId: Long, customId: String, values: List<String>): InteractionReply? {
         val session = sessionService.find(guildId) ?: return null
         val seat = session.seats.firstOrNull { it.memberId == userId }?.number
             ?: return InteractionReply("你不是這場遊戲的玩家")

@@ -88,8 +88,8 @@ class DayOrchestratorTest {
         assertEquals(PollStage.ENROLL, session.poll!!.stage)
 
         // seats 1 and 2 enroll
-        day.handle(gid, 1, InteractionIds.POLICE_ENROLL, emptyList())
-        day.handle(gid, 2, InteractionIds.POLICE_ENROLL, emptyList())
+        day.handle(gid, 1, 0L, InteractionIds.POLICE_ENROLL, emptyList())
+        day.handle(gid, 2, 0L, InteractionIds.POLICE_ENROLL, emptyList())
         assertEquals(setOf(1, 2), session.poll!!.candidates)
 
         day.resolvePollStage(gid) // ENROLL -> CAMPAIGN (campaign speeches start)
@@ -104,9 +104,9 @@ class DayOrchestratorTest {
 
         // non-candidate seats vote: 3 & 4 -> candidate 1, 5 -> candidate 2. The third (final) vote
         // completes the poll and auto-resolves.
-        day.handle(gid, 3, "${InteractionIds.POLICE_VOTE}:1", emptyList())
-        day.handle(gid, 4, "${InteractionIds.POLICE_VOTE}:1", emptyList())
-        day.handle(gid, 5, "${InteractionIds.POLICE_VOTE}:2", emptyList())
+        day.handle(gid, 3, 0L, "${InteractionIds.POLICE_VOTE}:1", emptyList())
+        day.handle(gid, 4, 0L, "${InteractionIds.POLICE_VOTE}:1", emptyList())
+        day.handle(gid, 5, 0L, "${InteractionIds.POLICE_VOTE}:2", emptyList())
 
         assertEquals(1, session.policeSeat)
         assertTrue(session.seat(1)!!.police)
@@ -120,7 +120,7 @@ class DayOrchestratorTest {
         assertEquals(PollStage.VOTING, session.poll!!.stage)
 
         // everyone votes seat 4; the final vote completes and resolves the poll
-        (1..5).forEach { day.handle(gid, it.toLong(), "${InteractionIds.EXPEL_VOTE}:4", emptyList()) }
+        (1..5).forEach { day.handle(gid, it.toLong(), 0L, "${InteractionIds.EXPEL_VOTE}:4", emptyList()) }
 
         assertFalse(session.seat(4)!!.alive)
         assertNull(session.poll)
@@ -132,7 +132,7 @@ class DayOrchestratorTest {
     @Test
     fun `expel records the last expelled seat for the gravekeeper`() {
         day.startExpelVote(gid)
-        (1..5).forEach { day.handle(gid, it.toLong(), "${InteractionIds.EXPEL_VOTE}:4", emptyList()) }
+        (1..5).forEach { day.handle(gid, it.toLong(), 0L, "${InteractionIds.EXPEL_VOTE}:4", emptyList()) }
         assertEquals(4, session.lastExpelledSeat)
     }
 
@@ -150,7 +150,7 @@ class DayOrchestratorTest {
         ) { assigned = true }
 
         day.startExpelVote(gid)
-        (1..5).forEach { day.handle(gid, it.toLong(), "${InteractionIds.EXPEL_VOTE}:4", emptyList()) }
+        (1..5).forEach { day.handle(gid, it.toLong(), 0L, "${InteractionIds.EXPEL_VOTE}:4", emptyList()) }
 
         assertTrue(session.seat(4)!!.alive)            // survives the expel
         assertTrue(session.seat(4)!!.idiotRevealed)    // but is flipped (loses its vote)
@@ -249,7 +249,7 @@ class DayOrchestratorTest {
         ) { assigned = true }
 
         day.startExpelVote(gid)
-        (1..5).forEach { day.handle(gid, it.toLong(), "${InteractionIds.EXPEL_VOTE}:1", emptyList()) }
+        (1..5).forEach { day.handle(gid, it.toLong(), 0L, "${InteractionIds.EXPEL_VOTE}:1", emptyList()) }
 
         assertTrue(session.seat(1)!!.alive)             // survives once
         assertTrue(session.seat(1)!!.bloodMoonRevived)
@@ -263,7 +263,7 @@ class DayOrchestratorTest {
 
         // a strict majority of the 5 alive players (3) vote the speaker off
         (1..5).filter { it != speaker }.take(3)
-            .forEach { day.handle(gid, it.toLong(), InteractionIds.SPEECH_INTERRUPT, emptyList()) }
+            .forEach { day.handle(gid, it.toLong(), 0L, InteractionIds.SPEECH_INTERRUPT, emptyList()) }
 
         // either advanced to the next speaker or the flow ended (single remaining speaker)
         assertTrue(session.speech == null || session.speech!!.index >= 1)

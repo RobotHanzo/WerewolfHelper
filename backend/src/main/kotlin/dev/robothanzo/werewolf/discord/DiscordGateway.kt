@@ -46,6 +46,9 @@ interface DiscordGateway {
     // --- queries ---
     fun listMembers(guildId: Long): List<GuildMember>
     fun isOwner(guildId: Long, memberId: Long): Boolean
+    /** Whether [memberId] is a judge of this guild (the owner, the judge role, or a server admin) —
+     *  judges may drive night prompts on a seat's behalf from that seat's channel. */
+    fun isJudge(guildId: Long, memberId: Long): Boolean
     /** Role-hierarchy preflight: can the bot actually act on this member? */
     fun canInteract(guildId: Long, memberId: Long): Boolean
     fun getGuildName(guildId: Long): String?
@@ -95,6 +98,9 @@ interface DiscordGateway {
 
     /** Register the handler for the `/server` slash command and bot-join provisioning. */
     fun setCommandHandler(handler: DiscordCommandHandler)
+
+    /** Register the handler that records relayed wolf-chat lines onto the live night (judge board). */
+    fun setWolfChatHandler(handler: WolfChatHandler)
 
     /** Grant a member the provisioned judge role (re-granted to the owner on join, §3). */
     fun grantJudgeRole(guildId: Long, memberId: Long)

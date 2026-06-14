@@ -66,7 +66,9 @@
     "previewOff": "旁觀者預覽",
     "switchServer": "伺服器",
     "themeDark": "深色",
-    "themeLight": "淺色"
+    "themeLight": "淺色",
+    "menu": "選單",
+    "close": "關閉選單"
   },
   "role": {
     "judge": "法官",
@@ -148,6 +150,8 @@
     "wolfKill": "狼人擊殺",
     "wolfConsensus": "刀口共識",
     "wolfVote": "狼人投票",
+    "wolfChat": "狼隊密談",
+    "wolfChatEmpty": "狼隊尚未發言",
     "locked": "已鎖定",
     "voted": "{{voted}} / {{total}} 已投",
     "deliberating": "商議中…",

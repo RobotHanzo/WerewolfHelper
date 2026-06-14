@@ -28,8 +28,8 @@ class InteractionRouter(
         handlers[namespace] = handler
     }
 
-    override fun handle(guildId: Long, userId: Long, customId: String, values: List<String>): InteractionReply? {
+    override fun handle(guildId: Long, userId: Long, channelId: Long, customId: String, values: List<String>): InteractionReply? {
         val namespace = customId.split(":").getOrNull(1) ?: return null
-        return handlers[namespace]?.handle(guildId, userId, customId, values)
+        return handlers[namespace]?.handle(guildId, userId, channelId, customId, values)
     }
 }

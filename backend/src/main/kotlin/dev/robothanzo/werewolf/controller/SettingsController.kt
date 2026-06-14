@@ -1,6 +1,7 @@
 package dev.robothanzo.werewolf.controller
 
 import dev.robothanzo.werewolf.controller.dto.ApiResponse
+import dev.robothanzo.werewolf.controller.dto.DayRequest
 import dev.robothanzo.werewolf.controller.dto.PlayerCountRequest
 import dev.robothanzo.werewolf.controller.dto.PoolRequest
 import dev.robothanzo.werewolf.controller.dto.ToggleRequest
@@ -37,6 +38,15 @@ class SettingsController(
                 gateway.resizeGuild(s, body.count)
             }
         }
+        return ResponseEntity.ok(ApiResponse.ok())
+    }
+
+    @Operation(summary = "Set day counter", description = "Override the current day number after the game has started.")
+    @ApiResponses(value = [SwaggerApiResponse(responseCode = "200", description = "Updated")])
+    @PostMapping("/day")
+    @CanManageGuild
+    fun day(@PathVariable guildId: String, @RequestBody body: DayRequest): ResponseEntity<ApiResponse> {
+        sessionService.mutate(guildId.toLong()) { s -> s.day = body.day.coerceAtLeast(0) }
         return ResponseEntity.ok(ApiResponse.ok())
     }
 

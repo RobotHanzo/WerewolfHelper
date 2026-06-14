@@ -19,7 +19,7 @@ export function Spectator() {
         </span>
       </header>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
         {snapshot.meters.map((m) => (
           <FactionMeter key={m.faction} meter={m} />
         ))}
@@ -31,7 +31,7 @@ export function Spectator() {
         </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
         {snapshot.seats.map((seat) => (
           <PlayerCard key={seat.seat} seat={seat} readOnly changed={changedSeats.has(seat.seat)} />
         ))}

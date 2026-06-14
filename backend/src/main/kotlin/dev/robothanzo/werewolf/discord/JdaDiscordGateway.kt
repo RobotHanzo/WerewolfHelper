@@ -99,6 +99,9 @@ class JdaDiscordGateway(
     @Volatile
     private var commandHandler: DiscordCommandHandler? = null
 
+    @Volatile
+    private var wolfChatHandler: WolfChatHandler? = null
+
     init {
         jda.addEventListener(RelayListener())
         jda.addEventListener(LifecycleListener())
@@ -135,6 +138,14 @@ class JdaDiscordGateway(
     }
 
     override fun isOwner(guildId: Long, memberId: Long): Boolean = guild(guildId)?.ownerIdLong == memberId
+
+    override fun isJudge(guildId: Long, memberId: Long): Boolean {
+        val g = guild(guildId) ?: return false
+        if (g.ownerIdLong == memberId) return true
+        val m = member(guildId, memberId) ?: return false
+        val judgeRoleId = session(guildId)?.discordIds?.judgeRoleId
+        return m.hasPermission(Permission.ADMINISTRATOR) || (judgeRoleId != null && m.roles.any { it.idLong == judgeRoleId })
+    }
 
     override fun canInteract(guildId: Long, memberId: Long): Boolean {
         val g = guild(guildId) ?: return false
@@ -530,6 +541,17 @@ class JdaDiscordGateway(
     private fun isWolfChat(seat: Seat): Boolean =
         seat.livingCards().ifEmpty { seat.cards }.any { roles.byId(it.roleId)?.hasTag(RoleTag.WOLF_CHAT) == true }
 
+    /**
+     * Forward a wolf-team line to the registered handler so it surfaces on the judge night board.
+     * Gated here (night active + a wolf-chat seat) where the session and role registry are already in
+     * hand; the handler owns persistence + broadcast (avoiding a constructor cycle, as with the other
+     * inbound handlers). The non-wolf seat groups (e.g. 金寶寶) are deliberately not recorded.
+     */
+    private fun recordWolfChat(guildId: Long, session: GameSession, sender: Seat, author: String, content: String) {
+        if (!session.nightState.active || content.isBlank() || !isWolfChat(sender)) return
+        wolfChatHandler?.onWolfChat(guildId, sender.number, "$author（${sender.paddedNumber}）", content)
+    }
+
     private fun webhookFor(channel: TextChannel): WebhookClient =
         webhookCache.getOrPut(channel.idLong) {
             val hook = channel.retrieveWebhooks().complete().firstOrNull { it.token != null }
@@ -549,6 +571,7 @@ class JdaDiscordGateway(
             // From a seat channel → relay within the sender's group.
             session.seats.firstOrNull { it.channelId == event.channel.idLong }?.let { sender ->
                 relayWolfChat(event.guild.idLong, sender.number, "$author（${sender.paddedNumber}）", avatar, content)
+                recordWolfChat(event.guild.idLong, session, sender, author, content)
                 return
             }
             // From the judge channel → mirror to every wolf-team channel.
@@ -571,6 +594,10 @@ class JdaDiscordGateway(
 
     override fun setCommandHandler(handler: DiscordCommandHandler) {
         commandHandler = handler
+    }
+
+    override fun setWolfChatHandler(handler: WolfChatHandler) {
+        wolfChatHandler = handler
     }
 
     override fun promptNightAction(
@@ -670,15 +697,17 @@ class JdaDiscordGateway(
     private inner class ComponentListener : ListenerAdapter() {
         override fun onButtonInteraction(event: ButtonInteractionEvent) {
             if (!event.componentId.startsWith(InteractionIds.PREFIX) || !event.isFromGuild) return
-            val reply =
-                interactionHandler?.handle(event.guild!!.idLong, event.user.idLong, event.componentId, emptyList())
+            val reply = interactionHandler?.handle(
+                event.guild!!.idLong, event.user.idLong, event.channel.idLong, event.componentId, emptyList(),
+            )
             event.reply(reply?.ack ?: "已收到").setEphemeral(true).queue()
         }
 
         override fun onStringSelectInteraction(event: StringSelectInteractionEvent) {
             if (!event.componentId.startsWith(InteractionIds.PREFIX) || !event.isFromGuild) return
-            val reply =
-                interactionHandler?.handle(event.guild!!.idLong, event.user.idLong, event.componentId, event.values)
+            val reply = interactionHandler?.handle(
+                event.guild!!.idLong, event.user.idLong, event.channel.idLong, event.componentId, event.values,
+            )
             event.reply(reply?.ack ?: "已收到").setEphemeral(true).queue()
         }
     }

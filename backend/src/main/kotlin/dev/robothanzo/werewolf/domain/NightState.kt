@@ -21,6 +21,16 @@ data class NightState(
     var wolfVotes: MutableMap<Int, Int> = mutableMapOf(),
     /** Submitted per-ability intents (excluding the collective wolf kill, which lives in wolfVotes). */
     var intents: MutableList<NightIntentData> = mutableListOf(),
+    /** Wolf-team chatter relayed from the seat channels this night, surfaced on the judge night board. */
+    var wolfChat: MutableList<WolfChatData> = mutableListOf(),
+)
+
+/** A single wolf-chat line captured during the night, in send order, for the dashboard board. */
+data class WolfChatData(
+    var seat: Int = 0,
+    var author: String = "",
+    var content: String = "",
+    var at: Long = 0,
 )
 
 /** A Mongo-serializable night intent (mirrors the engine's NightIntent). */

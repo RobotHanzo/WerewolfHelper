@@ -37,6 +37,8 @@ vi.mock("lucide-react", () => ({
   Shield: () => null,
   LogOutIcon: () => null,
   WifiOffIcon: () => null,
+  Menu: () => null,
+  X: () => null,
 }));
 
 // Spy on GameSocket

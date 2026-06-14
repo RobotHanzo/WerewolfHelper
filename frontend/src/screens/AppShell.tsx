@@ -1,7 +1,8 @@
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Moon, Sun, LayoutDashboard, Mic, Eye, Settings as SettingsIcon, Server, LogOut, WifiOff } from "lucide-react";
-import { motion } from "framer-motion";
+import { Moon, Sun, LayoutDashboard, Mic, Eye, Settings as SettingsIcon, Server, LogOut, WifiOff, Menu, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { api } from "@/api/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useGameStore } from "@/stores/gameStore";
@@ -22,8 +23,26 @@ export function AppShell() {
   const unread = useGameStore((s) => s.unreadLogs);
   const spectatorPreview = useUiStore((s) => s.spectatorPreview);
   const togglePreview = useUiStore((s) => s.toggleSpectatorPreview);
+  const sidebarOpen = useUiStore((s) => s.sidebarOpen);
+  const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
+  const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggle);
+
+  // The drawer is a navigation surface — collapse it on every route change.
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname, setSidebarOpen]);
+
+  // Lock the page behind the open drawer so the body doesn't scroll under it.
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [sidebarOpen]);
 
   const base = `/server/${guildId}`;
   const nav = isJudge
@@ -50,21 +69,43 @@ export function AppShell() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.18, ease: "easeOut" }}
-      style={{ display: "flex", minHeight: "100vh", background: "var(--surface-app)" }}
+      className="wh-shell"
     >
-      <motion.aside
-        initial={{ x: -16, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        exit={{ x: -16, opacity: 0 }}
-        transition={{ duration: 0.22, ease: "easeOut" }}
-        style={{ width: 224, flex: "none", display: "flex", flexDirection: "column", gap: 8, padding: 16, borderRight: "1px solid var(--border-1)", background: "var(--surface-card)", position: "sticky", top: 0, height: "100vh", boxSizing: "border-box" }}
-      >
+      {/* mobile top bar — hidden ≥860px via CSS */}
+      <header className="wh-topbar">
+        <button className="wh-icon-btn" onClick={toggleSidebar} aria-label={t("nav.menu")} aria-expanded={sidebarOpen}>
+          <Menu size={18} />
+        </button>
+        <img src="/logo.svg" alt="" width={26} height={26} />
+        <strong style={{ fontSize: 14, fontWeight: 900, letterSpacing: "0.04em" }}>{t("app.name")}</strong>
+        <span style={{ marginLeft: "auto" }}>
+          <LiveIndicator connected={connected} />
+        </span>
+      </header>
+
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            className="wh-sidebar-scrim"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <aside className={`wh-sidebar${sidebarOpen ? " wh-sidebar--open" : ""}`}>
         <div style={{ padding: "4px 4px 16px", display: "flex", alignItems: "center", gap: 10 }}>
           <img src="/logo.svg" alt="" width={34} height={34} />
-          <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
+          <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.2, flex: 1, minWidth: 0 }}>
             <strong style={{ fontSize: 15, fontWeight: 900, letterSpacing: "0.04em" }}>{t("app.name")}</strong>
             <span className="mono" style={{ fontSize: 8.5, color: "var(--moon-400)", letterSpacing: "0.2em" }}>{t("app.wordmark")}</span>
           </span>
+          <button className="wh-icon-btn wh-sidebar-close" onClick={() => setSidebarOpen(false)} aria-label={t("nav.close")} style={{ width: 32, height: 32 }}>
+            <X size={16} />
+          </button>
         </div>
 
         {nav.map((n) => (
@@ -115,14 +156,14 @@ export function AppShell() {
             <LogOut size={13} /> {t("common.signOut")}
           </button>
         </div>
-      </motion.aside>
+      </aside>
 
       <motion.main
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 8 }}
         transition={{ duration: 0.22, ease: "easeOut" }}
-        style={{ flex: 1, minWidth: 0, padding: "20px 24px 80px", boxSizing: "border-box" }}
+        className="wh-main"
       >
         {!connected && (
           <div className="wh-urgent" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", margin: "0 auto 14px", maxWidth: 1180, borderRadius: "var(--r-md)", background: "var(--danger-dim)", border: "1px solid rgba(255,92,110,0.4)" }}>

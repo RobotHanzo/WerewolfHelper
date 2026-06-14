@@ -121,6 +121,16 @@ data class NightDto(
     val resolved: Boolean,
     val summary: String?,
     val waves: List<NightWaveDto>,
+    @get:Schema(description = "Wolf-team chatter relayed from the seat channels this night, in send order")
+    val wolfChat: List<WolfChatDto> = emptyList(),
+)
+
+@Schema(description = "One relayed wolf-chat line shown on the judge night board")
+data class WolfChatDto(
+    val seat: Int,
+    val author: String,
+    val content: String,
+    val at: Long,
 )
 
 @Schema(description = "One wave of simultaneous night actions")

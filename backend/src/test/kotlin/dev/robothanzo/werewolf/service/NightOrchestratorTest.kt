@@ -79,7 +79,7 @@ class NightOrchestratorTest {
         ) { assigned = true; day = 2 }
 
         night.startNight(gid)
-        night.handle(gid, 1L, "${InteractionIds.NIGHT_ACTION}:mechanic_wolf.learn", listOf("2"))
+        night.handle(gid, 1L, 0L, "${InteractionIds.NIGHT_ACTION}:mechanic_wolf.learn", listOf("2"))
         night.resolveNight(gid)
 
         assertEquals(RoleIds.WITCH, session.seat(1)!!.learnedRoleId)

@@ -425,3 +425,178 @@
   color: var(--text-secondary);
   letter-spacing: var(--tracking-wide);
 }
+
+/* ============================================================
+   Responsive shell — sticky 224px rail on desktop; below 860px
+   it collapses into an off-canvas drawer toggled from the top bar.
+   ============================================================ */
+
+.wh-shell {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--surface-app);
+}
+
+.wh-sidebar {
+  width: 224px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-right: 1px solid var(--border-1);
+  background: var(--surface-card);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  box-sizing: border-box;
+}
+
+/* The top bar (hamburger + wordmark) only exists on mobile. */
+.wh-topbar {
+  display: none;
+}
+
+.wh-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-md);
+  background: var(--surface-app);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.wh-icon-btn:active {
+  transform: scale(0.96);
+}
+
+.wh-sidebar-scrim {
+  display: none;
+}
+
+/* The in-drawer close button is redundant beside the desktop rail. */
+.wh-sidebar-close {
+  display: none;
+}
+
+.wh-main {
+  flex: 1;
+  min-width: 0;
+  padding: 20px 24px 80px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 860px) {
+  .wh-shell {
+    flex-direction: column;
+  }
+
+  .wh-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    position: sticky;
+    top: 0;
+    z-index: 45;
+    background: var(--surface-card);
+    border-bottom: 1px solid var(--border-1);
+  }
+
+  .wh-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    height: 100dvh;
+    width: min(82vw, 300px);
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform var(--dur-base) var(--ease-out);
+    box-shadow: var(--shadow-3);
+    border-right: 1px solid var(--border-2);
+  }
+  .wh-sidebar--open {
+    transform: translateX(0);
+  }
+  .wh-sidebar-close {
+    display: inline-flex;
+  }
+
+  .wh-sidebar-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: var(--surface-overlay);
+    backdrop-filter: blur(2px);
+  }
+
+  .wh-main {
+    padding: 14px 14px 72px;
+  }
+}
+
+/* Two-column page layouts collapse to a single stack on mobile. */
+.wh-dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+  align-items: start;
+}
+.wh-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .wh-dash-grid,
+  .wh-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Night board: phases beside the wolf-chat rail on desktop, stacked on mobile. The phases column
+   uses minmax(0,…) so its inner auto-fill grid can shrink instead of forcing horizontal overflow. */
+.wh-night-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  align-items: stretch;
+}
+.wh-night-phases {
+  padding: 16px 18px;
+  min-width: 0;
+}
+.wh-night-chat {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 14px 18px;
+  border-left: 1px solid var(--border-1);
+  background: linear-gradient(180deg, var(--wolf-dim), transparent 60%);
+}
+.wh-night-chat-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+@media (max-width: 860px) {
+  .wh-night-body {
+    grid-template-columns: 1fr;
+  }
+  .wh-night-chat {
+    border-left: none;
+    border-top: 1px solid var(--border-1);
+  }
+  /* Stacked: the chat has no sibling to bound its height, so cap the scroll region. */
+  .wh-night-chat-scroll {
+    max-height: 280px;
+  }
+}

@@ -37,6 +37,9 @@ data class ForcePoliceRequest(val seat: Int)
 @Schema(description = "Change the player count")
 data class PlayerCountRequest(val count: Int)
 
+@Schema(description = "Set the current day counter")
+data class DayRequest(val day: Int)
+
 @Schema(description = "Replace the identity pool (roleId → count)")
 data class PoolRequest(val pool: Map<String, Int>)
 

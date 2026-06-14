@@ -11,6 +11,7 @@ interface KillTarget {
 interface UiState {
   density: Density;
   spectatorPreview: boolean;
+  sidebarOpen: boolean;
 
   // overlays
   killTarget: KillTarget | null;
@@ -21,6 +22,8 @@ interface UiState {
 
   setDensity: (density: Density) => void;
   toggleSpectatorPreview: () => void;
+  setSidebarOpen: (open: boolean) => void;
+  toggleSidebar: () => void;
   openKill: (target: KillTarget) => void;
   closeKill: () => void;
   openEdit: (seat: number) => void;
@@ -34,6 +37,7 @@ interface UiState {
 export const useUiStore = create<UiState>((set) => ({
   density: "comfort",
   spectatorPreview: false,
+  sidebarOpen: false,
   killTarget: null,
   editSeat: null,
   timerOpen: false,
@@ -42,6 +46,8 @@ export const useUiStore = create<UiState>((set) => ({
 
   setDensity: (density) => set({ density }),
   toggleSpectatorPreview: () => set((s) => ({ spectatorPreview: !s.spectatorPreview })),
+  setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+  toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   openKill: (killTarget) => set({ killTarget }),
   closeKill: () => set({ killTarget: null }),
   openEdit: (editSeat) => set({ editSeat }),

@@ -16,9 +16,23 @@ data class CourtButton(val customId: String, val label: String, val style: Butto
  * Receives Discord component interactions (night-action select menus, wolf-kill vote buttons) and
  * routes them into the game engine. The gateway owns the JDA wiring; this handler owns the meaning.
  * Custom ids are namespaced `wh:...` and parsed by the implementation.
+ *
+ * [channelId] is the channel the interaction was clicked in. Seat channels are bound 1:1 to a seat,
+ * so a judge (who can see every seat channel) clicking a night prompt acts **on behalf of** the seat
+ * that channel belongs to — that's how the judge votes/acts for players.
  */
 fun interface DiscordInteractionHandler {
-    fun handle(guildId: Long, userId: Long, customId: String, values: List<String>): InteractionReply?
+    fun handle(guildId: Long, userId: Long, channelId: Long, customId: String, values: List<String>): InteractionReply?
+}
+
+/**
+ * Receives wolf-team chat lines relayed from the seat channels during the night, so they can be
+ * surfaced on the judge night board. The gateway gates on night-active + wolf-chat membership and
+ * formats the author label; the handler owns persistence + snapshot broadcast. Registered
+ * post-construct (like the interaction handler) to avoid a constructor cycle with the gateway.
+ */
+fun interface WolfChatHandler {
+    fun onWolfChat(guildId: Long, seat: Int, author: String, content: String)
 }
 
 /**

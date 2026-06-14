@@ -58,7 +58,7 @@ export function LoginScreen({ onLogin, onViewDemo }: { onLogin: () => void; onVi
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.98, opacity: 0, y: -8 }}
         transition={{ duration: 0.22, ease: "easeOut" }}
-        style={{ ...card, width: 380 }}
+        style={{ ...card, width: "100%", maxWidth: 380 }}
       >
         <img src="/logo.svg" alt="" width={72} height={72} />
         <h1 style={{ margin: "8px 0 0", fontSize: 26, fontWeight: 900, letterSpacing: "0.04em" }}>{t("app.name")}</h1>
@@ -296,7 +296,7 @@ export function ServerSelectScreen({
       exit="exit"
       style={centered}
     >
-      <div style={{ width: 460, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ width: "100%", maxWidth: 460, display: "flex", flexDirection: "column", gap: 12 }}>
         <motion.h1
           variants={itemVariants}
           style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 900 }}
@@ -376,7 +376,7 @@ export function ServerSelectScreen({
 export function MessageScreen({ icon, title, body, children }: { icon: React.ReactNode; title: string; body: string; children?: React.ReactNode }) {
   return (
     <div style={centered}>
-      <div style={{ ...card, width: 440, boxShadow: "var(--shadow-2)" }}>
+      <div style={{ ...card, width: "100%", maxWidth: 440, boxShadow: "var(--shadow-2)" }}>
         <span style={{ color: "var(--warning-500)" }}>{icon}</span>
         <h1 style={{ margin: 0, fontSize: 20, fontWeight: 900 }}>{title}</h1>
         <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.8 }}>{body}</p>

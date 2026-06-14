@@ -13,6 +13,7 @@ import dev.robothanzo.werewolf.domain.NightIntentData
 import dev.robothanzo.werewolf.domain.NightState
 import dev.robothanzo.werewolf.domain.Phase
 import dev.robothanzo.werewolf.domain.Seat
+import dev.robothanzo.werewolf.domain.WolfChatData
 import dev.robothanzo.werewolf.game.GameConstants
 import dev.robothanzo.werewolf.game.flow.GameScheduler
 import dev.robothanzo.werewolf.game.night.NightAbility
@@ -62,10 +63,31 @@ class NightOrchestrator(
 
     private companion object {
         const val MECHANIC_LEARN_ID = "mechanic_wolf.learn"
+
+        /** Cap on retained wolf-chat lines per night, so a long night can't grow the document unbounded. */
+        const val MAX_WOLF_CHAT = 100
     }
 
     @PostConstruct
-    fun register() = router.register(InteractionIds.NS_NIGHT, this)
+    fun register() {
+        router.register(InteractionIds.NS_NIGHT, this)
+        gateway.setWolfChatHandler(::onWolfChat)
+    }
+
+    /**
+     * Record a relayed wolf-chat line onto the live night (the gateway has already gated on
+     * night-active + wolf-chat membership). Mutating through [GameSessionService.mutate] persists and
+     * broadcasts the fresh snapshot, so the judge board updates live. Oldest lines are trimmed once
+     * the per-night cap is exceeded.
+     */
+    fun onWolfChat(guildId: Long, seat: Int, author: String, content: String) {
+        sessionService.mutate(guildId) { session ->
+            if (!session.nightState.active) return@mutate
+            val chat = session.nightState.wolfChat
+            chat.add(WolfChatData(seat, author, content, System.currentTimeMillis()))
+            if (chat.size > MAX_WOLF_CHAT) chat.subList(0, chat.size - MAX_WOLF_CHAT).clear()
+        }
+    }
 
     // ---------- starting a night ----------
     fun startNight(guildId: Long) {
@@ -168,10 +190,18 @@ class NightOrchestrator(
     }
 
     // ---------- handling interactions ----------
-    override fun handle(guildId: Long, userId: Long, customId: String, values: List<String>): InteractionReply? {
+    override fun handle(guildId: Long, userId: Long, channelId: Long, customId: String, values: List<String>): InteractionReply? {
         val session = sessionService.find(guildId) ?: return null
-        val seatNumber = session.seats.firstOrNull { it.memberId == userId }?.number
-            ?: return InteractionReply("你不是這場遊戲的玩家")
+        // The action is attributed to a seat. A player drives their own prompt (memberId match); a
+        // judge, who can see every seat channel, drives the prompt **on that seat's behalf** — the
+        // seat is whichever one the clicked channel is bound to.
+        val ownSeat = session.seats.firstOrNull { it.memberId == userId }?.number
+        val channelSeat = session.seats.firstOrNull { it.channelId == channelId && it.channelId != 0L }?.number
+        val seatNumber = when {
+            channelSeat != null && gateway.isJudge(guildId, userId) -> channelSeat
+            ownSeat != null -> ownSeat
+            else -> return InteractionReply("你不是這場遊戲的玩家")
+        }
         if (!session.nightState.active || session.nightState.resolved) return InteractionReply("夜晚行動已結束")
 
         var reply = "已收到"

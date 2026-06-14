@@ -28,7 +28,7 @@ export function SpeechManager() {
           <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text-secondary)" }}>{t("speech.idle")}</span>
           <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{readOnly ? t("speech.idleHintSpectator") : t("speech.idleHintJudge")}</span>
           {!readOnly && (
-            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 10, marginTop: 8 }}>
               <Button variant="primary" onClick={actions.startSpeech}>{t("speech.startSpeech")}</Button>
               <Button variant="secondary" onClick={actions.startElection}>{t("speech.startElection")}</Button>
               <Button variant="secondary" onClick={actions.startExpel}>{t("speech.startExpel")}</Button>
@@ -42,7 +42,7 @@ export function SpeechManager() {
           <span style={{ fontSize: 15, fontWeight: 800 }}>{t("speech.waitingDirection")}</span>
           <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{t("speech.directionPrompt", { seat: speech.fromSeat ?? "" })}</span>
           {!readOnly && (
-            <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 10, marginTop: 6 }}>
               <Button variant="primary" onClick={() => actions.setSpeechDirection("UP")}>{t("speech.dirUp")}</Button>
               <Button variant="primary" onClick={() => actions.setSpeechDirection("DOWN")}>{t("speech.dirDown")}</Button>
             </div>
@@ -71,7 +71,7 @@ export function SpeechManager() {
             </div>
             {speech.endsAt && <Countdown endsAt={speech.endsAt} size="stage" />}
             {!readOnly && (
-              <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 10, marginTop: 6 }}>
                 <Button variant="secondary" onClick={actions.skipSpeech}>{t("speech.skip")}</Button>
                 <Button variant="danger" onClick={actions.terminateSpeech}>{t("speech.terminate")}</Button>
               </div>
@@ -83,7 +83,7 @@ export function SpeechManager() {
       {speech?.active && speech.upcoming.length > 0 && (
         <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.08em" }}>{t("speech.upcoming")}</span>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8 }}>
             {speech.upcoming.map((seat, i) => (
               <div key={seat} className="wh-card" style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px" }}>
                 <span className="mono" style={{ fontSize: 11, color: "var(--text-muted)" }}>{i + 1}</span>
@@ -150,7 +150,7 @@ function VotePanel() {
         })}
       </div>
       {!readOnly && (
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end" }}>
           {isElection && <Button variant="secondary" onClick={actions.advancePoll}>{t("election.advanceStage")}</Button>}
           <Button variant="danger" onClick={actions.resolvePoll}>{t("election.resolveNow")}</Button>
         </div>

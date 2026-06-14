@@ -1,7 +1,8 @@
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { Moon, Check, ArrowRight, Skull, Sparkles } from "lucide-react";
-import type { Night, NightAction, NightVote } from "@/types/snapshot";
+import { Moon, Check, ArrowRight, Skull, Sparkles, MessageSquare } from "lucide-react";
+import type { Night, NightAction, NightVote, WolfChatMessage } from "@/types/snapshot";
 import { Avatar } from "@/components/ui/Avatar";
 import { Countdown } from "@/components/ui/Countdown";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -185,6 +186,56 @@ function PhaseSection({ displayNumber, actions, isLast }: { displayNumber: numbe
   );
 }
 
+const chatTime = (at: number) =>
+  new Date(at).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+/**
+ * The wolf team's relayed chatter for this night. Read-only mirror of what the wolves type in their
+ * private Discord channels — auto-scrolls to the newest line. Wolf-tinted to match the knife panel.
+ */
+function WolfChatPanel({ messages }: { messages: WolfChatMessage[] }) {
+  const { t } = useTranslation();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages.length]);
+
+  return (
+    <section className="wh-night-chat">
+      <header style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 900, color: "var(--wolf-400)" }}>
+          <MessageSquare size={15} /> {t("night.wolfChat")}
+        </span>
+        {messages.length > 0 && (
+          <span className="mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--wolf-400)", background: "var(--wolf-dim)", borderRadius: "var(--r-full)", padding: "1px 8px" }}>
+            {messages.length}
+          </span>
+        )}
+      </header>
+      {messages.length === 0 ? (
+        <span style={{ fontSize: 12, color: "var(--text-muted)", fontStyle: "italic" }}>{t("night.wolfChatEmpty")}</span>
+      ) : (
+        <div ref={scrollRef} className="wh-night-chat-scroll" style={{ display: "flex", flexDirection: "column", gap: 8, paddingRight: 4 }}>
+          {messages.map((m, i) => (
+            <div key={`${m.at}-${i}`} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
+              <Avatar size="sm" name={`#${m.seat}`} />
+              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
+                <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--wolf-400)" }}>{m.author}</span>
+                  <span className="mono" style={{ fontSize: 10, color: "var(--text-muted)" }}>{chatTime(m.at)}</span>
+                </span>
+                <span style={{ fontSize: 13, color: "var(--text-body)", lineHeight: 1.5, wordBreak: "break-word" }}>{m.content}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 /**
  * The automated night engine surfaced for the judge: the NightPlanner's topological waves are shown
  * as ordered, numbered phases (independent abilities inside a phase run simultaneously). The
@@ -199,6 +250,16 @@ export function NightBoard({ night }: { night: Night }) {
   const phases = night.waves
     .map((w) => w.actions.filter(isLive))
     .filter((actions) => actions.length > 0);
+
+  // Wolf chat sits beside the phases on desktop (CSS grid), stacked below on mobile.
+  const showChat = night.active || night.wolfChat.length > 0;
+  const phasesEl = (
+    <div className="wh-night-phases">
+      {phases.map((actions, i) => (
+        <PhaseSection key={i} displayNumber={i + 1} actions={actions} isLast={i === phases.length - 1} />
+      ))}
+    </div>
+  );
 
   return (
     <motion.div
@@ -226,11 +287,14 @@ export function NightBoard({ night }: { night: Night }) {
         </span>
       </header>
 
-      <div style={{ padding: "16px 18px" }}>
-        {phases.map((actions, i) => (
-          <PhaseSection key={i} displayNumber={i + 1} actions={actions} isLast={i === phases.length - 1} />
-        ))}
-      </div>
+      {showChat ? (
+        <div className="wh-night-body">
+          {phasesEl}
+          <WolfChatPanel messages={night.wolfChat} />
+        </div>
+      ) : (
+        phasesEl
+      )}
 
       {night.resolved && night.summary && (
         <footer style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 18px", borderTop: "1px solid var(--border-1)", background: "var(--surface-raised)" }}>
