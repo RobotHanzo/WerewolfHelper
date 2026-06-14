@@ -23,8 +23,8 @@ class ApplicationContextTest {
     private lateinit var roles: RoleRegistry
 
     @Test
-    fun `context loads with the no-op gateway and all 27 roles registered`() {
+    fun `context loads with the no-op gateway and all 28 roles registered`() {
         assertFalse(gateway.available) // no token → NoOp
-        assertEquals(27, roles.all.size)
+        assertEquals(28, roles.all.size) // 27 FEATURES §2 identities + 隱狼 (ROLES.md)
     }
 }

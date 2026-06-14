@@ -14,7 +14,9 @@ import dev.robothanzo.werewolf.domain.LogSeverity
 import dev.robothanzo.werewolf.domain.Phase
 import dev.robothanzo.werewolf.domain.Seat
 import dev.robothanzo.werewolf.game.GameConstants
+import dev.robothanzo.werewolf.game.day.DuelResolver
 import dev.robothanzo.werewolf.game.flow.GameScheduler
+import dev.robothanzo.werewolf.game.roles.RoleIds
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.speech.SpeechDirection
 import dev.robothanzo.werewolf.game.speech.SpeechFlow
@@ -55,6 +57,8 @@ class DayOrchestrator(
     private val announcer: CourtAnnouncer,
     private val router: InteractionRouter,
     private val msg: Msg,
+    private val deaths: DeathService,
+    private val duel: DuelResolver,
 ) : DiscordInteractionHandler {
 
     @PostConstruct
@@ -85,6 +89,81 @@ class DayOrchestrator(
 
     /** Force the current poll stage to resolve / advance early (same op the scheduler deadline runs). */
     fun resolvePollStage(guildId: Long) = sessionService.mutate(guildId) { resolvePollStageInternal(it) }
+
+    // ======================= day-phase role actions (ROLES.md) =======================
+
+    /** 騎士 決鬥. Returns true when the duel hit a wolf and the game must enter night. */
+    fun knightDuel(guildId: Long, knightSeat: Int, targetSeat: Int): Boolean =
+        sessionService.mutate(guildId) { knightDuelInternal(it, knightSeat, targetSeat) }
+
+    /** 自爆 (狼人 / 白狼王 / 血月使徒). Returns true when the game must enter night (always, unless the
+     *  game just ended). */
+    fun selfDestruct(guildId: Long, seat: Int): Boolean =
+        sessionService.mutate(guildId) { selfDestructInternal(it, seat) }
+
+    private fun knightDuelInternal(session: GameSession, knightSeat: Int, targetSeat: Int): Boolean {
+        val knight = session.seat(knightSeat) ?: return false
+        val card = knight.cards.firstOrNull { !it.dead && it.roleId == RoleIds.KNIGHT } ?: return false
+        if (knight.duelUsed) return false
+        knight.duelUsed = true
+
+        val result = duel.resolve(session, knightSeat, targetSeat)
+        // 決鬥死亡的狼王/白狼王/狼美人技能不能發動 → the duel death suppresses revenge (KNIGHT_DUEL cause
+        // also spares a 狼美人's charmed seat inside DeathService).
+        val produced = deaths.killSeat(session, result.deadSeat, DeathCause.KNIGHT_DUEL, suppressRevenge = true)
+        if (result.targetIsWolf) {
+            announcer.announce(session.guildId, "day.duel.win", pad(knightSeat), pad(targetSeat))
+            sessionService.log(session.guildId, LogSeverity.ALERT, "day.duel.win", pad(knightSeat), pad(targetSeat))
+        } else {
+            announcer.announce(session.guildId, "day.duel.lose", pad(knightSeat), pad(targetSeat))
+            sessionService.log(session.guildId, LogSeverity.ALERT, "day.duel.lose", pad(knightSeat), pad(targetSeat))
+        }
+        announceDeaths(session, produced)
+        checkWinInternal(session)
+        if (session.phase == Phase.OVER) return false
+        // A wolf hit ends the day immediately; a miss lets the speeches continue.
+        if (result.targetIsWolf) { endSpeechInternal(session); enterNightInternal(session); return true }
+        return false
+    }
+
+    private fun selfDestructInternal(session: GameSession, seat: Int): Boolean {
+        val s = session.seat(seat) ?: return false
+        val card = s.cards.firstOrNull { !it.dead } ?: return false
+        // 狼美人不能自爆 (ROLES.md 狼美人).
+        if (card.roleId == RoleIds.WOLF_BEAUTY) return false
+
+        announcer.announce(session.guildId, "day.self_destruct", pad(seat))
+        sessionService.log(session.guildId, LogSeverity.ALERT, "day.self_destruct", pad(seat))
+
+        val isWhiteKing = card.roleId == RoleIds.WHITE_WOLF_KING
+        // 白狼王 只有自爆可帶人 → arm via SELF_DESTRUCT; every other 自爆 suppresses the shot.
+        val produced = deaths.applyDeath(session, seat, card, DeathCause.SELF_DESTRUCT, suppressRevenge = !isWhiteKing)
+        announceDeaths(session, produced)
+
+        // 血月使徒 自爆 seals the coming night (神職技能封印 + 不能指刀).
+        if (card.roleId == RoleIds.BLOOD_MOON) session.bloodMoonSeal = true
+
+        endSpeechInternal(session)
+        clearPollInternal(session)
+        checkWinInternal(session)
+        if (session.phase == Phase.OVER) return false
+        enterNightInternal(session)
+        return true
+    }
+
+    /** Announce every death the shared applier produced (the primary death plus any 殉情 cascade). */
+    private fun announceDeaths(session: GameSession, produced: List<DeathInfo>) {
+        produced.forEach { d ->
+            val padded = session.seat(d.seat)?.paddedNumber ?: pad(d.seat)
+            announcer.announce(session.guildId, "death.announce", padded, roles.localizedName(d.roleId))
+            sessionService.log(session.guildId, LogSeverity.ALERT, "death.announce", padded, roles.localizedName(d.roleId))
+        }
+    }
+
+    /** Set the phase to night; the caller (GameController) runs `night.startNight` after the mutate. */
+    private fun enterNightInternal(session: GameSession) {
+        session.phase = Phase.NIGHT
+    }
 
     // ======================= scheduler callbacks =======================
 
@@ -334,14 +413,38 @@ class DayOrchestrator(
 
     private fun expelInternal(session: GameSession, seat: Int, votes: Double?) {
         val seatObj = session.seat(seat)
-        seatObj?.cards?.firstOrNull { !it.dead }?.let { card ->
-            card.dead = true
-            announcer.announce(session.guildId, "death.announce", pad(seat), roles.localizedName(card.roleId))
-            sessionService.log(session.guildId, LogSeverity.ALERT, "death.announce", pad(seat), roles.localizedName(card.roleId))
-        }
-        seatObj?.let { syncNickname(session, it) }
         announcer.announce(session.guildId, "expel.result", pad(seat), fmtVotes(votes ?: 0.0))
         clearPollInternal(session)
+
+        // 白癡 翻牌免疫放逐: an unrevealed 白癡 survives the expel but loses its future vote.
+        if (seatObj != null && seatObj.idiot && !seatObj.idiotRevealed && seatObj.alive) {
+            seatObj.idiotRevealed = true
+            syncNickname(session, seatObj)
+            announcer.announce(session.guildId, "day.idiot.revealed", pad(seat))
+            sessionService.log(session.guildId, LogSeverity.INFO, "day.idiot.revealed", pad(seat))
+            return
+        }
+
+        // 血月使徒 被動: the last wolf to be expelled survives the vote once and gets a night kill.
+        val card0 = seatObj?.cards?.firstOrNull { !it.dead }
+        if (seatObj != null && card0?.roleId == RoleIds.BLOOD_MOON && !seatObj.bloodMoonRevived && isLastWolf(session, seat)) {
+            seatObj.bloodMoonRevived = true
+            announcer.announce(session.guildId, "day.blood_moon.survive", pad(seat))
+            sessionService.log(session.guildId, LogSeverity.ALERT, "day.blood_moon.survive", pad(seat))
+            return
+        }
+
+        // A real expel: apply the death through the shared applier (arms 狼王 revenge, cascades 殉情),
+        // and record the seat for the 守墓人 (ROLES.md 守墓人 第二晚起得知放逐者陣營).
+        session.lastExpelledSeat = seat
+        val card = seatObj?.cards?.firstOrNull { !it.dead }
+        if (card != null) {
+            deaths.applyDeath(session, seat, card, DeathCause.EXPEL).forEach { info ->
+                val padded = session.seat(info.seat)?.paddedNumber ?: pad(info.seat)
+                announcer.announce(session.guildId, "death.announce", padded, roles.localizedName(info.roleId))
+                sessionService.log(session.guildId, LogSeverity.ALERT, "death.announce", padded, roles.localizedName(info.roleId))
+            }
+        }
         checkWinInternal(session)
         if (session.phase != Phase.OVER) startLastWordsInternal(session, listOf(seat))
     }
@@ -459,6 +562,12 @@ class DayOrchestrator(
     }
 
     // ======================= helpers =======================
+
+    /** True when [seat] is the only living wolf-faction identity left on the board. */
+    private fun isLastWolf(session: GameSession, seat: Int): Boolean =
+        session.aliveSeats().none { s ->
+            s.number != seat && s.livingCards().any { roles.factionOf(it.roleId) == Faction.WOLF }
+        }
 
     private fun checkWinInternal(session: GameSession) {
         val result = win.check(session)

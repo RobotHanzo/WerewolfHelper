@@ -73,6 +73,49 @@ export function useGameActions(guildId: string, demo: boolean) {
           );
         } else void api.revive(guildId, seat, identityIndex);
       },
+      revenge: (seat: number, target: number) => {
+        if (demo) {
+          patch((snap) =>
+            recompute(
+              mapSeat(
+                mapSeat(snap, seat, (s) => ({ ...s, revengePending: false })),
+                target,
+                (s) => {
+                  const identities = s.identities.map((i, idx) => (idx === 0 ? { ...i, dead: true } : i));
+                  return { ...s, identities, alive: identities.some((i) => !i.dead) };
+                },
+              ),
+            ),
+          );
+        } else void api.revenge(guildId, seat, target);
+      },
+      duel: (seat: number, target: number) => {
+        if (demo) {
+          patch((snap) => {
+            const targetSeat = snap.seats.find((s) => s.seat === target);
+            const targetIsWolf = targetSeat?.identities.some((i) => i.faction === "WOLF") ?? false;
+            const dead = targetIsWolf ? target : seat;
+            return recompute(
+              mapSeat({ ...snap, phase: targetIsWolf ? "NIGHT" : snap.phase }, dead, (s) => {
+                const identities = s.identities.map((i, idx) => (idx === 0 ? { ...i, dead: true } : i));
+                return { ...s, identities, alive: identities.some((i) => !i.dead) };
+              }),
+            );
+          });
+        } else void api.duel(guildId, seat, target);
+      },
+      selfDestruct: (seat: number) => {
+        if (demo) {
+          patch((snap) =>
+            recompute(
+              mapSeat({ ...snap, phase: "NIGHT" }, seat, (s) => {
+                const identities = s.identities.map((i, idx) => (idx === 0 ? { ...i, dead: true } : i));
+                return { ...s, identities, alive: identities.some((i) => !i.dead) };
+              }),
+            ),
+          );
+        } else void api.selfDestruct(guildId, seat);
+      },
       pause: () => (demo ? patch((s) => ({ ...s, paused: !s.paused })) : void api.pause(guildId)),
       startGame: () => {
         if (demo) {
@@ -166,6 +209,10 @@ export function useGameActions(guildId: string, demo: boolean) {
          demo ? patch((s) => ({ ...s, doubleIdentity: value })) : void api.setDoubleIdentity(guildId, value),
       setMuteAfterSpeech: (value: boolean) =>
          demo ? patch((s) => ({ ...s, muteAfterSpeech: value })) : void api.setMuteAfterSpeech(guildId, value),
+      setWitchSelfSave: (value: boolean) =>
+         demo ? patch((s) => ({ ...s, witchSelfSave: value })) : void api.setWitchSelfSave(guildId, value),
+      setHiddenWolfKnife: (value: boolean) =>
+         demo ? patch((s) => ({ ...s, hiddenWolfInheritsKnife: value })) : void api.setHiddenWolfKnife(guildId, value),
       setPool: (pool: Record<string, number>) =>
          demo ? patch((s) => ({ ...s, pool })) : void api.setPool(guildId, pool),
       setPlayerCount: (count: number) => {

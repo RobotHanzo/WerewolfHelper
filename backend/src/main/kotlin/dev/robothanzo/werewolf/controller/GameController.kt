@@ -6,6 +6,7 @@ import dev.robothanzo.werewolf.controller.dto.ForcePoliceRequest
 import dev.robothanzo.werewolf.controller.dto.KillRequest
 import dev.robothanzo.werewolf.controller.dto.PoliceTransferRequest
 import dev.robothanzo.werewolf.controller.dto.ReviveRequest
+import dev.robothanzo.werewolf.controller.dto.TargetRequest
 import dev.robothanzo.werewolf.game.flow.GameFlowService
 import dev.robothanzo.werewolf.controller.dto.TimerRequest
 import dev.robothanzo.werewolf.discord.DiscordGateway
@@ -84,6 +85,44 @@ class GameController(
         @RequestBody body: KillRequest,
     ): ResponseEntity<ApiResponse> {
         actions.kill(guildId.toLong(), seat, body.identityIndex, body.allowLastWords)
+        return ResponseEntity.ok(ApiResponse.ok())
+    }
+
+    @Operation(summary = "Fire a revenge shot", description = "Fire an armed 獵人 / 狼王 / 白狼王 revenge at a target.")
+    @ApiResponses(value = [SwaggerApiResponse(responseCode = "200", description = "Fired")])
+    @PostMapping("/seats/{seat}/revenge")
+    @CanManageGuild
+    fun revenge(
+        @PathVariable guildId: String,
+        @PathVariable seat: Int,
+        @RequestBody body: TargetRequest,
+    ): ResponseEntity<ApiResponse> {
+        actions.revenge(guildId.toLong(), seat, body.target)
+        return ResponseEntity.ok(ApiResponse.ok())
+    }
+
+    @Operation(summary = "騎士 決鬥", description = "Knight duels a seat; a wolf hit enters night, a miss kills the knight.")
+    @ApiResponses(value = [SwaggerApiResponse(responseCode = "200", description = "Resolved")])
+    @PostMapping("/seats/{seat}/duel")
+    @CanManageGuild
+    fun duel(
+        @PathVariable guildId: String,
+        @PathVariable seat: Int,
+        @RequestBody body: TargetRequest,
+    ): ResponseEntity<ApiResponse> {
+        if (day.knightDuel(guildId.toLong(), seat, body.target)) onPhaseEntered(guildId.toLong(), Phase.NIGHT)
+        return ResponseEntity.ok(ApiResponse.ok())
+    }
+
+    @Operation(summary = "自爆", description = "A wolf self-destructs, forcing night (白狼王 may then带人, 血月使徒 seals the night).")
+    @ApiResponses(value = [SwaggerApiResponse(responseCode = "200", description = "Detonated")])
+    @PostMapping("/seats/{seat}/self-destruct")
+    @CanManageGuild
+    fun selfDestruct(
+        @PathVariable guildId: String,
+        @PathVariable seat: Int,
+    ): ResponseEntity<ApiResponse> {
+        if (day.selfDestruct(guildId.toLong(), seat)) onPhaseEntered(guildId.toLong(), Phase.NIGHT)
         return ResponseEntity.ok(ApiResponse.ok())
     }
 

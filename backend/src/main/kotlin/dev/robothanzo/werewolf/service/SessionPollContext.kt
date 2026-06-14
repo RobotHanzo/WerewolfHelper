@@ -16,5 +16,7 @@ class SessionPollContext(private val session: GameSession) : PollContext {
 
     override fun isAlive(seat: Int): Boolean = session.seat(seat)?.alive == true
 
-    override fun isDeadIdiot(seat: Int): Boolean = session.seat(seat)?.let { it.idiot && !it.alive } == true
+    /** A 白癡 loses its vote once it has flipped its card on expel (ROLES.md 白癡), or once fully dead. */
+    override fun isDeadIdiot(seat: Int): Boolean =
+        session.seat(seat)?.let { it.idiot && (it.idiotRevealed || !it.alive) } == true
 }

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -38,6 +38,14 @@ export function Dashboard() {
   const openEdit = useUiStore((s) => s.openEdit);
   const setLogVisible = useGameStore((s) => s.setLogPanelVisible);
   const actions = useGameActions(guildId, demo);
+
+  // Two-step revenge / duel: pick the actor, then click a target seat.
+  const [targeting, setTargeting] = useState<{ kind: "revenge" | "duel"; seat: number } | null>(null);
+  const roleNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    snapshot?.seats.forEach((s) => s.identities.forEach((i) => m.set(i.roleId, i.name)));
+    return m;
+  }, [snapshot]);
 
   // The log panel is in view on the dashboard → mark logs read while here.
   useEffect(() => {
@@ -129,17 +137,37 @@ export function Dashboard() {
               ))}
             </span>
           </header>
+          {targeting && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", marginBottom: 10, borderRadius: "var(--r-sm)", background: "var(--wolf-dim)", border: "1px solid rgba(240,74,94,0.35)", fontSize: 12, fontWeight: 700, color: "var(--wolf-400)" }}>
+              {t("dashboard.seatAction.pickTarget")}（玩家{String(targeting.seat).padStart(2, "0")} · {t(`dashboard.seatAction.${targeting.kind}`)}）
+              <Button size="sm" variant="ghost" style={{ marginLeft: "auto" }} onClick={() => setTargeting(null)}>
+                {t("dashboard.seatAction.cancelTarget")}
+              </Button>
+            </div>
+          )}
           <motion.div layout style={{ display: "grid", gridTemplateColumns: `repeat(${cols[density]}, 1fr)`, gap: density === "compact" ? 10 : 12 }}>
             {snapshot.seats.map((seat) => (
               <PlayerCard
                 key={seat.seat}
                 seat={seat}
                 readOnly={readOnly}
+                phase={snapshot.phase}
+                learnedRoleName={seat.learnedRoleId ? roleNameById.get(seat.learnedRoleId) : undefined}
+                targeting={targeting != null && targeting.seat !== seat.seat}
                 changed={changedSeats.has(seat.seat)}
                 onKill={(idx, name) => openKill({ seat: seat.seat, identityIndex: idx, identityName: name })}
                 onRevive={() => actions.revive(seat.seat)}
                 onReviveIdentity={(idx) => actions.reviveIdentity(seat.seat, idx)}
                 onEdit={() => openEdit(seat.seat)}
+                onRevenge={() => setTargeting({ kind: "revenge", seat: seat.seat })}
+                onDuel={() => setTargeting({ kind: "duel", seat: seat.seat })}
+                onSelfDestruct={() => actions.selfDestruct(seat.seat)}
+                onPickTarget={() => {
+                  if (!targeting) return;
+                  if (targeting.kind === "revenge") actions.revenge(targeting.seat, seat.seat);
+                  else actions.duel(targeting.seat, seat.seat);
+                  setTargeting(null);
+                }}
               />
             ))}
           </motion.div>

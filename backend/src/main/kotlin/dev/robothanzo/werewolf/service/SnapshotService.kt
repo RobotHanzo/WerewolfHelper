@@ -72,6 +72,12 @@ class SnapshotService(
                 clone = seat.clone,
                 idiot = seat.idiot,
                 orderLocked = seat.orderLocked,
+                revengePending = seat.revengePending,
+                idiotRevealed = seat.idiotRevealed,
+                loverSeat = seat.loverSeat,
+                charmedSeat = seat.charmedSeat,
+                learnedRoleId = seat.learnedRoleId,
+                knifeArmed = seat.knifeArmed,
             )
         }
 
@@ -85,6 +91,8 @@ class SnapshotService(
             started = session.phase != Phase.LOBBY,
             doubleIdentity = session.settings.doubleIdentity,
             muteAfterSpeech = session.settings.muteAfterSpeech,
+            witchSelfSave = session.settings.witchSelfSave,
+            hiddenWolfInheritsKnife = session.settings.hiddenWolfInheritsKnife,
             assigned = session.assigned,
             policeSeat = session.policeSeat,
             aliveCount = session.aliveSeats().size,

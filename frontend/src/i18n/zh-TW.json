@@ -124,7 +124,7 @@
     "error": {
       "not_assigned": "身分尚未分配，請先進行身分分配"
     },
-    "seatAction": { "kill": "擊殺", "revive": "復活", "edit": "編輯" }
+    "seatAction": { "kill": "擊殺", "revive": "復活", "edit": "編輯", "revenge": "開槍", "duel": "決鬥", "selfDestruct": "自爆", "pickTarget": "選擇目標", "cancelTarget": "取消" }
   },
   "expel": {
     "running": "放逐投票進行中",
@@ -209,6 +209,10 @@
     "doubleIdentityDesc": "每位玩家獲得兩張身分",
     "muteAfterSpeech": "發言後靜音",
     "muteAfterSpeechDesc": "發言結束後自動伺服器靜音",
+    "witchSelfSave": "女巫可自救",
+    "witchSelfSaveDesc": "允許女巫對自己使用解藥（ROLES.md 女巫房規）",
+    "hiddenWolfKnife": "隱狼繼承狼刀",
+    "hiddenWolfKnifeDesc": "其餘狼人出局後，隱狼帶刀；關閉則隨隊伍一同死亡",
     "playerCount": "玩家數量",
     "applyCount": "套用人數變更",
     "pool": "身分板子",
@@ -261,6 +265,13 @@
     "idiot": "白癡",
     "locked": "已鎖定",
     "unlocked": "可調換",
-    "dead": "死亡"
+    "dead": "死亡",
+    "revenge": "待開槍",
+    "idiotRevealed": "已翻牌",
+    "knife": "帶刀",
+    "charmed": "被魅惑",
+    "lover": "情侶",
+    "learned": "已學習 {{role}}",
+    "learnedShort": "已學習"
   }
 }

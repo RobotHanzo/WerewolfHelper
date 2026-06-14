@@ -76,6 +76,8 @@ class DayOrchestratorTest {
             announcer = announcer,
             router = router,
             msg = msg,
+            deaths = DeathService(roles, NicknameService(msg), gateway),
+            duel = dev.robothanzo.werewolf.game.day.DuelResolver(roles),
         )
     }
 
@@ -125,6 +127,133 @@ class DayOrchestratorTest {
         assertNotNull(session.speech)        // last-words flow
         assertTrue(session.speech!!.lastWords)
         assertEquals(listOf(4), session.speech!!.order)
+    }
+
+    @Test
+    fun `expel records the last expelled seat for the gravekeeper`() {
+        day.startExpelVote(gid)
+        (1..5).forEach { day.handle(gid, it.toLong(), "${InteractionIds.EXPEL_VOTE}:4", emptyList()) }
+        assertEquals(4, session.lastExpelledSeat)
+    }
+
+    @Test
+    fun `an expelled 白癡 flips its card and survives`() {
+        session = TestFixtures.session(
+            playerCount = 5,
+            seats = listOf(
+                TestFixtures.seat(1, "wolf" to false),
+                TestFixtures.seat(2, "seer" to false),
+                TestFixtures.seat(3, "villager" to false),
+                TestFixtures.seat(4, "idiot" to false) { idiot = true },
+                TestFixtures.seat(5, "villager" to false),
+            ),
+        ) { assigned = true }
+
+        day.startExpelVote(gid)
+        (1..5).forEach { day.handle(gid, it.toLong(), "${InteractionIds.EXPEL_VOTE}:4", emptyList()) }
+
+        assertTrue(session.seat(4)!!.alive)            // survives the expel
+        assertTrue(session.seat(4)!!.idiotRevealed)    // but is flipped (loses its vote)
+        assertNull(session.lastExpelledSeat)           // no real expel happened
+    }
+
+    @Test
+    fun `knight duel on a wolf kills the wolf and enters night`() {
+        // two wolves so killing one leaves the game in progress (the duel then forces night).
+        session = TestFixtures.session(
+            playerCount = 6,
+            seats = listOf(
+                TestFixtures.seat(1, "knight" to false),
+                TestFixtures.seat(2, "wolf" to false),
+                TestFixtures.seat(3, "wolf" to false),
+                TestFixtures.seat(4, "seer" to false),
+                TestFixtures.seat(5, "villager" to false),
+                TestFixtures.seat(6, "villager" to false),
+            ),
+        ) { assigned = true; phase = dev.robothanzo.werewolf.domain.Phase.SPEECHES }
+
+        val forceNight = day.knightDuel(gid, 1, 2)
+        assertTrue(forceNight)
+        assertFalse(session.seat(2)!!.alive)
+        assertEquals(dev.robothanzo.werewolf.domain.Phase.NIGHT, session.phase)
+    }
+
+    @Test
+    fun `knight duel on a good player kills the knight and stays in the day`() {
+        session = TestFixtures.session(
+            playerCount = 5,
+            seats = listOf(
+                TestFixtures.seat(1, "knight" to false),
+                TestFixtures.seat(2, "wolf" to false),
+                TestFixtures.seat(3, "seer" to false),
+                TestFixtures.seat(4, "villager" to false),
+                TestFixtures.seat(5, "villager" to false),
+            ),
+        ) { assigned = true; phase = dev.robothanzo.werewolf.domain.Phase.SPEECHES }
+
+        val forceNight = day.knightDuel(gid, 1, 3)
+        assertFalse(forceNight)
+        assertFalse(session.seat(1)!!.alive)
+        assertTrue(session.seat(3)!!.alive)
+        assertEquals(dev.robothanzo.werewolf.domain.Phase.SPEECHES, session.phase)
+    }
+
+    @Test
+    fun `白狼王 self-destruct arms its revenge and seals nothing`() {
+        session = TestFixtures.session(
+            playerCount = 5,
+            seats = listOf(
+                TestFixtures.seat(1, "white_wolf_king" to false),
+                TestFixtures.seat(2, "wolf" to false),
+                TestFixtures.seat(3, "seer" to false),
+                TestFixtures.seat(4, "villager" to false),
+                TestFixtures.seat(5, "villager" to false),
+            ),
+        ) { assigned = true; phase = dev.robothanzo.werewolf.domain.Phase.SPEECHES }
+
+        val forceNight = day.selfDestruct(gid, 1)
+        assertTrue(forceNight)
+        assertFalse(session.seat(1)!!.alive)
+        assertTrue(session.seat(1)!!.revengePending)
+        assertEquals(dev.robothanzo.werewolf.domain.Phase.NIGHT, session.phase)
+    }
+
+    @Test
+    fun `血月使徒 self-destruct seals the coming night`() {
+        session = TestFixtures.session(
+            playerCount = 5,
+            seats = listOf(
+                TestFixtures.seat(1, "blood_moon" to false),
+                TestFixtures.seat(2, "wolf" to false),
+                TestFixtures.seat(3, "seer" to false),
+                TestFixtures.seat(4, "villager" to false),
+                TestFixtures.seat(5, "villager" to false),
+            ),
+        ) { assigned = true; phase = dev.robothanzo.werewolf.domain.Phase.SPEECHES }
+
+        day.selfDestruct(gid, 1)
+        assertTrue(session.bloodMoonSeal)
+    }
+
+    @Test
+    fun `血月使徒 survives the expel when it is the last wolf`() {
+        session = TestFixtures.session(
+            playerCount = 5,
+            seats = listOf(
+                TestFixtures.seat(1, "blood_moon" to false),
+                TestFixtures.seat(2, "seer" to false),
+                TestFixtures.seat(3, "seer" to false),
+                TestFixtures.seat(4, "villager" to false),
+                TestFixtures.seat(5, "villager" to false),
+            ),
+        ) { assigned = true }
+
+        day.startExpelVote(gid)
+        (1..5).forEach { day.handle(gid, it.toLong(), "${InteractionIds.EXPEL_VOTE}:1", emptyList()) }
+
+        assertTrue(session.seat(1)!!.alive)             // survives once
+        assertTrue(session.seat(1)!!.bloodMoonRevived)
+        assertNull(session.lastExpelledSeat)
     }
 
     @Test

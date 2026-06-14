@@ -68,6 +68,11 @@ export const api = {
   pause: (g: string) => post(`/sessions/${g}/state/pause`),
   kill: (g: string, seat: number, identityIndex: number | null, allowLastWords: boolean) =>
     post(`/sessions/${g}/seats/${seat}/kill`, { identityIndex, allowLastWords }),
+  revenge: (g: string, seat: number, target: number) =>
+    post(`/sessions/${g}/seats/${seat}/revenge`, { target }),
+  duel: (g: string, seat: number, target: number) =>
+    post(`/sessions/${g}/seats/${seat}/duel`, { target }),
+  selfDestruct: (g: string, seat: number) => post(`/sessions/${g}/seats/${seat}/self-destruct`),
   revive: (g: string, seat: number, identityIndex: number | null) =>
     post(`/sessions/${g}/seats/${seat}/revive`, { identityIndex }),
   edit: (g: string, seat: number, roleIds: string[], orderLocked: boolean | null) =>
@@ -85,6 +90,8 @@ export const api = {
   setPool: (g: string, pool: Record<string, number>) => post(`/sessions/${g}/settings/pool`, { pool }),
   setDoubleIdentity: (g: string, value: boolean) => post(`/sessions/${g}/settings/double-identity`, { value }),
   setMuteAfterSpeech: (g: string, value: boolean) => post(`/sessions/${g}/settings/mute-after-speech`, { value }),
+  setWitchSelfSave: (g: string, value: boolean) => post(`/sessions/${g}/settings/witch-self-save`, { value }),
+  setHiddenWolfKnife: (g: string, value: boolean) => post(`/sessions/${g}/settings/hidden-wolf-knife`, { value }),
 
   // day-side flow controls (mirror the Discord court buttons)
   skipSpeaker: (g: string) => post(`/sessions/${g}/speech/skip`),

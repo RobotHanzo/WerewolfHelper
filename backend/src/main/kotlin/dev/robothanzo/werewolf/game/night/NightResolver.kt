@@ -2,6 +2,7 @@ package dev.robothanzo.werewolf.game.night
 
 import dev.robothanzo.werewolf.domain.Faction
 import dev.robothanzo.werewolf.domain.GameSession
+import dev.robothanzo.werewolf.game.roles.RoleIds
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import org.springframework.stereotype.Service
 
@@ -84,18 +85,23 @@ class NightResolver(private val roles: RoleRegistry) {
             }
         }
 
+        // 女巫不可自救 (房規 toggle): a save on the witch's own seat is void unless 自救 is enabled.
+        val selfSaveBlocked = decls.witchSave != null &&
+            decls.witchSave == decls.witchActor && !session.settings.witchSelfSave
+
         // 3. Wolf knife vs guard vs witch save.
         if (wolfKill != null && !voided(wolfKill) && wolfKill.target != null) {
             val t = wolfKill.target
             val guarded = guard != null && !voided(guard) && guard.target == t
-            val saved = !witchVoided && witchSave == t
+            val saved = !witchVoided && !selfSaveBlocked && witchSave == t
             // 同守同救 = 死: protection and antidote on the same seat cancel; the seat still dies.
             val dies = if (guarded && saved) true else !(guarded || saved)
             if (dies) addDeath(t, "night.death")
         }
 
-        // 4. 女巫 poison — cannot be guarded; blocks the victim's revenge.
-        if (!witchVoided) {
+        // 4. 女巫 poison — cannot be guarded; blocks the victim's revenge. 獵魔人 is immune to other
+        // gods' night abilities (ROLES.md 獵魔人 被動), so poison cannot kill it.
+        if (!witchVoided && witchPoison != null && roleIdOfSeat(session, witchPoison) != RoleIds.DEMON_HUNTER) {
             addDeath(witchPoison, "night.death", suppressRevenge = true)
         }
 
@@ -138,5 +144,12 @@ class NightResolver(private val roles: RoleRegistry) {
         val s = session.seat(seat) ?: return null
         val card = s.livingCards().firstOrNull() ?: s.cards.firstOrNull() ?: return null
         return if (s.clone) Faction.GOD else roles.factionOf(card.roleId)
+    }
+
+    /** The (living) role id held by a seat — used for passive role checks like 獵魔人 immunity. */
+    private fun roleIdOfSeat(session: GameSession, seat: Int): String? {
+        val s = session.seat(seat) ?: return null
+        val card = s.livingCards().firstOrNull() ?: s.cards.firstOrNull() ?: return null
+        return card.roleId
     }
 }

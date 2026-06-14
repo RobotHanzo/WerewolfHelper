@@ -21,6 +21,15 @@ enum class RoleTag {
 
     /** First-night-only ability (邱比特 / 盜賊 / 混血兒). */
     FIRST_NIGHT_ONLY,
+
+    /** Reads as 好人 to 預言家 / 通靈師 investigations (隱狼). */
+    INVESTIGATED_AS_GOOD,
+
+    /** Inherits the wolf knife once the chat wolves are dead (石像鬼 / 隱狼 / 機械狼). */
+    INHERITS_KILL,
+
+    /** Death-revenge fires only via 自爆, never on a normal death (白狼王). */
+    REVENGE_ON_SELF_DESTRUCT_ONLY,
 }
 
 /**
