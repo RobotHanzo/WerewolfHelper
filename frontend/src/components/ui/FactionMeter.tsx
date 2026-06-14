@@ -29,9 +29,9 @@ export function FactionMeter({ meter }: { meter: FactionMeterData }) {
           {meter.alive} / {meter.total}
         </span>
       </div>
-      <span className="wh-progress" style={{ display: "block", height: 8 }}>
-        <span className="wh-progress__fill" style={{ width: `${pct}%`, background: color }} />
-      </span>
+      <div className="wh-progress" style={{ height: 8 }}>
+        <div className="wh-progress__fill" style={{ width: `${pct}%`, background: color }} />
+      </div>
     </div>
   );
 }
