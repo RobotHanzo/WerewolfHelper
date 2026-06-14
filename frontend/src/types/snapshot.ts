@@ -38,6 +38,13 @@ export interface Seat {
   clone: boolean;
   idiot: boolean;
   orderLocked: boolean;
+  // ROLES.md behavioural state (judge action buttons / state badges)
+  revengePending: boolean;
+  idiotRevealed: boolean;
+  loverSeat: number | null;
+  charmedSeat: number | null;
+  learnedRoleId: string | null;
+  knifeArmed: boolean;
 }
 
 export interface FactionMeter {
@@ -119,6 +126,8 @@ export interface GameSnapshot {
   started: boolean;
   doubleIdentity: boolean;
   muteAfterSpeech: boolean;
+  witchSelfSave: boolean;
+  hiddenWolfInheritsKnife: boolean;
   assigned: boolean;
   policeSeat: number | null;
   aliveCount: number;

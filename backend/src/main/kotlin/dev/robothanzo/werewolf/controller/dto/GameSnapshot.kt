@@ -19,6 +19,8 @@ data class GameSnapshot(
     val started: Boolean,
     val doubleIdentity: Boolean,
     val muteAfterSpeech: Boolean,
+    val witchSelfSave: Boolean,
+    val hiddenWolfInheritsKnife: Boolean,
     val assigned: Boolean,
     val policeSeat: Int?,
     val aliveCount: Int,
@@ -49,6 +51,13 @@ data class SeatDto(
     val clone: Boolean,
     val idiot: Boolean,
     val orderLocked: Boolean,
+    // --- ROLES.md behavioural state surfaced for judge action buttons ---
+    val revengePending: Boolean,
+    val idiotRevealed: Boolean,
+    val loverSeat: Int?,
+    val charmedSeat: Int?,
+    val learnedRoleId: String?,
+    val knifeArmed: Boolean,
 )
 
 @Schema(description = "One identity card on a seat")

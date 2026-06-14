@@ -72,6 +72,12 @@ function buildSeat(spec: SeatSpec): Seat {
     clone: false,
     idiot: spec.ids.some(([n]) => n === "白癡"),
     orderLocked: spec.locked ?? true,
+    revengePending: false,
+    idiotRevealed: false,
+    loverSeat: null,
+    charmedSeat: null,
+    learnedRoleId: null,
+    knifeArmed: false,
   };
 }
 
@@ -124,6 +130,8 @@ export function buildScenario(scenario: ScenarioId): GameSnapshot {
     started: true,
     doubleIdentity: true,
     muteAfterSpeech: true,
+    witchSelfSave: false,
+    hiddenWolfInheritsKnife: true,
     assigned: true,
     policeSeat: 2,
     aliveCount: seats.filter((s) => s.alive).length,

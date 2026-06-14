@@ -26,7 +26,8 @@ import {
   Compass,
   Cpu,
   Crosshair,
-  ShieldAlert
+  ShieldAlert,
+  EyeOff
 } from "lucide-react";
 
 type Size = "sm" | "md";
@@ -99,6 +100,8 @@ export function RoleIcon({ roleId, size = 14 }: { roleId: string; size?: number 
       return <Cpu {...iconProps} />;
     case "demon_hunter":
       return <Crosshair {...iconProps} />;
+    case "hidden_wolf":
+      return <EyeOff {...iconProps} />;
     default:
       return <User {...iconProps} />;
   }
@@ -128,16 +131,29 @@ export function FactionBadge({
   );
 }
 
-type StateKind = "police" | "gbaby" | "lock" | "dead";
+type StateKind = "police" | "gbaby" | "lock" | "dead" | "revenge" | "idiotRevealed" | "knife" | "charmed" | "lover" | "learned";
 
-export function StateBadge({ kind, size = "md" }: { kind: StateKind; size?: Size }) {
+export function StateBadge({ kind, size = "md", text }: { kind: StateKind; size?: Size; text?: string }) {
   const { t } = useTranslation();
-  const cls = ["wh-badge", `wh-badge--${kind === "dead" ? "lock" : kind}`, `wh-badge--${size}`].join(" ");
+  // Reuse existing faction-tinted chip styles for the new ROLES.md state badges.
+  const styleKind =
+    kind === "revenge" || kind === "knife" ? "wolf"
+      : kind === "charmed" || kind === "lover" ? "gbaby"
+      : kind === "idiotRevealed" || kind === "learned" ? "god"
+      : kind === "dead" ? "lock"
+      : kind;
+  const cls = ["wh-badge", `wh-badge--${styleKind}`, `wh-badge--${size}`].join(" ");
   const label: Record<StateKind, string> = {
     police: `⛨ ${t("badge.police")}`,
     gbaby: t("badge.gbaby"),
     lock: `鎖 ${t("badge.locked")}`,
     dead: t("badge.dead"),
+    revenge: t("badge.revenge"),
+    idiotRevealed: t("badge.idiotRevealed"),
+    knife: t("badge.knife"),
+    charmed: t("badge.charmed"),
+    lover: t("badge.lover"),
+    learned: text ? t("badge.learned", { role: text }) : t("badge.learnedShort"),
   };
   return <span className={cls}>{label[kind]}</span>;
 }

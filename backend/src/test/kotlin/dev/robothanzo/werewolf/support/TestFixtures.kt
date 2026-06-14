@@ -4,6 +4,8 @@ import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.domain.GameSettings
 import dev.robothanzo.werewolf.domain.IdentityCard
 import dev.robothanzo.werewolf.domain.Seat
+import dev.robothanzo.werewolf.game.night.NightAbility
+import dev.robothanzo.werewolf.game.night.abilities.*
 import dev.robothanzo.werewolf.game.roles.Role
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.roles.impl.*
@@ -22,7 +24,7 @@ object TestFixtures {
         // wolves
         WolfRole(), WolfKingRole(), WolfBeautyRole(), WhiteWolfKingRole(),
         WolfBrotherRole(), WolfYoungerRole(), MechanicWolfRole(), NightmareRole(),
-        GargoyleRole(), BloodMoonRole(), EvilKnightRole(),
+        GargoyleRole(), BloodMoonRole(), EvilKnightRole(), HiddenWolfRole(),
         // gods
         SeerRole(), WitchRole(), HunterRole(), GuardRole(), KnightRole(), IdiotRole(),
         GravekeeperRole(), MagicianRole(), BlackMerchantRole(), PsychicRole(),
@@ -32,6 +34,13 @@ object TestFixtures {
     )
 
     fun registry(): RoleRegistry = RoleRegistry(allRoles(), msg())
+
+    /** Every canonical night-ability bean — for orchestrator/planner tests that need the full set. */
+    fun allAbilities(): List<NightAbility> = listOf(
+        MagicianSwap(), NightmareFear(), WolfKill(), GuardProtect(), SeerInvestigate(),
+        PsychicInvestigate(), GargoyleInvestigate(), WolfBeautyCharm(), BlackMerchantTrade(),
+        MechanicWolfLearn(), DemonHunterHunt(), WitchPotion(), GravekeeperPeek(), CupidBond(),
+    )
 
     fun seat(number: Int, vararg cards: Pair<String, Boolean>, configure: Seat.() -> Unit = {}): Seat =
         Seat(

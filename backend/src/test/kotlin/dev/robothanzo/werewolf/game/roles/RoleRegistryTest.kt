@@ -12,8 +12,9 @@ class RoleRegistryTest {
     private val registry = TestFixtures.registry()
 
     @Test
-    fun `all 27 canonical identities are registered`() {
-        assertEquals(27, registry.all.size)
+    fun `all canonical identities are registered`() {
+        // 27 FEATURES §2 identities + 隱狼 (ROLES.md).
+        assertEquals(28, registry.all.size)
     }
 
     @Test
@@ -58,6 +59,23 @@ class RoleRegistryTest {
         assertTrue(registry.require(RoleIds.WOLF).hasTag(RoleTag.WOLF_CHAT))
         assertTrue(registry.require(RoleIds.NIGHTMARE).hasTag(RoleTag.WOLF_CHAT))
         assertTrue(!registry.require(RoleIds.SEER).hasTag(RoleTag.WOLF_CHAT))
+    }
+
+    @Test
+    fun `non-recognizing wolves stay off the wolf chat`() {
+        // 機械狼 / 石像鬼 / 隱狼 互不相認 — wolf faction, but not on the chat relay.
+        assertTrue(!registry.require(RoleIds.MECHANIC_WOLF).hasTag(RoleTag.WOLF_CHAT))
+        assertTrue(!registry.require(RoleIds.GARGOYLE).hasTag(RoleTag.WOLF_CHAT))
+        assertTrue(!registry.require(RoleIds.HIDDEN_WOLF).hasTag(RoleTag.WOLF_CHAT))
+        assertEquals(Faction.WOLF, registry.factionOf(RoleIds.HIDDEN_WOLF))
+    }
+
+    @Test
+    fun `non-recognizing wolves inherit the knife`() {
+        assertTrue(registry.require(RoleIds.MECHANIC_WOLF).hasTag(RoleTag.INHERITS_KILL))
+        assertTrue(registry.require(RoleIds.GARGOYLE).hasTag(RoleTag.INHERITS_KILL))
+        assertTrue(registry.require(RoleIds.HIDDEN_WOLF).hasTag(RoleTag.INHERITS_KILL))
+        assertTrue(registry.require(RoleIds.HIDDEN_WOLF).hasTag(RoleTag.INVESTIGATED_AS_GOOD))
     }
 
     @Test
