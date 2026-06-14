@@ -158,6 +158,30 @@ class DayOrchestratorTest {
     }
 
     @Test
+    fun `first-night deaths open last words at dawn`() {
+        session.phase = dev.robothanzo.werewolf.domain.Phase.DAWN
+        session.day = 1
+        session.nightState.deaths = mutableListOf(4)
+
+        day.enterDawn(gid)
+
+        assertNotNull(session.speech)
+        assertTrue(session.speech!!.lastWords)
+        assertEquals(listOf(4), session.speech!!.order)
+    }
+
+    @Test
+    fun `night deaths from the second night on get no last words`() {
+        session.phase = dev.robothanzo.werewolf.domain.Phase.DAWN
+        session.day = 2
+        session.nightState.deaths = mutableListOf(4)
+
+        day.enterDawn(gid)
+
+        assertNull(session.speech) // 第二晚起夜間死亡無遺言
+    }
+
+    @Test
     fun `knight duel on a wolf kills the wolf and enters night`() {
         // two wolves so killing one leaves the game in progress (the duel then forces night).
         session = TestFixtures.session(

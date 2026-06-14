@@ -313,7 +313,9 @@ class DayOrchestrator(
                 val roleName = seat?.cards?.lastOrNull { it.dead }?.let { roles.localizedName(it.roleId) } ?: ""
                 announcer.announce(session.guildId, "death.announce", pad(n), roleName)
             }
-            startLastWordsInternal(session, deaths)
+            // 遺言規則：只有「首個夜晚」死亡的玩家（狼刀 / 女巫毒）有遺言；第二晚起的夜間死亡一律無遺言。
+            // 白天放逐的遺言走 expelInternal（白癡翻牌免死不算遺言，由該處提前 return 處理）。
+            if (session.day == 1) startLastWordsInternal(session, deaths)
         }
     }
 
