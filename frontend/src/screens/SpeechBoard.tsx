@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { Megaphone, Vote, ArrowUp, ArrowDown } from "lucide-react";
-import type { Speech } from "@/types/snapshot";
+import type { Seat, Speech } from "@/types/snapshot";
 import { useGameStore } from "@/stores/gameStore";
 import { Avatar } from "@/components/ui/Avatar";
 import { Countdown } from "@/components/ui/Countdown";
@@ -15,7 +15,7 @@ const MOON: Accent = { border: "var(--moon-500)", glow: "rgba(84,210,228,0.14)",
 const GOLD: Accent = { border: "var(--badge-gold)", glow: "rgba(242,201,76,0.14)", soft: "var(--badge-gold-dim)", fg: "var(--badge-gold)" };
 
 /** The live speaker, surfaced compactly for the dashboard: avatar + direction + countdown. */
-function SpeakingRow({ speech }: { speech: Speech }) {
+function SpeakingRow({ speech, seat }: { speech: Speech; seat?: Seat }) {
   const { t } = useTranslation();
   const Dir = speech.direction === "UP" ? ArrowUp : ArrowDown;
   return (
@@ -28,7 +28,7 @@ function SpeakingRow({ speech }: { speech: Speech }) {
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}
       >
-        <Avatar size="lg" speaking name={`#${speech.speakerSeat}`} />
+        <Avatar size="lg" speaking name={seat?.displayName ?? `#${speech.speakerSeat}`} avatar={seat?.avatar} />
         <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <span className="mono" style={{ fontSize: 22, fontWeight: 900 }}>{seatLabel(speech.speakerSeat ?? 0)}</span>
           {speech.direction && (
@@ -55,6 +55,7 @@ export function SpeechBoard() {
   const snapshot = useGameStore((s) => s.snapshot);
   const speech = snapshot?.speech;
   const poll = snapshot?.poll;
+  const seatBySeat = (n: number): Seat | undefined => snapshot?.seats.find((s) => s.seat === n);
 
   const speechLive = !!(speech?.active || speech?.waiting);
   if (!speechLive && !poll) return null;
@@ -93,7 +94,7 @@ export function SpeechBoard() {
       </header>
 
       <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 16 }}>
-        {speech?.active && speech.speakerSeat != null && <SpeakingRow speech={speech} />}
+        {speech?.active && speech.speakerSeat != null && <SpeakingRow speech={speech} seat={seatBySeat(speech.speakerSeat)} />}
 
         {speech?.waiting && (
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -106,13 +107,16 @@ export function SpeechBoard() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "var(--text-muted)" }}>{t("speech.upcoming")}</span>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {speech.upcoming.map((seat, i) => (
-                <span key={seat} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "5px 10px", borderRadius: "var(--r-full)", background: "var(--surface-card)", border: "1px solid var(--border-1)" }}>
-                  <span className="mono" style={{ fontSize: 10, color: "var(--text-muted)" }}>{i + 1}</span>
-                  <Avatar size="sm" name={`#${seat}`} />
-                  <span className="mono" style={{ fontSize: 12, fontWeight: 700 }}>{seatLabel(seat)}</span>
-                </span>
-              ))}
+              {speech.upcoming.map((seat, i) => {
+                const s = seatBySeat(seat);
+                return (
+                  <span key={seat} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "5px 10px", borderRadius: "var(--r-full)", background: "var(--surface-card)", border: "1px solid var(--border-1)" }}>
+                    <span className="mono" style={{ fontSize: 10, color: "var(--text-muted)" }}>{i + 1}</span>
+                    <Avatar size="sm" name={s?.displayName ?? `#${seat}`} avatar={s?.avatar} />
+                    <span className="mono" style={{ fontSize: 12, fontWeight: 700 }}>{seatLabel(seat)}</span>
+                  </span>
+                );
+              })}
             </div>
           </div>
         )}

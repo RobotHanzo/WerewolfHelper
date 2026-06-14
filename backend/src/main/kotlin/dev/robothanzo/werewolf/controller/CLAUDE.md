@@ -14,13 +14,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - OpenAPI is hand-annotated in the proven auto-branch style: `@Tag` on the class, `@Operation` +
   `@ApiResponses` per method (note the `io.swagger...ApiResponse as SwaggerApiResponse` alias to
   avoid colliding with our own `dto.ApiResponse`). Surfaced at `/scalar`.
-- Entering `Phase.NIGHT` (in `start`/`next`) is a two-step: `mutate` to flip the phase, **then**
-  `night.startNight(...)` outside the mutate. Timer endpoints schedule cancellable `GameScheduler`
-  jobs (final + 30s warning) and must cancel them on stop.
+- Phase transitions go through `GameFlowCoordinator` (service): `start`/`next` just call
+  `coordinator.start`/`coordinator.advance`, which flip the phase and run the owning orchestrator.
+  Stages also **auto-advance** between phases on their own (the coordinator), so `/state/next` is now
+  an explicit override rather than the only driver. Timer endpoints still schedule cancellable
+  `GameScheduler` jobs (final + 30s warning) and must cancel them on stop.
 - Day-phase role actions are their own seat endpoints: `POST /seats/{seat}/revenge` (fire an armed
   獵人/狼王/白狼王 shot, via `GameActionService`), `/seats/{seat}/duel` (騎士 決鬥) and
   `/seats/{seat}/self-destruct` (自爆), both via `DayOrchestrator`. The latter two return whether the
-  game must enter night; when they do, the controller runs the same `night.startNight` two-step.
+  game must enter night; when they do, the controller calls `coordinator.enterPhase(NIGHT)`.
 
 `controller/dto/` — the wire contract. `ApiResponse` is the envelope (`success`/`message`/`error`);
 data endpoints return typed subclasses with a `data` field so the OpenAPI schema **and the

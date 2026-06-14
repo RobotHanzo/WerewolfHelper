@@ -16,6 +16,8 @@ export function SpeechManager() {
 
   const { speech, poll } = snapshot;
   const idle = !speech?.active && !speech?.waiting && !poll;
+  const seatBySeat = (n: number) => snapshot.seats.find((s) => s.seat === n);
+  const speaker = speech?.speakerSeat != null ? seatBySeat(speech.speakerSeat) : undefined;
 
   return (
     <div style={{ maxWidth: 980, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
@@ -65,7 +67,7 @@ export function SpeechManager() {
             <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: "var(--moon-300)", background: "var(--accent-soft)", border: "1px solid rgba(84,210,228,0.3)", borderRadius: "var(--r-full)", padding: "4px 14px" }}>
               {t("speech.speakingDir", { direction: speech.direction === "UP" ? t("speech.directionUp") : t("speech.directionDown") })}
             </span>
-            <Avatar size="xl" speaking name={`#${speech.speakerSeat}`} />
+            <Avatar size="xl" speaking name={speaker?.displayName ?? `#${speech.speakerSeat}`} avatar={speaker?.avatar} />
             <div style={{ textAlign: "center" }}>
               <span className="mono" style={{ fontSize: 30, fontWeight: 900 }}>玩家{String(speech.speakerSeat).padStart(2, "0")}</span>
             </div>
@@ -84,13 +86,16 @@ export function SpeechManager() {
         <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.08em" }}>{t("speech.upcoming")}</span>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8 }}>
-            {speech.upcoming.map((seat, i) => (
-              <div key={seat} className="wh-card" style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px" }}>
-                <span className="mono" style={{ fontSize: 11, color: "var(--text-muted)" }}>{i + 1}</span>
-                <Avatar size="sm" name={`#${seat}`} />
-                <span className="mono" style={{ fontSize: 13, fontWeight: 700 }}>玩家{String(seat).padStart(2, "0")}</span>
-              </div>
-            ))}
+            {speech.upcoming.map((seat, i) => {
+              const s = seatBySeat(seat);
+              return (
+                <div key={seat} className="wh-card" style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px" }}>
+                  <span className="mono" style={{ fontSize: 11, color: "var(--text-muted)" }}>{i + 1}</span>
+                  <Avatar size="sm" name={s?.displayName ?? `#${seat}`} avatar={s?.avatar} />
+                  <span className="mono" style={{ fontSize: 13, fontWeight: 700 }}>玩家{String(seat).padStart(2, "0")}</span>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
@@ -113,6 +118,7 @@ const POLL_STAGE_KEY: Record<string, string> = {
 export function PollResults() {
   const { t } = useTranslation();
   const poll = useGameStore((s) => s.snapshot?.poll);
+  const seats = useGameStore((s) => s.snapshot?.seats);
   if (!poll) return null;
   const notVoted = poll.eligibleVoters - poll.votesCast;
   const maxWeight = Math.max(1, ...poll.candidates.map((x) => x.weight));
@@ -127,16 +133,19 @@ export function PollResults() {
         <span>{t("expel.turnoutShort", { cast: poll.votesCast, eligible: poll.eligibleVoters, remaining: notVoted })}</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {poll.candidates.map((c) => (
+        {poll.candidates.map((c) => {
+          const s = seats?.find((x) => x.seat === c.seat);
+          return (
           <motion.div layout key={c.seat} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", borderRadius: "var(--r-md)", background: "var(--surface-app)", border: "1px solid var(--border-1)", opacity: c.withdrawn ? 0.5 : 1 }}>
-            <Avatar size="sm" name={`#${c.seat}`} />
+            <Avatar size="sm" name={s?.displayName ?? `#${c.seat}`} avatar={s?.avatar} />
             <span className="mono" style={{ fontSize: 13, fontWeight: 700, width: 64, textDecoration: c.withdrawn ? "line-through" : "none" }}>玩家{String(c.seat).padStart(2, "0")}</span>
             <span style={{ flex: 1, height: 8, borderRadius: "var(--r-full)", background: "var(--surface-card)", overflow: "hidden" }}>
               <motion.span layout style={{ display: "block", height: "100%", width: `${(c.weight / maxWeight) * 100}%`, background: "var(--moon-500)" }} />
             </span>
             <span className="mono" style={{ fontSize: 16, fontWeight: 700, color: "var(--moon-300)", width: 44, textAlign: "right" }}>{c.weight % 1 ? c.weight.toFixed(1) : c.weight}</span>
           </motion.div>
-        ))}
+          );
+        })}
       </div>
     </>
   );
