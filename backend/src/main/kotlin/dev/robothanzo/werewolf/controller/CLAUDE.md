@@ -17,6 +17,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Entering `Phase.NIGHT` (in `start`/`next`) is a two-step: `mutate` to flip the phase, **then**
   `night.startNight(...)` outside the mutate. Timer endpoints schedule cancellable `GameScheduler`
   jobs (final + 30s warning) and must cancel them on stop.
+- Day-phase role actions are their own seat endpoints: `POST /seats/{seat}/revenge` (fire an armed
+  獵人/狼王/白狼王 shot, via `GameActionService`), `/seats/{seat}/duel` (騎士 決鬥) and
+  `/seats/{seat}/self-destruct` (自爆), both via `DayOrchestrator`. The latter two return whether the
+  game must enter night; when they do, the controller runs the same `night.startNight` two-step.
 
 `controller/dto/` — the wire contract. `ApiResponse` is the envelope (`success`/`message`/`error`);
 data endpoints return typed subclasses with a `data` field so the OpenAPI schema **and the

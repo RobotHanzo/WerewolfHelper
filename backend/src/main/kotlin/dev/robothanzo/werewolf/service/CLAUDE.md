@@ -10,10 +10,26 @@ and the WebSocket. This is where side effects live; keep new rules in `game/` an
   through it. Also owns `log(...)` (typed, localized log entries: key + params + rendered text) and
   `broadcast`. Don't persist/broadcast by hand — call `mutate`.
 - `SnapshotService` builds the wire `GameSnapshot` (`controller/dto`) consumed by the frontend store.
-- `GameActionService` — the judge's per-seat mutations (assign / kill / revive / edit / force +
-  transfer police / reset). Each mutates in place inside `mutate`; nicknames are synced best-effort
-  via the gateway (`canInteract` preflight). `assign`/`reset` delegate the bulk Discord work to
-  `DiscordOpsService`. **Kill is soft death of one `IdentityCard`**, then `win.check`.
+- `GameActionService` — the judge's per-seat mutations (assign / kill / revenge / revive / edit /
+  force + transfer police / reset). Each mutates in place inside `mutate`; nicknames are synced
+  best-effort via the gateway (`canInteract` preflight). `assign`/`reset` delegate the bulk Discord
+  work to `DiscordOpsService`. **Kill routes through `DeathService`** (not an inline card flip), then
+  `win.check`.
+- `DeathService` is the **single place a death is applied** — shared by `NightOrchestrator`,
+  `GameActionService`, and `DayOrchestrator`. `applyDeath`/`killSeat` mark the card dead, sync the
+  nickname, and run the cross-cutting ROLES.md rules once: death-revenge arming (`DEATH_REVENGE`;
+  白狼王 only via 自爆 per `REVENGE_ON_SELF_DESTRUCT_ONLY`), 殉情 cascade (lover/charm bond, with the
+  騎士-duel exemption), and 隱狼 auto-death. It returns the full `List<DeathInfo>` it produced;
+  **logging/announcing stays with the callers**. The `DeathCause` enum gates these rules — pass the
+  right cause (NIGHT/POISON/EXPEL/KNIGHT_DUEL/SELF_DESTRUCT/JUDGE/LOVER/TEAM). Never flip
+  `card.dead` by hand outside this service.
+- `DayOrchestrator` is the day-side mirror of `NightOrchestrator` (a `DiscordInteractionHandler`):
+  it runs dawn/last-words, the speech flow, and the police-election + expel polls over
+  `GameSession.speech`/`poll`, with all sequencing/tally in the pure `SpeechService`/`PollEngine`.
+  It also owns the **day-phase role actions**: 騎士 決鬥 (`DuelResolver` → `DeathService`), 自爆
+  (白狼王 带人 / 血月使徒 night seal), 白癡 翻牌免疫放逐, and the 血月使徒 last-wolf expel survival.
+  `*Internal` helpers operate on an already-loaded session (no nested `mutate`); the public methods
+  each wrap one `mutate` and return whether the game must enter night.
 - `NightOrchestrator` runs a live night end-to-end and **is** the `DiscordInteractionHandler`
   (registers itself in `@PostConstruct`): plan via `NightPlanner` → prompt actors (select menus;
   wolves get vote buttons) → collect into the persisted `nightState` → resolve via `NightResolver`

@@ -9,8 +9,10 @@ where randomness is needed (assignment) so tests are reproducible. Side effects 
 and `discord/`; keep logic here and wire it through a service.
 
 Sub-areas:
-- `roles/` — the identity registry and the 27 role beans (extensibility core; see its own CLAUDE.md).
+- `roles/` — the identity registry and the 28 role beans (extensibility core; see its own CLAUDE.md).
 - `night/` — the dependency-graph night engine (the most complex part; see its own CLAUDE.md).
+- `day/` — `DuelResolver`: the pure 騎士 決鬥 rule (who dies, was the target a wolf). The day-side
+  side effects (arming the death, entering night) live in `service/DayOrchestrator`.
 - `win/` — `WinConditionChecker`: living-identity faction tally, 金寶寶 (double mode), parity with
   the police +0.5 bonus, all-god setups. The same checker feeds both the engine and the snapshot
   meters, so the dashboard and the rules never disagree.

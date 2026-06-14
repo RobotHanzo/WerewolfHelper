@@ -8,8 +8,9 @@ WerewolfHelper hosts Chinese Werewolf (狼人殺) games on Discord — **one Dis
 session** — with a real-time web dashboard for the judge (法官) and a read-only God's view for
 spectators. The Discord bot and the dashboard are two thin interfaces over a single game engine.
 The authoritative behaviour spec lives in [`instructions/`](instructions/) (`FEATURES.md`,
-`GAMEPLAY.md`, `UI_SPEC.md`) — treat those as the source of truth for game rules and operational
-requirements (the §-numbers referenced in code comments point there).
+`GAMEPLAY.md`, `ROLES.md`, `UI_SPEC.md`) — treat those as the source of truth for game rules and
+operational requirements (the §-numbers referenced in code comments point there). `ROLES.md` is the
+per-role spec the death/day-action engine is verified against.
 
 Monorepo: `backend/` (Kotlin · Spring Boot 4 · MongoDB · JDA · Gradle Kotlin DSL) and
 `frontend/` (React 19 · Vite · TypeScript · Yarn · Lucide · framer-motion · zustand). The entire
@@ -56,11 +57,18 @@ prompts actors via Discord select menus / wolves via vote buttons, collects into
 `NightDeclarationsBuilder` bridges `nightState` → `NightDeclarations` for the resolver.
 
 **Roles are registry-driven for expansion** (`game/roles/`). `RoleRegistry` collects every `Role`
-`@Component` bean (all 27 canonical identities). Adding a role is one new bean (plus optional
-`NightAbility` beans + i18n keys) — no engine, controller, or frontend change. Faction is explicit
-registry data with `Faction.fromName` as the FEATURES §2 fallback. The frontend renders identities
-purely from server data (`roleId` + localized name + `faction`) — **never hardcode a role name in
-the UI**.
+`@Component` bean (28 identities: the 27 FEATURES §2 canonical ones + 隱狼). Adding a role is one new
+bean (plus optional `NightAbility` beans + i18n keys) — no engine, controller, or frontend change.
+Faction is explicit registry data with `Faction.fromName` as the FEATURES §2 fallback. The frontend
+renders identities purely from server data (`roleId` + localized name + `faction`) — **never
+hardcode a role name in the UI**.
+
+**Death is applied in one place** (`service/DeathService`). Night, judge-kill, expel, 決鬥, and 自爆
+all route through `applyDeath`/`killSeat`, which marks the card dead, syncs the nickname, and runs
+the cross-cutting ROLES.md rules once: death-revenge arming (獵人/狼王 unless suppressed; 白狼王 only
+via 自爆), 殉情 cascade (邱比特 lover / 狼美人 charm, with the 騎士-duel exemption), and 隱狼
+auto-death. Day-side role actions (`/seats/{n}/revenge|duel|self-destruct`) live in `DayOrchestrator`
+alongside the speech/poll loop. Never re-implement card-death inline — call `DeathService`.
 
 **Discord is behind the `DiscordGateway` seam** (`discord/`). `NoOpDiscordGateway` is the default
 (boots without a token); `JdaDiscordGateway` is the full JDA implementation (provisioning, seat

@@ -24,7 +24,11 @@ fine; the next snapshot wins.
 
 **Types mirror the backend DTOs by hand** (`types/snapshot.ts`) — keep them in lock-step with the
 OpenAPI schema. Identities carry `roleId` + localized `name` + `faction`; **never hardcode a role
-name** — faction → colour is via the enum only.
+name** — faction → colour is via the enum only. Seats also carry the ROLES.md state flags
+(`revengePending`, `idiotRevealed`, `knifeArmed`, `learnedRoleId`, `loverSeat`/`charmedSeat`) —
+`PlayerCard` renders these as state badges and gates the judge's day-action picker
+(revenge/duel/self-destruct, a two-step target select wired through `useGameActions`). New 房規
+toggles live on `Settings` (`witchSelfSave`, `hiddenWolfInheritsKnife`).
 
 **Data layer.** `api/client.ts` is a typed fetch wrapper over the backend's `ApiResponse` envelope
 (throws `ApiError` on `!success`). `api/ws.ts` is the per-guild `GameSocket`: 15 s heartbeat,
