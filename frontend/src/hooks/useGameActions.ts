@@ -117,6 +117,31 @@ export function useGameActions(guildId: string, demo: boolean) {
         } else void api.selfDestruct(guildId, seat);
       },
       pause: () => (demo ? patch((s) => ({ ...s, paused: !s.paused })) : void api.pause(guildId)),
+      skipPhase: () => {
+        if (demo) {
+          patch((s) => {
+            // mirror the backend GameFlowService.next phase machine
+            let phase = s.phase;
+            let day = s.day;
+            switch (s.phase) {
+              case "LOBBY":
+              case "ASSIGNMENT":
+                phase = "NIGHT"; day = day < 1 ? 1 : day; break;
+              case "NIGHT": phase = "DAWN"; break;
+              case "DAWN":
+              case "DAY":
+                phase = day === 1 ? "POLICE_ELECTION" : "SPEECHES"; break;
+              case "POLICE_ELECTION": phase = "SPEECHES"; break;
+              case "SPEECHES": phase = "EXPEL_VOTE"; break;
+              case "EXPEL_VOTE": phase = "NIGHT"; day = day + 1; break;
+              default: return s;
+            }
+            return { ...s, phase, day, speech: null, poll: null, night: null, timerEndsAt: null };
+          });
+        } else {
+          void api.nextPhase(guildId);
+        }
+      },
       startGame: () => {
         if (demo) {
           patch((s) => {
@@ -221,6 +246,8 @@ export function useGameActions(guildId: string, demo: boolean) {
           api.setPlayerCount(guildId, count).catch(handleApiError);
         }
       },
+      setDay: (day: number) =>
+         demo ? patch((s) => ({ ...s, day })) : void api.setDay(guildId, day),
       startSpeech: () => {
         if (demo) {
           patch((s) => {

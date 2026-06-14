@@ -46,6 +46,7 @@ export function Settings() {
   const snapshot = useGameStore((s) => s.snapshot);
   const actions = useGameActions(guildId, demo);
   const [count, setCount] = useState(snapshot?.totalSeats ?? 12);
+  const [day, setDay] = useState(snapshot?.day ?? 0);
   const [roles, setRoles] = useState<RoleInfo[]>([]);
   const [pool, setPool] = useState<Record<string, number>>({});
 
@@ -56,6 +57,7 @@ export function Settings() {
   useEffect(() => {
     if (snapshot) {
       setCount(snapshot.totalSeats);
+      setDay(snapshot.day);
       if (snapshot.pool) {
         setPool(snapshot.pool);
       }
@@ -67,6 +69,7 @@ export function Settings() {
   const mismatch = total !== need;
   const roleById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
   const dirty = snapshot != null && count !== snapshot.totalSeats;
+  const dayDirty = snapshot != null && day !== snapshot.day;
 
   const rolesByFaction = useMemo(() => {
     const groups: Record<string, RoleInfo[]> = {};
@@ -124,6 +127,16 @@ export function Settings() {
                 </Button>
               )}
             </div>
+            {snapshot.started && (
+              <div style={{ borderTop: "1px solid var(--border-1)", paddingTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                <Stepper label={t("settings.dayCount")} value={day} min={0} onChange={setDay} dirty={dayDirty} />
+                {dayDirty && (
+                  <Button variant="primary" size="sm" style={{ alignSelf: "flex-start" }} onClick={() => actions.setDay(day)}>
+                    {t("settings.applyDay")}
+                  </Button>
+                )}
+              </div>
+            )}
           </section>
 
           <section className="wh-card" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
