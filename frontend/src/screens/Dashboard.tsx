@@ -59,6 +59,7 @@ export function Dashboard() {
 
   if (!snapshot) return null;
   const isLobby = snapshot.phase === "LOBBY";
+  const isNight = snapshot.phase === "NIGHT";
   // Roster columns track the user's density on desktop; on narrow screens
   // we cap them so cards stay legible (phones go single/double column).
   const cols: Record<Density, number> = isPhone
@@ -128,11 +129,15 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* night board (carries the wolf-chat panel beside the phases during the night) */}
-      <AnimatePresence>{snapshot.night && (snapshot.night.active || snapshot.night.resolved) && <NightBoard night={snapshot.night} wolfChat={snapshot.wolfChat} />}</AnimatePresence>
+      {/* During the night the board leads (carries the wolf-chat panel beside the phases). */}
+      <AnimatePresence>{isNight && snapshot.night && (snapshot.night.active || snapshot.night.resolved) && <NightBoard night={snapshot.night} wolfChat={snapshot.wolfChat} />}</AnimatePresence>
 
       {/* speech-manager stages (發言 / 警長競選 / 放逐投票) surface here the same way the night does */}
       <AnimatePresence>{(snapshot.speech?.active || snapshot.speech?.waiting || snapshot.poll) && <SpeechBoard />}</AnimatePresence>
+
+      {/* Once the stage moves off the night, the board drops below the active stage panel and
+          collapses into a recap (click its header to expand). */}
+      <AnimatePresence>{!isNight && snapshot.night && (snapshot.night.active || snapshot.night.resolved) && <NightBoard night={snapshot.night} wolfChat={snapshot.wolfChat} collapsible />}</AnimatePresence>
 
       {/* wolf chat keeps syncing across every phase — show it on its own when the night board is down */}
       {!(snapshot.night && (snapshot.night.active || snapshot.night.resolved)) && snapshot.wolfChat.length > 0 && (

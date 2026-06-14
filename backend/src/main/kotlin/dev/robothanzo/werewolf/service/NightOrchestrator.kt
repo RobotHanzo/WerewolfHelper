@@ -461,6 +461,13 @@ class NightOrchestrator(
                 customId.startsWith(InteractionIds.NIGHT_ACTION) -> {
                     val abilityId = customId.removePrefix("${InteractionIds.NIGHT_ACTION}:")
                     val ability = abilitiesById[abilityId] ?: return@mutate
+                    // 預言家/通靈師/石像鬼 see their verdict the instant they pick — and the pick locks,
+                    // since re-selecting a second seat would be a free extra investigation.
+                    val investigates = abilityId.endsWith("investigate")
+                    if (investigates && night.intents.any { it.abilityId == abilityId }) {
+                        reply = "你今晚已查驗過目標，無法更改"
+                        return@mutate
+                    }
                     val intent = NightIntentData(abilityId, ability.roleId, mutableListOf(seatNumber))
                     val first = values.firstOrNull()
                     when {
@@ -469,6 +476,8 @@ class NightOrchestrator(
                     }
                     night.intents.removeAll { it.abilityId == abilityId }
                     night.intents.add(intent)
+                    // Deliver the verdict right away (resolution no longer re-announces investigations).
+                    if (investigates && !intent.skipped && intent.targets.isNotEmpty()) deliverInvestigation(s, intent)
                     reply = if (intent.skipped) "已選擇不行動" else "已提交行動"
                 }
             }
@@ -507,7 +516,6 @@ class NightOrchestrator(
                 }
             }
             applyLearns(session)
-            announceInvestigations(session)
             deliverGravekeeper(session)
 
             val summary = if (resolution.deaths.isEmpty()) msg.msg("night.peaceful")
@@ -579,24 +587,20 @@ class NightOrchestrator(
             }
     }
 
-    /** DM each investigator their result: 預言家 reports faction (隱狼 reads 好人); 通靈師/石像鬼 report
-     *  the exact identity (a 機械狼 reads as its learned identity). */
-    private fun announceInvestigations(session: GameSession) {
-        session.nightState.intents
-            .filter { it.abilityId.endsWith("investigate") && !it.skipped && it.targets.isNotEmpty() }
-            .forEach { intent ->
-                val actor = intent.actorSeats.firstOrNull() ?: return@forEach
-                val target = session.seat(intent.targets.first()) ?: return@forEach
-                val card = target.livingCards().firstOrNull() ?: target.cards.firstOrNull() ?: return@forEach
-                val verdict = if (intent.roleId == RoleIds.SEER) {
-                    val readsGood = roles.byId(card.roleId)?.hasTag(RoleTag.INVESTIGATED_AS_GOOD) == true
-                    val faction = if (target.clone) Faction.GOD else roles.factionOf(card.roleId)
-                    if (faction == Faction.WOLF && !readsGood) "狼人" else "好人"
-                } else {
-                    // 通靈師 / 石像鬼 — exact identity, following a 機械狼's learned id.
-                    roles.localizedName(target.learnedRoleId ?: card.roleId)
-                }
-                gateway.sendSeatMessage(session.guildId, actor, "查驗 玩家${target.paddedNumber} → $verdict")
-            }
+    /** Compute + DM one investigator's verdict the instant the target is picked: 預言家 reports faction
+     *  (隱狼 reads 好人); 通靈師/石像鬼 report the exact identity (a 機械狼 reads as its learned identity). */
+    private fun deliverInvestigation(session: GameSession, intent: NightIntentData) {
+        val actor = intent.actorSeats.firstOrNull() ?: return
+        val target = session.seat(intent.targets.firstOrNull() ?: return) ?: return
+        val card = target.livingCards().firstOrNull() ?: target.cards.firstOrNull() ?: return
+        val verdict = if (intent.roleId == RoleIds.SEER) {
+            val readsGood = roles.byId(card.roleId)?.hasTag(RoleTag.INVESTIGATED_AS_GOOD) == true
+            val faction = if (target.clone) Faction.GOD else roles.factionOf(card.roleId)
+            if (faction == Faction.WOLF && !readsGood) "狼人" else "好人"
+        } else {
+            // 通靈師 / 石像鬼 — exact identity, following a 機械狼's learned id.
+            roles.localizedName(target.learnedRoleId ?: card.roleId)
+        }
+        gateway.sendSeatMessage(session.guildId, actor, "查驗 玩家${target.paddedNumber} → $verdict")
     }
 }

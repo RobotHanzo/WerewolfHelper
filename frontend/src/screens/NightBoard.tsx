@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { Moon, Check, ArrowRight, Skull, Sparkles, MessageSquare } from "lucide-react";
+import { Moon, Check, ArrowRight, Skull, Sparkles, MessageSquare, ChevronDown } from "lucide-react";
 import type { Night, NightAction, NightVote, WolfChatMessage } from "@/types/snapshot";
 import { Avatar } from "@/components/ui/Avatar";
 import { Countdown } from "@/components/ui/Countdown";
@@ -267,8 +267,10 @@ export function WolfChatPanel({ messages }: { messages: WolfChatMessage[] }) {
  * collective wolf knife is elevated into its own consensus panel. Judge-only — no spectator surface
  * requests this, and it leaks no information the roster doesn't already show.
  */
-export function NightBoard({ night, wolfChat }: { night: Night; wolfChat: WolfChatMessage[] }) {
+export function NightBoard({ night, wolfChat, collapsible = false }: { night: Night; wolfChat: WolfChatMessage[]; collapsible?: boolean }) {
   const { t } = useTranslation();
+  // Once the stage moves off the night, the board is a recap — start collapsed, let the judge expand it.
+  const [collapsed, setCollapsed] = useState(collapsible);
 
   // Drop abilities with no actor in play, then drop emptied waves and renumber the survivors so the
   // phase labels stay contiguous (NightPlanner wave indices can have gaps). The original wave index is
@@ -308,7 +310,10 @@ export function NightBoard({ night, wolfChat }: { night: Night; wolfChat: WolfCh
       className="wh-card"
       style={{ marginBottom: 16, border: "1px solid var(--moon-500)", boxShadow: "0 0 24px rgba(84,210,228,0.14)", overflow: "hidden" }}
     >
-      <header style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", borderBottom: "1px solid var(--border-1)", flexWrap: "wrap" }}>
+      <header
+        onClick={collapsible ? () => setCollapsed((c) => !c) : undefined}
+        style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", borderBottom: collapsed ? "none" : "1px solid var(--border-1)", flexWrap: "wrap", cursor: collapsible ? "pointer" : "default" }}
+      >
         <span style={{ width: 38, height: 38, borderRadius: "var(--r-md)", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--accent-soft)", border: "1px solid var(--moon-500)", color: "var(--moon-300)" }}>
           <Moon size={20} />
         </span>
@@ -325,18 +330,24 @@ export function NightBoard({ night, wolfChat }: { night: Night; wolfChat: WolfCh
             <ProgressBar percent={night.totalCount ? (night.submittedCount / night.totalCount) * 100 : 0} state={night.submittedCount >= night.totalCount ? "success" : "running"} />
           </span>
         </span>
+        {collapsible && (
+          <ChevronDown
+            size={18}
+            style={{ color: "var(--text-muted)", flexShrink: 0, transition: "transform 0.2s", transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
+          />
+        )}
       </header>
 
-      {showChat ? (
+      {!collapsed && (showChat ? (
         <div className="wh-night-body">
           {phasesEl}
           <WolfChatPanel messages={wolfChat} />
         </div>
       ) : (
         phasesEl
-      )}
+      ))}
 
-      {night.resolved && night.summary && (
+      {!collapsed && night.resolved && night.summary && (
         <footer style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 18px", borderTop: "1px solid var(--border-1)", background: "var(--surface-raised)" }}>
           {night.summary === t("night.peaceful") ? (
             <Sparkles size={16} style={{ color: "var(--success-500)" }} />

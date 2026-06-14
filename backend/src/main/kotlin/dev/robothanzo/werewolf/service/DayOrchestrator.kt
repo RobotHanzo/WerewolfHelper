@@ -261,7 +261,12 @@ class DayOrchestrator(
             seat?.memberId?.let { gateway.muteMember(session.guildId, it, false) }
         }
 
-        val text = msg.msg(if (flow.lastWords) "speech.last_words" else "speech.speaking", pad(speaker))
+        // Tag the speaker (so the ping lands) and state their time budget explicitly.
+        val mention = seat?.memberId?.let { "<@$it> " } ?: ""
+        val text = mention + msg.msg(
+            if (flow.lastWords) "speech.last_words" else "speech.speaking",
+            pad(speaker), GameConstants.SPEECH_SECONDS,
+        )
         val buttons = buildList {
             add(CourtButton(InteractionIds.SPEECH_SKIP, msg.msg("speech.skip.button"), ButtonStyle.SECONDARY))
             if (!flow.lastWords) add(CourtButton(InteractionIds.SPEECH_INTERRUPT, msg.msg("speech.interrupt.button"), ButtonStyle.DANGER))
