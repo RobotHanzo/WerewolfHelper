@@ -83,6 +83,13 @@ interface DiscordGateway {
      */
     fun sendCourtButtons(guildId: Long, text: String, buttons: List<CourtButton>)
 
+    /**
+     * Open every channel in the guild for viewing by everyone (grants `VIEW_CHANNEL` to @everyone on
+     * each channel without lifting the send-message restrictions). Used when the judge confirms the
+     * win banner so spectators/players can read all the seat channels post-game.
+     */
+    fun revealAllChannels(guildId: Long)
+
     // --- voice ---
     fun muteAll(guildId: Long)
     fun unmuteAll(guildId: Long)

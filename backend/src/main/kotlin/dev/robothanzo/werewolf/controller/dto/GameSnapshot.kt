@@ -28,6 +28,8 @@ data class GameSnapshot(
     val aliveCount: Int,
     val totalSeats: Int,
     val winner: WinnerDto?,
+    @get:Schema(description = "Whether the judge has revealed the result to the court (confirmed the win banner)")
+    val winRevealed: Boolean,
     val timerEndsAt: Long?,
     val seats: List<SeatDto>,
     val meters: List<FactionMeterDto>,

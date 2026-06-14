@@ -33,6 +33,7 @@ import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Icon
 import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.channel.attribute.IPermissionContainer
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent
@@ -461,6 +462,18 @@ class JdaDiscordGateway(
         ButtonStyle.SECONDARY -> Button.secondary(customId, label)
         ButtonStyle.SUCCESS -> Button.success(customId, label)
         ButtonStyle.DANGER -> Button.danger(customId, label)
+    }
+
+    override fun revealAllChannels(guildId: Long) {
+        val g = guild(guildId) ?: return
+        val pub = g.publicRole
+        // grant() adds VIEW_CHANNEL to the @everyone allow set without clearing existing denies
+        // (e.g. MESSAGE_SEND stays blocked), so post-game everyone can read but not write.
+        g.channels.filterIsInstance<IPermissionContainer>().forEach { ch ->
+            runCatching {
+                ch.upsertPermissionOverride(pub).grant(Permission.VIEW_CHANNEL).queue()
+            }.onFailure { log.warn("reveal channel {} failed: {}", ch.id, it.message) }
+        }
     }
 
     // ---- voice ----

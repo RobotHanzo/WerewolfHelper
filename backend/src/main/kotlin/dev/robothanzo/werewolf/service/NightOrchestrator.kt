@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.service
 
+import dev.robothanzo.werewolf.discord.ChannelKind
 import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.discord.DiscordInteractionHandler
 import dev.robothanzo.werewolf.discord.InteractionIds
@@ -529,7 +530,11 @@ class NightOrchestrator(
             val result = win.check(session)
             if (result.over) {
                 session.phase = Phase.OVER
-                sessionService.log(guildId, LogSeverity.ALERT, if (result.winner == Faction.WOLF) "game.over.wolf" else "game.over.good")
+                val winnerKey = if (result.winner == Faction.WOLF) "game.over.wolf" else "game.over.good"
+                sessionService.log(guildId, LogSeverity.ALERT, winnerKey)
+                // Pre-reveal: keep the result private to the judge + spectator channels until the
+                // judge confirms the win banner (which then announces it to the court).
+                announcer.announceTo(guildId, listOf(ChannelKind.JUDGE, ChannelKind.SPECTATOR), winnerKey)
             } else {
                 session.phase = Phase.DAWN
             }

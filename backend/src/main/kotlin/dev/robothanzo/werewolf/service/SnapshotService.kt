@@ -105,6 +105,7 @@ class SnapshotService(
             winner = winResult?.takeIf { it.over }?.let {
                 WinnerDto(it.winner!!.name, it.reasonKey?.let { key -> msg.msg(key) } ?: "")
             },
+            winRevealed = session.winRevealed,
             timerEndsAt = session.timerEndsAt,
             seats = seats,
             meters = meters(session),

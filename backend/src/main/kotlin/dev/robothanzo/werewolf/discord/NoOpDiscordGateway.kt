@@ -110,6 +110,8 @@ class NoOpDiscordGateway(
         log.debug("[noop] court-buttons {} <- {} {}", guildId, text, buttons.map { it.customId })
     }
 
+    override fun revealAllChannels(guildId: Long) = log.debug("[noop] revealAllChannels {}", guildId)
+
     override fun muteAll(guildId: Long) = log.debug("[noop] muteAll {}", guildId)
     override fun unmuteAll(guildId: Long) = log.debug("[noop] unmuteAll {}", guildId)
     override fun muteMember(guildId: Long, memberId: Long, muted: Boolean) {

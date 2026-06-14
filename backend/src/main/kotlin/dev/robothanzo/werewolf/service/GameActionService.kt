@@ -1,5 +1,6 @@
 package dev.robothanzo.werewolf.service
 
+import dev.robothanzo.werewolf.discord.ChannelKind
 import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.discord.NicknameService
 import dev.robothanzo.werewolf.domain.DashboardRole
@@ -32,6 +33,7 @@ class GameActionService(
     private val gameScheduler: GameScheduler,
     private val roleService: DashboardRoleService,
     private val deaths: DeathService,
+    private val announcer: CourtAnnouncer,
 ) {
 
     /** Deal identities to the eligible (non-bot, non-owner, non-spectator) members. */
@@ -142,6 +144,7 @@ class GameActionService(
         session.assigned = false
         session.policeSeat = null
         session.phase = Phase.LOBBY
+        session.winRevealed = false
         session.day = 0
         session.timerEndsAt = null
         session.stepEndsAt = null
@@ -154,13 +157,34 @@ class GameActionService(
     }
 
     private fun checkWin(session: GameSession) {
+        if (session.phase == Phase.OVER) return
         val result = win.check(session)
         if (result.over) {
             session.phase = Phase.OVER
             val winnerKey = if (result.winner?.name == "WOLF") "game.over.wolf" else "game.over.good"
             sessionService.log(session.guildId, LogSeverity.ALERT, winnerKey)
             result.reasonKey?.let { sessionService.log(session.guildId, LogSeverity.INFO, it) }
+            // Pre-reveal: keep the result private to the judge + spectator channels until the judge
+            // confirms the win banner (which then announces it to the court).
+            announcer.announceTo(session.guildId, listOf(ChannelKind.JUDGE, ChannelKind.SPECTATOR), winnerKey)
         }
+    }
+
+    /**
+     * The judge confirms the win banner: reveal the result to the court channel, unmute everyone, and
+     * open every channel for viewing. Until this is pressed the result is private to the judge +
+     * spectator channels (see [checkWin]).
+     */
+    fun confirmWin(guildId: Long) = sessionService.mutate(guildId) { session ->
+        if (session.phase != Phase.OVER || session.winRevealed) return@mutate
+        val result = win.check(session)
+        if (!result.over) return@mutate
+        session.winRevealed = true
+        val winnerKey = if (result.winner?.name == "WOLF") "game.over.wolf" else "game.over.good"
+        announcer.announce(session.guildId, winnerKey) // now public to the court
+        sessionService.log(guildId, LogSeverity.ACTION, "game.over.revealed")
+        gateway.unmuteAll(guildId)
+        gateway.revealAllChannels(guildId)
     }
 
     private fun syncNickname(session: GameSession, seat: Seat) {

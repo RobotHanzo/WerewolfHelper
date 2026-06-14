@@ -121,12 +121,28 @@ export function Dashboard() {
 
       {/* game over */}
       {snapshot.winner && (
-        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "18px 22px", marginBottom: 16, borderRadius: "var(--r-lg)", background: "var(--success-dim)", border: "1px solid rgba(62,220,151,0.4)" }}>
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 14, padding: "18px 22px", marginBottom: 16, borderRadius: "var(--r-lg)", background: "var(--success-dim)", border: "1px solid rgba(62,220,151,0.4)" }}>
           <span style={{ fontSize: 18, fontWeight: 900, color: "var(--success-500)" }}>
             {t("dashboard.gameOver", { winner: snapshot.winner.faction === "WOLF" ? t("faction.wolfFull") : t("faction.godFull") })}
           </span>
           <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{snapshot.winner.reason}</span>
+          {!readOnly && (
+            <span style={{ marginLeft: "auto" }}>
+              {snapshot.winRevealed ? (
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--success-500)" }}>{t("dashboard.winRevealedTag")}</span>
+              ) : (
+                <Button variant="primary" size="sm" armed armedLabel={t("dashboard.confirmWinArmed")} onClick={actions.confirmWin}>
+                  {t("dashboard.confirmWin")}
+                </Button>
+              )}
+            </span>
+          )}
         </div>
+      )}
+      {!readOnly && snapshot.winner && !snapshot.winRevealed && (
+        <p style={{ margin: "-8px 0 16px", fontSize: 12, color: "var(--text-muted)", lineHeight: 1.6 }}>
+          {t("dashboard.confirmWinHint")}
+        </p>
       )}
 
       {/* During the night the board leads (carries the wolf-chat panel beside the phases). */}

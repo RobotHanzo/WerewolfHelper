@@ -66,6 +66,7 @@ export const api = {
   startGame: (g: string) => post(`/sessions/${g}/state/start`),
   nextPhase: (g: string) => post(`/sessions/${g}/state/next`),
   pause: (g: string) => post(`/sessions/${g}/state/pause`),
+  confirmWin: (g: string) => post(`/sessions/${g}/state/confirm-win`),
   kill: (g: string, seat: number, identityIndex: number | null, allowLastWords: boolean) =>
     post(`/sessions/${g}/seats/${seat}/kill`, { identityIndex, allowLastWords }),
   revenge: (g: string, seat: number, target: number) =>

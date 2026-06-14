@@ -174,6 +174,18 @@ class GameController(
         return ResponseEntity.ok(ApiResponse.ok())
     }
 
+    @Operation(
+        summary = "Confirm win",
+        description = "Reveal the game result to the court channel, unmute everyone, and open all channels for viewing.",
+    )
+    @ApiResponses(value = [SwaggerApiResponse(responseCode = "200", description = "Revealed")])
+    @PostMapping("/state/confirm-win")
+    @CanManageGuild
+    fun confirmWin(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
+        actions.confirmWin(guildId.toLong())
+        return ResponseEntity.ok(ApiResponse.ok())
+    }
+
     @Operation(summary = "Pause / resume", description = "Freeze (or un-freeze) every running countdown.")
     @ApiResponses(value = [SwaggerApiResponse(responseCode = "200", description = "Toggled")])
     @PostMapping("/state/pause")

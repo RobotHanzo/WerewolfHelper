@@ -18,4 +18,13 @@ class CourtAnnouncer(
     fun announce(guildId: Long, key: String, vararg args: Any?) {
         gateway.sendChannelMessage(guildId, ChannelKind.COURT, msg.msg(key, *args))
     }
+
+    /**
+     * Render [key] once and post it to each of [channels]. Used for the game-over notice, which stays
+     * private to the judge + spectator channels until the judge reveals the result to the court.
+     */
+    fun announceTo(guildId: Long, channels: List<ChannelKind>, key: String, vararg args: Any?) {
+        val text = msg.msg(key, *args)
+        channels.forEach { gateway.sendChannelMessage(guildId, it, text) }
+    }
 }

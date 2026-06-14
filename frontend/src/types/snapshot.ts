@@ -163,6 +163,8 @@ export interface GameSnapshot {
   aliveCount: number;
   totalSeats: number;
   winner: Winner | null;
+  /** Whether the judge has revealed the result to the court (confirmed the win banner). */
+  winRevealed: boolean;
   timerEndsAt: number | null;
   seats: Seat[];
   meters: FactionMeter[];

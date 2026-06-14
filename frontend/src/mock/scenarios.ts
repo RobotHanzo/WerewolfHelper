@@ -138,6 +138,7 @@ export function buildScenario(scenario: ScenarioId): GameSnapshot {
     aliveCount: seats.filter((s) => s.alive).length,
     totalSeats: 12,
     winner: null,
+    winRevealed: false,
     timerEndsAt: null,
     seats,
     meters: meters(seats, true),

@@ -73,6 +73,13 @@ data class GameSession(
 
     /** 血月使徒 自爆 seals the next night: all 神職 abilities void + the wolves cannot knife. */
     var bloodMoonSeal: Boolean = false,
+
+    /**
+     * Whether the judge has confirmed the win banner. Until then the result stays private to the
+     * judge + spectator channels; confirming reveals it to the court, unmutes everyone, and opens
+     * every channel for viewing. Reset with the game.
+     */
+    var winRevealed: Boolean = false,
 ) {
     val playerCount: Int get() = settings.playerCount
 

@@ -134,6 +134,16 @@ export function useGameActions(guildId: string, demo: boolean) {
               };
             })
           : void api.pause(guildId),
+      confirmWin: () => {
+        if (demo) {
+          patch((s) => ({ ...s, winRevealed: true }));
+          useUiStore.getState().showToast(t("dashboard.winRevealed"));
+        } else {
+          api.confirmWin(guildId)
+            .then(() => useUiStore.getState().showToast(t("dashboard.winRevealed")))
+            .catch(handleApiError);
+        }
+      },
       skipPhase: () => {
         if (demo) {
           patch((s) => {

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useGameStore } from "@/stores/gameStore";
 import { FactionMeter } from "@/components/ui/FactionMeter";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { WolfChatPanel } from "./NightBoard";
 
@@ -19,6 +20,16 @@ export function Spectator() {
           {t("spectator.subtitle", { mode: snapshot.doubleIdentity ? t("spectator.modeDouble") : t("spectator.modeSingle") })}
         </span>
       </header>
+
+      <div className="wh-meter">
+        <div className="wh-meter__head">
+          <span style={{ fontWeight: 700 }}>{t("spectator.aliveTitle")}</span>
+          <span className="wh-meter__count">
+            {snapshot.aliveCount} / {snapshot.totalSeats}
+          </span>
+        </div>
+        <ProgressBar percent={snapshot.totalSeats > 0 ? (snapshot.aliveCount / snapshot.totalSeats) * 100 : 0} state="success" />
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
         {snapshot.meters.map((m) => (
