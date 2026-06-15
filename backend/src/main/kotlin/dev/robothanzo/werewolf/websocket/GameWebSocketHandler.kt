@@ -58,9 +58,24 @@ class GameWebSocketHandler(
         }
     }
 
-    /** Broadcast a full snapshot to every client of [guildId]. */
+    /**
+     * Broadcast a full snapshot to every client of [guildId] — **except** clients the snapshot itself
+     * shows as a seated active player. This is the anti-cheat guarantee: `assign` runs inside `mutate`,
+     * which broadcasts the role-revealing snapshot *before* the follow-up `broadcastAuthRefresh`
+     * disconnects newly-seated spectators, so without this filter a player who was watching the God's
+     * view would receive every identity in that one snapshot before being kicked. We never put roles on
+     * their wire in the first place; the `authRefresh` nudge + handshake `canView` then route them to
+     * the lockout screen. The check reads the snapshot (no DB hit) so it stays cheap per broadcast.
+     */
     fun broadcastSnapshot(guildId: Long, snapshot: GameSnapshot) {
-        send(guildId, mapOf("type" to "snapshot", "snapshot" to snapshot))
+        val seatedMemberIds = if (snapshot.assigned) {
+            snapshot.seats.mapNotNull { it.memberId }.toSet()
+        } else {
+            emptySet()
+        }
+        send(guildId, mapOf("type" to "snapshot", "snapshot" to snapshot)) { userId ->
+            userId.toString() !in seatedMemberIds
+        }
     }
 
 
@@ -100,11 +115,20 @@ class GameWebSocketHandler(
         }
     }
 
-    private fun send(guildId: Long, payload: Any) {
+    /**
+     * Send [payload] to every open client of [guildId], optionally gated by [recipientFilter] against
+     * the client's authenticated user id (used to withhold role-revealing snapshots from locked-out
+     * seated players — see [broadcastSnapshot]).
+     */
+    private fun send(guildId: Long, payload: Any, recipientFilter: ((Long) -> Boolean)? = null) {
         val clients = registry[guildId] ?: return
         val json = mapper.writeValueAsString(payload)
         for (client in clients) {
             if (!client.isOpen) continue
+            if (recipientFilter != null) {
+                val userId = client.attributes[ATTR_USER_ID] as? Long
+                if (userId == null || !recipientFilter(userId)) continue
+            }
             val lock = locks[client.id] ?: continue
             try {
                 synchronized(lock) { client.sendMessage(TextMessage(json)) }

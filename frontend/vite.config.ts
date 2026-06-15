@@ -13,8 +13,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": { target: "http://localhost:8080", changeOrigin: true },
-      "/ws": { target: "ws://localhost:8080", ws: true },
+      // `xfwd` adds X-Forwarded-Host/Proto so the backend can resolve the browser-facing origin
+      // (e.g. a LAN/Tailscale host) instead of the proxy target — required for OAuth redirects.
+      "/api": { target: "http://localhost:8080", changeOrigin: true, xfwd: true },
+      "/ws": { target: "ws://localhost:8080", ws: true, xfwd: true },
     },
   },
   test: {

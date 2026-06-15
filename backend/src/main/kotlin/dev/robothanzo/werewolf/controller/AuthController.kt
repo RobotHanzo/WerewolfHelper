@@ -9,6 +9,7 @@ import dev.robothanzo.werewolf.security.CurrentUser
 import dev.robothanzo.werewolf.security.DashboardRoleService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
@@ -47,9 +48,20 @@ class AuthController(
 
     @Operation(summary = "Begin login", description = "Redirect to Discord's OAuth2 authorize page.")
     @GetMapping("/login")
-    fun login(): RedirectView {
+    fun login(request: HttpServletRequest): RedirectView {
+        // Resolve the origin the user actually opened (e.g. a LAN/Tailscale host behind the Vite proxy),
+        // not a hardcoded localhost. The callback must reach this same origin so the session cookie set
+        // here round-trips, and the redirect_uri must be byte-identical at the token exchange — so stash
+        // both on the session. NOTE: every origin used must be registered as an OAuth redirect URI in
+        // the Discord developer portal (it requires an exact match).
+        val origin = originOf(request)
+        val redirectUri = "$origin/api/auth/callback"
+        request.getSession(true).apply {
+            setAttribute(ATTR_OAUTH_REDIRECT_URI, redirectUri)
+            setAttribute(ATTR_OAUTH_ORIGIN, origin)
+        }
         val scope = URLEncoder.encode("identify guilds guilds.members.read", StandardCharsets.UTF_8)
-        val redirect = URLEncoder.encode(properties.redirectUri, StandardCharsets.UTF_8)
+        val redirect = URLEncoder.encode(redirectUri, StandardCharsets.UTF_8)
         val url = "https://discord.com/api/oauth2/authorize?client_id=${properties.clientId}" +
             "&response_type=code&scope=$scope&redirect_uri=$redirect"
         return RedirectView(url)
@@ -57,15 +69,42 @@ class AuthController(
 
     @Operation(summary = "OAuth callback", description = "Exchange the code, store the session, return to the dashboard.")
     @GetMapping("/callback")
-    fun callback(@RequestParam code: String): RedirectView {
+    fun callback(@RequestParam code: String, request: HttpServletRequest): RedirectView {
+        val session = request.getSession(false)
+        // Reuse the exact redirect_uri sent at /login (OAuth requires it to match); fall back to deriving
+        // it from this request's origin if the session was lost.
+        val redirectUri = session?.getAttribute(ATTR_OAUTH_REDIRECT_URI) as? String
+            ?: "${originOf(request)}/api/auth/callback"
+        val landing = session?.getAttribute(ATTR_OAUTH_ORIGIN) as? String ?: originOf(request)
         try {
-            val token = exchangeCode(code)
+            val token = exchangeCode(code, redirectUri)
             val user = fetchUser(token)
             currentUser.login(user.id, user.username, user.avatarUrl)
         } catch (e: Exception) {
             log.error("OAuth callback failed: {}", e.message)
         }
-        return RedirectView(dashboardBaseUrl)
+        return RedirectView(landing)
+    }
+
+    /**
+     * The browser-facing origin (`scheme://host[:port]`) of the dashboard for this request. Prefers a
+     * reverse proxy's forwarded headers (the Vite dev proxy with `xfwd`, or a prod proxy), then the
+     * `Origin`/`Referer` of the navigation, and finally the configured [dashboardBaseUrl]. This is what
+     * makes login work over a LAN/Tailscale host instead of always bouncing to localhost.
+     */
+    private fun originOf(request: HttpServletRequest): String {
+        request.getHeader("X-Forwarded-Host")?.split(",")?.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }?.let { host ->
+            val proto = request.getHeader("X-Forwarded-Proto")?.split(",")?.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+                ?: request.scheme
+            return "$proto://$host"
+        }
+        request.getHeader("Origin")?.takeIf { it.isNotBlank() && it != "null" }?.let { return it }
+        request.getHeader("Referer")?.takeIf { it.isNotBlank() }?.let { referer ->
+            runCatching { URI.create(referer) }.getOrNull()?.let { uri ->
+                if (uri.scheme != null && uri.authority != null) return "${uri.scheme}://${uri.authority}"
+            }
+        }
+        return dashboardBaseUrl
     }
 
     @Operation(summary = "Current identity", description = "The logged-in user, or 401 if no session.")
@@ -98,13 +137,13 @@ class AuthController(
 
     private data class DiscordUser(val id: Long, val username: String, val avatarUrl: String?)
 
-    private fun exchangeCode(code: String): String {
+    private fun exchangeCode(code: String, redirectUri: String): String {
         val form = mapOf(
             "client_id" to properties.clientId,
             "client_secret" to properties.clientSecret,
             "grant_type" to "authorization_code",
             "code" to code,
-            "redirect_uri" to properties.redirectUri,
+            "redirect_uri" to redirectUri,
         ).entries.joinToString("&") {
             "${it.key}=${URLEncoder.encode(it.value, StandardCharsets.UTF_8)}"
         }
@@ -131,5 +170,10 @@ class AuthController(
             username = node.get("username").asText(),
             avatarUrl = avatar?.let { "https://cdn.discordapp.com/avatars/$id/$it.png" },
         )
+    }
+
+    private companion object {
+        const val ATTR_OAUTH_REDIRECT_URI = "wh.oauth.redirectUri"
+        const val ATTR_OAUTH_ORIGIN = "wh.oauth.origin"
     }
 }
