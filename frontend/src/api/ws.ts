@@ -8,6 +8,9 @@ export const WS_BACKOFF_CAP_MS = 10_000;
 /** Close code the server uses to signal an expired/rejected session (vs a network blip). */
 export const WS_CLOSE_SESSION_EXPIRED = 4001;
 
+/** Close code: dashboard authorization was revoked (locked out / blocked) — re-resolve role, don't reconnect. */
+export const WS_CLOSE_AUTH_CHANGED = 4002;
+
 /** Pure backoff step: 1s → ×1.5 → capped at 10s. Exported for unit testing. */
 export function nextBackoff(current: number): number {
   if (current <= 0) return WS_BACKOFF_START_MS;
@@ -28,6 +31,9 @@ export interface GameSocketHandlers {
   /** The server's authorization for this guild changed (role promote/demote, or assignment lockout):
    *  re-fetch `/me` and re-route. Carries no payload — each client resolves its own role. */
   onAuthRefresh?: () => void;
+  /** The server force-closed us because our authorization was revoked (locked out / blocked), or we
+   *  are about to reconnect: re-resolve `/me` and route away. Must not itself trigger a reconnect. */
+  onRevalidate?: () => void;
   /** Session expired / rejected — pop the re-login modal instead of reconnect-looping. */
   onExpired: () => void;
 }
@@ -88,6 +94,11 @@ export class GameSocket {
         this.handlers.onExpired();
         return;
       }
+      if (event.code === WS_CLOSE_AUTH_CHANGED) {
+        // Authorization revoked server-side (locked out / blocked): re-resolve and route, no reconnect.
+        this.handlers.onRevalidate?.();
+        return;
+      }
       this.scheduleReconnect();
     };
 
@@ -107,6 +118,10 @@ export class GameSocket {
   }
 
   private scheduleReconnect(): void {
+    // Re-resolve identity on every reconnect: if we were locked out / blocked while the socket was
+    // down, `/me` now reflects it and the app routes us away (which unmounts and stops this loop);
+    // a rejected handshake (no longer authorized) otherwise reconnect-loops forever.
+    this.handlers.onRevalidate?.();
     this.backoff = nextBackoff(this.backoff);
     this.reconnectTimer = setTimeout(() => this.connect(), this.backoff);
   }

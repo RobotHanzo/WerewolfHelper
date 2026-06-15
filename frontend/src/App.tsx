@@ -155,6 +155,7 @@ function ServerSurface() {
       onConnected: useGameStore.getState().setConnected,
       onPong: useGameStore.getState().incrementPongCount,
       onAuthRefresh: () => api.me(guildId).then(applyMe).catch(() => {}),
+      onRevalidate: () => api.me(guildId).then(applyMe).catch(() => {}),
       onExpired: () => useGameStore.getState().setExpired(true),
     });
     socket.connect();
