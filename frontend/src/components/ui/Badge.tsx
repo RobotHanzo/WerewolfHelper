@@ -27,7 +27,8 @@ import {
   Cpu,
   Crosshair,
   ShieldAlert,
-  EyeOff
+  EyeOff,
+  Lock
 } from "lucide-react";
 
 type Size = "sm" | "md";
@@ -143,10 +144,21 @@ export function StateBadge({ kind, size = "md", text }: { kind: StateKind; size?
       : kind === "dead" ? "lock"
       : kind;
   const cls = ["wh-badge", `wh-badge--${styleKind}`, `wh-badge--${size}`].join(" ");
+  const iconSize = size === "sm" ? 10 : 12;
+
+  if (kind === "lock") {
+    return (
+      <span className={cls} style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
+        <Lock size={iconSize} style={{ flexShrink: 0 }} />
+        {t("badge.locked")}
+      </span>
+    );
+  }
+
   const label: Record<StateKind, string> = {
     police: `⛨ ${t("badge.police")}`,
     gbaby: t("badge.gbaby"),
-    lock: `鎖 ${t("badge.locked")}`,
+    lock: t("badge.locked"),
     dead: t("badge.dead"),
     revenge: t("badge.revenge"),
     idiotRevealed: t("badge.idiotRevealed"),
