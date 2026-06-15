@@ -688,7 +688,7 @@ class JdaDiscordGateway(
         }
     }
 
-    /** Registers and handles the `/server` slash command (create / delete), for server creators. */
+    /** Registers and handles slash commands: `/server` (create/delete, server creators) and `/game`. */
     private inner class CommandListener : ListenerAdapter() {
         override fun onReady(event: ReadyEvent) {
             jda.updateCommands().addCommands(
@@ -701,21 +701,33 @@ class JdaDiscordGateway(
                             ),
                         SubcommandData("delete", "刪除目前伺服器的遊戲"),
                     ),
+                Commands.slash("game", "遊戲中的玩家指令")
+                    .addSubcommands(
+                        SubcommandData("detonate", "自爆（限狼人：當前身分為狼才可使用）"),
+                    ),
             ).queue()
         }
 
         override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
-            if (event.name != "server") return
             val handler = commandHandler ?: return event.reply("尚未就緒").setEphemeral(true).queue()
-            val reply = when (event.subcommandName) {
-                "create" -> handler.onServerCreate(
-                    event.user.idLong,
-                    event.getOption("players")!!.asInt,
-                    event.getOption("double")?.asBoolean ?: false,
-                )
+            val reply = when (event.name) {
+                "server" -> when (event.subcommandName) {
+                    "create" -> handler.onServerCreate(
+                        event.user.idLong,
+                        event.getOption("players")!!.asInt,
+                        event.getOption("double")?.asBoolean ?: false,
+                    )
 
-                "delete" -> handler.onServerDelete(event.user.idLong, event.guild?.idLong ?: 0)
-                else -> "未知的指令"
+                    "delete" -> handler.onServerDelete(event.user.idLong, event.guild?.idLong ?: 0)
+                    else -> "未知的指令"
+                }
+
+                "game" -> when (event.subcommandName) {
+                    "detonate" -> handler.onDetonate(event.guild?.idLong ?: 0, event.user.idLong)
+                    else -> "未知的指令"
+                }
+
+                else -> return
             }
             event.reply(reply).setEphemeral(true).queue()
         }

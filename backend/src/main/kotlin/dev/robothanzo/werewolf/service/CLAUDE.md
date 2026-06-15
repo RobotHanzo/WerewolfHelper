@@ -46,7 +46,9 @@ and the WebSocket. This is where side effects live; keep new rules in `game/` an
   on the `GameScheduler` deadline **or** once `isComplete`. Resolution applies deaths, announces
   investigations, re-checks win, and advances `phase` to DAWN/OVER. The interaction-rule matrix
   lives in `NightResolver`, **not** here — this class is wiring + persistence of intents/votes.
-- `ServerProvisioningService` handles `/server create|delete` + bot-join provisioning (the
-  `DiscordCommandHandler`). `DiscordOpsService` enforces **critical-before-cosmetic** (FEATURES
+- `ServerProvisioningService` handles `/server create|delete` + bot-join provisioning; `CommandRouter`
+  is the gateway's single `DiscordCommandHandler` and fans `/server` here and `/game detonate` to
+  `DayOrchestrator.detonate` (wolf-only player 自爆, gated on the caller's current identity being a
+  wolf). `DiscordOpsService` enforces **critical-before-cosmetic** (FEATURES
   §10.2): role grants + nicknames finish as one phase before any notification messages, streamed
   through `BulkOperationEngine` over the WS.

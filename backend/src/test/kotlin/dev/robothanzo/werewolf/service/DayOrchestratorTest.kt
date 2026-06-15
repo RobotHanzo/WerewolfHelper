@@ -260,6 +260,62 @@ class DayOrchestratorTest {
     }
 
     @Test
+    fun `detonate command self-destructs a wolf and forces night`() {
+        session = TestFixtures.session(
+            playerCount = 5,
+            seats = listOf(
+                TestFixtures.seat(1, "wolf" to false),
+                TestFixtures.seat(2, "wolf" to false),
+                TestFixtures.seat(3, "seer" to false),
+                TestFixtures.seat(4, "villager" to false),
+                TestFixtures.seat(5, "villager" to false),
+            ),
+        ) { assigned = true; phase = dev.robothanzo.werewolf.domain.Phase.SPEECHES }
+
+        val reply = day.detonate(gid, 1) // seat 1's member id is 1
+        assertEquals(msg.msg("cmd.detonate.ok", "01"), reply)
+        assertFalse(session.seat(1)!!.alive)
+        assertEquals(dev.robothanzo.werewolf.domain.Phase.NIGHT, session.phase)
+    }
+
+    @Test
+    fun `detonate is rejected when the caller's current identity is not a wolf`() {
+        session = TestFixtures.session(
+            playerCount = 5,
+            seats = listOf(
+                TestFixtures.seat(1, "wolf" to false),
+                TestFixtures.seat(2, "seer" to false),
+                TestFixtures.seat(3, "seer" to false),
+                TestFixtures.seat(4, "villager" to false),
+                TestFixtures.seat(5, "villager" to false),
+            ),
+        ) { assigned = true; phase = dev.robothanzo.werewolf.domain.Phase.SPEECHES }
+
+        val reply = day.detonate(gid, 2) // seat 2 is a 預言家
+        assertEquals(msg.msg("cmd.detonate.not_wolf"), reply)
+        assertTrue(session.seat(2)!!.alive)
+        assertEquals(dev.robothanzo.werewolf.domain.Phase.SPEECHES, session.phase)
+    }
+
+    @Test
+    fun `detonate is rejected outside the day phases`() {
+        session = TestFixtures.session(
+            playerCount = 5,
+            seats = listOf(
+                TestFixtures.seat(1, "wolf" to false),
+                TestFixtures.seat(2, "seer" to false),
+                TestFixtures.seat(3, "seer" to false),
+                TestFixtures.seat(4, "villager" to false),
+                TestFixtures.seat(5, "villager" to false),
+            ),
+        ) { assigned = true; phase = dev.robothanzo.werewolf.domain.Phase.NIGHT }
+
+        val reply = day.detonate(gid, 1)
+        assertEquals(msg.msg("cmd.detonate.not_day"), reply)
+        assertTrue(session.seat(1)!!.alive)
+    }
+
+    @Test
     fun `血月使徒 survives the expel when it is the last wolf`() {
         session = TestFixtures.session(
             playerCount = 5,

@@ -176,6 +176,26 @@ class DayOrchestrator(
         return true
     }
 
+    /**
+     * `/game detonate`: a **wolf player** self-destructs straight from Discord (the judge's seat
+     * endpoint is [selfDestruct]). 自爆 is a wolf-only day action, so this validates the caller is a
+     * living player whose **current identity** (their first living card) is wolf-faction, then routes
+     * through the same path. Returns the zh-TW ephemeral reply shown to the player.
+     */
+    fun detonate(guildId: Long, userId: Long): String {
+        val session = sessionService.find(guildId) ?: return msg.msg("error.session_not_found")
+        val seat = session.seats.firstOrNull { it.memberId == userId }
+            ?: return msg.msg("cmd.detonate.not_player")
+        if (session.phase !in DETONATABLE_PHASES) return msg.msg("cmd.detonate.not_day")
+        // The first living card is the identity selfDestructInternal will detonate — validate that one.
+        val card = seat.livingCards().firstOrNull() ?: return msg.msg("cmd.detonate.dead")
+        if (roles.factionOf(card.roleId) != Faction.WOLF) return msg.msg("cmd.detonate.not_wolf")
+        // 狼美人不能自爆 (ROLES.md) — surfaced explicitly so the player isn't met with silence.
+        if (card.roleId == RoleIds.WOLF_BEAUTY) return msg.msg("cmd.detonate.wolf_beauty")
+        if (selfDestruct(guildId, seat.number)) coordinator?.enterPhase(guildId, Phase.NIGHT)
+        return msg.msg("cmd.detonate.ok", pad(seat.number))
+    }
+
     /** Announce every death the shared applier produced (the primary death plus any 殉情 cascade). */
     private fun announceDeaths(session: GameSession, produced: List<DeathInfo>) {
         produced.forEach { d ->
@@ -675,6 +695,9 @@ class DayOrchestrator(
     private companion object {
         /** Day phases whose work, once their poll+speech are idle, auto-advances to the next phase. */
         val ADVANCEABLE_DAY_PHASES = setOf(Phase.DAWN, Phase.POLICE_ELECTION, Phase.SPEECHES, Phase.EXPEL_VOTE)
+
+        /** Day phases during which a wolf may 自爆 via the `/game detonate` command. */
+        val DETONATABLE_PHASES = setOf(Phase.DAWN, Phase.POLICE_ELECTION, Phase.SPEECHES, Phase.EXPEL_VOTE)
 
         /** Poll stages that run their own scheduled deadline (CAMPAIGN is driven by the speech flow). */
         val TIMED_POLL_STAGES = setOf(PollStage.ENROLL, PollStage.WITHDRAW, PollStage.VOTING)

@@ -1,6 +1,5 @@
 package dev.robothanzo.werewolf.service
 
-import dev.robothanzo.werewolf.discord.DiscordCommandHandler
 import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.discord.DiscordProperties
 import dev.robothanzo.werewolf.domain.GameSession
@@ -8,7 +7,6 @@ import dev.robothanzo.werewolf.domain.LogSeverity
 import dev.robothanzo.werewolf.domain.PendingSetup
 import dev.robothanzo.werewolf.domain.repo.PendingSetupRepository
 import dev.robothanzo.werewolf.i18n.Msg
-import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +19,8 @@ import org.springframework.stereotype.Service
 /**
  * The `/server create` flow (FEATURES §3): a trusted server creator stores a pending config; when the
  * bot later joins (or becomes ready in) the guild that creator owns, the server is built
- * automatically from that config and the pending entry consumed.
+ * automatically from that config and the pending entry consumed. [CommandRouter] is the gateway's
+ * registered command handler and delegates the `/server` subcommands + bot-join events here.
  */
 @Service
 class ServerProvisioningService(
@@ -30,15 +29,12 @@ class ServerProvisioningService(
     private val sessionService: GameSessionService,
     private val pendingSetups: PendingSetupRepository,
     private val msg: Msg,
-) : DiscordCommandHandler {
+) {
 
     private val log = LoggerFactory.getLogger(javaClass)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    @PostConstruct
-    fun register() = gateway.setCommandHandler(this)
-
-    override fun onServerCreate(creatorId: Long, playerCount: Int, doubleIdentity: Boolean): String {
+    fun onServerCreate(creatorId: Long, playerCount: Int, doubleIdentity: Boolean): String {
         if (creatorId !in properties.serverCreatorIds) return msg.msg("cmd.create.denied")
         pendingSetups.save(PendingSetup("setup:$creatorId", creatorId, playerCount, doubleIdentity))
         val invite = "https://discord.com/oauth2/authorize?client_id=${properties.clientId}" +
@@ -47,7 +43,7 @@ class ServerProvisioningService(
         return msg.msg("cmd.create.ok", playerCount, mode, invite)
     }
 
-    override fun onServerDelete(creatorId: Long, guildId: Long): String {
+    fun onServerDelete(creatorId: Long, guildId: Long): String {
         if (creatorId !in properties.serverCreatorIds) return msg.msg("cmd.delete.denied")
         if (guildId == 0L) return msg.msg("cmd.delete.no_guild")
         sessionService.find(guildId) ?: return msg.msg("error.session_not_found")
@@ -57,7 +53,7 @@ class ServerProvisioningService(
         return msg.msg("cmd.delete.ok")
     }
 
-    override fun onGuildJoined(guildId: Long, ownerId: Long) {
+    fun onGuildJoined(guildId: Long, ownerId: Long) {
         if (sessionService.find(guildId) != null) return // already provisioned
         val pending = pendingSetups.findByCreatorId(ownerId) ?: return
         scope.launch {

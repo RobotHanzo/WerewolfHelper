@@ -36,8 +36,9 @@ fun interface WolfChatHandler {
 }
 
 /**
- * Routes the `/server` slash command and bot-join events into the provisioning service. As with the
- * interaction handler, the gateway owns the JDA wiring and this owns the meaning.
+ * Routes slash commands and bot-join events into the engine. As with the interaction handler, the
+ * gateway owns the JDA wiring and this owns the meaning; a single router implements it and fans each
+ * command out to the owning service (`/server` lifecycle → provisioning, `/game` → day flow).
  */
 interface DiscordCommandHandler {
     /** `/server create` — returns the zh-TW reply (instructions + invite link, or an error). */
@@ -48,6 +49,12 @@ interface DiscordCommandHandler {
 
     /** The bot joined (or became ready in) a guild — provision it if a pending config matches. */
     fun onGuildJoined(guildId: Long, ownerId: Long)
+
+    /**
+     * `/game detonate` — the calling player self-destructs (自爆). Wolf-only: allowed only when the
+     * caller's current identity is a wolf. Returns the zh-TW ephemeral reply.
+     */
+    fun onDetonate(guildId: Long, userId: Long): String
 }
 
 /** Custom-id constants shared between the orchestrator (parsing) and the gateway (building). */

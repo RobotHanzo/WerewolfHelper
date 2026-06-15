@@ -16,10 +16,12 @@ rest of the app is testable and **degrades gracefully without a token**.
   also carries the OAuth client id/secret/redirect and the `serverCreators` allowlist.
 - **No constructor cycle with services.** Services that react to Discord events register *back* into
   the gateway via `@PostConstruct` → `setInteractionHandler` / `setCommandHandler`.
-  `DiscordInteractions.kt` defines those handler interfaces (`DiscordInteractionHandler` →
-  `NightOrchestrator`; `DiscordCommandHandler` → `ServerProvisioningService`) plus `InteractionIds`
-  (custom-id constants, namespaced `wh:...`, shared between the gateway that builds them and the
-  service that parses them). Keep the meaning in the handler, the JDA wiring in the gateway.
+  `DiscordInteractions.kt` defines those handler interfaces (`DiscordInteractionHandler` and
+  `DiscordCommandHandler`) plus `InteractionIds` (custom-id constants, namespaced `wh:...`, shared
+  between the gateway that builds them and the service that parses them). A single router implements
+  each interface and fans out to the owning service — `InteractionRouter` (component ids → `Night`/
+  `DayOrchestrator` by namespace) and `CommandRouter` (`/server` → `ServerProvisioningService`,
+  `/game detonate` → `DayOrchestrator`). Keep the meaning in the handler, the JDA wiring in the gateway.
 - `NicknameService` formats `[死人] 玩家NN [警長]`; `SoundCue` enumerates audio cues; `ChannelKind`
   selects COURT/JUDGE/SPECTATOR shared channels.
 
