@@ -143,6 +143,8 @@ data class NightDto(
 @Schema(description = "One relayed wolf-chat line shown on the judge wolf-chat panel")
 data class WolfChatDto(
     val seat: Int,
+    @get:Schema(description = "Discord user id of the sender (string to avoid JS precision loss); the dashboard groups consecutive lines by this, not by seat")
+    val userId: String,
     val author: String,
     val avatar: String?,
     val content: String,

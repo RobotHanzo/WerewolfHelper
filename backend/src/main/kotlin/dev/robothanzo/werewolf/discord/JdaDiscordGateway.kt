@@ -564,9 +564,9 @@ class JdaDiscordGateway(
      * (avoiding a constructor cycle, as with the other inbound handlers). The non-wolf seat groups
      * (e.g. 金寶寶) are deliberately not recorded.
      */
-    private fun recordWolfChat(guildId: Long, session: GameSession, sender: Seat, author: String, avatar: String?, content: String) {
+    private fun recordWolfChat(guildId: Long, session: GameSession, sender: Seat, userId: Long, author: String, avatar: String?, content: String) {
         if (content.isBlank() || !isWolfChat(sender)) return
-        wolfChatHandler?.onWolfChat(guildId, sender.number, "$author（${sender.paddedNumber}）", avatar, content)
+        wolfChatHandler?.onWolfChat(guildId, sender.number, userId, "$author（${sender.paddedNumber}）", avatar, content)
     }
 
     private fun webhookFor(channel: TextChannel): WebhookClient =
@@ -588,7 +588,7 @@ class JdaDiscordGateway(
             // From a seat channel → relay within the sender's group.
             session.seats.firstOrNull { it.channelId == event.channel.idLong }?.let { sender ->
                 relayWolfChat(event.guild.idLong, sender.number, "$author（${sender.paddedNumber}）", avatar, content)
-                recordWolfChat(event.guild.idLong, session, sender, author, avatar, content)
+                recordWolfChat(event.guild.idLong, session, sender, event.author.idLong, author, avatar, content)
                 return
             }
             // From the judge channel → mirror to every wolf-team channel.

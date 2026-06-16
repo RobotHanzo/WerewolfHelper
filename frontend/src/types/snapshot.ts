@@ -119,6 +119,8 @@ export interface NightWave {
 /** One relayed wolf-team chat line, shown on the judge wolf-chat panel. */
 export interface WolfChatMessage {
   seat: number;
+  /** Discord user id of the sender — consecutive lines are grouped by this, not by seat. */
+  userId: string;
   author: string;
   avatar: string | null;
   content: string;

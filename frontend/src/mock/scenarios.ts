@@ -186,10 +186,11 @@ export function buildScenario(scenario: ScenarioId): GameSnapshot {
           ],
         },
         wolfChat: [
-          { seat: 1, author: "Alex（01）", avatar: null, content: "今晚刀誰？9 號一直跳預言家", at: now - 38_000 },
-          { seat: 3, author: "Mia（03）", avatar: null, content: "同意，9 號刀掉，他帶節奏太兇", at: now - 30_000 },
-          { seat: 8, author: "Leo（08）", avatar: null, content: "我覺得留 9 號，先處理真預言家 2 號", at: now - 18_000 },
-          { seat: 1, author: "Alex（01）", avatar: null, content: "那這夜先 9，明天再看 2 號", at: now - 6_000 },
+          { seat: 1, userId: "1001", author: "Alex（01）", avatar: null, content: "今晚刀誰？9 號一直跳預言家", at: now - 38_000 },
+          { seat: 1, userId: "1001", author: "Alex（01）", avatar: null, content: "他發言邏輯太順，肯定是真預言", at: now - 36_000 },
+          { seat: 3, userId: "1003", author: "Mia（03）", avatar: null, content: "同意，9 號刀掉，他帶節奏太兇", at: now - 30_000 },
+          { seat: 8, userId: "1008", author: "Leo（08）", avatar: null, content: "我覺得留 9 號，先處理真預言家 2 號", at: now - 18_000 },
+          { seat: 1, userId: "1001", author: "Alex（01）", avatar: null, content: "那這夜先 9，明天再看 2 號", at: now - 6_000 },
         ],
       };
     case "day":

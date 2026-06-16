@@ -113,7 +113,7 @@ class SnapshotService(
             speech = buildSpeech(session),
             poll = buildPoll(session),
             night = buildNight(session),
-            wolfChat = session.wolfChat.map { WolfChatDto(it.seat, it.author, it.avatar, it.content, it.at) },
+            wolfChat = session.wolfChat.map { WolfChatDto(it.seat, it.userId.toString(), it.author, it.avatar, it.content, it.at) },
             log = logs.map {
                 LogDto(it.id, it.timestamp.toEpochMilli(), it.severity.name.lowercase(), it.rendered)
             },

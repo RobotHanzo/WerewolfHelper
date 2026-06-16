@@ -32,7 +32,7 @@ fun interface DiscordInteractionHandler {
  * post-construct (like the interaction handler) to avoid a constructor cycle with the gateway.
  */
 fun interface WolfChatHandler {
-    fun onWolfChat(guildId: Long, seat: Int, author: String, avatar: String?, content: String)
+    fun onWolfChat(guildId: Long, seat: Int, userId: Long, author: String, avatar: String?, content: String)
 }
 
 /**

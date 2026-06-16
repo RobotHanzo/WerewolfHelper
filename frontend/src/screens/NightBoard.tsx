@@ -213,6 +213,22 @@ function PhaseSection({ displayNumber, actions, isLast, state, endsAt }: {
 const chatTime = (at: number) =>
   new Date(at).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false });
 
+/** Break a new group when the sender changes (by Discord user, not seat) or after a 5-min gap. */
+const WOLF_CHAT_GROUP_GAP = 5 * 60_000;
+export function groupWolfChat(messages: WolfChatMessage[]): WolfChatMessage[][] {
+  const groups: WolfChatMessage[][] = [];
+  for (const m of messages) {
+    const last = groups[groups.length - 1];
+    const prev = last?.[last.length - 1];
+    if (last && prev && prev.userId === m.userId && m.at - prev.at <= WOLF_CHAT_GROUP_GAP) {
+      last.push(m);
+    } else {
+      groups.push([m]);
+    }
+  }
+  return groups;
+}
+
 /**
  * The wolf team's relayed chatter. Read-only mirror of what the wolves type in their private Discord
  * channels — synced across every phase, not just the night — auto-scrolls to the newest line.
@@ -243,15 +259,17 @@ export function WolfChatPanel({ messages }: { messages: WolfChatMessage[] }) {
         <span style={{ fontSize: 12, color: "var(--text-muted)", fontStyle: "italic" }}>{t("night.wolfChatEmpty")}</span>
       ) : (
         <div ref={scrollRef} className="wh-night-chat-scroll" style={{ display: "flex", flexDirection: "column", gap: 8, paddingRight: 4 }}>
-          {messages.map((m, i) => (
-            <div key={`${m.at}-${i}`} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-              <Avatar size="sm" name={m.author} avatar={m.avatar} />
-              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
+          {groupWolfChat(messages).map((group, gi) => (
+            <div key={`${group[0].at}-${gi}`} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
+              <Avatar size="sm" name={group[0].author} avatar={group[0].avatar} />
+              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
                 <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--wolf-400)" }}>{m.author}</span>
-                  <span className="mono" style={{ fontSize: 10, color: "var(--text-muted)" }}>{chatTime(m.at)}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--wolf-400)" }}>{group[0].author}</span>
+                  <span className="mono" style={{ fontSize: 10, color: "var(--text-muted)" }}>{chatTime(group[0].at)}</span>
                 </span>
-                <span style={{ fontSize: 13, color: "var(--text-body)", lineHeight: 1.5, wordBreak: "break-word" }}>{m.content}</span>
+                {group.map((m, mi) => (
+                  <span key={`${m.at}-${mi}`} style={{ fontSize: 13, color: "var(--text-body)", lineHeight: 1.5, wordBreak: "break-word" }}>{m.content}</span>
+                ))}
               </div>
             </div>
           ))}

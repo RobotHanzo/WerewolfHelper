@@ -85,10 +85,10 @@ class NightOrchestrator(
      * just the night. Mutating through [GameSessionService.mutate] persists and broadcasts the fresh
      * snapshot, so the judge panel updates live. Oldest lines are trimmed once the cap is exceeded.
      */
-    fun onWolfChat(guildId: Long, seat: Int, author: String, avatar: String?, content: String) {
+    fun onWolfChat(guildId: Long, seat: Int, userId: Long, author: String, avatar: String?, content: String) {
         sessionService.mutate(guildId) { session ->
             val chat = session.wolfChat
-            chat.add(WolfChatData(seat, author, avatar, content, System.currentTimeMillis()))
+            chat.add(WolfChatData(seat, userId, author, avatar, content, System.currentTimeMillis()))
             if (chat.size > MAX_WOLF_CHAT) chat.subList(0, chat.size - MAX_WOLF_CHAT).clear()
         }
     }

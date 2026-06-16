@@ -29,6 +29,8 @@ data class NightState(
 /** A single relayed wolf-chat line, in send order, for the dashboard wolf-chat panel. */
 data class WolfChatData(
     var seat: Int = 0,
+    /** Discord user id of the sender — the dashboard groups consecutive lines by this, not by seat. */
+    var userId: Long = 0,
     var author: String = "",
     var avatar: String? = null,
     var content: String = "",
