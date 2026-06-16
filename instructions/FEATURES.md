@@ -277,17 +277,23 @@ From the dashboard the judge can directly edit a seat's identities (dropdowns ov
 toggle the identity-order lock, swap identity order, and transfer the police badge — all
 reflected to Discord (nicknames) immediately.
 
-### Wolf chat relay (secret coordination)
+### Cross-chat relay (secret coordination)
 Messages posted in a wolf-team member's private seat channel are mirrored into every other
 wolf-team member's private channel **and** into the judge channel, attributed to the sender
 (their name and avatar, via webhook impersonation). The wolf team for this purpose includes wolf
 identities and 夢魘. Use **one cached webhook per channel** — creating webhooks ad hoc hits
 Discord's 10-per-channel cap and rate limits.
 
-**金寶寶 have their own separate cross-chat group**, mirrored only among the 金寶寶 channels (not
-into the wolf channels and **not** into the judge channel — golden-baby coordination stays private).
-At assignment each 金寶寶 is told who the other 金寶寶 is, or that they are the only one on the board,
-so the team knows its members before the first night.
+**金寶寶 have their own separate cross-chat group**, mirrored only among the 金寶寶 channels (never
+into the wolf channels). 金寶寶 lines **are** also mirrored into the judge channel and surfaced on
+the dashboard chat panel, but tagged with `[金寶寶]` after the author name so the judge can tell the
+two private chats apart. At assignment each 金寶寶 is told who the other 金寶寶 is, or that they are
+the only one on the board, so the team knows its members before the first night.
+
+Both relays are **time-gated**: cross-chat is only forwarded **during the night or before the game
+starts** (LOBBY/ASSIGNMENT/NIGHT phases). A cross-chat message sent in any other phase is not
+forwarded — the first such message in a channel gets a reply explaining the restriction; subsequent
+ones just get an ❌ reaction (so the explanation isn't spammed).
 
 ### Audit log
 Every game event is appended to a persistent, typed log on the session: deaths, revivals,

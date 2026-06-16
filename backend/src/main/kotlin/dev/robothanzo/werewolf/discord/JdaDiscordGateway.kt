@@ -10,6 +10,7 @@ import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import dev.robothanzo.werewolf.domain.GameSession
+import dev.robothanzo.werewolf.domain.Phase
 import dev.robothanzo.werewolf.domain.Seat
 import dev.robothanzo.werewolf.domain.repo.GameSessionRepository
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
@@ -35,6 +36,7 @@ import net.dv8tion.jda.api.entities.Icon
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.channel.attribute.IPermissionContainer
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent
@@ -93,6 +95,9 @@ class JdaDiscordGateway(
     private val playerManager = DefaultAudioPlayerManager().also { AudioSourceManagers.registerLocalSource(it) }
     private val webhookCache = ConcurrentHashMap<Long, WebhookClient>()
     private val soundFiles = ConcurrentHashMap<SoundCue, File>()
+
+    /** Seat channels already told (this block) that relay is closed — so we explain once, then react ❌. */
+    private val relayBlockWarned = ConcurrentHashMap.newKeySet<Long>()
 
     @Volatile
     private var interactionHandler: DiscordInteractionHandler? = null
@@ -549,8 +554,15 @@ class JdaDiscordGateway(
             val sameGroup = (wolfGroup && isWolfChat(target)) || (gbabyGroup && target.goldenBaby)
             if (sameGroup) g.getTextChannelById(target.channelId)?.let { webhookFor(it).send(message) }
         }
-        // Wolves are also mirrored into the judge channel.
-        if (wolfGroup) g.getTextChannelById(session.discordIds.judgeTextChannelId)?.let { webhookFor(it).send(message) }
+        // Both groups are mirrored into the judge channel; 金寶寶 lines carry a [金寶寶] tag after the
+        // author name so the judge can tell the two private chats apart.
+        if (wolfGroup || gbabyGroup) {
+            val judgeMessage = if (gbabyGroup)
+                WebhookMessageBuilder().setContent(content)
+                    .setUsername("$authorName ${msg.msg("relay.golden_baby_tag")}").setAvatarUrl(authorAvatar).build()
+            else message
+            g.getTextChannelById(session.discordIds.judgeTextChannelId)?.let { webhookFor(it).send(judgeMessage) }
+        }
     }
 
     /** A seat participates in wolf chat if any living card has the WOLF_CHAT tag (wolves, 夢魘, …). */
@@ -558,15 +570,18 @@ class JdaDiscordGateway(
         seat.livingCards().ifEmpty { seat.cards }.any { roles.byId(it.roleId)?.hasTag(RoleTag.WOLF_CHAT) == true }
 
     /**
-     * Forward a wolf-team line to the registered handler so it surfaces on the judge wolf-chat panel.
-     * Gated here only on a wolf-chat seat (not on night-active — the panel syncs across every phase)
-     * where the session and role registry are already in hand; the handler owns persistence + broadcast
-     * (avoiding a constructor cycle, as with the other inbound handlers). The non-wolf seat groups
-     * (e.g. 金寶寶) are deliberately not recorded.
+     * Forward a relayed line to the registered handler so it surfaces on the judge dashboard chat
+     * panel. Records both the wolf team and 金寶寶 (the latter tagged [金寶寶] after the author name so
+     * the judge can tell the two private chats apart). Not gated on night-active — the panel syncs
+     * across every phase; the handler owns persistence + broadcast (avoiding a constructor cycle, as
+     * with the other inbound handlers).
      */
     private fun recordWolfChat(guildId: Long, session: GameSession, sender: Seat, userId: Long, author: String, avatar: String?, content: String) {
-        if (content.isBlank() || !isWolfChat(sender)) return
-        wolfChatHandler?.onWolfChat(guildId, sender.number, userId, "$author（${sender.paddedNumber}）", avatar, content)
+        if (content.isBlank()) return
+        val isWolf = isWolfChat(sender)
+        if (!isWolf && !sender.goldenBaby) return
+        val tag = if (!isWolf && sender.goldenBaby) " ${msg.msg("relay.golden_baby_tag")}" else ""
+        wolfChatHandler?.onWolfChat(guildId, sender.number, userId, "$author（${sender.paddedNumber}）$tag", avatar, content)
     }
 
     private fun webhookFor(channel: TextChannel): WebhookClient =
@@ -575,6 +590,19 @@ class JdaDiscordGateway(
                 ?: channel.createWebhook("Werewolf Relay").complete()
             WebhookClient.withUrl(hook.url)
         }
+
+    /** Cross-chat (wolf / 金寶寶) is only relayed during the night or before the game starts. */
+    private fun relayWindowOpen(session: GameSession): Boolean =
+        session.phase == Phase.LOBBY || session.phase == Phase.ASSIGNMENT || session.phase == Phase.NIGHT
+
+    /** Outside the relay window: explain once per channel, then just react ❌ on later messages. */
+    private fun denyOutsideWindow(event: MessageReceivedEvent) {
+        if (relayBlockWarned.add(event.channel.idLong)) {
+            event.message.reply(msg.msg("relay.outside_window")).queue({}, {})
+        } else {
+            event.message.addReaction(Emoji.fromUnicode("❌")).queue({}, {})
+        }
+    }
 
     /** Listens for messages in seat channels and mirrors wolf-team chatter. */
     private inner class RelayListener : ListenerAdapter() {
@@ -587,12 +615,19 @@ class JdaDiscordGateway(
 
             // From a seat channel → relay within the sender's group.
             session.seats.firstOrNull { it.channelId == event.channel.idLong }?.let { sender ->
+                if (!isWolfChat(sender) && !sender.goldenBaby) return // not a chat participant — ignore
+                if (!relayWindowOpen(session)) {
+                    denyOutsideWindow(event)
+                    return
+                }
+                relayBlockWarned.remove(event.channel.idLong)
                 relayWolfChat(event.guild.idLong, sender.number, "$author（${sender.paddedNumber}）", avatar, content)
                 recordWolfChat(event.guild.idLong, session, sender, event.author.idLong, author, avatar, content)
                 return
             }
-            // From the judge channel → mirror to every wolf-team channel.
+            // From the judge channel → mirror to every wolf-team channel (only within the relay window).
             if (event.channel.idLong == session.discordIds.judgeTextChannelId) {
+                if (!relayWindowOpen(session)) return
                 val message =
                     WebhookMessageBuilder().setContent(content).setUsername("法官頻道（$author）").setAvatarUrl(avatar)
                         .build()
