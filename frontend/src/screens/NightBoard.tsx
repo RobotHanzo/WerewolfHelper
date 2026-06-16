@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Moon, Check, ArrowRight, Skull, Sparkles, MessageSquare, ChevronDown } from "lucide-react";
 import type { Night, NightAction, NightVote, WolfChatMessage } from "@/types/snapshot";
 import { Avatar } from "@/components/ui/Avatar";
@@ -329,8 +329,7 @@ export function NightBoard({ night, wolfChat, collapsible = false }: { night: Ni
   );
 
   return (
-    <motion.div
-      layout
+    <div
       className="wh-card"
       style={{ marginBottom: 16, border: "1px solid var(--moon-500)", boxShadow: "0 0 24px rgba(84,210,228,0.14)", overflow: "hidden" }}
     >
@@ -362,26 +361,39 @@ export function NightBoard({ night, wolfChat, collapsible = false }: { night: Ni
         )}
       </header>
 
-      {!collapsed && (showChat ? (
-        <div className="wh-night-body">
-          {phasesEl}
-          <WolfChatPanel messages={wolfChat} />
-        </div>
-      ) : (
-        phasesEl
-      ))}
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            style={{ overflow: "hidden" }}
+          >
+            {showChat ? (
+              <div className="wh-night-body">
+                {phasesEl}
+                <WolfChatPanel messages={wolfChat} />
+              </div>
+            ) : (
+              phasesEl
+            )}
 
-      {!collapsed && night.resolved && night.summary && (
-        <footer style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 18px", borderTop: "1px solid var(--border-1)", background: "var(--surface-raised)" }}>
-          {night.summary === t("night.peaceful") ? (
-            <Sparkles size={16} style={{ color: "var(--success-500)" }} />
-          ) : (
-            <Skull size={16} style={{ color: "var(--wolf-400)" }} />
-          )}
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "var(--text-muted)" }}>{t("night.resultTitle")}</span>
-          <span style={{ fontSize: 13, fontWeight: 800 }}>{night.summary}</span>
-        </footer>
-      )}
-    </motion.div>
+            {night.resolved && night.summary && (
+              <footer style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 18px", borderTop: "1px solid var(--border-1)", background: "var(--surface-raised)" }}>
+                {night.summary === t("night.peaceful") ? (
+                  <Sparkles size={16} style={{ color: "var(--success-500)" }} />
+                ) : (
+                  <Skull size={16} style={{ color: "var(--wolf-400)" }} />
+                )}
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "var(--text-muted)" }}>{t("night.resultTitle")}</span>
+                <span style={{ fontSize: 13, fontWeight: 800 }}>{night.summary}</span>
+              </footer>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
