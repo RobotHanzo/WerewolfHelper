@@ -337,6 +337,104 @@ class DayOrchestratorTest {
     }
 
     @Test
+    fun `expelled 獵人 defers its shot until last words finish`() {
+        session = TestFixtures.session(
+            playerCount = 5,
+            seats = listOf(
+                TestFixtures.seat(1, "wolf" to false),
+                TestFixtures.seat(2, "seer" to false),
+                TestFixtures.seat(3, "villager" to false),
+                TestFixtures.seat(4, "hunter" to false),
+                TestFixtures.seat(5, "villager" to false),
+            ),
+        ) { assigned = true }
+
+        day.startExpelVote(gid)
+        (1..5).forEach { day.handle(gid, it.toLong(), 0L, "${InteractionIds.EXPEL_VOTE}:4", emptyList()) }
+
+        // 遺言先行：the shot is armed but NOT yet prompted while last words run.
+        assertTrue(session.seat(4)!!.revengePending)
+        assertFalse(session.seat(4)!!.revengePrompted)
+        assertNotNull(session.speech)
+        assertTrue(session.speech!!.lastWords)
+
+        // Last words end → the shot is now prompted and still gates the flow.
+        day.stopSpeech(gid)
+        assertNull(session.speech)
+        assertTrue(session.seat(4)!!.revengePending)
+        assertTrue(session.seat(4)!!.revengePrompted)
+    }
+
+    @Test
+    fun `a 獵人 killed from the second night on is prompted immediately at dawn`() {
+        session = TestFixtures.session(
+            playerCount = 5,
+            seats = listOf(
+                TestFixtures.seat(1, "wolf" to false),
+                TestFixtures.seat(2, "seer" to false),
+                TestFixtures.seat(3, "villager" to false),
+                TestFixtures.seat(4, "hunter" to false),
+                TestFixtures.seat(5, "villager" to false),
+            ),
+        ) { assigned = true; phase = dev.robothanzo.werewolf.domain.Phase.DAWN; day = 2 }
+        // Simulate the night having killed + armed the 獵人.
+        session.seat(4)!!.cards.first().dead = true
+        session.seat(4)!!.revengePending = true
+        session.nightState.deaths = mutableListOf(4)
+
+        day.enterDawn(gid)
+
+        assertNull(session.speech) // 第二晚起夜間死亡無遺言
+        assertTrue(session.seat(4)!!.revengePending)
+        assertTrue(session.seat(4)!!.revengePrompted) // prompted straight away (gates the speech stage)
+    }
+
+    @Test
+    fun `firing the armed shot kills the target and clears the gate`() {
+        session = TestFixtures.session(
+            playerCount = 5,
+            seats = listOf(
+                TestFixtures.seat(1, "wolf" to false),
+                TestFixtures.seat(2, "seer" to false),
+                TestFixtures.seat(3, "villager" to false),
+                TestFixtures.seat(4, "hunter" to false),
+                TestFixtures.seat(5, "villager" to false),
+            ),
+        ) { assigned = true; phase = dev.robothanzo.werewolf.domain.Phase.DAWN; day = 2 }
+        session.seat(4)!!.cards.first().dead = true
+        session.seat(4)!!.revengePending = true
+        session.seat(4)!!.revengePrompted = true
+
+        day.fireRevenge(gid, 4, 1)
+
+        assertFalse(session.seat(4)!!.revengePending)
+        assertFalse(session.seat(4)!!.revengePrompted)
+        assertFalse(session.seat(1)!!.alive) // the 獵人 took the wolf with it
+    }
+
+    @Test
+    fun `declining the armed shot clears the gate`() {
+        session = TestFixtures.session(
+            playerCount = 5,
+            seats = listOf(
+                TestFixtures.seat(1, "wolf" to false),
+                TestFixtures.seat(2, "seer" to false),
+                TestFixtures.seat(3, "villager" to false),
+                TestFixtures.seat(4, "hunter" to false),
+                TestFixtures.seat(5, "villager" to false),
+            ),
+        ) { assigned = true; phase = dev.robothanzo.werewolf.domain.Phase.DAWN; day = 2 }
+        session.seat(4)!!.cards.first().dead = true
+        session.seat(4)!!.revengePending = true
+        session.seat(4)!!.revengePrompted = true
+
+        day.skipRevenge(gid, 4)
+
+        assertFalse(session.seat(4)!!.revengePending)
+        assertFalse(session.seat(4)!!.revengePrompted)
+    }
+
+    @Test
     fun `speech interrupt majority advances to the next speaker`() {
         day.startSpeeches(gid) // no police -> random direction, flow active immediately
         val speaker = session.speech!!.order[session.speech!!.index]

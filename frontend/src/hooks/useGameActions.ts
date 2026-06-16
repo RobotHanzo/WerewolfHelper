@@ -89,6 +89,11 @@ export function useGameActions(guildId: string, demo: boolean) {
           );
         } else void api.revenge(guildId, seat, target);
       },
+      skipRevenge: (seat: number) => {
+        if (demo) {
+          patch((snap) => mapSeat(snap, seat, (s) => ({ ...s, revengePending: false })));
+        } else void api.skipRevenge(guildId, seat);
+      },
       duel: (seat: number, target: number) => {
         if (demo) {
           patch((snap) => {

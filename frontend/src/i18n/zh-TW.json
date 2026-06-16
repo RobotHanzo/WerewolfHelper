@@ -134,7 +134,7 @@
     "error": {
       "not_assigned": "身分尚未分配，請先進行身分分配"
     },
-    "seatAction": { "kill": "擊殺", "revive": "復活", "edit": "編輯", "revenge": "開槍", "duel": "決鬥", "selfDestruct": "自爆", "pickTarget": "選擇目標", "cancelTarget": "取消" }
+    "seatAction": { "kill": "擊殺", "revive": "復活", "edit": "編輯", "revenge": "開槍", "revengeSkip": "放棄開槍", "duel": "決鬥", "selfDestruct": "自爆", "pickTarget": "選擇目標", "cancelTarget": "取消" }
   },
   "expel": {
     "running": "放逐投票進行中",

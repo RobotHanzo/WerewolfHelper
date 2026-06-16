@@ -75,14 +75,22 @@ class DiscordOpsService(
             val swapButtons = if (session.settings.doubleIdentity)
                 listOf(CourtButton(InteractionIds.SWAP_ORDER, msg.msg("assign.order.swap_button"), ButtonStyle.SECONDARY))
             else emptyList()
+            // 金寶寶 coordinate as a team (their own private cross-chat group) — tell each one who their
+            // partner is, or that they are the only 金寶寶 on the board (FEATURES §5.3 / §284).
+            val goldenBabies = session.seats.filter { it.assigned && it.goldenBaby }
             val notify = BulkPhase(
                 "notify", 90, 100,
                 session.seats.filter { it.assigned }.map { seat ->
                     BulkItem(msg.msg("bulk.item.assign_notify", seat.paddedNumber)) {
-                        val ids = seat.cards.joinToString("、") { roles.localizedName(it.roleId) }
+                        val lines = mutableListOf(seat.cards.joinToString("、") { roles.localizedName(it.roleId) })
+                        if (seat.goldenBaby) {
+                            val others = goldenBabies.filter { it.number != seat.number }
+                            lines += if (others.isEmpty()) msg.msg("assign.dm.golden_baby.solo")
+                            else msg.msg("assign.dm.golden_baby.partners", others.joinToString("、") { "玩家${it.paddedNumber}" })
+                        }
                         gateway.sendSeatEmbed(
                             guildId, seat.number,
-                            EmbedSpec(title = msg.msg("assign.dm.title"), description = ids, color = 0xE8B923),
+                            EmbedSpec(title = msg.msg("assign.dm.title"), description = lines.joinToString("\n"), color = 0xE8B923),
                             if (seat.cards.size > 1) swapButtons else emptyList(),
                         )
                     }

@@ -20,6 +20,7 @@ interface PlayerCardProps {
   /** Click a struck-through dead identity to revive just it. */
   onReviveIdentity?: (identityIndex: number) => void;
   onRevenge?: () => void;
+  onSkipRevenge?: () => void;
   onDuel?: () => void;
   onSelfDestruct?: () => void;
   onPickTarget?: () => void;
@@ -33,7 +34,7 @@ interface PlayerCardProps {
  */
 export function PlayerCard({
   seat, changed, readOnly, phase, learnedRoleName, targeting,
-  onKill, onRevive, onEdit, onReviveIdentity, onRevenge, onDuel, onSelfDestruct, onPickTarget,
+  onKill, onRevive, onEdit, onReviveIdentity, onRevenge, onSkipRevenge, onDuel, onSelfDestruct, onPickTarget,
 }: PlayerCardProps) {
   const { t } = useTranslation();
   const fullyDead = !seat.alive && !seat.unassigned;
@@ -114,6 +115,11 @@ export function PlayerCard({
           {canRevenge && (
             <Button size="sm" variant="danger" style={{ flex: 1 }} onClick={onRevenge}>
               {t("dashboard.seatAction.revenge")}
+            </Button>
+          )}
+          {canRevenge && (
+            <Button size="sm" variant="ghost" style={{ flex: 1 }} onClick={onSkipRevenge}>
+              {t("dashboard.seatAction.revengeSkip")}
             </Button>
           )}
           {canDuel && (

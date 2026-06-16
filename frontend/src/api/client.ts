@@ -71,6 +71,7 @@ export const api = {
     post(`/sessions/${g}/seats/${seat}/kill`, { identityIndex, allowLastWords }),
   revenge: (g: string, seat: number, target: number) =>
     post(`/sessions/${g}/seats/${seat}/revenge`, { target }),
+  skipRevenge: (g: string, seat: number) => post(`/sessions/${g}/seats/${seat}/revenge/skip`),
   duel: (g: string, seat: number, target: number) =>
     post(`/sessions/${g}/seats/${seat}/duel`, { target }),
   selfDestruct: (g: string, seat: number) => post(`/sessions/${g}/seats/${seat}/self-destruct`),

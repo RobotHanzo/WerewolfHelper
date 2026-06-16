@@ -111,10 +111,16 @@ class DayOrchestrator(
 
     private fun maybeAdvance(guildId: Long) {
         val s = sessionService.find(guildId) ?: return
-        if (s.phase in ADVANCEABLE_DAY_PHASES && s.poll == null && s.speech == null) {
+        // An armed 獵人/狼王/白狼王 shot is a blocking gate: the table waits for the dead player (or the
+        // judge on their behalf) to fire or decline before the flow walks on — so the shot resolves
+        // before the speech stage (night deaths) / before the game continues (day deaths). 遺言, when
+        // owed, runs first because it parks a speech flow that this same guard also blocks on.
+        if (s.phase in ADVANCEABLE_DAY_PHASES && s.poll == null && s.speech == null && !hasPendingRevenge(s)) {
             coordinator?.advance(guildId)
         }
     }
+
+    private fun hasPendingRevenge(session: GameSession): Boolean = session.seats.any { it.revengePending }
 
     // ======================= day-phase role actions (ROLES.md) =======================
 
@@ -205,7 +211,9 @@ class DayOrchestrator(
             announceDeathPublic(session, padded, d.roleId)
             sessionService.log(session.guildId, LogSeverity.ALERT, "death.announce", padded, roles.localizedName(d.roleId))
         }
-        promptRevenges(session, produced)
+        // Day deaths (決鬥 / 自爆 / a chained shot) carry no 遺言, so any armed shot they produced is
+        // prompted immediately; advancement then blocks on it (ROLES.md 開槍先於繼續遊戲流程).
+        promptArmedRevenges(session)
     }
 
     /**
@@ -323,13 +331,17 @@ class DayOrchestrator(
     }
 
     private fun endSpeechInternal(session: GameSession) {
-        if (session.speech == null) return
+        val flow = session.speech ?: return
+        val wasLastWords = flow.lastWords
         session.speech = null
         session.stepEndsAt = null
         scheduler.cancel(session.guildId, GameScheduler.SPEECH)
         // The police campaign couples its speeches to the poll: when campaign speeches finish, the
         // poll advances out of CAMPAIGN.
         if (session.poll?.stage == PollStage.CAMPAIGN) resolvePollStageInternal(session)
+        // 遺言先行：once a dead player's last words finish, prompt any 開槍 they're holding (a night
+        // death's 獵人/狼王 or an expelled 狼王). Until they fire/decline, [maybeAdvance] stays parked.
+        if (wasLastWords) promptArmedRevenges(session)
     }
 
     // ======================= last words =======================
@@ -343,10 +355,21 @@ class DayOrchestrator(
 
     // ======================= 獵人 / 狼王 / 白狼王 revenge =======================
 
-    /** Prompt the seat channel of every armed seat among [produced] to pick its revenge shot. */
-    private fun promptRevenges(session: GameSession, produced: List<DeathInfo>) {
-        produced.forEach { info ->
-            session.seat(info.seat)?.takeIf { it.revengePending }?.let { promptRevengeInternal(session, info.seat) }
+    /** Fire an armed shot from the dashboard (the judge), then try to advance the now-unblocked flow. */
+    fun fireRevenge(guildId: Long, seat: Int, target: Int) = mutateThenAdvance(guildId) { fireRevengeInternal(it, seat, target) }
+
+    /** Decline an armed shot from the dashboard (the judge), then advance the now-unblocked flow. */
+    fun skipRevenge(guildId: Long, seat: Int) = mutateThenAdvance(guildId) { declineRevengeInternal(it, seat) }
+
+    /**
+     * Post the 開槍 select menu into the seat channel of every seat that is armed but not yet prompted.
+     * Called once last words finish (night day-1 / expel) and immediately for day deaths with no last
+     * words (決鬥 / 自爆 / a chained shot) — `revengePrompted` keeps it idempotent across both paths.
+     */
+    private fun promptArmedRevenges(session: GameSession) {
+        session.seats.filter { it.revengePending && !it.revengePrompted }.forEach { seat ->
+            seat.revengePrompted = true
+            promptRevengeInternal(session, seat.number)
         }
     }
 
@@ -373,11 +396,22 @@ class DayOrchestrator(
         val seat = session.seat(seatNumber) ?: return
         if (!seat.revengePending) return
         seat.revengePending = false
+        seat.revengePrompted = false
         announcer.announce(session.guildId, "day.revenge", pad(seatNumber), pad(targetSeat))
         sessionService.log(session.guildId, LogSeverity.ACTION, "day.revenge", pad(seatNumber), pad(targetSeat))
         val produced = deaths.killSeat(session, targetSeat, DeathCause.JUDGE)
         announceDeaths(session, produced)
         checkWinInternal(session)
+    }
+
+    /** Decline an armed shot: clear the gate and tell the court, so the flow can walk on. */
+    private fun declineRevengeInternal(session: GameSession, seatNumber: Int) {
+        val seat = session.seat(seatNumber) ?: return
+        if (!seat.revengePending) return
+        seat.revengePending = false
+        seat.revengePrompted = false
+        announcer.announce(session.guildId, "day.revenge.skip", pad(seatNumber))
+        sessionService.log(session.guildId, LogSeverity.ACTION, "day.revenge.skip", pad(seatNumber))
     }
 
     // ======================= dawn =======================
@@ -399,9 +433,15 @@ class DayOrchestrator(
             }
             // 遺言規則：只有「首個夜晚」死亡的玩家（狼刀 / 女巫毒）有遺言；第二晚起的夜間死亡一律無遺言。
             // 白天放逐的遺言走 expelInternal（白癡翻牌免死不算遺言，由該處提前 return 處理）。
-            if (session.day == 1) startLastWordsInternal(session, deaths)
-            // 獵人/狼王/白狼王 killed in the night now reveal at 天亮 — prompt their shot in their seat channel.
-            deaths.forEach { n -> session.seat(n)?.takeIf { it.revengePending }?.let { promptRevengeInternal(session, n) } }
+            if (session.day == 1) {
+                // 遺言先行：last words run first; their 開槍 is prompted once the speech ends
+                // ([endSpeechInternal] → [promptArmedRevenges]).
+                startLastWordsInternal(session, deaths)
+            } else {
+                // 第二晚起無遺言：a 獵人/狼王/白狼王 killed in the night reveals at 天亮 and is prompted
+                // straight away — advancement then waits on the shot before the speech stage.
+                promptArmedRevenges(session)
+            }
         }
     }
 
@@ -557,7 +597,8 @@ class DayOrchestrator(
                 announceDeathPublic(session, padded, info.roleId)
                 sessionService.log(session.guildId, LogSeverity.ALERT, "death.announce", padded, roles.localizedName(info.roleId))
             }
-            promptRevenges(session, produced)
+            // 遺言先行：do not prompt the 開槍 yet — the expelled 狼王 speaks last words first, then
+            // [endSpeechInternal] → [promptArmedRevenges] reveals the shot.
         }
         checkWinInternal(session)
         if (session.phase != Phase.OVER) startLastWordsInternal(session, listOf(seat))
@@ -625,12 +666,19 @@ class DayOrchestrator(
 
     // ======================= interactions =======================
 
-    // Day prompts live in the shared COURT channel (not a per-seat channel), so the action is always
-    // attributed to the clicking member's own seat — [channelId] is unused here.
+    // Most day prompts live in the shared COURT channel, so the action is attributed to the clicking
+    // member's own seat. The 開槍 prompt is the exception: it is posted into the **dead player's seat
+    // channel**, so a judge — who can see every seat channel — fires it on that seat's behalf, the seat
+    // being whichever one the clicked channel is bound to (FEATURES §5 judge-on-behalf).
     override fun handle(guildId: Long, userId: Long, channelId: Long, customId: String, values: List<String>): InteractionReply? {
         val session = sessionService.find(guildId) ?: return null
-        val seat = session.seats.firstOrNull { it.memberId == userId }?.number
-            ?: return InteractionReply("你不是這場遊戲的玩家")
+        val ownSeat = session.seats.firstOrNull { it.memberId == userId }?.number
+        val channelSeat = session.seats.firstOrNull { it.channelId == channelId && it.channelId != 0L }?.number
+        val seat = when {
+            customId.startsWith(InteractionIds.REVENGE_TARGET) && channelSeat != null && gateway.isJudge(guildId, userId) -> channelSeat
+            ownSeat != null -> ownSeat
+            else -> return InteractionReply("你不是這場遊戲的玩家")
+        }
 
         var reply = "已收到"
         sessionService.mutate(guildId) { s ->
@@ -670,7 +718,7 @@ class DayOrchestrator(
                     when {
                         seatObj == null || !seatObj.revengePending -> reply = ":x: 你目前無法發動技能"
                         value == null || value == InteractionIds.SKIP -> {
-                            seatObj.revengePending = false
+                            declineRevengeInternal(s, seat)
                             reply = "已放棄技能"
                         }
                         else -> {

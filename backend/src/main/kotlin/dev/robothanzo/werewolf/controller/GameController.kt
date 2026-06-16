@@ -77,7 +77,19 @@ class GameController(
         @PathVariable seat: Int,
         @RequestBody body: TargetRequest,
     ): ResponseEntity<ApiResponse> {
-        actions.revenge(guildId.toLong(), seat, body.target)
+        day.fireRevenge(guildId.toLong(), seat, body.target)
+        return ResponseEntity.ok(ApiResponse.ok())
+    }
+
+    @Operation(summary = "Decline a revenge shot", description = "Decline an armed 獵人 / 狼王 / 白狼王 shot, unblocking the flow.")
+    @ApiResponses(value = [SwaggerApiResponse(responseCode = "200", description = "Declined")])
+    @PostMapping("/seats/{seat}/revenge/skip")
+    @CanManageGuild
+    fun skipRevenge(
+        @PathVariable guildId: String,
+        @PathVariable seat: Int,
+    ): ResponseEntity<ApiResponse> {
+        day.skipRevenge(guildId.toLong(), seat)
         return ResponseEntity.ok(ApiResponse.ok())
     }
 

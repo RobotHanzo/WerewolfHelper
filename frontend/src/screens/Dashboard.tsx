@@ -212,6 +212,7 @@ export function Dashboard() {
                 onReviveIdentity={(idx) => actions.reviveIdentity(seat.seat, idx)}
                 onEdit={() => openEdit(seat.seat)}
                 onRevenge={() => setTargeting({ kind: "revenge", seat: seat.seat })}
+                onSkipRevenge={() => actions.skipRevenge(seat.seat)}
                 onDuel={() => setTargeting({ kind: "duel", seat: seat.seat })}
                 onSelfDestruct={() => actions.selfDestruct(seat.seat)}
                 onPickTarget={() => {

@@ -281,8 +281,13 @@ reflected to Discord (nicknames) immediately.
 Messages posted in a wolf-team member's private seat channel are mirrored into every other
 wolf-team member's private channel **and** into the judge channel, attributed to the sender
 (their name and avatar, via webhook impersonation). The wolf team for this purpose includes wolf
-identities, 夢魘, and 金寶寶 partners (金寶寶 coordinate like a team). Use **one cached webhook per
-channel** — creating webhooks ad hoc hits Discord's 10-per-channel cap and rate limits.
+identities and 夢魘. Use **one cached webhook per channel** — creating webhooks ad hoc hits
+Discord's 10-per-channel cap and rate limits.
+
+**金寶寶 have their own separate cross-chat group**, mirrored only among the 金寶寶 channels (not
+into the wolf channels and **not** into the judge channel — golden-baby coordination stays private).
+At assignment each 金寶寶 is told who the other 金寶寶 is, or that they are the only one on the board,
+so the team knows its members before the first night.
 
 ### Audit log
 Every game event is appended to a persistent, typed log on the session: deaths, revivals,

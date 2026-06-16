@@ -28,6 +28,9 @@ data class Seat(
     var charmedSeat: Int? = null,
     /** An armed but unfired DEATH_REVENGE shot (獵人 / 狼王 / 白狼王). */
     var revengePending: Boolean = false,
+    /** Whether the 開槍 select menu has already been posted for this armed shot (so the day flow
+     *  prompts each armed seat exactly once, after its 遺言, and blocks advancement until it fires). */
+    var revengePrompted: Boolean = false,
     /** 白癡 has flipped its card on expel: stays alive but loses its vote. */
     var idiotRevealed: Boolean = false,
     /** 機械狼 learned identity (its abilities/reads follow this id). */

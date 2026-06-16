@@ -68,18 +68,6 @@ class GameActionService(
             checkWin(session)
         }
 
-    /** Fire an armed 獵人 / 狼王 / 白狼王 revenge shot at [targetSeat] (FEATURES §5, ROLES.md). */
-    fun revenge(guildId: Long, seatNumber: Int, targetSeat: Int) = sessionService.mutate(guildId) { session ->
-        val seat = session.seat(seatNumber) ?: error("seat $seatNumber not found")
-        require(seat.revengePending) { "seat $seatNumber has no pending revenge" }
-        seat.revengePending = false
-        // The shot itself is a normal death (so a 狼王 can chain its own 殉情); the target keeps its abilities.
-        val produced = deaths.killSeat(session, targetSeat, DeathCause.JUDGE)
-        sessionService.log(guildId, LogSeverity.ACTION, "day.revenge", seat.paddedNumber, String.format("%02d", targetSeat))
-        logDeaths(guildId, session, produced)
-        checkWin(session)
-    }
-
     /** Announce every death the shared applier produced (the primary death plus any 殉情 cascade). */
     private fun logDeaths(guildId: Long, session: GameSession, produced: List<DeathInfo>) {
         produced.forEach { d ->
