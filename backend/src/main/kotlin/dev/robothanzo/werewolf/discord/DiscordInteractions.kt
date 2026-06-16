@@ -93,6 +93,8 @@ object InteractionIds {
     const val SPEECH_SKIP = "wh:day:speech:skip"
     /** Speech: a player votes to force the current speaker off the stage (下台). */
     const val SPEECH_INTERRUPT = "wh:day:speech:interrupt"
+    /** Revenge: a dead 獵人/狼王/白狼王 picks their shot from a seat-channel select menu — value = target seat or SKIP. */
+    const val REVENGE_TARGET = "wh:day:revenge"
     /** Police election: toggle enrollment. */
     const val POLICE_ENROLL = "wh:day:police:enroll"
     /** Police election: a candidate withdraws. */

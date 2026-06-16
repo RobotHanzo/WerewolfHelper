@@ -98,6 +98,7 @@ class SnapshotService(
             muteAfterSpeech = session.settings.muteAfterSpeech,
             witchSelfSave = session.settings.witchSelfSave,
             hiddenWolfInheritsKnife = session.settings.hiddenWolfInheritsKnife,
+            revealRolesOnDeath = session.settings.revealRolesOnDeath,
             assigned = session.assigned,
             policeSeat = session.policeSeat,
             aliveCount = session.aliveSeats().size,

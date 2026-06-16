@@ -8,6 +8,7 @@ import dev.robothanzo.werewolf.discord.DiscordInteractionHandler
 import dev.robothanzo.werewolf.discord.InteractionIds
 import dev.robothanzo.werewolf.discord.InteractionReply
 import dev.robothanzo.werewolf.discord.NicknameService
+import dev.robothanzo.werewolf.discord.SeatOption
 import dev.robothanzo.werewolf.discord.SoundCue
 import dev.robothanzo.werewolf.domain.Faction
 import dev.robothanzo.werewolf.domain.GameSession
@@ -128,7 +129,8 @@ class DayOrchestrator(
 
     private fun knightDuelInternal(session: GameSession, knightSeat: Int, targetSeat: Int): Boolean {
         val knight = session.seat(knightSeat) ?: return false
-        val card = knight.cards.firstOrNull { !it.dead && it.roleId == RoleIds.KNIGHT } ?: return false
+        // Only the current identity may act: a still-dormant 騎士 (a living second card) can't duel.
+        if (knight.activeCard?.roleId != RoleIds.KNIGHT) return false
         if (knight.duelUsed) return false
         knight.duelUsed = true
 
@@ -200,8 +202,22 @@ class DayOrchestrator(
     private fun announceDeaths(session: GameSession, produced: List<DeathInfo>) {
         produced.forEach { d ->
             val padded = session.seat(d.seat)?.paddedNumber ?: pad(d.seat)
-            announcer.announce(session.guildId, "death.announce", padded, roles.localizedName(d.roleId))
+            announceDeathPublic(session, padded, d.roleId)
             sessionService.log(session.guildId, LogSeverity.ALERT, "death.announce", padded, roles.localizedName(d.roleId))
+        }
+        promptRevenges(session, produced)
+    }
+
+    /**
+     * Post the death to the public 法院 channel, honouring the 死亡公布身分 房規: when on, the identity is
+     * named; when off (default) only the seat is announced. The judge/spectator views and the game log
+     * always keep the role — this only gates what the players in the court see.
+     */
+    private fun announceDeathPublic(session: GameSession, paddedSeat: String, roleId: String) {
+        if (session.settings.revealRolesOnDeath) {
+            announcer.announce(session.guildId, "death.announce", paddedSeat, roles.localizedName(roleId))
+        } else {
+            announcer.announce(session.guildId, "death.announce_hidden", paddedSeat)
         }
     }
 
@@ -288,10 +304,12 @@ class DayOrchestrator(
             if (flow.lastWords) "speech.last_words" else "speech.speaking",
             pad(speaker), GameConstants.SPEECH_SECONDS,
         )
-        val buttons = buildList {
-            add(CourtButton(InteractionIds.SPEECH_SKIP, msg.msg("speech.skip.button"), ButtonStyle.SECONDARY))
-            if (!flow.lastWords) add(CourtButton(InteractionIds.SPEECH_INTERRUPT, msg.msg("speech.interrupt.button"), ButtonStyle.DANGER))
-        }
+        // 遺言 also carries the 下台 vote, just like a normal speech (a table can cut short a rambling
+        // last-words too).
+        val buttons = listOf(
+            CourtButton(InteractionIds.SPEECH_SKIP, msg.msg("speech.skip.button"), ButtonStyle.SECONDARY),
+            CourtButton(InteractionIds.SPEECH_INTERRUPT, msg.msg("speech.interrupt.button"), ButtonStyle.DANGER),
+        )
         gateway.sendCourtButtons(session.guildId, text, buttons)
         scheduler.schedule(session.guildId, GameScheduler.SPEECH, GameConstants.SPEECH_SECONDS * 1000L) {
             advanceSpeaker(session.guildId)
@@ -323,6 +341,45 @@ class DayOrchestrator(
         promptSpeakerInternal(session)
     }
 
+    // ======================= 獵人 / 狼王 / 白狼王 revenge =======================
+
+    /** Prompt the seat channel of every armed seat among [produced] to pick its revenge shot. */
+    private fun promptRevenges(session: GameSession, produced: List<DeathInfo>) {
+        produced.forEach { info ->
+            session.seat(info.seat)?.takeIf { it.revengePending }?.let { promptRevengeInternal(session, info.seat) }
+        }
+    }
+
+    /**
+     * Post a select menu of living targets into the dead player's seat channel so a 獵人/狼王/白狼王 can
+     * fire on Discord (the judge can still fire from the dashboard). The shot is applied + announced to
+     * the court when they pick (see [handle] → [fireRevengeInternal]); `revengePending` stays armed
+     * until then, so a missed prompt can still be answered later.
+     */
+    private fun promptRevengeInternal(session: GameSession, seatNumber: Int) {
+        val options = session.aliveSeats()
+            .filter { it.number != seatNumber }
+            .map { SeatOption(it.number, "玩家${it.paddedNumber}") }
+        if (options.isEmpty()) return
+        gateway.promptNightAction(
+            session.guildId, seatNumber, InteractionIds.REVENGE_TARGET,
+            msg.msg("day.revenge.prompt"), options, allowSkip = true,
+        )
+    }
+
+    /** Fire an armed revenge at [targetSeat]: kill (a normal death, so a 狼王 can chain 殉情), announce
+     *  to the court, then re-check the win. Mirrors [GameActionService.revenge] for the Discord path. */
+    private fun fireRevengeInternal(session: GameSession, seatNumber: Int, targetSeat: Int) {
+        val seat = session.seat(seatNumber) ?: return
+        if (!seat.revengePending) return
+        seat.revengePending = false
+        announcer.announce(session.guildId, "day.revenge", pad(seatNumber), pad(targetSeat))
+        sessionService.log(session.guildId, LogSeverity.ACTION, "day.revenge", pad(seatNumber), pad(targetSeat))
+        val produced = deaths.killSeat(session, targetSeat, DeathCause.JUDGE)
+        announceDeaths(session, produced)
+        checkWinInternal(session)
+    }
+
     // ======================= dawn =======================
 
     private fun enterDawnInternal(session: GameSession) {
@@ -336,12 +393,15 @@ class DayOrchestrator(
         } else {
             deaths.forEach { n ->
                 val seat = session.seat(n)
-                val roleName = seat?.cards?.lastOrNull { it.dead }?.let { roles.localizedName(it.roleId) } ?: ""
-                announcer.announce(session.guildId, "death.announce", pad(n), roleName)
+                val deadCard = seat?.cards?.lastOrNull { it.dead }
+                if (deadCard != null) announceDeathPublic(session, pad(n), deadCard.roleId)
+                else announcer.announce(session.guildId, "death.announce_hidden", pad(n))
             }
             // 遺言規則：只有「首個夜晚」死亡的玩家（狼刀 / 女巫毒）有遺言；第二晚起的夜間死亡一律無遺言。
             // 白天放逐的遺言走 expelInternal（白癡翻牌免死不算遺言，由該處提前 return 處理）。
             if (session.day == 1) startLastWordsInternal(session, deaths)
+            // 獵人/狼王/白狼王 killed in the night now reveal at 天亮 — prompt their shot in their seat channel.
+            deaths.forEach { n -> session.seat(n)?.takeIf { it.revengePending }?.let { promptRevengeInternal(session, n) } }
         }
     }
 
@@ -491,11 +551,13 @@ class DayOrchestrator(
         session.lastExpelledSeat = seat
         val card = seatObj?.cards?.firstOrNull { !it.dead }
         if (card != null) {
-            deaths.applyDeath(session, seat, card, DeathCause.EXPEL).forEach { info ->
+            val produced = deaths.applyDeath(session, seat, card, DeathCause.EXPEL)
+            produced.forEach { info ->
                 val padded = session.seat(info.seat)?.paddedNumber ?: pad(info.seat)
-                announcer.announce(session.guildId, "death.announce", padded, roles.localizedName(info.roleId))
+                announceDeathPublic(session, padded, info.roleId)
                 sessionService.log(session.guildId, LogSeverity.ALERT, "death.announce", padded, roles.localizedName(info.roleId))
             }
+            promptRevenges(session, produced)
         }
         checkWinInternal(session)
         if (session.phase != Phase.OVER) startLastWordsInternal(session, listOf(seat))
@@ -586,7 +648,7 @@ class DayOrchestrator(
                 customId.startsWith(InteractionIds.SPEECH_INTERRUPT) -> {
                     val flow = s.speech
                     when {
-                        flow == null || flow.lastWords -> reply = "目前無法投票"
+                        flow == null -> reply = "目前無法投票"
                         speeches.current(flow) == seat -> reply = ":x: 若要結束發言請按跳過"
                         else -> {
                             val speaker = speeches.current(flow)
@@ -597,6 +659,27 @@ class DayOrchestrator(
                                 advanceSpeakerInternal(s)
                             } else {
                                 reply = "已投下台票"
+                            }
+                        }
+                    }
+                }
+
+                customId.startsWith(InteractionIds.REVENGE_TARGET) -> {
+                    val seatObj = s.seat(seat)
+                    val value = values.firstOrNull()
+                    when {
+                        seatObj == null || !seatObj.revengePending -> reply = ":x: 你目前無法發動技能"
+                        value == null || value == InteractionIds.SKIP -> {
+                            seatObj.revengePending = false
+                            reply = "已放棄技能"
+                        }
+                        else -> {
+                            val target = value.toIntOrNull()
+                            if (target == null || s.seat(target)?.alive != true) {
+                                reply = ":x: 目標無效"
+                            } else {
+                                fireRevengeInternal(s, seat, target)
+                                reply = "已槍殺 玩家${pad(target)}"
                             }
                         }
                     }

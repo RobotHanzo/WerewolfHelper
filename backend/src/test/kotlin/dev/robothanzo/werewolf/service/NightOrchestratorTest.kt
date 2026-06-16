@@ -86,6 +86,50 @@ class NightOrchestratorTest {
     }
 
     @Test
+    fun `雙身分只有當前身分行動 — seer+witch acts only as seer`() {
+        // A double-identity seat holding 預言家 (first) + 女巫 (second), both alive. Only the current
+        // identity may act, so 預言家 is planned and 女巫 is not (no other witch is on the board).
+        session = TestFixtures.session(
+            doubleIdentity = true,
+            playerCount = 4,
+            seats = listOf(
+                TestFixtures.seat(1, RoleIds.SEER to false, RoleIds.WITCH to false),
+                TestFixtures.seat(2, RoleIds.WOLF to false, RoleIds.VILLAGER to false),
+                TestFixtures.seat(3, RoleIds.VILLAGER to false, RoleIds.VILLAGER to false),
+                TestFixtures.seat(4, RoleIds.VILLAGER to false, RoleIds.VILLAGER to false),
+            ),
+        ) { assigned = true; day = 2 }
+
+        night.startNight(gid)
+
+        val planned = session.nightState.waves.flatten()
+        assertTrue("seer.investigate" in planned, "the current 預言家 identity should be planned: $planned")
+        assertTrue("witch.potion" !in planned, "the dormant 女巫 identity must not act: $planned")
+    }
+
+    @Test
+    fun `雙身分只有當前身分行動 — dormant seer wakes once the wolf card dies`() {
+        // 狼人(first) + 預言家(second). While both live the seat acts as the wolf; once the wolf card
+        // dies the 預言家 becomes the current identity and may investigate.
+        session = TestFixtures.session(
+            doubleIdentity = true,
+            playerCount = 4,
+            seats = listOf(
+                TestFixtures.seat(1, RoleIds.WOLF to true, RoleIds.SEER to false),
+                TestFixtures.seat(2, RoleIds.VILLAGER to false, RoleIds.VILLAGER to false),
+                TestFixtures.seat(3, RoleIds.VILLAGER to false, RoleIds.VILLAGER to false),
+                TestFixtures.seat(4, RoleIds.VILLAGER to false, RoleIds.VILLAGER to false),
+            ),
+        ) { assigned = true; day = 2 }
+
+        night.startNight(gid)
+
+        val planned = session.nightState.waves.flatten()
+        assertTrue("seer.investigate" in planned, "the now-current 預言家 identity should be planned: $planned")
+        assertTrue("wolf.kill" !in planned, "the dead 狼人 card must not knife: $planned")
+    }
+
+    @Test
     fun `機械狼 acts as its learned role on later nights`() {
         // The mechanic has learned 女巫; no real 女巫 is on the board, so the planned witch ability
         // can only come from the learned identity.

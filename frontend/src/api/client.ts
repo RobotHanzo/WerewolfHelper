@@ -94,6 +94,7 @@ export const api = {
   setMuteAfterSpeech: (g: string, value: boolean) => post(`/sessions/${g}/settings/mute-after-speech`, { value }),
   setWitchSelfSave: (g: string, value: boolean) => post(`/sessions/${g}/settings/witch-self-save`, { value }),
   setHiddenWolfKnife: (g: string, value: boolean) => post(`/sessions/${g}/settings/hidden-wolf-knife`, { value }),
+  setRevealRolesOnDeath: (g: string, value: boolean) => post(`/sessions/${g}/settings/reveal-roles-on-death`, { value }),
 
   // day-side flow controls (mirror the Discord court buttons)
   skipSpeaker: (g: string) => post(`/sessions/${g}/speech/skip`),

@@ -133,6 +133,7 @@ export function buildScenario(scenario: ScenarioId): GameSnapshot {
     muteAfterSpeech: true,
     witchSelfSave: false,
     hiddenWolfInheritsKnife: true,
+    revealRolesOnDeath: false,
     assigned: true,
     policeSeat: 2,
     aliveCount: seats.filter((s) => s.alive).length,

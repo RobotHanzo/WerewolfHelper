@@ -160,6 +160,7 @@ export interface GameSnapshot {
   muteAfterSpeech: boolean;
   witchSelfSave: boolean;
   hiddenWolfInheritsKnife: boolean;
+  revealRolesOnDeath: boolean;
   assigned: boolean;
   policeSeat: number | null;
   aliveCount: number;

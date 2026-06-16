@@ -45,6 +45,14 @@ data class Seat(
     /** A seat is alive while it has at least one living card; an empty (unassigned) seat is not "alive". */
     val alive: Boolean get() = cards.any { !it.dead }
 
+    /**
+     * The **current** identity: the first living card. In double-identity mode a seat may only
+     * act at night as this identity — a still-alive second identity stays dormant until the first
+     * one dies (so a seer+witch seat acts only as the seer while both live). Null for an
+     * empty/dead seat. Single-identity seats have exactly one card, so this is just that card.
+     */
+    val activeCard: IdentityCard? get() = cards.firstOrNull { !it.dead }
+
     val assigned: Boolean get() = memberId != null
 
     /** Count of living cards — used by win-condition faction tallies. */

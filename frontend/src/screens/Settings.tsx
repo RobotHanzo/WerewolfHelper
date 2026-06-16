@@ -119,6 +119,7 @@ export function Settings() {
             <Switch checked={snapshot.muteAfterSpeech} onChange={actions.setMuteAfterSpeech} label={t("settings.muteAfterSpeech")} description={t("settings.muteAfterSpeechDesc")} />
             <Switch checked={snapshot.witchSelfSave} onChange={actions.setWitchSelfSave} label={t("settings.witchSelfSave")} description={t("settings.witchSelfSaveDesc")} />
             <Switch checked={snapshot.hiddenWolfInheritsKnife} onChange={actions.setHiddenWolfKnife} label={t("settings.hiddenWolfKnife")} description={t("settings.hiddenWolfKnifeDesc")} />
+            <Switch checked={snapshot.revealRolesOnDeath} onChange={actions.setRevealRolesOnDeath} label={t("settings.revealRolesOnDeath")} description={t("settings.revealRolesOnDeathDesc")} />
             <div style={{ borderTop: "1px solid var(--border-1)", paddingTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
               <Stepper label={t("settings.playerCount")} value={count} onChange={setCount} dirty={dirty} />
               {dirty && (

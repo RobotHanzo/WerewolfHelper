@@ -103,6 +103,9 @@ data class GameSettings(
     var witchSelfSave: Boolean = false,
     /** 隱狼 房規: whether 隱狼 inherits the wolf knife once the chat wolves are dead (ROLES.md 隱狼). */
     var hiddenWolfInheritsKnife: Boolean = true,
+    /** 房規: whether a dead player's identity is revealed in the public court death announcement
+     *  (the judge/spectator views always show it; this only gates the 法院 announcement). Default off. */
+    var revealRolesOnDeath: Boolean = false,
 ) {
     /** Required pool size: N for single, 2N for double identity. */
     val requiredPoolSize: Int get() = if (doubleIdentity) playerCount * 2 else playerCount

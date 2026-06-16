@@ -7,8 +7,12 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Countdown } from "@/components/ui/Countdown";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { FactionBadge, WolfSvg } from "@/components/ui/Badge";
+import { useGameStore } from "@/stores/gameStore";
 
 const seatLabel = (n: number) => `玩家${String(n).padStart(2, "0")}`;
+/** Resolve a seat number to its live seat record, so tokens can show the real player avatar. */
+const useSeat = (seat: number | null | undefined) =>
+  useGameStore((s) => (seat == null ? undefined : s.snapshot?.seats.find((x) => x.seat === seat)));
 /** The collective wolf knife — emitted by SnapshotService with this synthetic roleId. */
 const isWolfKill = (a: NightAction) => a.roleId === "wolf";
 /** Only abilities that actually have an actor in play are worth showing. */
@@ -34,9 +38,10 @@ function StatusChip({ status }: { status: NightAction["status"] }) {
 
 /** A seat token: small avatar over its padded label. */
 function SeatToken({ seat, tone }: { seat: number; tone?: "target" }) {
+  const s = useSeat(seat);
   return (
     <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-      <Avatar size="sm" name={`#${seat}`} />
+      <Avatar size="sm" name={s?.displayName ?? `#${seat}`} avatar={s?.avatar} />
       <span className="mono" style={{ fontSize: 10, fontWeight: tone === "target" ? 700 : 400, color: tone === "target" ? "var(--text-body)" : "var(--text-muted)" }}>
         {seatLabel(seat)}
       </span>
@@ -90,6 +95,7 @@ function WolfVoteRow({ vote }: { vote: NightVote }) {
 /** The collective wolf kill, elevated: the running knife consensus plus the per-wolf vote roster. */
 function WolfConsensusCard({ action }: { action: NightAction }) {
   const { t } = useTranslation();
+  const target = useSeat(action.targetSeat);
   const locked = action.status === "submitted";
   const votes = action.votes ?? [];
   const cast = votes.filter((v) => v.target != null || v.skip).length;
@@ -117,7 +123,7 @@ function WolfConsensusCard({ action }: { action: NightAction }) {
           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "var(--text-muted)" }}>{t("night.wolfConsensus")}</span>
           {action.targetSeat != null ? (
             <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <Avatar size="md" name={`#${action.targetSeat}`} />
+              <Avatar size="md" name={target?.displayName ?? `#${action.targetSeat}`} avatar={target?.avatar} />
               <span className="mono" style={{ fontSize: 15, fontWeight: 900, color: "var(--wolf-400)" }}>{seatLabel(action.targetSeat)}</span>
             </span>
           ) : (

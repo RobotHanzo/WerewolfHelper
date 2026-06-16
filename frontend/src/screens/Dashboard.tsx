@@ -58,6 +58,9 @@ export function Dashboard() {
   }, [setLogVisible]);
 
   if (!snapshot) return null;
+  const speaker = snapshot.speech?.speakerSeat != null
+    ? snapshot.seats.find((s) => s.seat === snapshot.speech!.speakerSeat)
+    : undefined;
   const isLobby = snapshot.phase === "LOBBY";
   const isNight = snapshot.phase === "NIGHT";
   // Roster columns track the user's density on desktop; on narrow screens
@@ -80,7 +83,7 @@ export function Dashboard() {
         </span>
         {snapshot.speech?.active && snapshot.speech.speakerSeat != null && (
           <button onClick={() => navigate(`/server/${guildId}/speech`)} style={{ display: "flex", alignItems: "center", gap: 12, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            <Avatar size="sm" speaking name={`#${snapshot.speech.speakerSeat}`} />
+            <Avatar size="sm" speaking name={speaker?.displayName ?? `#${snapshot.speech.speakerSeat}`} avatar={speaker?.avatar} />
             <span style={{ display: "flex", flexDirection: "column", textAlign: "left" }}>
               <span style={{ fontSize: 13, fontWeight: 700 }}>{t("dashboard.speakerSpeaking", { seat: String(snapshot.speech.speakerSeat).padStart(2, "0") })}</span>
               <span style={{ fontSize: 11, color: "var(--moon-400)" }}>{t("dashboard.goSpeech")}</span>

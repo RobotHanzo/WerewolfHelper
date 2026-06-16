@@ -113,11 +113,14 @@ class NightOrchestrator(
 
     private fun planNight(session: GameSession) {
         val alive = session.aliveSeats()
-        val present = alive.flatMap { it.livingCards() }.map { it.roleId }.toSet()
+        // Only the current (first-living) identity may act tonight: a seat with two living cards
+        // acts solely as its active one (seer+witch → seer only). The dormant second identity is
+        // excluded everywhere an actor is derived (here, [actorSeatsFor], [wolfKillParticipants]).
+        val present = alive.mapNotNull { it.activeCard?.roleId }.toSet()
         // 機械狼 acts as its learned identity once it has learned (ROLES.md 機械狼 主動技).
         val learned = alive.mapNotNull { it.learnedRoleId }.toSet()
         val mechanicMayLearn = alive.any { s ->
-            s.livingCards().any { it.roleId == RoleIds.MECHANIC_WOLF } && s.learnedRoleId == null
+            s.activeCard?.roleId == RoleIds.MECHANIC_WOLF && s.learnedRoleId == null
         }
 
         // 血月使徒 自爆 seals this one night: all 神職 abilities void + the wolves cannot knife.
@@ -163,17 +166,19 @@ class NightOrchestrator(
      */
     private fun wolfKillParticipants(session: GameSession, alive: List<Seat>): Set<Int> {
         fun inheritor(roleId: String) = roles.byId(roleId)?.hasTag(RoleTag.INHERITS_KILL) == true
+        // Opening eyes for the knife is a night action, so it follows the current-identity rule:
+        // a seat knifes only when its active card is the wolf (a dormant wolf card stays asleep).
         val chatWolves = alive.filter { seat ->
-            seat.livingCards().any { roles.factionOf(it.roleId) == Faction.WOLF && !inheritor(it.roleId) }
+            seat.activeCard?.let { roles.factionOf(it.roleId) == Faction.WOLF && !inheritor(it.roleId) } == true
         }
         if (chatWolves.isNotEmpty()) return chatWolves.map { it.number }.toSet()
 
         // No chat wolf left — the 大哥 inherits the knife.
         val inheritors = alive.filter { seat ->
-            seat.livingCards().any { card ->
+            seat.activeCard?.let { card ->
                 inheritor(card.roleId) &&
                     (card.roleId != RoleIds.HIDDEN_WOLF || session.settings.hiddenWolfInheritsKnife)
-            }
+            } == true
         }
         inheritors.forEach { it.knifeArmed = true }
         return inheritors.map { it.number }.toSet()
@@ -210,11 +215,15 @@ class NightOrchestrator(
         }
     }
 
-    /** Seats that act for [ability]: real card-holders plus a 機械狼 acting as its learned identity. */
+    /**
+     * Seats that act for [ability]: a seat whose **current** identity is the ability's role, plus a
+     * 機械狼 (active identity) acting as its learned identity. A dormant second identity never acts.
+     */
     private fun actorSeatsFor(session: GameSession, ability: NightAbility): List<Int> =
         session.aliveSeats().filter { seat ->
-            seat.livingCards().any { it.roleId == ability.roleId } ||
-                (ability.id != MECHANIC_LEARN_ID && seat.learnedRoleId == ability.roleId)
+            val active = seat.activeCard?.roleId ?: return@filter false
+            active == ability.roleId ||
+                (ability.id != MECHANIC_LEARN_ID && active == RoleIds.MECHANIC_WOLF && seat.learnedRoleId == ability.roleId)
         }.map { it.number }
 
     /**

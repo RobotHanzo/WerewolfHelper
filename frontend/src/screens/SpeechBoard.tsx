@@ -101,15 +101,15 @@ export function SpeechBoard() {
       <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 16 }}>
         {speech?.active && speech.speakerSeat != null && <SpeakingRow speech={speech} seat={seatBySeat(speech.speakerSeat)} />}
 
-        {speech?.active && !speech.lastWords && (
+        {speech?.active && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", background: "var(--surface-card)", border: "1px solid var(--border-1)", borderRadius: "var(--r-full)", padding: "4px 12px" }} className="mono">
               {t("speech.stepDownVotes", { count: speech.interruptVoters.length, threshold: speech.interruptThreshold })}
             </span>
             {!readOnly && (
               <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-                <Button variant="secondary" size="sm" onClick={actions.skipSpeech}>{t("speech.skip")}</Button>
-                {/* 下台: judge override that forces the speaker off — backend-identical to skip (advance). */}
+                {/* 下台: judge override that forces the speaker off (advance). Skipping a turn is a
+                    player self-action done over Discord, so it isn't surfaced on the judge console. */}
                 <Button variant="danger" size="sm" onClick={actions.skipSpeech}>{t("speech.stepDown")}</Button>
               </span>
             )}

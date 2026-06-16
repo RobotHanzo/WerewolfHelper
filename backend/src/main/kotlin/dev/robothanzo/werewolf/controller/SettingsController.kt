@@ -94,4 +94,13 @@ class SettingsController(
         sessionService.mutate(guildId.toLong()) { s -> s.settings.hiddenWolfInheritsKnife = body.value }
         return ResponseEntity.ok(ApiResponse.ok())
     }
+
+    @Operation(summary = "Toggle reveal roles on death", description = "Enable/disable 死亡公布身分 in the court announcement.")
+    @ApiResponses(value = [SwaggerApiResponse(responseCode = "200", description = "Updated")])
+    @PostMapping("/reveal-roles-on-death")
+    @CanManageGuild
+    fun revealRolesOnDeath(@PathVariable guildId: String, @RequestBody body: ToggleRequest): ResponseEntity<ApiResponse> {
+        sessionService.mutate(guildId.toLong()) { s -> s.settings.revealRolesOnDeath = body.value }
+        return ResponseEntity.ok(ApiResponse.ok())
+    }
 }

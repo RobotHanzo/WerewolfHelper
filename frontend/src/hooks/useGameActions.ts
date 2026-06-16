@@ -281,6 +281,8 @@ export function useGameActions(guildId: string, demo: boolean) {
          demo ? patch((s) => ({ ...s, witchSelfSave: value })) : void api.setWitchSelfSave(guildId, value),
       setHiddenWolfKnife: (value: boolean) =>
          demo ? patch((s) => ({ ...s, hiddenWolfInheritsKnife: value })) : void api.setHiddenWolfKnife(guildId, value),
+      setRevealRolesOnDeath: (value: boolean) =>
+         demo ? patch((s) => ({ ...s, revealRolesOnDeath: value })) : void api.setRevealRolesOnDeath(guildId, value),
       setPool: (pool: Record<string, number>) =>
          demo ? patch((s) => ({ ...s, pool })) : void api.setPool(guildId, pool),
       setPlayerCount: (count: number) => {

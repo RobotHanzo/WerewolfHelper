@@ -23,6 +23,8 @@ data class GameSnapshot(
     val muteAfterSpeech: Boolean,
     val witchSelfSave: Boolean,
     val hiddenWolfInheritsKnife: Boolean,
+    @get:Schema(description = "Whether a dead player's identity is revealed in the public court death announcement")
+    val revealRolesOnDeath: Boolean,
     val assigned: Boolean,
     val policeSeat: Int?,
     val aliveCount: Int,
@@ -103,7 +105,7 @@ data class SpeechDto(
     val interruptVoters: List<Int>,
     @get:Schema(description = "Number of 下台 votes needed to force the current speaker off (alive majority)")
     val interruptThreshold: Int,
-    @get:Schema(description = "Whether this is a last-words flow (no 下台 vote applies)")
+    @get:Schema(description = "Whether this is a last-words flow (still interruptible via the 下台 vote)")
     val lastWords: Boolean,
 )
 
