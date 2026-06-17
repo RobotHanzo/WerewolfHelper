@@ -37,6 +37,20 @@ data class WolfChatData(
     var at: Long = 0,
 )
 
+/**
+ * A single message captured from the public 法院 (court) text channel while a game is in progress,
+ * folded into a recording's event stream as a 發言 line. [seat] is null when the author is not a
+ * seated player (a judge or spectator typing in the court). Bot/webhook messages are never recorded.
+ */
+data class CourtChatData(
+    var seat: Int? = null,
+    var userId: Long = 0,
+    var author: String = "",
+    var avatar: String? = null,
+    var content: String = "",
+    var at: Long = 0,
+)
+
 /** A Mongo-serializable night intent (mirrors the engine's NightIntent). */
 data class NightIntentData(
     var abilityId: String = "",

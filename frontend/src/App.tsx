@@ -15,6 +15,8 @@ import { Dashboard } from "@/screens/Dashboard";
 import { SpeechManager } from "@/screens/SpeechManager";
 import { Spectator } from "@/screens/Spectator";
 import { Settings } from "@/screens/Settings";
+import { ReplaySelect } from "@/screens/ReplaySelect";
+import { ReplayPlayer } from "@/screens/ReplayPlayer";
 import { Button } from "@/components/ui/Button";
 
 /** Seed demo data and mark demo mode (no live backend reachable). */
@@ -67,6 +69,8 @@ export function App() {
         }
       />
       <Route path="/servers" element={<ServersRoute />} />
+      <Route path="/replays" element={<ReplaySelect />} />
+      <Route path="/replays/:id" element={<ReplayPlayer />} />
       <Route path="/lockout" element={<LockoutRoute />} />
       <Route path="/blocked" element={<BlockedRoute />} />
       <Route path="/server/:guildId" element={<ServerSurface />}>
@@ -221,6 +225,7 @@ function ServersRoute() {
       loading={state === "loading"}
       error={state === "error"}
       onPick={(g) => navigate(`/server/${g}/dashboard`)}
+      onReplay={() => navigate("/replays")}
       onRetry={load}
       onBack={() => navigate("/login")}
     />

@@ -1,0 +1,58 @@
+/* Replay player — scoped styles for the scrub slider + stream entrance. Tokens come from the shared
+   design-system CSS variables; nothing here hardcodes a hex. Motion respects prefers-reduced-motion. */
+
+@keyframes wh-rise {
+  from {
+    transform: translateY(8px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.wh-streamitem {
+  animation: wh-rise var(--dur-base) var(--ease-out) 1;
+}
+
+/* Native range styled as a thin scrubber with a glowing moonlight thumb. */
+input[type="range"].wh-scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 14px;
+  background: transparent;
+  cursor: pointer;
+  margin: 0;
+}
+input[type="range"].wh-scrub::-webkit-slider-runnable-track {
+  height: 14px;
+  background: transparent;
+}
+input[type="range"].wh-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 6px;
+  height: 22px;
+  margin-top: -4px;
+  border-radius: 3px;
+  background: var(--moon-200);
+  box-shadow: 0 0 0 1px var(--moon-500), 0 0 14px rgba(84, 210, 228, 0.6);
+}
+input[type="range"].wh-scrub::-moz-range-track {
+  height: 14px;
+  background: transparent;
+}
+input[type="range"].wh-scrub::-moz-range-thumb {
+  width: 6px;
+  height: 22px;
+  border: none;
+  border-radius: 3px;
+  background: var(--moon-200);
+  box-shadow: 0 0 0 1px var(--moon-500), 0 0 14px rgba(84, 210, 228, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wh-streamitem {
+    animation: none;
+  }
+}

@@ -99,9 +99,27 @@ class AssignmentService(private val roles: RoleRegistry) {
         deck: MutableList<String>,
         random: Random,
     ) {
-        var goldenBabies = 0
+        // FEATURES §5 / §4: the board must contain at least one 金寶寶, otherwise the wolves'
+        // "kill all 金寶寶" win target is vacuous. The greedy deal below only forms a 金寶寶 when a
+        // 平民 happens to land as a seat's *first* card before villagers run out — but a shuffle
+        // can hand every 平民 out as a *second* card (paired with a non-villager first), yielding
+        // zero 金寶寶. Reserve a 平民+平民 pair out of the deck up front (so earlier seats can't
+        // consume the villagers) and hand it to a randomly chosen seat. Skips only when the pool
+        // genuinely can't form one (fewer than two villager-faction cards).
+        val reservedPair = reserveVillagerPair(deck, random)
+        val guaranteedSeat = reservedPair?.let { seats.indices.random(random) }
+        // The guaranteed seat already consumes one slot of the 金寶寶 cap budget.
+        var goldenBabies = if (reservedPair != null) 1 else 0
+
         seats.forEachIndexed { i, seat ->
             seat.memberId = members[i]
+            if (i == guaranteedSeat) {
+                seat.cards = mutableListOf(IdentityCard(reservedPair!!.first), IdentityCard(reservedPair.second))
+                seat.goldenBaby = true
+                applyFlags(seat)
+                return@forEachIndexed
+            }
+
             val first = deck.removeAt(0)
             val second: String
 
@@ -157,6 +175,21 @@ class AssignmentService(private val roles: RoleRegistry) {
     /** A 金寶寶 seat is two villagers (平民+平民, or 平民+複製人 resolved to a villager). */
     private fun isGoldenBaby(seat: Seat): Boolean =
         seat.cards.size == 2 && seat.cards.all { roles.factionOf(it.roleId) == Faction.VILLAGER }
+
+    /**
+     * Pull two villager-faction cards out of [deck] to seed a guaranteed 金寶寶, or null if the
+     * pool holds fewer than two (no 金寶寶 is possible). 複製人 is GOD faction, so it is never
+     * picked here — the reserved pair is always a real 平民+平民.
+     */
+    private fun reserveVillagerPair(deck: MutableList<String>, random: Random): Pair<String, String>? {
+        val first = takeWhere(deck, random) { roles.factionOf(it) == Faction.VILLAGER } ?: return null
+        val second = takeWhere(deck, random) { roles.factionOf(it) == Faction.VILLAGER }
+        if (second == null) {
+            deck.add(first) // put the lone villager back; can't form a pair
+            return null
+        }
+        return first to second
+    }
 
     /** Remove and return the first deck entry matching [predicate], or null if none match. */
     private fun takeWhere(deck: MutableList<String>, random: Random, predicate: (String) -> Boolean): String? {

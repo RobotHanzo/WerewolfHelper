@@ -36,6 +36,16 @@ fun interface WolfChatHandler {
 }
 
 /**
+ * Receives non-bot messages from the public 法院 (court) text channel while a game is in progress, so
+ * they can be recorded for the replay. The gateway gates on the court channel + game-started +
+ * non-bot (which also excludes webhook relays); the handler owns persistence. [seat] is null when the
+ * author is not a seated player (a judge or spectator). Registered post-construct like the others.
+ */
+fun interface CourtChatHandler {
+    fun onCourtChat(guildId: Long, seat: Int?, userId: Long, author: String, avatar: String?, content: String)
+}
+
+/**
  * Routes slash commands and bot-join events into the engine. As with the interaction handler, the
  * gateway owns the JDA wiring and this owns the meaning; a single router implements it and fans each
  * command out to the owning service (`/server` lifecycle → provisioning, `/game` → day flow).

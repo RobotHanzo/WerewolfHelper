@@ -68,6 +68,13 @@ data class GameSession(
      */
     var wolfChat: MutableList<WolfChatData> = mutableListOf(),
 
+    /**
+     * Public 法院 (court) text-channel messages captured while the game is in progress, ignoring all
+     * bot/webhook messages. Persisted on the session (like [wolfChat]) so it survives restarts and is
+     * available to fold into the recording when the judge confirms the win; cleared on game reset.
+     */
+    var courtChat: MutableList<CourtChatData> = mutableListOf(),
+
     /** Active day speech flow (SPEECHES / police campaign / last words), or null when idle. */
     var speech: SpeechFlow? = null,
 

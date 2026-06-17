@@ -52,6 +52,9 @@ class GameFlowCoordinator(
     fun advance(guildId: Long) {
         val entered = sessionService.mutate(guildId) { s ->
             if (s.phase == Phase.OVER) return@mutate null
+            // A manual skip interrupts whatever stage is mid-flight (a speaking turn / a poll) so the
+            // next phase starts clean; a no-op on the automatic path, where speech+poll are already idle.
+            day.abortActiveStage(s)
             val t = flow.next(s.phase, s.day); s.phase = t.phase; s.day = t.day; t.phase
         }
         entered?.let { enterPhase(guildId, it) }

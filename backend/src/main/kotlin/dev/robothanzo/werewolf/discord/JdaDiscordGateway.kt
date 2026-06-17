@@ -108,6 +108,9 @@ class JdaDiscordGateway(
     @Volatile
     private var wolfChatHandler: WolfChatHandler? = null
 
+    @Volatile
+    private var courtChatHandler: CourtChatHandler? = null
+
     init {
         jda.addEventListener(RelayListener())
         jda.addEventListener(LifecycleListener())
@@ -635,6 +638,15 @@ class JdaDiscordGateway(
                     .forEach {
                         event.guild.getTextChannelById(it.channelId)?.let { ch -> webhookFor(ch).send(message) }
                     }
+                return
+            }
+            // From the public court channel → record for the replay once the game has started. The
+            // `isBot` gate above already excludes the bot's announcements and the wolf-chat webhook
+            // relays; a null seat means a judge/spectator typed in the court.
+            if (event.channel.idLong == session.discordIds.courtTextChannelId && session.phase != Phase.LOBBY) {
+                if (content.isBlank()) return
+                val seat = session.seats.firstOrNull { it.memberId == event.author.idLong }?.number
+                courtChatHandler?.onCourtChat(event.guild.idLong, seat, event.author.idLong, author, avatar, content)
             }
         }
     }
@@ -650,6 +662,10 @@ class JdaDiscordGateway(
 
     override fun setWolfChatHandler(handler: WolfChatHandler) {
         wolfChatHandler = handler
+    }
+
+    override fun setCourtChatHandler(handler: CourtChatHandler) {
+        courtChatHandler = handler
     }
 
     override fun promptNightAction(

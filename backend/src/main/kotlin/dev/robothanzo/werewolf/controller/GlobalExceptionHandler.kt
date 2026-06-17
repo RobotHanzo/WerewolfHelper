@@ -4,6 +4,7 @@ import dev.robothanzo.werewolf.controller.dto.ApiResponse
 import dev.robothanzo.werewolf.game.assign.AssignmentException
 import dev.robothanzo.werewolf.i18n.Msg
 import dev.robothanzo.werewolf.security.ActivePlayerLockoutException
+import dev.robothanzo.werewolf.service.RecordingNotFoundException
 import dev.robothanzo.werewolf.service.SessionNotFoundException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -18,6 +19,10 @@ class GlobalExceptionHandler(private val msg: Msg) {
     @ExceptionHandler(SessionNotFoundException::class)
     fun handleNotFound(e: SessionNotFoundException): ResponseEntity<ApiResponse> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(msg.msg("error.session_not_found")))
+
+    @ExceptionHandler(RecordingNotFoundException::class)
+    fun handleRecordingNotFound(e: RecordingNotFoundException): ResponseEntity<ApiResponse> =
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(msg.msg("error.recording_not_found")))
 
     @ExceptionHandler(AssignmentException::class)
     fun handleAssignment(e: AssignmentException): ResponseEntity<ApiResponse> =

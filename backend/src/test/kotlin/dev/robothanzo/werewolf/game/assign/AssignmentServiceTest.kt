@@ -72,6 +72,26 @@ class AssignmentServiceTest {
     }
 
     @Test
+    fun `always forms at least one golden baby when villagers exist`() {
+        // Villager-scarce pool (only 2 平民 among 8 cards): a greedy deal can hand both villagers
+        // out as *second* cards (paired with non-villager firsts) and produce zero 金寶寶, which
+        // makes the wolves' win target vacuous. Across many seeds there must always be ≥1.
+        repeat(100) { seed ->
+            val s = session(doubleIdentity = true, playerCount = 4).apply {
+                pool = mutableMapOf(VILLAGER to 2, WOLF to 3, SEER to 2, WITCH to 1)
+            }
+            service.assign(s, members(4), Random(seed.toLong()))
+            val gbabies = s.seats.filter { it.goldenBaby }
+            assertTrue(gbabies.isNotEmpty(), "seed $seed produced no golden baby")
+            assertTrue(gbabies.size <= AssignmentService.GOLDEN_BABY_CAP)
+            gbabies.forEach { seat ->
+                assertEquals(2, seat.cards.size)
+                assertTrue(seat.cards.all { reg.factionOf(it.roleId) == Faction.VILLAGER })
+            }
+        }
+    }
+
+    @Test
     fun `clone copies its partner identity and flags the seat`() {
         // N=1 double, pool = clone + seer → clone copies seer → two seers, flagged clone.
         val s = session(doubleIdentity = true, playerCount = 1).apply {

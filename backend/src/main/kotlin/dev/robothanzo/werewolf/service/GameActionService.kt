@@ -34,6 +34,7 @@ class GameActionService(
     private val roleService: DashboardRoleService,
     private val deaths: DeathService,
     private val announcer: CourtAnnouncer,
+    private val recordingService: GameRecordingService,
 ) {
 
     /** Deal identities to the eligible (non-bot, non-owner, non-spectator) members. */
@@ -144,6 +145,7 @@ class GameActionService(
         session.speech = null
         session.poll = null
         session.wolfChat.clear()
+        session.courtChat.clear()
         sessionService.clearLogs(guildId)
         sessionService.log(guildId, LogSeverity.ACTION, "game.reset")
         gameScheduler.cancelAll(guildId)
@@ -173,6 +175,9 @@ class GameActionService(
         val result = win.check(session)
         if (!result.over) return@mutate
         session.winRevealed = true
+        // Persist the immutable replay recording now — this is the single save trigger. (Built before
+        // the reveal logs/announce below so `game.over.revealed` stays out of the recorded timeline.)
+        recordingService.finalize(session)
         val winnerKey = if (result.winner?.name == "WOLF") "game.over.wolf" else "game.over.good"
         announcer.announce(session.guildId, winnerKey) // now public to the court
         sessionService.log(guildId, LogSeverity.ACTION, "game.over.revealed")

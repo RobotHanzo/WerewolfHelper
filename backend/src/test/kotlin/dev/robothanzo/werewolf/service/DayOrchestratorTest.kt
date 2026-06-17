@@ -435,6 +435,49 @@ class DayOrchestratorTest {
     }
 
     @Test
+    fun `a speaker who dies mid-round is skipped, not prompted`() {
+        // Speaking order [1,2,3,4,5]; seat 2 dies (e.g. a 殉情 cascade) after the order was captured.
+        session.speech = dev.robothanzo.werewolf.game.speech.SpeechFlow(
+            order = listOf(1, 2, 3, 4, 5),
+            direction = dev.robothanzo.werewolf.game.speech.SpeechDirection.DOWN,
+            from = 1,
+        )
+        session.seat(2)!!.cards.first().dead = true
+
+        day.skipCurrentSpeaker(gid) // advance off seat 1 → seat 2 is dead, so it's skipped
+
+        assertEquals(3, session.speech!!.order[session.speech!!.index]) // landed on the next living seat
+    }
+
+    @Test
+    fun `last-words flow still prompts the dead speaker`() {
+        // 遺言 speakers are dead by definition — the skip-dead guard must not apply here, or the
+        // dead player's last words would be silently skipped and the flow would end immediately.
+        session.phase = dev.robothanzo.werewolf.domain.Phase.DAWN
+        session.day = 1
+        session.seat(4)!!.cards.first().dead = true
+        session.nightState.deaths = mutableListOf(4)
+
+        day.enterDawn(gid)
+
+        assertNotNull(session.speech)
+        assertTrue(session.speech!!.lastWords)
+        assertEquals(4, session.speech!!.order[session.speech!!.index]) // the dead seat still speaks
+    }
+
+    @Test
+    fun `abortActiveStage tears down an in-flight speech and poll`() {
+        day.startSpeeches(gid)
+        assertNotNull(session.speech)
+
+        day.abortActiveStage(session)
+
+        assertNull(session.speech)
+        assertNull(session.poll)
+        assertNull(session.stepEndsAt)
+    }
+
+    @Test
     fun `speech interrupt majority advances to the next speaker`() {
         day.startSpeeches(gid) // no police -> random direction, flow active immediately
         val speaker = session.speech!!.order[session.speech!!.index]

@@ -1,4 +1,5 @@
 import type { AuthInfo, GameSnapshot, RoleInfo, SessionSummary } from "@/types/snapshot";
+import type { Replay, ReplaySummary } from "@/types/replay";
 
 /** The backend's response envelope. Typed responses additionally carry `data`. */
 interface ApiEnvelope<T> {
@@ -51,6 +52,10 @@ export const api = {
 
   // roles
   roles: () => request<RoleInfo[]>("/roles"),
+
+  // replays (cross-guild; filtered to games the user took part in)
+  listReplays: () => request<ReplaySummary[]>("/replays"),
+  getReplay: (id: string) => request<Replay>(`/replays/${id}`),
 
   // members
   members: (guildId: string, query = "", type = "") =>

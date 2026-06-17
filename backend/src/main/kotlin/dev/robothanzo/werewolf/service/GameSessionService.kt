@@ -39,7 +39,20 @@ class GameSessionService(
     fun recentLogs(guildId: Long): List<GameLogEntry> = logs.findByGuildIdOrderByTimestampDesc(guildId)
 
     /** Append a typed, localized log entry. */
-    fun log(guildId: Long, severity: LogSeverity, key: String, vararg params: Any?): GameLogEntry {
+    fun log(guildId: Long, severity: LogSeverity, key: String, vararg params: Any?): GameLogEntry =
+        logEvent(guildId, severity, key, emptyMap(), *params)
+
+    /**
+     * Like [log], but also carries structured [metadata] used to reconstruct the replay timeline
+     * (e.g. vote breakdowns, skill actors). The dashboard ignores it; the recording finalizer reads it.
+     */
+    fun logEvent(
+        guildId: Long,
+        severity: LogSeverity,
+        key: String,
+        metadata: Map<String, String>,
+        vararg params: Any?,
+    ): GameLogEntry {
         val entry = GameLogEntry(
             id = UUID.randomUUID().toString(),
             guildId = guildId,
@@ -48,6 +61,7 @@ class GameSessionService(
             messageKey = key,
             params = params.map { it.toString() },
             rendered = msg.msg(key, *params),
+            metadata = metadata,
         )
         return logs.save(entry)
     }

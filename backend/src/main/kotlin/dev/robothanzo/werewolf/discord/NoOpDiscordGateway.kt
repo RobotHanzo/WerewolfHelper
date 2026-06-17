@@ -142,6 +142,10 @@ class NoOpDiscordGateway(
         log.debug("[noop] setWolfChatHandler")
     }
 
+    override fun setCourtChatHandler(handler: CourtChatHandler) {
+        log.debug("[noop] setCourtChatHandler")
+    }
+
     override fun grantJudgeRole(guildId: Long, memberId: Long) {
         log.debug("[noop] grantJudgeRole {}", memberId)
     }

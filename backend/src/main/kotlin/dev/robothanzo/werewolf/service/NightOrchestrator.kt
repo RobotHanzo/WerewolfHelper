@@ -511,6 +511,7 @@ class NightOrchestrator(
             val resolution = resolver.resolve(declarations.build(night), session)
             // Persist 狼美人 charm / 邱比特 lover bonds first so a same-night death can cascade 殉情.
             persistBonds(session)
+            recordNightSkills(session, night)
             night.deaths.clear()
             // Each death flows through the shared applier (arms 獵人/狼王 revenge, cascades 殉情,
             // 隱狼 auto-death). The resolver's suppressRevenge flags are carried through.
@@ -552,6 +553,47 @@ class NightOrchestrator(
         // the rest of the day. (Without this the night left the phase on DAWN but never ran dawn.)
         if (sessionService.find(guildId)?.phase == Phase.DAWN) coordinator?.enterPhase(guildId, Phase.DAWN)
     }
+
+    /**
+     * Log the seer's investigation verdict and the witch's potion use so the replay event stream can
+     * surface them under the 技能 filter. Best-effort: the seer verdict reads the target's current
+     * faction (a rare 魔術師 swap could differ); the witch's save target is the wolves' knife victim.
+     */
+    private fun recordNightSkills(session: GameSession, night: NightState) {
+        night.intents.forEach { intent ->
+            val actor = intent.actorSeats.firstOrNull() ?: return@forEach
+            val actorMeta = mapOf("actorSeat" to actor.toString())
+            when (intent.roleId) {
+                RoleIds.SEER -> {
+                    val target = intent.targets.firstOrNull() ?: return@forEach
+                    val card = session.seat(target)?.cards?.firstOrNull() ?: return@forEach
+                    val verdict = if (roles.factionOf(card.roleId) == Faction.WOLF) "狼人" else "好人"
+                    sessionService.logEvent(
+                        session.guildId, LogSeverity.INFO, "replay.skill.seer", actorMeta, seatPad(session, target), verdict,
+                    )
+                }
+                RoleIds.WITCH -> when {
+                    intent.skipped ->
+                        sessionService.logEvent(session.guildId, LogSeverity.INFO, "replay.skill.witch.idle", actorMeta)
+                    intent.meta.containsKey("save") -> {
+                        val saved = declarations.wolfConsensus(night.wolfVotes) ?: return@forEach
+                        sessionService.logEvent(
+                            session.guildId, LogSeverity.INFO, "replay.skill.witch.save", actorMeta, seatPad(session, saved),
+                        )
+                    }
+                    intent.meta.containsKey("poison") -> {
+                        val poisoned = intent.meta["poison"] ?: return@forEach
+                        sessionService.logEvent(
+                            session.guildId, LogSeverity.INFO, "replay.skill.witch.poison", actorMeta, seatPad(session, poisoned),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun seatPad(session: GameSession, seat: Int): String =
+        session.seat(seat)?.paddedNumber ?: seat.toString().padStart(2, '0')
 
     /** 守墓人 — from the second night on, DM the faction (好人/狼人) of the last expelled seat
      *  (ROLES.md 守墓人: 第一晚無技能, 第二晚起). */

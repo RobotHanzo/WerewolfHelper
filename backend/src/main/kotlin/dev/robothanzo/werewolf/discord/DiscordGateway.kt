@@ -111,6 +111,9 @@ interface DiscordGateway {
     /** Register the handler that records relayed wolf-chat lines onto the live night (judge board). */
     fun setWolfChatHandler(handler: WolfChatHandler)
 
+    /** Register the handler that records public 法院 (court) text messages for the replay. */
+    fun setCourtChatHandler(handler: CourtChatHandler)
+
     /** Grant a member the provisioned judge role (re-granted to the owner on join, §3). */
     fun grantJudgeRole(guildId: Long, memberId: Long)
 

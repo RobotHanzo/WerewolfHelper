@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
-import { Eye } from "lucide-react";
+import { Eye, History } from "lucide-react";
 import { api } from "@/api/client";
 import { useAuthStore } from "@/stores/authStore";
 import { Avatar } from "@/components/ui/Avatar";
@@ -256,6 +256,7 @@ export function ServerSelectScreen({
   loading,
   error,
   onPick,
+  onReplay,
   onRetry,
   onBack,
 }: {
@@ -263,6 +264,7 @@ export function ServerSelectScreen({
   loading: boolean;
   error: boolean;
   onPick: (guildId: string) => void;
+  onReplay?: () => void;
   onRetry: () => void;
   onBack: () => void;
 }) {
@@ -297,12 +299,37 @@ export function ServerSelectScreen({
       style={centered}
     >
       <div style={{ width: "100%", maxWidth: 460, display: "flex", flexDirection: "column", gap: 12 }}>
-        <motion.h1
+        <motion.div
           variants={itemVariants}
-          style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 900 }}
+          style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 4px" }}
         >
-          {t("servers.title")}
-        </motion.h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, flex: 1 }}>{t("servers.title")}</h1>
+          {onReplay && (
+            <button
+              type="button"
+              onClick={onReplay}
+              className="wh-btn"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 7,
+                height: 34,
+                padding: "0 14px",
+                borderRadius: "var(--r-full)",
+                border: "1px solid rgba(84,210,228,0.4)",
+                background: "var(--accent-soft)",
+                color: "var(--moon-300)",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "var(--font-ui)",
+              }}
+            >
+              <History size={15} />
+              {t("replay.enter")}
+            </button>
+          )}
+        </motion.div>
 
         {loading && (
           <motion.span

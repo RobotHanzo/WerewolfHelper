@@ -89,6 +89,23 @@ class DayOrchestrator(
 
     fun stopSpeech(guildId: Long) = mutateThenAdvance(guildId) { endSpeechInternal(it) }
 
+    /**
+     * Tear down any in-flight day stage (a speaking turn / a poll) **without** running its normal
+     * completion side effects. Called by the judge's manual "skip stage" override
+     * ([GameFlowCoordinator.advance]) before the phase machine steps on: the next phase sets up a fresh
+     * speech/poll, so a half-finished one must be cancelled first — otherwise its scheduler job would
+     * later fire into the new phase and its court buttons would linger. A no-op when the stage is idle
+     * (the automatic progression path only advances once speech+poll are already null).
+     */
+    fun abortActiveStage(session: GameSession) {
+        if (session.speech != null) {
+            session.speech = null
+            session.stepEndsAt = null
+            scheduler.cancel(session.guildId, GameScheduler.SPEECH)
+        }
+        if (session.poll != null) clearPollInternal(session)
+    }
+
     fun chooseDirection(guildId: Long, direction: SpeechDirection) =
         mutateThenAdvance(guildId) { chooseDirectionInternal(it, direction) }
 
@@ -291,6 +308,16 @@ class DayOrchestrator(
 
     private fun promptSpeakerInternal(session: GameSession) {
         val flow = session.speech ?: return
+        // Skip any seat that has died since the order was captured at the start of the round — a 殉情
+        // cascade, a revenge shot, or a missed 騎士 決鬥 (which kills the 騎士 but keeps the day going)
+        // can kill a still-queued speaker. A 遺言 flow is exempt: its speakers are dead by definition.
+        if (!flow.lastWords) {
+            while (true) {
+                val next = speeches.current(flow) ?: break
+                if (session.seat(next)?.alive == true) break
+                speeches.advance(flow)
+            }
+        }
         val speaker = speeches.current(flow)
         if (speaker == null) {
             endSpeechInternal(session)
@@ -420,6 +447,9 @@ class DayOrchestrator(
         gateway.unmuteAll(session.guildId)
         gateway.playSound(session.guildId, SoundCue.MORNING)
         announcer.announce(session.guildId, "game.day.start", session.day)
+        // Day banner for the replay timeline: this is what the recording classifier reads to open a
+        // new "日 N" segment (the night banner is the existing `night.start` log).
+        sessionService.log(session.guildId, LogSeverity.INFO, "game.day.start", session.day)
 
         val deaths = session.nightState.deaths.toList()
         if (deaths.isEmpty()) {
@@ -534,8 +564,20 @@ class DayOrchestrator(
         val poll = session.poll ?: return
         val res = polls.resolveVotes(poll, ctx)
         when (res.outcome) {
-            PollOutcome.ELECTED -> electPoliceInternal(session, res.winner!!, votes = res.tally[res.winner])
-            PollOutcome.EXPELLED -> expelInternal(session, res.winner!!, votes = res.tally[res.winner])
+            PollOutcome.ELECTED -> {
+                val winner = res.winner!!
+                electPoliceInternal(
+                    session, winner, votes = res.tally[winner],
+                    voteMeta = encodeVoteMeta(poll, res.tally, "police", winner),
+                )
+            }
+            PollOutcome.EXPELLED -> {
+                val winner = res.winner!!
+                expelInternal(
+                    session, winner, votes = res.tally[winner],
+                    voteMeta = encodeVoteMeta(poll, res.tally, "exile", winner),
+                )
+            }
             PollOutcome.PK_NEEDED -> {
                 if (poll.kind == PollKind.EXPEL) announcer.announce(session.guildId, "expel.tie")
                 polls.startPkRound(poll, res.tied)
@@ -550,7 +592,12 @@ class DayOrchestrator(
         }
     }
 
-    private fun electPoliceInternal(session: GameSession, seat: Int, votes: Double?) {
+    private fun electPoliceInternal(
+        session: GameSession,
+        seat: Int,
+        votes: Double?,
+        voteMeta: Map<String, String> = emptyMap(),
+    ) {
         session.seats.forEach { it.police = false }
         session.seat(seat)?.let { it.police = true; syncNickname(session, it) }
         session.policeSeat = seat
@@ -559,13 +606,26 @@ class DayOrchestrator(
         } else {
             announcer.announce(session.guildId, "police.elected", pad(seat), fmtVotes(votes))
         }
-        sessionService.log(session.guildId, LogSeverity.ACTION, "police.elected", pad(seat), fmtVotes(votes ?: 0.0))
+        // `voteMeta` (present only when this was decided by an actual vote) carries the tally for the
+        // replay vote overlay; the police effect itself is read from the seat param.
+        sessionService.logEvent(
+            session.guildId, LogSeverity.ACTION, "police.elected", voteMeta, pad(seat), fmtVotes(votes ?: 0.0),
+        )
         clearPollInternal(session)
     }
 
-    private fun expelInternal(session: GameSession, seat: Int, votes: Double?) {
+    private fun expelInternal(
+        session: GameSession,
+        seat: Int,
+        votes: Double?,
+        voteMeta: Map<String, String> = emptyMap(),
+    ) {
         val seatObj = session.seat(seat)
         announcer.announce(session.guildId, "expel.result", pad(seat), fmtVotes(votes ?: 0.0))
+        // Record the expel tally for the replay (the resulting death is logged separately on the kill).
+        sessionService.logEvent(
+            session.guildId, LogSeverity.ACTION, "expel.result", voteMeta, pad(seat), fmtVotes(votes ?: 0.0),
+        )
         clearPollInternal(session)
 
         // 白癡 翻牌免疫放逐: an unrevealed 白癡 survives the expel but loses its future vote.
@@ -822,6 +882,26 @@ class DayOrchestrator(
     /** Render a weighted tally without a trailing `.0` (3.0 → "3", 3.5 → "3.5"). */
     private fun fmtVotes(votes: Double): String =
         if (votes % 1.0 == 0.0) votes.toInt().toString() else votes.toString()
+
+    /**
+     * Encode a vote tally for the replay vote-breakdown overlay into log metadata. `voteRows` is a
+     * compact `seat:count:voterCsv;…` string (parsed back by the recording finalizer); only seats
+     * that drew a vote — plus the [decided] seat — are listed. [kind] is "police" or "exile".
+     */
+    private fun encodeVoteMeta(poll: Poll, tally: Map<Int, Double>, kind: String, decided: Int): Map<String, String> {
+        val voters = polls.voters(poll)
+        val seats = (tally.filterValues { it > 0.0 }.keys + decided).toSortedSet()
+        val rows = seats.joinToString(";") { s ->
+            val count = tally[s] ?: 0.0
+            val csv = (voters[s] ?: emptyList()).sorted().joinToString(",")
+            "$s:${fmtVotes(count)}:$csv"
+        }
+        return mapOf(
+            "voteKind" to kind,
+            (if (kind == "police") "voteWin" else "voteOut") to decided.toString(),
+            "voteRows" to rows,
+        )
+    }
 
     private companion object {
         /** Day phases whose work, once their poll+speech are idle, auto-advances to the next phase. */
