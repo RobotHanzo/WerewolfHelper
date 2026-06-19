@@ -14,7 +14,7 @@ import dev.robothanzo.werewolf.controller.dto.SeatDto
 import dev.robothanzo.werewolf.controller.dto.SpeechDto
 import dev.robothanzo.werewolf.controller.dto.WinnerDto
 import dev.robothanzo.werewolf.controller.dto.WolfChatDto
-import dev.robothanzo.werewolf.discord.DiscordGateway
+import dev.robothanzo.werewolf.discord.listMembers
 import dev.robothanzo.werewolf.domain.Faction
 import dev.robothanzo.werewolf.domain.GameLogEntry
 import dev.robothanzo.werewolf.domain.GameSession
@@ -29,6 +29,7 @@ import dev.robothanzo.werewolf.game.speech.SpeechService
 import dev.robothanzo.werewolf.game.vote.PollEngine
 import dev.robothanzo.werewolf.game.win.WinConditionChecker
 import dev.robothanzo.werewolf.i18n.Msg
+import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 
 /**
@@ -40,7 +41,7 @@ import org.springframework.stereotype.Service
 class SnapshotService(
     private val roles: RoleRegistry,
     private val win: WinConditionChecker,
-    private val gateway: DiscordGateway,
+    private val jda: JDA?,
     private val msg: Msg,
     private val declarations: NightDeclarationsBuilder,
     private val polls: PollEngine,
@@ -51,7 +52,7 @@ class SnapshotService(
     private val wolfKillAbilityId = abilities.firstOrNull { Effect.WOLF_KILL in it.writes }?.id
 
     fun build(session: GameSession, logs: List<GameLogEntry>): GameSnapshot {
-        val members = if (gateway.available) gateway.listMembers(session.guildId).associateBy { it.id } else emptyMap()
+        val members = if (jda != null) jda.listMembers(session).associateBy { it.id } else emptyMap()
 
         val seats = session.seats.sortedBy { it.number }.map { seat ->
             SeatDto(

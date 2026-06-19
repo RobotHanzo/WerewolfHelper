@@ -6,15 +6,9 @@ data class SeatOption(val seat: Int, val label: String)
 /** The reply shown (ephemerally) to a player after they use a night button/menu. */
 data class InteractionReply(val ack: String)
 
-/** Neutral button style so the gateway interface stays free of JDA types (mapped in the JDA impl). */
-enum class ButtonStyle { PRIMARY, SECONDARY, SUCCESS, DANGER }
-
-/** One button on a court prompt (day speech controls, poll enroll/withdraw/vote, direction choice). */
-data class CourtButton(val customId: String, val label: String, val style: ButtonStyle = ButtonStyle.SECONDARY)
-
 /**
  * Receives Discord component interactions (night-action select menus, wolf-kill vote buttons) and
- * routes them into the game engine. The gateway owns the JDA wiring; this handler owns the meaning.
+ * routes them into the game engine. [DiscordBot] owns the JDA wiring; this handler owns the meaning.
  * Custom ids are namespaced `wh:...` and parsed by the implementation.
  *
  * [channelId] is the channel the interaction was clicked in. Seat channels are bound 1:1 to a seat,
@@ -27,9 +21,9 @@ fun interface DiscordInteractionHandler {
 
 /**
  * Receives wolf-team chat lines relayed from the seat channels during the night, so they can be
- * surfaced on the judge night board. The gateway gates on night-active + wolf-chat membership and
+ * surfaced on the judge night board. [DiscordBot] gates on night-active + wolf-chat membership and
  * formats the author label; the handler owns persistence + snapshot broadcast. Registered
- * post-construct (like the interaction handler) to avoid a constructor cycle with the gateway.
+ * post-construct (like the interaction handler) to avoid a constructor cycle with the bot.
  */
 fun interface WolfChatHandler {
     fun onWolfChat(guildId: Long, seat: Int, userId: Long, author: String, avatar: String?, content: String)
@@ -37,7 +31,7 @@ fun interface WolfChatHandler {
 
 /**
  * Receives non-bot messages from the public 法院 (court) text channel while a game is in progress, so
- * they can be recorded for the replay. The gateway gates on the court channel + game-started +
+ * they can be recorded for the replay. [DiscordBot] gates on the court channel + game-started +
  * non-bot (which also excludes webhook relays); the handler owns persistence. [seat] is null when the
  * author is not a seated player (a judge or spectator). Registered post-construct like the others.
  */
@@ -46,8 +40,8 @@ fun interface CourtChatHandler {
 }
 
 /**
- * Routes slash commands and bot-join events into the engine. As with the interaction handler, the
- * gateway owns the JDA wiring and this owns the meaning; a single router implements it and fans each
+ * Routes slash commands and bot-join events into the engine. As with the interaction handler,
+ * [DiscordBot] owns the JDA wiring and this owns the meaning; a single router implements it and fans each
  * command out to the owning service (`/server` lifecycle → provisioning, `/game` → day flow).
  */
 interface DiscordCommandHandler {
@@ -67,7 +61,7 @@ interface DiscordCommandHandler {
     fun onDetonate(guildId: Long, userId: Long): String
 }
 
-/** Custom-id constants shared between the orchestrator (parsing) and the gateway (building). */
+/** Custom-id constants shared between the orchestrator (parsing) and the prompt builders (building). */
 object InteractionIds {
     const val PREFIX = "wh"
 

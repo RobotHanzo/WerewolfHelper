@@ -1,12 +1,18 @@
 package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.discord.ChannelKind
-import dev.robothanzo.werewolf.discord.DiscordGateway
+import dev.robothanzo.werewolf.discord.DiscordBot
 import dev.robothanzo.werewolf.discord.DiscordInteractionHandler
 import dev.robothanzo.werewolf.discord.InteractionIds
 import dev.robothanzo.werewolf.discord.InteractionReply
 import dev.robothanzo.werewolf.discord.SeatOption
 import dev.robothanzo.werewolf.discord.SoundCue
+import dev.robothanzo.werewolf.discord.isJudge
+import dev.robothanzo.werewolf.discord.muteAll
+import dev.robothanzo.werewolf.discord.sendSeatMessage
+import dev.robothanzo.werewolf.discord.sendSelectMenu
+import dev.robothanzo.werewolf.discord.sendWitchChoice
+import dev.robothanzo.werewolf.discord.sendWolfVote
 import dev.robothanzo.werewolf.domain.Faction
 import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.domain.LogSeverity
@@ -28,6 +34,7 @@ import dev.robothanzo.werewolf.game.roles.RoleTag
 import dev.robothanzo.werewolf.game.win.WinConditionChecker
 import dev.robothanzo.werewolf.i18n.Msg
 import jakarta.annotation.PostConstruct
+import net.dv8tion.jda.api.JDA
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
@@ -38,7 +45,7 @@ import org.springframework.stereotype.Service
  * [NightState], and the [NightResolver] turns them into deaths — on the deadline or once everyone
  * has acted.
  *
- * Implements [DiscordInteractionHandler] so the gateway routes button/menu clicks straight here.
+ * Implements [DiscordInteractionHandler] so [dev.robothanzo.werewolf.discord.DiscordBot] routes button/menu clicks straight here.
  */
 @Service
 class NightOrchestrator(
@@ -49,7 +56,8 @@ class NightOrchestrator(
     private val sessionService: GameSessionService,
     private val win: WinConditionChecker,
     private val roles: RoleRegistry,
-    private val gateway: DiscordGateway,
+    private val jda: JDA?,
+    private val discord: DiscordBot,
     private val scheduler: GameScheduler,
     private val msg: Msg,
     private val announcer: CourtAnnouncer,
@@ -76,11 +84,11 @@ class NightOrchestrator(
     @PostConstruct
     fun register() {
         router.register(InteractionIds.NS_NIGHT, this)
-        gateway.setWolfChatHandler(::onWolfChat)
+        discord.setWolfChatHandler(::onWolfChat)
     }
 
     /**
-     * Record a relayed wolf-chat line onto the session (the gateway has already gated on wolf-chat
+     * Record a relayed wolf-chat line onto the session (DiscordBot has already gated on wolf-chat
      * membership). Kept at the session level — not the night — so it syncs across **every** phase, not
      * just the night. Mutating through [GameSessionService.mutate] persists and broadcasts the fresh
      * snapshot, so the judge panel updates live. Oldest lines are trimmed once the cap is exceeded.
@@ -98,8 +106,8 @@ class NightOrchestrator(
         sessionService.mutate(guildId) { session -> planNight(session) }
         val session = sessionService.find(guildId) ?: return
         // Court cue: night falls, everyone is silenced (the announcement itself was previously log-only).
-        gateway.muteAll(guildId)
-        gateway.playSound(guildId, SoundCue.NIGHT)
+        jda?.muteAll(guildId)
+        discord.playSound(guildId, SoundCue.NIGHT)
         announcer.announce(guildId, "night.start", session.day)
         val night = session.nightState
         // No actor has anything to do tonight — resolve immediately rather than hang on an empty phase.
@@ -191,15 +199,15 @@ class NightOrchestrator(
         val ids = session.nightState.waves.getOrNull(phaseIndex) ?: return
         ids.forEach { abilityId ->
             if (abilityId == wolfKillAbility?.id) {
-                gateway.promptWolfVote(guildId, session.nightState.wolfParticipants.toList(), options)
+                jda?.sendWolfVote(session, session.nightState.wolfParticipants.toList(), options)
                 return@forEach
             }
             val ability = abilitiesById[abilityId] ?: return@forEach
             // 女巫 uses a two-step prompt: a 解藥/毒藥 choice, then a target menu (see [handleWitch]).
             if (ability.roleId == RoleIds.WITCH) {
                 actorSeatsFor(session, ability).forEach { actor ->
-                    gateway.promptWitchChoice(
-                        guildId, actor,
+                    jda?.sendWitchChoice(
+                        session, actor,
                         "🌙 女巫：請先選擇要使用解藥還是毒藥，再選擇對象。在選定對象前，可隨時改用另一瓶藥或取消。",
                     )
                 }
@@ -207,8 +215,8 @@ class NightOrchestrator(
             }
             val roleName = roles.localizedName(ability.roleId)
             actorSeatsFor(session, ability).forEach { actor ->
-                gateway.promptNightAction(
-                    guildId, actor, "${InteractionIds.NIGHT_ACTION}:${ability.id}",
+                jda?.sendSelectMenu(
+                    session, actor, "${InteractionIds.NIGHT_ACTION}:${ability.id}",
                     "🌙 $roleName：請選擇今晚的行動目標", options, emptyList(), ability.optional, ability.targetCount,
                 )
             }
@@ -236,15 +244,15 @@ class NightOrchestrator(
             val eligible = eligibleSaveTargets(session, witchSeat)
             if (eligible.isEmpty()) return InteractionReply("今晚沒有可以解救的對象")
             val options = eligible.map { SeatOption(it, "玩家${session.seat(it)?.paddedNumber}") }
-            gateway.promptNightAction(
-                session.guildId, witchSeat, InteractionIds.WITCH_CURE_TARGET,
+            jda?.sendSelectMenu(
+                session, witchSeat, InteractionIds.WITCH_CURE_TARGET,
                 "💊 解藥：請選擇要解救的對象（選定對象前仍可改用毒藥）", options,
             )
             return InteractionReply("請從選單選擇要解救的對象")
         }
         val options = session.aliveSeats().map { SeatOption(it.number, "玩家${it.paddedNumber}") }
-        gateway.promptNightAction(
-            session.guildId, witchSeat, InteractionIds.WITCH_POISON_TARGET,
+        jda?.sendSelectMenu(
+            session, witchSeat, InteractionIds.WITCH_POISON_TARGET,
             "☠️ 毒藥：請選擇要毒殺的對象（選定對象前仍可改用解藥）", options,
         )
         return InteractionReply("請從選單選擇要毒殺的對象")
@@ -362,7 +370,7 @@ class NightOrchestrator(
         val night = session.nightState
         if (!night.active || night.resolved) return
         pendingActors(session, night, night.currentPhase).forEach { seat ->
-            gateway.sendSeatMessage(guildId, seat, msg.msg("night.reminder", secondsLeft))
+            jda?.sendSeatMessage(session, seat, msg.msg("night.reminder", secondsLeft))
         }
     }
 
@@ -406,7 +414,7 @@ class NightOrchestrator(
         val ownSeat = session.seats.firstOrNull { it.memberId == userId }?.number
         val channelSeat = session.seats.firstOrNull { it.channelId == channelId && it.channelId != 0L }?.number
         val seatNumber = when {
-            channelSeat != null && gateway.isJudge(guildId, userId) -> channelSeat
+            channelSeat != null && jda?.isJudge(session, userId) == true -> channelSeat
             ownSeat != null -> ownSeat
             else -> return InteractionReply("你不是這場遊戲的玩家")
         }
@@ -606,7 +614,7 @@ class NightOrchestrator(
         val card = expelled.cards.lastOrNull { it.dead } ?: expelled.cards.firstOrNull() ?: return
         val faction = if (expelled.clone) Faction.GOD else roles.factionOf(card.roleId)
         val verdict = if (faction == Faction.WOLF) "狼人" else "好人"
-        gateway.sendSeatMessage(session.guildId, keeper.number, msg.msg("gravekeeper.report", expelled.paddedNumber, verdict))
+        jda?.sendSeatMessage(session, keeper.number, msg.msg("gravekeeper.report", expelled.paddedNumber, verdict))
     }
 
     /** Persist 狼美人 charm + 邱比特 lover bonds onto the seats so a daytime death can cascade 殉情
@@ -657,6 +665,6 @@ class NightOrchestrator(
             // 通靈師 / 石像鬼 — exact identity, following a 機械狼's learned id.
             roles.localizedName(target.learnedRoleId ?: card.roleId)
         }
-        gateway.sendSeatMessage(session.guildId, actor, "查驗 玩家${target.paddedNumber} → $verdict")
+        jda?.sendSeatMessage(session, actor, "查驗 玩家${target.paddedNumber} → $verdict")
     }
 }

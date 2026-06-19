@@ -18,7 +18,7 @@ the backend deep-dive. Kotlin · Spring Boot 4.0.2 · Kotlin 2.3 · Java 25 · M
 - `./gradlew test --tests "*.PollEngineTest"` / `--tests "*.NightResolverTest.魔術師*"` — one class /
   one method.
 - `./gradlew bootRun` — needs MongoDB on `localhost:27017`; `DISCORD_TOKEN` optional (no token →
-  no-op gateway, REST/WS still serve). Scalar UI at `/scalar`, OpenAPI JSON at `/v3/api-docs`.
+  null `JDA` bean, Discord calls no-op, REST/WS still serve). Scalar UI at `/scalar`, OpenAPI JSON at `/v3/api-docs`.
 - Env vars (all optional): `MONGODB_URI`, `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`,
   `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `DISCORD_SERVER_CREATORS` (comma-separated user
   ids allowed to run `/server create`), `DASHBOARD_BASE_URL`.
@@ -42,9 +42,11 @@ the backend deep-dive. Kotlin · Spring Boot 4.0.2 · Kotlin 2.3 · Java 25 · M
   logic: win-condition tally (金寶寶, parity +0.5), assignment (金寶寶 cap, clone copy, wolf-second
   ordering), `PollEngine` (shared by police election + expel), `SpeechService` (wrap-around order +
   interrupt majority), `GameFlowService` (phase machine) + the cancellable `GameScheduler`.
-- `discord/` — the `DiscordGateway` seam: `NoOpDiscordGateway` + `JdaDiscordGateway`, `DiscordConfig`
-  (bean selection), `NicknameService` (`[死人] 玩家NN [警長]`), interaction/command handler
-  interfaces, `SoundCue`.
+- `discord/` — **no gateway interface**; services hold a nullable `JDA?` (from `DiscordConfig`) and
+  call it inline via `JdaExtensions.kt` (best-effort/null-safe helpers). `null` JDA = tokenless no-op.
+  Event-driven/stateful plumbing in `DiscordBot` (listeners + audio + webhook relay) and
+  `GuildProvisioner`; inbound handler interfaces + `InteractionIds` in `DiscordInteractions.kt`;
+  `NicknameService` (`[死人] 玩家NN [警長]`), `SoundCue`.
 - `ops/` — `BulkOperationEngine` (barrier + per-item isolation + percent + timeout).
 - `service/` — orchestration: `GameSessionService` (load/log/save/**broadcast**/`mutate`),
   `SnapshotService` (builds the wire `GameSnapshot`), `GameActionService` (kill/revive/edit/police/
@@ -62,7 +64,7 @@ the backend deep-dive. Kotlin · Spring Boot 4.0.2 · Kotlin 2.3 · Java 25 · M
 3. Long Discord operations (assignment/reset, provisioning) run through `BulkOperationEngine` on a
    coroutine and stream percent + log lines via `GameWebSocketHandler.broadcastProgress`.
 4. Night: entering `Phase.NIGHT` (in `GameController.start`/`next`) triggers
-   `NightOrchestrator.startNight` → plan → prompt via gateway → collect into `nightState` → resolve.
+   `NightOrchestrator.startNight` → plan → prompt actors via `JDA?` → collect into `nightState` → resolve.
 
 ## Testing approach
 
@@ -70,7 +72,7 @@ Game logic is pure and tested without Spring (`support/TestFixtures` builds a re
 over the canonical beans + the actual message bundle; inject a seeded `Random` for assignment). The
 **night resolver test is the interaction-rule matrix** — extend it when adding interaction rules.
 Repository/wiring is covered only by `ApplicationContextTest` (embedded Mongo). There are no
-live-Discord tests; the gateway is exercised via the `NoOp` impl.
+live-Discord tests; services are constructed with a **null `JDA?`** (every Discord call no-ops).
 
 ## Gotchas
 

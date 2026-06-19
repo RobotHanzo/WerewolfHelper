@@ -17,12 +17,12 @@ and the WebSocket. This is where side effects live; keep new rules in `game/` an
   the loop walks itself `NIGHT → DAWN → [POLICE_ELECTION] → SPEECHES → EXPEL_VOTE → NIGHT(+1)` with no
   judge click; `/state/next` stays an explicit override. To avoid a bean cycle the coordinator depends
   on the orchestrators and registers itself onto them in `@PostConstruct` (`night.coordinator = this`),
-  the same self-registration idiom used with the gateway. `NightOrchestrator.resolveNight` hands off to
+  the same self-registration idiom services use with `DiscordBot`. `NightOrchestrator.resolveNight` hands off to
   `enterPhase(DAWN)` once the night resolves (this is what actually runs 天亮).
 - `SnapshotService` builds the wire `GameSnapshot` (`controller/dto`) consumed by the frontend store.
 - `GameActionService` — the judge's per-seat mutations (assign / kill / revenge / revive / edit /
   force + transfer police / reset). Each mutates in place inside `mutate`; nicknames are synced
-  best-effort via the gateway (`canInteract` preflight). `assign`/`reset` delegate the bulk Discord
+  best-effort via `jda?.syncNickname` (owner/hierarchy/no-op guards folded in). `assign`/`reset` delegate the bulk Discord
   work to `DiscordOpsService`. **Kill routes through `DeathService`** (not an inline card flip), then
   `win.check`.
 - `DeathService` is the **single place a death is applied** — shared by `NightOrchestrator`,
@@ -46,8 +46,9 @@ and the WebSocket. This is where side effects live; keep new rules in `game/` an
   on the `GameScheduler` deadline **or** once `isComplete`. Resolution applies deaths, announces
   investigations, re-checks win, and advances `phase` to DAWN/OVER. The interaction-rule matrix
   lives in `NightResolver`, **not** here — this class is wiring + persistence of intents/votes.
-- `ServerProvisioningService` handles `/server create|delete` + bot-join provisioning; `CommandRouter`
-  is the gateway's single `DiscordCommandHandler` and fans `/server` here and `/game detonate` to
+- `ServerProvisioningService` handles `/server create|delete` + bot-join provisioning (delegating the
+  Discord build to `discord/GuildProvisioner`); `CommandRouter` is `DiscordBot`'s single
+  `DiscordCommandHandler` and fans `/server` here and `/game detonate` to
   `DayOrchestrator.detonate` (wolf-only player 自爆, gated on the caller's current identity being a
   wolf). `DiscordOpsService` enforces **critical-before-cosmetic** (FEATURES
   §10.2): role grants + nicknames finish as one phase before any notification messages, streamed

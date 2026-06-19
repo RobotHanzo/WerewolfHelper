@@ -1,6 +1,9 @@
 package dev.robothanzo.werewolf.service
 
-import dev.robothanzo.werewolf.discord.DiscordGateway
+import dev.robothanzo.werewolf.discord.DiscordBot
+import dev.robothanzo.werewolf.discord.guildIconUrl
+import dev.robothanzo.werewolf.discord.guildName
+import dev.robothanzo.werewolf.discord.listMembers
 import dev.robothanzo.werewolf.domain.CourtChatData
 import dev.robothanzo.werewolf.domain.DashboardRole
 import dev.robothanzo.werewolf.domain.GameRecording
@@ -13,6 +16,7 @@ import dev.robothanzo.werewolf.domain.repo.GameLogRepository
 import dev.robothanzo.werewolf.domain.repo.GameRecordingRepository
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import jakarta.annotation.PostConstruct
+import net.dv8tion.jda.api.JDA
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.Instant
@@ -22,7 +26,7 @@ import java.util.UUID
 
 /**
  * Records finished games for the dashboard replay ("復盤"). Court text chat is captured live onto the
- * session (via the gateway court-chat handler, registered post-construct to avoid a constructor
+ * session (via DiscordBot's court-chat handler, registered post-construct to avoid a constructor
  * cycle); the immutable [GameRecording] is built and saved once, when the judge confirms the win
  * banner. A guild therefore produces one recording per game it plays and resets through.
  */
@@ -32,7 +36,8 @@ class GameRecordingService(
     private val recordings: GameRecordingRepository,
     private val logs: GameLogRepository,
     private val dashboardUsers: DashboardUserRepository,
-    private val gateway: DiscordGateway,
+    private val jda: JDA?,
+    private val discord: DiscordBot,
     private val roles: RoleRegistry,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -40,7 +45,7 @@ class GameRecordingService(
 
     @PostConstruct
     fun register() {
-        gateway.setCourtChatHandler(::onCourtChat)
+        discord.setCourtChatHandler(::onCourtChat)
     }
 
     /** Persist a captured court message onto the live session (mirrors the wolf-chat handler). */
@@ -64,7 +69,7 @@ class GameRecordingService(
         if (entries.isEmpty() && session.courtChat.isEmpty()) return
 
         val events = RecordingTimeline.build(entries, session.courtChat)
-        val members = if (gateway.available) gateway.listMembers(guildId).associateBy { it.id } else emptyMap()
+        val members = if (jda != null) jda.listMembers(session).associateBy { it.id } else emptyMap()
 
         val players = session.seats.sortedBy { it.number }.filter { it.assigned }.map { seat ->
             RecordedSeat(
@@ -85,8 +90,8 @@ class GameRecordingService(
             dashboardUsers.findByGuildId(guildId)
                 .filter { it.role == DashboardRole.JUDGE || it.role == DashboardRole.SPECTATOR }
                 .forEach { add(it.userId) }
-            if (gateway.available) {
-                gateway.listMembers(guildId).filter { it.owner || it.spectator }.forEach { add(it.id) }
+            if (jda != null) {
+                jda.listMembers(session).filter { it.owner || it.spectator }.forEach { add(it.id) }
             }
         }
 
@@ -94,8 +99,8 @@ class GameRecordingService(
         val recording = GameRecording(
             id = UUID.randomUUID().toString(),
             guildId = guildId,
-            guildName = gateway.getGuildName(guildId),
-            guildIcon = gateway.getGuildIconUrl(guildId),
+            guildName = jda?.guildName(guildId),
+            guildIcon = jda?.guildIconUrl(guildId),
             title = "${titleFormat.format(now)} · ${session.playerCount} 人局",
             startedAt = entries.firstOrNull()?.timestamp ?: now,
             endedAt = now,

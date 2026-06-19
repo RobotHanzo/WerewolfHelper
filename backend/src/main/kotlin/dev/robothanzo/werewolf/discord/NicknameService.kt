@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service
  * a nickname suffix, never a Discord role (role-based badges broke transfers in the past).
  *
  * The grammar is pure and testable here; applying it (hierarchy preflight, owner skip, no-op skip)
- * is the gateway's job.
+ * is `JDA.syncNickname`'s job.
  */
 @Service
 class NicknameService(private val msg: Msg) {

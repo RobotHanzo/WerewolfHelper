@@ -1,0 +1,48 @@
+# WerewolfHelper — app + MongoDB.
+#
+#   docker compose up --build      # build the image locally and run
+#   docker compose pull && up -d   # run the image published by CI (GHCR)
+#
+# Variable substitution reads ./.env automatically (gitignored). See
+# .env.example for the full list; everything Discord-related is optional —
+# without DISCORD_TOKEN the bot degrades to a no-op and the dashboard/API
+# still serve.
+
+services:
+  mongo:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  app:
+    image: ghcr.io/robothanzo/werewolfhelper:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      # Defaults to the bundled mongo service; override in .env to use an external DB.
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/werewolf}
+      DISCORD_TOKEN: ${DISCORD_TOKEN:-}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
+      DISCORD_REDIRECT_URI: ${DISCORD_REDIRECT_URI:-}
+      DISCORD_SERVER_CREATORS: ${DISCORD_SERVER_CREATORS:-}
+      DASHBOARD_BASE_URL: ${DASHBOARD_BASE_URL:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      JAVA_OPTS: ${JAVA_OPTS:-}
+
+volumes:
+  mongo-data:

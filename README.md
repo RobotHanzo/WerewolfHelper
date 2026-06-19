@@ -93,6 +93,30 @@ java --enable-native-access=ALL-UNNAMED -jar build/libs/werewolf-helper-1.0.0.ja
 - `--enable-native-access=ALL-UNNAMED` is required on Java 25 for the lavaplayer/jdave voice
   natives. Run the jar as a service (systemd / container) with the environment variables above.
 
+### Container (Docker)
+
+A multi-stage [`Dockerfile`](Dockerfile) builds the same single self-contained jar (frontend +
+backend) and ships it on a JRE 25 runtime. CI publishes the image to GHCR on every push to `main`
+and on `v*` tags (`.github/workflows/docker-publish.yml`).
+
+```bash
+cp .env.example .env                        # fill in Discord creds (all optional)
+docker compose up -d --build                # build locally + run app and MongoDB
+# or pull the published image instead of building:
+docker compose pull && docker compose up -d
+```
+
+`docker-compose.yml` runs the app alongside a `mongo` service (data on a named volume). The app's
+`MONGODB_URI` defaults to that bundled MongoDB — set it in `.env` to point at an external database
+instead. The image (`ghcr.io/robothanzo/werewolfhelper`) can also be run standalone:
+
+```bash
+docker run -d -p 8080:8080 \
+  -e MONGODB_URI=mongodb://host:27017/werewolf \
+  -e DISCORD_TOKEN=... -e DISCORD_CLIENT_ID=... -e DISCORD_CLIENT_SECRET=... \
+  ghcr.io/robothanzo/werewolfhelper:latest
+```
+
 ### TLS / reverse proxy (optional)
 
 The jar already serves everything on one port, so a proxy is only needed for TLS termination. If you

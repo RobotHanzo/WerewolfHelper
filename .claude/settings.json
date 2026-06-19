@@ -6,6 +6,7 @@
     ]
   },
   "enabledPlugins": {
-    "feature-dev@claude-plugins-official": true
+    "feature-dev@claude-plugins-official": true,
+    "andrej-karpathy-skills@karpathy-skills": true
   }
 }

@@ -27,7 +27,7 @@ for i18n (`backend/.../i18n/messages_zh_TW.properties`, `frontend/src/i18n/zh-TW
 - `./gradlew test --tests "dev.robothanzo.werewolf.game.night.NightResolverTest"` — a single class;
   `--tests "*.NightResolverTest.同守同救*"` for a single method.
 - `./gradlew bootRun` — needs a local MongoDB on `localhost:27017`. **Without a `DISCORD_TOKEN` the
-  bot degrades to a no-op gateway and the REST API + WebSocket hub still serve.** OpenAPI (Scalar)
+  bot degrades to a no-op (the `JDA` bean is null) and the REST API + WebSocket hub still serve.** OpenAPI (Scalar)
   is at `/scalar`.
 - The Gradle daemon's JDK and toolchain are Java 25; the wrapper is Gradle 9.3.1.
 
@@ -70,14 +70,18 @@ via 自爆), 殉情 cascade (邱比特 lover / 狼美人 charm, with the 騎士-
 auto-death. Day-side role actions (`/seats/{n}/revenge|duel|self-destruct`) live in `DayOrchestrator`
 alongside the speech/poll loop. Never re-implement card-death inline — call `DeathService`.
 
-**Discord is behind the `DiscordGateway` seam** (`discord/`). `NoOpDiscordGateway` is the default
-(boots without a token); `JdaDiscordGateway` is the full JDA implementation (provisioning, seat
-role/channel grants, audio cues via lavaplayer, wolf-chat relay via cached webhooks, `/server`
-slash command, night button/menu prompts, membership lifecycle). The gateway is wired in
-`DiscordConfig` (picks the impl by token presence). Services that need to react to Discord events
-(`NightOrchestrator`, `ServerProvisioningService`) implement a handler interface and register
-themselves with the gateway via `@PostConstruct` (`setInteractionHandler` / `setCommandHandler`),
-avoiding a constructor cycle.
+**Discord is used directly, not behind a gateway** (`discord/`). There is no interface seam:
+`DiscordConfig` produces a single **nullable `JDA?` bean** (`null` when no token is configured or JDA
+construction throws), and every service injects `JDA?` and calls it inline via the stateless helpers
+in `JdaExtensions.kt` (messaging, role/nickname mutations, voice, queries, night prompts — all
+best-effort/null-safe). With a `null` JDA the calls no-op and the REST API + WebSocket hub still serve
+fully — **the `null` is the tokenless degrade path** (no separate no-op implementation to maintain).
+The irreducible, event-driven/stateful Discord plumbing lives in two interface-free `@Component`s:
+`DiscordBot` (the JDA event loop's four listeners, the audio-cue cache + playback, the wolf-chat
+webhook relay) and `GuildProvisioner` (provision/resize/delete). Services that react to Discord
+events register *back* into `DiscordBot` via `@PostConstruct` (`setInteractionHandler` /
+`setCommandHandler` / `setWolfChatHandler` / `setCourtChatHandler`) — `DiscordBot` injects only
+infrastructure, never a service, so there is no constructor cycle.
 
 **Bulk Discord mutations go through `ops/BulkOperationEngine`** (FEATURES §10.1–10.4): a barrier
 that awaits every item, isolates per-item failures (`[完成]`/`[失敗]`), maps phases onto percent

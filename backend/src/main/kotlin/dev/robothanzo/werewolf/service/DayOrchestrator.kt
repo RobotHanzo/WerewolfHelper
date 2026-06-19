@@ -1,15 +1,20 @@
 package dev.robothanzo.werewolf.service
 
-import dev.robothanzo.werewolf.discord.ButtonStyle
 import dev.robothanzo.werewolf.discord.ChannelKind
-import dev.robothanzo.werewolf.discord.CourtButton
-import dev.robothanzo.werewolf.discord.DiscordGateway
+import dev.robothanzo.werewolf.discord.DiscordBot
 import dev.robothanzo.werewolf.discord.DiscordInteractionHandler
 import dev.robothanzo.werewolf.discord.InteractionIds
 import dev.robothanzo.werewolf.discord.InteractionReply
 import dev.robothanzo.werewolf.discord.NicknameService
 import dev.robothanzo.werewolf.discord.SeatOption
 import dev.robothanzo.werewolf.discord.SoundCue
+import dev.robothanzo.werewolf.discord.isJudge
+import dev.robothanzo.werewolf.discord.muteAll
+import dev.robothanzo.werewolf.discord.muteMember
+import dev.robothanzo.werewolf.discord.sendCourtButtons
+import dev.robothanzo.werewolf.discord.sendSelectMenu
+import dev.robothanzo.werewolf.discord.syncNickname
+import dev.robothanzo.werewolf.discord.unmuteAll
 import dev.robothanzo.werewolf.domain.Faction
 import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.domain.LogSeverity
@@ -31,6 +36,8 @@ import dev.robothanzo.werewolf.game.vote.PollStage
 import dev.robothanzo.werewolf.game.win.WinConditionChecker
 import dev.robothanzo.werewolf.i18n.Msg
 import jakarta.annotation.PostConstruct
+import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.components.buttons.Button
 import org.springframework.stereotype.Service
 import kotlin.random.Random
 
@@ -54,7 +61,8 @@ class DayOrchestrator(
     private val win: WinConditionChecker,
     private val roles: RoleRegistry,
     private val nicknames: NicknameService,
-    private val gateway: DiscordGateway,
+    private val jda: JDA?,
+    private val discord: DiscordBot,
     private val scheduler: GameScheduler,
     private val announcer: CourtAnnouncer,
     private val router: InteractionRouter,
@@ -266,11 +274,11 @@ class DayOrchestrator(
             session.speech = SpeechFlow(order = emptyList(), direction = SpeechDirection.DOWN, from = police, waiting = true)
             session.stepEndsAt = null
             announcer.announce(session.guildId, "speech.start")
-            gateway.sendCourtButtons(
-                session.guildId, msg.msg("police.dir.prompt"),
+            jda?.sendCourtButtons(
+                session, msg.msg("police.dir.prompt"),
                 listOf(
-                    CourtButton("${InteractionIds.POLICE_DIR}:UP", msg.msg("speech.direction.up"), ButtonStyle.PRIMARY),
-                    CourtButton("${InteractionIds.POLICE_DIR}:DOWN", msg.msg("speech.direction.down"), ButtonStyle.PRIMARY),
+                    Button.primary("${InteractionIds.POLICE_DIR}:UP", msg.msg("speech.direction.up")),
+                    Button.primary("${InteractionIds.POLICE_DIR}:DOWN", msg.msg("speech.direction.down")),
                 ),
             )
         } else {
@@ -329,8 +337,8 @@ class DayOrchestrator(
         session.stepEndsAt = endsAt
 
         if (session.settings.muteAfterSpeech) {
-            gateway.muteAll(session.guildId)
-            seat?.memberId?.let { gateway.muteMember(session.guildId, it, false) }
+            jda?.muteAll(session.guildId)
+            seat?.memberId?.let { jda?.muteMember(session.guildId, it, false) }
         }
 
         // Tag the speaker (so the ping lands) and state their time budget explicitly.
@@ -342,10 +350,10 @@ class DayOrchestrator(
         // 遺言 also carries the 下台 vote, just like a normal speech (a table can cut short a rambling
         // last-words too).
         val buttons = listOf(
-            CourtButton(InteractionIds.SPEECH_SKIP, msg.msg("speech.skip.button"), ButtonStyle.SECONDARY),
-            CourtButton(InteractionIds.SPEECH_INTERRUPT, msg.msg("speech.interrupt.button"), ButtonStyle.DANGER),
+            Button.secondary(InteractionIds.SPEECH_SKIP, msg.msg("speech.skip.button")),
+            Button.danger(InteractionIds.SPEECH_INTERRUPT, msg.msg("speech.interrupt.button")),
         )
-        gateway.sendCourtButtons(session.guildId, text, buttons)
+        jda?.sendCourtButtons(session, text, buttons)
         scheduler.schedule(session.guildId, GameScheduler.SPEECH, GameConstants.SPEECH_SECONDS * 1000L) {
             advanceSpeaker(session.guildId)
         }
@@ -411,8 +419,8 @@ class DayOrchestrator(
             .filter { it.number != seatNumber }
             .map { SeatOption(it.number, "玩家${it.paddedNumber}") }
         if (options.isEmpty()) return
-        gateway.promptNightAction(
-            session.guildId, seatNumber, InteractionIds.REVENGE_TARGET,
+        jda?.sendSelectMenu(
+            session, seatNumber, InteractionIds.REVENGE_TARGET,
             msg.msg("day.revenge.prompt"), options, allowSkip = true,
         )
     }
@@ -444,8 +452,8 @@ class DayOrchestrator(
     // ======================= dawn =======================
 
     private fun enterDawnInternal(session: GameSession) {
-        gateway.unmuteAll(session.guildId)
-        gateway.playSound(session.guildId, SoundCue.MORNING)
+        jda?.unmuteAll(session.guildId)
+        discord.playSound(session.guildId, SoundCue.MORNING)
         announcer.announce(session.guildId, "game.day.start", session.day)
         // Day banner for the replay timeline: this is what the recording classifier reads to open a
         // new "日 N" segment (the night banner is the existing `night.start` log).
@@ -480,10 +488,10 @@ class DayOrchestrator(
     private fun startPoliceElectionInternal(session: GameSession) {
         val poll = Poll(kind = PollKind.POLICE, stage = PollStage.ENROLL)
         session.poll = poll
-        gateway.playSound(session.guildId, SoundCue.POLICE_ENROLL_START)
-        gateway.sendCourtButtons(
-            session.guildId, msg.msg("police.enroll.start"),
-            listOf(CourtButton(InteractionIds.POLICE_ENROLL, msg.msg("police.enroll.button"), ButtonStyle.SUCCESS)),
+        discord.playSound(session.guildId, SoundCue.POLICE_ENROLL_START)
+        jda?.sendCourtButtons(
+            session, msg.msg("police.enroll.start"),
+            listOf(Button.success(InteractionIds.POLICE_ENROLL, msg.msg("police.enroll.button"))),
         )
         scheduleStage(session, GameConstants.POLICE_ENROLL_SECONDS, SoundCue.ENROLL_TEN_SECONDS)
     }
@@ -501,14 +509,14 @@ class DayOrchestrator(
         poll.stage = PollStage.VOTING
         val police = poll.kind == PollKind.POLICE
         if (police) {
-            gateway.playSound(session.guildId, SoundCue.POLICE_VOTE_START)
+            discord.playSound(session.guildId, SoundCue.POLICE_VOTE_START)
         } else {
-            gateway.playSound(session.guildId, SoundCue.EXPEL_POLL_START)
+            discord.playSound(session.guildId, SoundCue.EXPEL_POLL_START)
         }
         val prefix = if (police) InteractionIds.POLICE_VOTE else InteractionIds.EXPEL_VOTE
         val buttons = poll.activeCandidates().sorted()
-            .map { CourtButton("$prefix:$it", msg.msg("seat.name", pad(it)), ButtonStyle.PRIMARY) }
-        gateway.sendCourtButtons(session.guildId, msg.msg(if (police) "police.vote.start" else "expel.start"), buttons)
+            .map { Button.primary("$prefix:$it", msg.msg("seat.name", pad(it))) }
+        jda?.sendCourtButtons(session, msg.msg(if (police) "police.vote.start" else "expel.start"), buttons)
         val seconds = if (police) GameConstants.POLICE_VOTE_SECONDS else GameConstants.EXPEL_VOTE_SECONDS
         scheduleStage(session, seconds, SoundCue.POLL_TEN_SECONDS)
     }
@@ -553,9 +561,9 @@ class DayOrchestrator(
     private fun beginWithdrawInternal(session: GameSession) {
         val poll = session.poll ?: return
         poll.stage = PollStage.WITHDRAW
-        gateway.sendCourtButtons(
-            session.guildId, msg.msg("police.withdraw.prompt"),
-            listOf(CourtButton(InteractionIds.POLICE_WITHDRAW, msg.msg("police.withdraw.button"), ButtonStyle.DANGER)),
+        jda?.sendCourtButtons(
+            session, msg.msg("police.withdraw.prompt"),
+            listOf(Button.danger(InteractionIds.POLICE_WITHDRAW, msg.msg("police.withdraw.button"))),
         )
         scheduleStage(session, GameConstants.POLICE_WITHDRAW_SECONDS, null)
     }
@@ -693,7 +701,7 @@ class DayOrchestrator(
         val warnMs = remainMs - GameConstants.TEN_SECONDS_WARNING_AT * 1000L
         if (warnCue != null && warnMs > 0) {
             scheduler.schedule(guildId, GameScheduler.TEN_SECOND_WARNING, warnMs) {
-                gateway.playSound(guildId, warnCue)
+                discord.playSound(guildId, warnCue)
             }
         }
     }
@@ -735,7 +743,7 @@ class DayOrchestrator(
         val ownSeat = session.seats.firstOrNull { it.memberId == userId }?.number
         val channelSeat = session.seats.firstOrNull { it.channelId == channelId && it.channelId != 0L }?.number
         val seat = when {
-            customId.startsWith(InteractionIds.REVENGE_TARGET) && channelSeat != null && gateway.isJudge(guildId, userId) -> channelSeat
+            customId.startsWith(InteractionIds.REVENGE_TARGET) && channelSeat != null && jda?.isJudge(session, userId) == true -> channelSeat
             ownSeat != null -> ownSeat
             else -> return InteractionReply("你不是這場遊戲的玩家")
         }
@@ -869,9 +877,7 @@ class DayOrchestrator(
     }
 
     private fun syncNickname(session: GameSession, seat: Seat) {
-        val memberId = seat.memberId ?: return
-        if (!gateway.canInteract(session.guildId, memberId)) return
-        gateway.setNickname(session.guildId, memberId, nicknames.nicknameFor(seat))
+        jda?.syncNickname(session, seat, nicknames.nicknameFor(seat))
     }
 
     private fun directionLabel(direction: SpeechDirection): String =

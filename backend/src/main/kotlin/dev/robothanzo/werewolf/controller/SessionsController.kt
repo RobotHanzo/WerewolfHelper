@@ -3,13 +3,15 @@ package dev.robothanzo.werewolf.controller
 import dev.robothanzo.werewolf.controller.dto.SessionSummary
 import dev.robothanzo.werewolf.controller.dto.SessionSummaryResponse
 import dev.robothanzo.werewolf.controller.dto.SnapshotResponse
-import dev.robothanzo.werewolf.discord.DiscordGateway
+import dev.robothanzo.werewolf.discord.guildIconUrl
+import dev.robothanzo.werewolf.discord.guildName
 import dev.robothanzo.werewolf.domain.repo.GameSessionRepository
 import dev.robothanzo.werewolf.security.CurrentUser
 import dev.robothanzo.werewolf.security.DashboardRoleService
 import dev.robothanzo.werewolf.security.annotations.CanViewGuild
 import dev.robothanzo.werewolf.service.GameSessionService
 import dev.robothanzo.werewolf.service.SnapshotService
+import net.dv8tion.jda.api.JDA
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -29,7 +31,7 @@ class SessionsController(
     private val snapshots: SnapshotService,
     private val currentUser: CurrentUser,
     private val roleService: DashboardRoleService,
-    private val discordGateway: DiscordGateway,
+    private val jda: JDA?,
 ) {
 
     @Operation(summary = "List my game servers", description = "Game servers the logged-in user may view.")
@@ -42,8 +44,8 @@ class SessionsController(
             .map {
                 SessionSummary(
                     guildId = it.guildId.toString(),
-                    guildName = discordGateway.getGuildName(it.guildId) ?: "狼人殺遊戲",
-                    guildIcon = discordGateway.getGuildIconUrl(it.guildId),
+                    guildName = jda?.guildName(it.guildId) ?: "狼人殺遊戲",
+                    guildIcon = jda?.guildIconUrl(it.guildId),
                     playerCount = it.playerCount,
                 )
             }

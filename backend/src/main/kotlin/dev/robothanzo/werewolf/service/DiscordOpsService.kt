@@ -1,13 +1,14 @@
 package dev.robothanzo.werewolf.service
 
-import dev.robothanzo.werewolf.discord.ButtonStyle
 import dev.robothanzo.werewolf.discord.ChannelKind
-import dev.robothanzo.werewolf.discord.CourtButton
-import dev.robothanzo.werewolf.discord.DiscordGateway
-import dev.robothanzo.werewolf.discord.EmbedField
-import dev.robothanzo.werewolf.discord.EmbedSpec
 import dev.robothanzo.werewolf.discord.InteractionIds
 import dev.robothanzo.werewolf.discord.NicknameService
+import dev.robothanzo.werewolf.discord.clearNickname
+import dev.robothanzo.werewolf.discord.grantSeatRole
+import dev.robothanzo.werewolf.discord.removeSeatRoles
+import dev.robothanzo.werewolf.discord.sendChannelEmbed
+import dev.robothanzo.werewolf.discord.sendSeatEmbed
+import dev.robothanzo.werewolf.discord.setNickname
 import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.i18n.Msg
@@ -22,6 +23,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.components.buttons.Button
 import org.springframework.stereotype.Service
 
 /**
@@ -34,7 +38,7 @@ import org.springframework.stereotype.Service
  */
 @Service
 class DiscordOpsService(
-    private val gateway: DiscordGateway,
+    private val jda: JDA?,
     private val nicknames: NicknameService,
     private val engine: BulkOperationEngine,
     private val roles: RoleRegistry,
@@ -50,10 +54,9 @@ class DiscordOpsService(
 
     /** Apply the assignment's Discord side-effects: critical role/nickname batch, then notifications. */
     fun applyAssignment(session: GameSession) {
-        if (!gateway.available) {
-            scope.launch {
-                ws.broadcastProgress(session.guildId, 100, msg.msg("bulk.finished"), "info")
-            }
+        val jda = jda
+        if (jda == null) {
+            scope.launch { ws.broadcastProgress(session.guildId, 100, msg.msg("bulk.finished"), "info") }
             return
         }
         scope.launch {
@@ -65,15 +68,15 @@ class DiscordOpsService(
                 session.seats.filter { it.assigned }.flatMap { seat ->
                     val memberId = seat.memberId!!
                     listOf(
-                        BulkItem(msg.msg("bulk.item.assign_role", seat.paddedNumber)) { gateway.grantSeatRole(guildId, memberId, seat.number, await = true) },
-                        BulkItem(msg.msg("bulk.item.assign_nickname", seat.paddedNumber)) { gateway.setNickname(guildId, memberId, nicknames.nicknameFor(seat), await = true) },
+                        BulkItem(msg.msg("bulk.item.assign_role", seat.paddedNumber)) { jda.grantSeatRole(session, memberId, seat.number, await = true) },
+                        BulkItem(msg.msg("bulk.item.assign_nickname", seat.paddedNumber)) { jda.setNickname(session, memberId, nicknames.nicknameFor(seat), await = true) },
                     )
                 },
             )
             // Double identity: each announcement carries a 調換順序 button so the player can swap their
             // two cards' order before the lock countdown (FEATURES §5.3).
             val swapButtons = if (session.settings.doubleIdentity)
-                listOf(CourtButton(InteractionIds.SWAP_ORDER, msg.msg("assign.order.swap_button"), ButtonStyle.SECONDARY))
+                listOf(Button.secondary(InteractionIds.SWAP_ORDER, msg.msg("assign.order.swap_button")))
             else emptyList()
             // 金寶寶 coordinate as a team (their own private cross-chat group) — tell each one who their
             // partner is, or that they are the only 金寶寶 on the board (FEATURES §5.3 / §284).
@@ -88,38 +91,36 @@ class DiscordOpsService(
                             lines += if (others.isEmpty()) msg.msg("assign.dm.golden_baby.solo")
                             else msg.msg("assign.dm.golden_baby.partners", others.joinToString("、") { "玩家${it.paddedNumber}" })
                         }
-                        gateway.sendSeatEmbed(
-                            guildId, seat.number,
-                            EmbedSpec(title = msg.msg("assign.dm.title"), description = lines.joinToString("\n"), color = 0xE8B923),
-                            if (seat.cards.size > 1) swapButtons else emptyList(),
-                        )
+                        val embed = EmbedBuilder()
+                            .setTitle(msg.msg("assign.dm.title"))
+                            .setDescription(lines.joinToString("\n"))
+                            .setColor(0xE8B923)
+                        jda.sendSeatEmbed(session, seat.number, embed, if (seat.cards.size > 1) swapButtons else emptyList())
                     }
                 },
             )
             engine.execute(listOf(critical, notify), sink(guildId))
             // Now that announcements are out, start the swap window's lock countdown (double identity only).
             orderService.startOrderLock(guildId)
-            val fields = session.seats.filter { it.assigned }.map { seat ->
-                val ids = seat.cards.joinToString("、") { roles.localizedName(it.roleId) }
-                EmbedField(name = "玩家${seat.paddedNumber}", value = ids, inline = true)
-            }
-            val summaryEmbed = EmbedSpec(
-                title = msg.msg("assign.summary.title"),
-                color = kotlin.random.Random.nextInt(0x1000000),
-                fields = fields
-            )
-            gateway.sendChannelEmbed(guildId, ChannelKind.JUDGE, summaryEmbed)
-            gateway.sendChannelEmbed(guildId, ChannelKind.SPECTATOR, summaryEmbed)
+            val summaryEmbed = EmbedBuilder()
+                .setTitle(msg.msg("assign.summary.title"))
+                .setColor(kotlin.random.Random.nextInt(0x1000000))
+                .apply {
+                    session.seats.filter { it.assigned }.forEach { seat ->
+                        addField("玩家${seat.paddedNumber}", seat.cards.joinToString("、") { roles.localizedName(it.roleId) }, true)
+                    }
+                }
+            jda.sendChannelEmbed(session, ChannelKind.JUDGE, summaryEmbed)
+            jda.sendChannelEmbed(session, ChannelKind.SPECTATOR, summaryEmbed)
         }
     }
 
     /** Reset the Discord side: clear each member's nickname/roles. Member ids are captured eagerly
      *  because the caller clears the bindings synchronously right after. */
     fun applyReset(session: GameSession) {
-        if (!gateway.available) {
-            scope.launch {
-                ws.broadcastProgress(session.guildId, 100, msg.msg("bulk.finished"), "info")
-            }
+        val jda = jda
+        if (jda == null) {
+            scope.launch { ws.broadcastProgress(session.guildId, 100, msg.msg("bulk.finished"), "info") }
             return
         }
         val guildId = session.guildId
@@ -130,8 +131,8 @@ class DiscordOpsService(
                 "reset", 0, 100,
                 seated.flatMap { (paddedNumber, memberId) ->
                     listOf(
-                        BulkItem(msg.msg("bulk.item.reset_role", paddedNumber)) { gateway.removeSeatRoles(guildId, memberId) },
-                        BulkItem(msg.msg("bulk.item.reset_nickname", paddedNumber)) { gateway.clearNickname(guildId, memberId) },
+                        BulkItem(msg.msg("bulk.item.reset_role", paddedNumber)) { jda.removeSeatRoles(session, memberId) },
+                        BulkItem(msg.msg("bulk.item.reset_nickname", paddedNumber)) { jda.clearNickname(session, memberId) },
                     )
                 },
             )

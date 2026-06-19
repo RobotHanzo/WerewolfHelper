@@ -5,7 +5,7 @@ import dev.robothanzo.werewolf.controller.dto.DayRequest
 import dev.robothanzo.werewolf.controller.dto.PlayerCountRequest
 import dev.robothanzo.werewolf.controller.dto.PoolRequest
 import dev.robothanzo.werewolf.controller.dto.ToggleRequest
-import dev.robothanzo.werewolf.discord.DiscordGateway
+import dev.robothanzo.werewolf.discord.GuildProvisioner
 import dev.robothanzo.werewolf.security.annotations.CanManageGuild
 import dev.robothanzo.werewolf.service.GameSessionService
 import io.swagger.v3.oas.annotations.Operation
@@ -25,7 +25,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 @Tag(name = "Settings", description = "Pre-game configuration (auto-saving)")
 class SettingsController(
     private val sessionService: GameSessionService,
-    private val gateway: DiscordGateway,
+    private val provisioner: GuildProvisioner,
 ) {
 
     @Operation(summary = "Set player count", description = "Resize the seat list and provision/recycle Discord channels and roles.")
@@ -35,7 +35,7 @@ class SettingsController(
     fun playerCount(@PathVariable guildId: String, @RequestBody body: PlayerCountRequest): ResponseEntity<ApiResponse> {
         sessionService.mutate(guildId.toLong()) { s ->
             runBlocking {
-                gateway.resizeGuild(s, body.count)
+                provisioner.resizeGuild(s, body.count)
             }
         }
         return ResponseEntity.ok(ApiResponse.ok())

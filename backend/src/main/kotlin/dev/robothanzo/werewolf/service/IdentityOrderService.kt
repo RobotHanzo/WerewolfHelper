@@ -1,9 +1,10 @@
 package dev.robothanzo.werewolf.service
 
-import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.discord.DiscordInteractionHandler
 import dev.robothanzo.werewolf.discord.InteractionIds
 import dev.robothanzo.werewolf.discord.InteractionReply
+import dev.robothanzo.werewolf.discord.isJudge
+import dev.robothanzo.werewolf.discord.sendSeatMessage
 import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.domain.LogSeverity
 import dev.robothanzo.werewolf.domain.Seat
@@ -12,6 +13,7 @@ import dev.robothanzo.werewolf.game.flow.GameScheduler
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.i18n.Msg
 import jakarta.annotation.PostConstruct
+import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 
 /**
@@ -26,7 +28,7 @@ import org.springframework.stereotype.Service
 @Service
 class IdentityOrderService(
     private val sessionService: GameSessionService,
-    private val gateway: DiscordGateway,
+    private val jda: JDA?,
     private val scheduler: GameScheduler,
     private val roles: RoleRegistry,
     private val msg: Msg,
@@ -70,7 +72,7 @@ class IdentityOrderService(
         val session = sessionService.find(guildId) ?: return
         if (session.orderLockEndsAt == null) return
         session.seats.filter { it.assigned && !it.orderLocked && it.cards.size > 1 }
-            .forEach { gateway.sendSeatMessage(guildId, it.number, msg.msg("assign.order.reminder", secondsLeft)) }
+            .forEach { jda?.sendSeatMessage(session, it.number, msg.msg("assign.order.reminder", secondsLeft)) }
     }
 
     /** Lock every seat's order and tell each seat channel; clears the countdown. */
@@ -83,7 +85,8 @@ class IdentityOrderService(
             session.orderLockEndsAt = null
             seatNumbers = session.seats.filter { it.assigned && it.cards.size > 1 }.map { it.number }
         }
-        seatNumbers.forEach { gateway.sendSeatMessage(guildId, it, msg.msg("assign.order.locked")) }
+        val session = sessionService.find(guildId) ?: return
+        seatNumbers.forEach { jda?.sendSeatMessage(session, it, msg.msg("assign.order.locked")) }
     }
 
     override fun handle(guildId: Long, userId: Long, channelId: Long, customId: String, values: List<String>): InteractionReply? {
@@ -93,7 +96,7 @@ class IdentityOrderService(
         val ownSeat = session.seats.firstOrNull { it.memberId == userId }?.number
         val channelSeat = session.seats.firstOrNull { it.channelId == channelId && it.channelId != 0L }?.number
         val seatNumber = when {
-            channelSeat != null && gateway.isJudge(guildId, userId) -> channelSeat
+            channelSeat != null && jda?.isJudge(session, userId) == true -> channelSeat
             ownSeat != null -> ownSeat
             else -> return InteractionReply("你不是這場遊戲的玩家")
         }

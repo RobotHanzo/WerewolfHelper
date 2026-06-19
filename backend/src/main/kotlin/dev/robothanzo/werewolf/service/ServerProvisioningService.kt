@@ -1,7 +1,8 @@
 package dev.robothanzo.werewolf.service
 
-import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.discord.DiscordProperties
+import dev.robothanzo.werewolf.discord.GuildProvisioner
+import dev.robothanzo.werewolf.discord.grantJudgeRole
 import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.domain.LogSeverity
 import dev.robothanzo.werewolf.domain.PendingSetup
@@ -13,18 +14,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import net.dv8tion.jda.api.JDA
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 /**
  * The `/server create` flow (FEATURES §3): a trusted server creator stores a pending config; when the
  * bot later joins (or becomes ready in) the guild that creator owns, the server is built
- * automatically from that config and the pending entry consumed. [CommandRouter] is the gateway's
+ * automatically from that config and the pending entry consumed. [CommandRouter] is [DiscordBot]'s
  * registered command handler and delegates the `/server` subcommands + bot-join events here.
  */
 @Service
 class ServerProvisioningService(
-    private val gateway: DiscordGateway,
+    private val provisioner: GuildProvisioner,
+    private val jda: JDA?,
     private val properties: DiscordProperties,
     private val sessionService: GameSessionService,
     private val pendingSetups: PendingSetupRepository,
@@ -47,7 +50,7 @@ class ServerProvisioningService(
         if (creatorId !in properties.serverCreatorIds) return msg.msg("cmd.delete.denied")
         if (guildId == 0L) return msg.msg("cmd.delete.no_guild")
         sessionService.find(guildId) ?: return msg.msg("error.session_not_found")
-        scope.launch { gateway.deleteGuild(guildId) }
+        scope.launch { provisioner.deleteGuild(guildId) }
         sessionService.clearLogs(guildId)
         sessionService.delete(guildId)
         return msg.msg("cmd.delete.ok")
@@ -62,12 +65,12 @@ class ServerProvisioningService(
                     settings.playerCount = pending.playerCount
                     settings.doubleIdentity = pending.doubleIdentity
                 }
-                gateway.provisionGuild(session)
+                provisioner.provisionGuild(session)
                 sessionService.save(session)
                 sessionService.log(guildId, LogSeverity.ACTION, "provision.completed")
                 pendingSetups.delete(pending)
                 sessionService.broadcast(session)
-                gateway.grantJudgeRole(guildId, ownerId)
+                jda?.grantJudgeRole(session, ownerId)
                 log.info("Auto-provisioned guild {} from pending config of {}", guildId, ownerId)
             } catch (e: Exception) {
                 log.error("Auto-provisioning guild {} failed: {}", guildId, e.message)

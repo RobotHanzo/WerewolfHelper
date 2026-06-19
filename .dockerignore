@@ -1,0 +1,28 @@
+# Build outputs (regenerated inside the image)
+backend/.gradle/
+backend/build/
+backend/out/
+backend/bin/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+
+# VCS / IDE / OS
+.git/
+.github/
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Secrets — never bake these into the image or build context
+.env
+.env.*
+!.env.example
+*.local
+
+# Docs / meta not needed at build time
+*.md
+instructions/

@@ -8,13 +8,15 @@ import dev.robothanzo.werewolf.controller.dto.PoliceTransferRequest
 import dev.robothanzo.werewolf.controller.dto.ReviveRequest
 import dev.robothanzo.werewolf.controller.dto.TargetRequest
 import dev.robothanzo.werewolf.controller.dto.TimerRequest
-import dev.robothanzo.werewolf.discord.DiscordGateway
+import dev.robothanzo.werewolf.discord.muteAll
+import dev.robothanzo.werewolf.discord.unmuteAll
 import dev.robothanzo.werewolf.domain.Phase
 import dev.robothanzo.werewolf.security.annotations.CanManageGuild
 import dev.robothanzo.werewolf.service.DayOrchestrator
 import dev.robothanzo.werewolf.service.GameActionService
 import dev.robothanzo.werewolf.service.GameFlowCoordinator
 import dev.robothanzo.werewolf.service.TimerService
+import net.dv8tion.jda.api.JDA
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -33,7 +35,7 @@ class GameController(
     private val actions: GameActionService,
     private val coordinator: GameFlowCoordinator,
     private val day: DayOrchestrator,
-    private val gateway: DiscordGateway,
+    private val jda: JDA?,
     private val timer: TimerService,
 ) {
 
@@ -212,7 +214,7 @@ class GameController(
     @PostMapping("/voice/mute")
     @CanManageGuild
     fun muteAll(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
-        gateway.muteAll(guildId.toLong())
+        jda?.muteAll(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok())
     }
 
@@ -221,7 +223,7 @@ class GameController(
     @PostMapping("/voice/unmute")
     @CanManageGuild
     fun unmuteAll(@PathVariable guildId: String): ResponseEntity<ApiResponse> {
-        gateway.unmuteAll(guildId.toLong())
+        jda?.unmuteAll(guildId.toLong())
         return ResponseEntity.ok(ApiResponse.ok())
     }
 

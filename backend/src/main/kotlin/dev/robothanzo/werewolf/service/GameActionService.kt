@@ -1,8 +1,11 @@
 package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.discord.ChannelKind
-import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.discord.NicknameService
+import dev.robothanzo.werewolf.discord.listMembers
+import dev.robothanzo.werewolf.discord.revealAllChannels
+import dev.robothanzo.werewolf.discord.syncNickname
+import dev.robothanzo.werewolf.discord.unmuteAll
 import dev.robothanzo.werewolf.domain.DashboardRole
 import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.domain.LogSeverity
@@ -13,13 +16,14 @@ import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.win.WinConditionChecker
 import dev.robothanzo.werewolf.game.flow.GameScheduler
 import dev.robothanzo.werewolf.security.DashboardRoleService
+import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import kotlin.random.Random
 
 /**
  * The judge's per-seat mutations (FEATURES §5/§9). Each method mutates the session in place;
  * the caller wraps it in [GameSessionService.mutate], which persists and broadcasts the snapshot.
- * Discord side-effects (nicknames) are kept in sync best-effort through the gateway.
+ * Discord side-effects (nicknames) are kept in sync best-effort via `jda?.syncNickname`.
  */
 @Service
 class GameActionService(
@@ -28,7 +32,7 @@ class GameActionService(
     private val roles: RoleRegistry,
     private val win: WinConditionChecker,
     private val nicknames: NicknameService,
-    private val gateway: DiscordGateway,
+    private val jda: JDA?,
     private val discordOps: DiscordOpsService,
     private val gameScheduler: GameScheduler,
     private val roleService: DashboardRoleService,
@@ -39,7 +43,7 @@ class GameActionService(
 
     /** Deal identities to the eligible (non-bot, non-owner, non-spectator) members. */
     fun assign(guildId: Long) = sessionService.mutate(guildId) { session ->
-        val eligible = gateway.listMembers(guildId)
+        val eligible = (jda?.listMembers(session) ?: emptyList())
             .filter { !it.bot && !it.owner && !it.spectator && roleService.roleFor(guildId, it.id) != DashboardRole.JUDGE }
             .map { it.id }
             .ifEmpty { session.seats.mapNotNull { it.memberId } } // dev fallback to existing bindings
@@ -181,13 +185,11 @@ class GameActionService(
         val winnerKey = if (result.winner?.name == "WOLF") "game.over.wolf" else "game.over.good"
         announcer.announce(session.guildId, winnerKey) // now public to the court
         sessionService.log(guildId, LogSeverity.ACTION, "game.over.revealed")
-        gateway.unmuteAll(guildId)
-        gateway.revealAllChannels(guildId)
+        jda?.unmuteAll(guildId)
+        jda?.revealAllChannels(guildId)
     }
 
     private fun syncNickname(session: GameSession, seat: Seat) {
-        val memberId = seat.memberId ?: return
-        if (!gateway.canInteract(session.guildId, memberId)) return
-        gateway.setNickname(session.guildId, memberId, nicknames.nicknameFor(seat))
+        jda?.syncNickname(session, seat, nicknames.nicknameFor(seat))
     }
 }

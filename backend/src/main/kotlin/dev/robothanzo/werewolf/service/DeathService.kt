@@ -1,7 +1,7 @@
 package dev.robothanzo.werewolf.service
 
-import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.discord.NicknameService
+import dev.robothanzo.werewolf.discord.syncNickname
 import dev.robothanzo.werewolf.domain.Faction
 import dev.robothanzo.werewolf.domain.GameSession
 import dev.robothanzo.werewolf.domain.IdentityCard
@@ -9,6 +9,7 @@ import dev.robothanzo.werewolf.domain.Seat
 import dev.robothanzo.werewolf.game.roles.RoleIds
 import dev.robothanzo.werewolf.game.roles.RoleRegistry
 import dev.robothanzo.werewolf.game.roles.RoleTag
+import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 
 /** Why a seat died — drives revenge arming and the 殉情 / 決鬥 interaction rules (ROLES.md). */
@@ -36,7 +37,7 @@ data class DeathInfo(val seat: Int, val roleId: String, val cause: DeathCause)
 class DeathService(
     private val roles: RoleRegistry,
     private val nicknames: NicknameService,
-    private val gateway: DiscordGateway,
+    private val jda: JDA?,
 ) {
 
     fun applyDeath(
@@ -114,8 +115,6 @@ class DeathService(
     }
 
     private fun syncNickname(session: GameSession, seat: Seat) {
-        val memberId = seat.memberId ?: return
-        if (!gateway.canInteract(session.guildId, memberId)) return
-        gateway.setNickname(session.guildId, memberId, nicknames.nicknameFor(seat))
+        jda?.syncNickname(session, seat, nicknames.nicknameFor(seat))
     }
 }

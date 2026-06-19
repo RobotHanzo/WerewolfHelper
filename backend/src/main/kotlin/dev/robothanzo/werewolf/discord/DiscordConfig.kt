@@ -1,10 +1,13 @@
 package dev.robothanzo.werewolf.discord
 
-import dev.robothanzo.werewolf.domain.repo.GameSessionRepository
-import dev.robothanzo.werewolf.game.roles.RoleRegistry
-import dev.robothanzo.werewolf.i18n.Msg
-import dev.robothanzo.werewolf.ops.BulkOperationEngine
-import dev.robothanzo.werewolf.websocket.GameWebSocketHandler
+import club.minnced.discord.jdave.interop.JDaveSessionFactory
+import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.JDABuilder
+import net.dv8tion.jda.api.audio.AudioModuleConfig
+import net.dv8tion.jda.api.requests.GatewayIntent
+import net.dv8tion.jda.api.utils.ChunkingFilter
+import net.dv8tion.jda.api.utils.MemberCachePolicy
+import net.dv8tion.jda.api.utils.cache.CacheFlag
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -33,29 +36,35 @@ class DiscordConfig(private val properties: DiscordProperties) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     /**
-     * Picks the live JDA gateway when a token is present, otherwise the no-op gateway. JDA
-     * construction is guarded so a bad token degrades to no-op instead of failing startup — the
-     * dashboard must still come up.
+     * The single JDA connection, shared by every Discord-touching component. **Nullable on purpose**:
+     * with no token (or a bad one) the bean is `null` and every consumer injects `JDA?`, guarding its
+     * Discord calls — so the REST API + WebSocket hub still serve fully (the old no-op gateway is gone,
+     * the null is the no-op). Construction is wrapped so a bad token degrades to `null` instead of
+     * failing startup; the dashboard must always come up.
      */
     @Bean
-    fun discordGateway(
-        nicknameService: NicknameService,
-        sessions: GameSessionRepository,
-        roles: RoleRegistry,
-        engine: BulkOperationEngine,
-        ws: GameWebSocketHandler,
-        msg: Msg,
-    ): DiscordGateway {
+    fun jda(): JDA? {
         if (!properties.hasToken) {
-            log.warn("No Discord token configured — running with the no-op gateway (REST/WS still serve).")
-            return NoOpDiscordGateway(ws, msg)
+            log.warn("No Discord token configured — Discord features disabled (REST/WS still serve).")
+            return null
         }
         return try {
-            JdaDiscordGateway(properties, sessions, roles, engine, ws, msg)
+            JDABuilder.create(
+                properties.token,
+                GatewayIntent.GUILD_MEMBERS,
+                GatewayIntent.GUILD_MESSAGES,
+                GatewayIntent.GUILD_VOICE_STATES,
+                GatewayIntent.MESSAGE_CONTENT,
+            )
+                .setMemberCachePolicy(MemberCachePolicy.ALL)
+                .setChunkingFilter(ChunkingFilter.ALL)
+                .enableCache(CacheFlag.VOICE_STATE)
+                .disableCache(CacheFlag.ACTIVITY, CacheFlag.EMOJI, CacheFlag.STICKER, CacheFlag.SCHEDULED_EVENTS)
+                .setAudioModuleConfig(AudioModuleConfig().withDaveSessionFactory(JDaveSessionFactory()))
+                .build()
         } catch (e: Exception) {
-            log.error("Failed to start JDA ({}); falling back to the no-op gateway.", e.message)
-            NoOpDiscordGateway(ws, msg)
+            log.error("Failed to start JDA ({}); Discord features disabled.", e.message)
+            null
         }
     }
 }
-

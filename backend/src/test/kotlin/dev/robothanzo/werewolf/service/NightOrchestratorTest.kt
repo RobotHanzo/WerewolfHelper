@@ -1,9 +1,10 @@
 package dev.robothanzo.werewolf.service
 
+import dev.robothanzo.werewolf.discord.DiscordBot
 import dev.robothanzo.werewolf.discord.InteractionIds
 import dev.robothanzo.werewolf.discord.NicknameService
-import dev.robothanzo.werewolf.discord.NoOpDiscordGateway
 import dev.robothanzo.werewolf.domain.GameSession
+import dev.robothanzo.werewolf.domain.repo.GameSessionRepository
 import dev.robothanzo.werewolf.game.flow.GameScheduler
 import dev.robothanzo.werewolf.game.night.NightDeclarationsBuilder
 import dev.robothanzo.werewolf.game.night.NightPlanner
@@ -21,14 +22,14 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 /**
- * Exercises the 機械狼 learn flow through [NightOrchestrator] against the [NoOpDiscordGateway], with
- * [GameSessionService] mocked onto an in-memory session (no Spring / Mongo).
+ * Exercises the 機械狼 learn flow through [NightOrchestrator] with a null [net.dv8tion.jda.api.JDA]
+ * (Discord calls no-op), and [GameSessionService] mocked onto an in-memory session (no Spring / Mongo).
  */
 class NightOrchestratorTest {
 
     private val msg = TestFixtures.msg()
     private val roles = TestFixtures.registry()
-    private val gateway = NoOpDiscordGateway()
+    private val discord = DiscordBot(null, mock<GameSessionRepository>(), roles, msg)
     private val scheduler = GameScheduler()
 
     private lateinit var session: GameSession
@@ -53,12 +54,13 @@ class NightOrchestratorTest {
             sessionService = sessionService,
             win = WinConditionChecker(roles),
             roles = roles,
-            gateway = gateway,
+            jda = null,
+            discord = discord,
             scheduler = scheduler,
             msg = msg,
-            announcer = CourtAnnouncer(gateway, msg),
-            router = InteractionRouter(gateway),
-            deaths = DeathService(roles, NicknameService(msg), gateway),
+            announcer = CourtAnnouncer(null, mock<GameSessionRepository>(), msg),
+            router = InteractionRouter(discord),
+            deaths = DeathService(roles, NicknameService(msg), null),
         )
     }
 

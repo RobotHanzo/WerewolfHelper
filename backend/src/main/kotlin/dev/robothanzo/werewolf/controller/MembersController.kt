@@ -4,8 +4,10 @@ import dev.robothanzo.werewolf.controller.dto.ApiResponse
 import dev.robothanzo.werewolf.controller.dto.DashboardRoleRequest
 import dev.robothanzo.werewolf.controller.dto.MemberDto
 import dev.robothanzo.werewolf.controller.dto.MembersResponse
-import dev.robothanzo.werewolf.discord.DiscordGateway
 import dev.robothanzo.werewolf.discord.DiscordProperties
+import dev.robothanzo.werewolf.discord.grantJudgeRole
+import dev.robothanzo.werewolf.discord.listMembers
+import dev.robothanzo.werewolf.discord.revokeJudgeRole
 import dev.robothanzo.werewolf.domain.DashboardRole
 import dev.robothanzo.werewolf.domain.DashboardUser
 import dev.robothanzo.werewolf.domain.LogSeverity
@@ -14,6 +16,7 @@ import dev.robothanzo.werewolf.security.CurrentUser
 import dev.robothanzo.werewolf.security.DashboardRoleService
 import dev.robothanzo.werewolf.security.annotations.CanManageGuild
 import dev.robothanzo.werewolf.service.GameSessionService
+import net.dv8tion.jda.api.JDA
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -31,7 +34,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 @RequestMapping("/api/sessions/{guildId}/members")
 @Tag(name = "Members", description = "Guild member search for the dashboard pickers")
 class MembersController(
-    private val gateway: DiscordGateway,
+    private val jda: JDA?,
     private val currentUser: CurrentUser,
     private val roleService: DashboardRoleService,
     private val dashboardUsers: DashboardUserRepository,
@@ -50,8 +53,9 @@ class MembersController(
     ): ResponseEntity<MembersResponse> {
         val currentUserId = currentUser.userId()
         val gId = guildId.toLong()
+        val session = sessionService.find(gId)
 
-        val members = gateway.listMembers(gId)
+        val members = (if (jda != null && session != null) jda.listMembers(session) else emptyList())
             .filter { member ->
                 if (member.bot) return@filter false
                 if (query.isNotBlank() && !member.displayName.contains(query, true) && !member.name.contains(query, true)) {
@@ -117,15 +121,16 @@ class MembersController(
         ).apply { role = newRole }
         dashboardUsers.save(userOverride)
 
-        val members = gateway.listMembers(gId)
+        val session = sessionService.find(gId)
+        val members = if (jda != null && session != null) jda.listMembers(session) else emptyList()
         val targetMember = members.find { it.id == uId }
         val targetName = targetMember?.displayName ?: targetMember?.name ?: uId.toString()
 
         if (newRole == DashboardRole.JUDGE) {
-            gateway.grantJudgeRole(gId, uId)
+            if (session != null) jda?.grantJudgeRole(session, uId)
             sessionService.log(gId, LogSeverity.ACTION, "judge.promoted", targetName)
         } else {
-            gateway.revokeJudgeRole(gId, uId)
+            if (session != null) jda?.revokeJudgeRole(session, uId)
             sessionService.log(gId, LogSeverity.ACTION, "judge.demoted", targetName)
         }
 

@@ -1,9 +1,10 @@
 package dev.robothanzo.werewolf.service
 
+import dev.robothanzo.werewolf.discord.DiscordBot
 import dev.robothanzo.werewolf.discord.InteractionIds
 import dev.robothanzo.werewolf.discord.NicknameService
-import dev.robothanzo.werewolf.discord.NoOpDiscordGateway
 import dev.robothanzo.werewolf.domain.GameSession
+import dev.robothanzo.werewolf.domain.repo.GameSessionRepository
 import dev.robothanzo.werewolf.game.flow.GameScheduler
 import dev.robothanzo.werewolf.game.speech.SpeechService
 import dev.robothanzo.werewolf.game.vote.PollEngine
@@ -24,15 +25,15 @@ import org.mockito.kotlin.whenever
 
 /**
  * Drives the day-side flows (police election, expel vote, speech interrupt) end-to-end through the
- * orchestrator against the [NoOpDiscordGateway], verifying the persisted [GameSession.speech] /
- * [GameSession.poll] state transitions. [GameSessionService] is mocked so `mutate`/`find` operate on
- * an in-memory session — no Spring context or Mongo needed.
+ * orchestrator with a null [net.dv8tion.jda.api.JDA] (Discord calls no-op), verifying the persisted
+ * [GameSession.speech] / [GameSession.poll] state transitions. [GameSessionService] is mocked so
+ * `mutate`/`find` operate on an in-memory session — no Spring context or Mongo needed.
  */
 class DayOrchestratorTest {
 
     private val msg = TestFixtures.msg()
     private val roles = TestFixtures.registry()
-    private val gateway = NoOpDiscordGateway()
+    private val discord = DiscordBot(null, mock<GameSessionRepository>(), roles, msg)
     private val scheduler = GameScheduler()
 
     private lateinit var session: GameSession
@@ -62,8 +63,8 @@ class DayOrchestratorTest {
         }
         whenever(sessionService.log(any(), any(), any())).thenAnswer { null }
 
-        val announcer = CourtAnnouncer(gateway, msg)
-        val router = InteractionRouter(gateway)
+        val announcer = CourtAnnouncer(null, mock<GameSessionRepository>(), msg)
+        val router = InteractionRouter(discord)
         day = DayOrchestrator(
             sessionService = sessionService,
             speeches = SpeechService(),
@@ -71,12 +72,13 @@ class DayOrchestratorTest {
             win = WinConditionChecker(roles),
             roles = roles,
             nicknames = NicknameService(msg),
-            gateway = gateway,
+            jda = null,
+            discord = discord,
             scheduler = scheduler,
             announcer = announcer,
             router = router,
             msg = msg,
-            deaths = DeathService(roles, NicknameService(msg), gateway),
+            deaths = DeathService(roles, NicknameService(msg), null),
             duel = dev.robothanzo.werewolf.game.day.DuelResolver(roles),
         )
     }

@@ -1,6 +1,6 @@
 package dev.robothanzo.werewolf.service
 
-import dev.robothanzo.werewolf.discord.DiscordGateway
+import dev.robothanzo.werewolf.discord.DiscordBot
 import dev.robothanzo.werewolf.discord.SoundCue
 import dev.robothanzo.werewolf.domain.LogSeverity
 import dev.robothanzo.werewolf.game.flow.GameScheduler
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service
 class TimerService(
     private val sessionService: GameSessionService,
     private val scheduler: GameScheduler,
-    private val gateway: DiscordGateway,
+    private val discord: DiscordBot,
     private val announcer: CourtAnnouncer,
 ) {
 
@@ -58,13 +58,13 @@ class TimerService(
                 s.timerEndsAt = null
                 sessionService.log(guildId, LogSeverity.ALERT, "timer.ended")
             }
-            gateway.playSound(guildId, SoundCue.TIMER_ENDED)
+            discord.playSound(guildId, SoundCue.TIMER_ENDED)
             announcer.announce(guildId, "timer.ended")
         }
         val warnMs = remainMs - WARNING_AT_SECONDS * 1000L
         if (warnMs > 0) {
             scheduler.schedule(guildId, TIMER_WARN, warnMs) {
-                gateway.playSound(guildId, SoundCue.TIMER_THIRTY_SECONDS)
+                discord.playSound(guildId, SoundCue.TIMER_THIRTY_SECONDS)
             }
         }
     }

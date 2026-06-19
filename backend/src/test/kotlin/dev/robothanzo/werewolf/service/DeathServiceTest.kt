@@ -1,7 +1,6 @@
 package dev.robothanzo.werewolf.service
 
 import dev.robothanzo.werewolf.discord.NicknameService
-import dev.robothanzo.werewolf.discord.NoOpDiscordGateway
 import dev.robothanzo.werewolf.game.roles.RoleIds.HIDDEN_WOLF
 import dev.robothanzo.werewolf.game.roles.RoleIds.HUNTER
 import dev.robothanzo.werewolf.game.roles.RoleIds.KNIGHT
@@ -19,7 +18,7 @@ import org.junit.jupiter.api.Test
 
 class DeathServiceTest {
 
-    private val service = DeathService(TestFixtures.registry(), NicknameService(TestFixtures.msg()), NoOpDiscordGateway())
+    private val service = DeathService(TestFixtures.registry(), NicknameService(TestFixtures.msg()), null)
 
     @Test
     fun `judge-killing a 獵人 arms its revenge`() {
